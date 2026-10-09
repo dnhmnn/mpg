@@ -11,10 +11,12 @@ import type { Werte } from './DokuFeld'
 import { datensatz, fristLaeuft, fristText, inWarteschlange, protokollnummer, pruefen } from './absenden'
 import { zettelVon } from './zettel'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 export default function Absenden({ werte, orgId, orgCode, protokollId, onGesendet, onSpringen }: {
   werte: Werte
@@ -74,8 +76,8 @@ export default function Absenden({ werte, orgId, orgCode, protokollId, onGesende
             key={s.feld} type="button" onClick={() => z && onSpringen(z.id)}
             style={{
               display: 'flex', alignItems: 'baseline', gap: 8, width: '100%',
-              padding: '8px 10px', background: '#fff', border: 'none',
-              borderBottom: i < eintraege.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none',
+              padding: '8px 10px', background: 'var(--lbf-card)', border: 'none',
+              borderBottom: i < eintraege.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' : 'none',
               fontFamily: 'inherit', textAlign: 'left', cursor: z ? 'pointer' : 'default',
             }}
           >
@@ -97,7 +99,7 @@ export default function Absenden({ werte, orgId, orgCode, protokollId, onGesende
 
   return (
     <section
-      style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'clip', marginBottom: 10 }}
+      style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'clip', marginBottom: 10 }}
     >
       <div style={{ padding: '11px 12px', borderBottom: `0.5px solid ${LINIE}` }}>
         <h2 style={{ margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
@@ -107,26 +109,26 @@ export default function Absenden({ werte, orgId, orgCode, protokollId, onGesende
       <div style={{ padding: '10px 12px 12px' }}>
         {haelt.length > 0 ? (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b91c1c', marginBottom: 5 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-fehler-text-2)', marginBottom: 5 }}>
               {haelt.length === 1 ? 'Eine Pflichtangabe fehlt' : `${haelt.length} Pflichtangaben fehlen`}
             </div>
-            {liste(haelt, '#b91c1c')}
+            {liste(haelt, 'var(--lbf-fehler-text-2)')}
           </>
         ) : null}
         {fehlt.length > 0 ? (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: '#b45309', marginBottom: 5 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-warn-text-2)', marginBottom: 5 }}>
               {fehlt.length === 1 ? 'Eine Angabe wird erwartet' : `${fehlt.length} Angaben werden erwartet`}
               <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, fontStyle: 'italic', marginLeft: 5, color: GRAU }}>
                 halten nicht auf
               </span>
             </div>
-            {liste(fehlt, '#b45309')}
+            {liste(fehlt, 'var(--lbf-warn-text-2)')}
           </>
         ) : null}
 
         {meldung ? (
-          <div style={{ padding: '8px 11px', marginBottom: 10, background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+          <div style={{ padding: '8px 11px', marginBottom: 10, background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
             {meldung}
           </div>
         ) : null}
@@ -135,7 +137,7 @@ export default function Absenden({ werte, orgId, orgCode, protokollId, onGesende
           type="button" onClick={absenden} disabled={haelt.length > 0 || sendet || !inFrist}
           style={{
             width: '100%', padding: '13px 12px', border: 'none', borderRadius: 12,
-            background: haelt.length > 0 || !inFrist ? 'rgba(96,8,18,0.15)' : ROT, color: '#fff',
+            background: haelt.length > 0 || !inFrist ? 'rgba(var(--lbf-rot-rgb),0.15)' : ROT_GRUND, color: '#fff',
             fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
             textTransform: 'uppercase', letterSpacing: '0.06em',
             cursor: haelt.length > 0 || sendet || !inFrist ? 'default' : 'pointer',

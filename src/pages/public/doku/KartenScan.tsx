@@ -37,10 +37,12 @@ import {
   type EhicDaten,
 } from '../../../lib/ehic'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 const TESSERACT_ESM = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.esm.min.js'
 const TESSERACT_UMD = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'
@@ -211,7 +213,7 @@ function ausVideo(video: HTMLVideoElement): HTMLCanvasElement {
 
 function Reihe({ marke, wert, hinweis }: { marke: string; wert?: string; hinweis?: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '7px 0', borderBottom: '0.5px solid rgba(96,8,18,0.07)' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '7px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.07)' }}>
       <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: GRAU, paddingTop: 2 }}>{marke}</span>
       <span style={{ textAlign: 'right' }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: wert ? TEXT : GRAU }}>{wert ?? 'nicht erkannt'}</span>
@@ -661,7 +663,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         {stand === 'wahl' ? (
           <>
             <button type="button" onClick={() => { setLiveDaten(egkLeer()); setStand('live') }}
-              style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff', marginBottom: 8 }}>
+              style={{ ...knopfGross, background: ROT_GRUND, border: 'none', color: '#fff', marginBottom: 8 }}>
               Rückseite vor die Kamera halten
             </button>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'center', marginBottom: 14, lineHeight: 1.45 }}>
@@ -698,8 +700,9 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                   style={{
                     position: 'absolute', right: 10, top: 10, width: 46, height: 46,
                     borderRadius: 23, cursor: 'pointer', fontFamily: 'inherit', fontSize: 20,
+                    // Liegt auf dem Kamerabild — bleibt in beiden Modi gleich.
                     background: licht ? '#fff' : 'rgba(0,0,0,0.5)',
-                    color: licht ? ROT : '#fff',
+                    color: licht ? '#600812' : '#fff',
                     border: '0.5px solid rgba(255,255,255,0.6)',
                   }}
                 >
@@ -709,7 +712,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
 
             {lichtFehler ? (
-              <div style={{ margin: '8px 0 0', padding: '8px 10px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT, lineHeight: 1.45 }}>
+              <div style={{ margin: '8px 0 0', padding: '8px 10px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT, lineHeight: 1.45 }}>
                 {lichtFehler}
               </div>
             ) : null}
@@ -723,7 +726,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
 
             {/* Was schon dasteht, während weitergelesen wird. */}
-            <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 8px', marginBottom: 10 }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 8px', marginBottom: 10 }}>
               <Reihe
                 marke="Versicherten-Nr." wert={liveEhic.versnr ?? liveDaten.versnr}
                 hinweis={(() => {
@@ -736,7 +739,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
 
             <button type="button" onClick={liveUebernehmen}
-              style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff', marginBottom: 8 }}>
+              style={{ ...knopfGross, background: ROT_GRUND, border: 'none', color: '#fff', marginBottom: 8 }}>
               Übernehmen, was bisher gelesen wurde
             </button>
             <button type="button" onClick={() => { liveAus(); kameraAus(); dateiRef.current?.click() }}
@@ -749,7 +752,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         {stand === 'lesen' ? (
           <div style={{ padding: '28px 8px', textAlign: 'center' }}>
             <div style={{ fontSize: 13, color: TEXT, marginBottom: 10 }}>Karte wird gelesen…</div>
-            <div style={{ height: 4, background: 'rgba(96,8,18,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: 4, background: 'rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${Math.round(fortschritt * 100)}%`, background: ROT, transition: 'width .2s' }} />
             </div>
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 10 }}>
@@ -761,7 +764,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
 
         {stand === 'fehler' ? (
           <>
-            <div style={{ padding: '14px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5, marginBottom: 10 }}>
+            <div style={{ padding: '14px 12px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5, marginBottom: 10 }}>
               {fehler || aufgegeben}
             </div>
             {vorderseiteAnbieten ? (
@@ -773,7 +776,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               </button>
             ) : null}
             <button type="button" onClick={() => { setFehler(''); setAufgegeben(''); setVorderseiteAnbieten(false); setStand('wahl') }}
-              style={{ ...knopfGross, background: ROT, border: 'none', color: '#fff' }}>
+              style={{ ...knopfGross, background: ROT_GRUND, border: 'none', color: '#fff' }}>
               Von vorn
             </button>
           </>
@@ -782,11 +785,11 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
         {stand === 'fertig' && daten ? (
           <>
             {aufgegeben ? (
-              <div style={{ padding: '10px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT, lineHeight: 1.45, marginBottom: 10 }}>
+              <div style={{ padding: '10px 12px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT, lineHeight: 1.45, marginBottom: 10 }}>
                 {aufgegeben}
               </div>
             ) : null}
-            <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 10px', marginBottom: 10 }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 10px', marginBottom: 10 }}>
               <Reihe
                 marke="Versicherten-Nr." wert={daten.versnr}
                 hinweis={daten.versnr
@@ -797,7 +800,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
               <Reihe marke="Kassennummer" wert={daten.kassennr} hinweis="wird nicht übernommen, nur zum Vergleichen" />
             </div>
 
-            <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 10px', marginBottom: 10 }}>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '4px 12px 10px', marginBottom: 10 }}>
               <Reihe marke="Nachname" wert={zuordnung.name} />
               <Reihe marke="Vorname" wert={zuordnung.vorname} />
               <Reihe
@@ -819,7 +822,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
             </div>
 
             {aendern ? (
-              <div style={{ background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '11px 12px', marginBottom: 10 }}>
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${ROT}`, padding: '11px 12px', marginBottom: 10 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 8 }}>
                   Von Hand zuordnen
                 </div>
@@ -827,16 +830,16 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                   <div style={{ fontSize: 13, fontStyle: 'italic', color: GRAU }}>Keine Textzeile erkannt.</div>
                 ) : (
                   daten.zeilen.map((zeile) => (
-                    <div key={zeile} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+                    <div key={zeile} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
                       <span style={{ flex: 1, fontSize: 14, color: TEXT, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{zeile}</span>
                       {(['name', 'vorname', 'kasse'] as Ziel[]).map((ziel) => (
                         <button
                           key={ziel} type="button" onClick={() => zielUmschalten(ziel, zeile)}
                           style={{
                             padding: '5px 9px', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11,
-                            background: zuordnung[ziel] === zeile ? ROT : '#fff',
+                            background: zuordnung[ziel] === zeile ? ROT_GRUND : 'var(--lbf-card)',
                             color: zuordnung[ziel] === zeile ? '#fff' : TEXT,
-                            border: `0.5px solid ${zuordnung[ziel] === zeile ? ROT : LINIE}`,
+                            border: `0.5px solid ${zuordnung[ziel] === zeile ? ROT_GRUND : LINIE}`,
                             fontWeight: zuordnung[ziel] === zeile ? 700 : 400,
                           }}
                         >
@@ -855,7 +858,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                 Neu aufnehmen
               </button>
               <button type="button" onClick={uebernehmen} disabled={anzahl === 0}
-                style={{ ...knopfGross, flex: 2, background: anzahl === 0 ? 'rgba(96,8,18,0.25)' : ROT, border: 'none', color: '#fff', fontSize: 12, cursor: anzahl === 0 ? 'default' : 'pointer' }}>
+                style={{ ...knopfGross, flex: 2, background: anzahl === 0 ? 'rgba(var(--lbf-rot-rgb),0.25)' : ROT_GRUND, border: 'none', color: '#fff', fontSize: 12, cursor: anzahl === 0 ? 'default' : 'pointer' }}>
                 {anzahl === 0 ? 'Nichts zu übernehmen' : `${anzahl} Angaben übernehmen`}
               </button>
             </div>
@@ -880,7 +883,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
           <>
             <details style={{ marginTop: 10 }}>
               <summary style={{ fontSize: 11, color: GRAU, cursor: 'pointer' }}>Erkannten Text anzeigen</summary>
-              <pre style={{ margin: '6px 0 0', padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 220, overflow: 'auto' }}>
+              <pre style={{ margin: '6px 0 0', padding: 10, background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 11, lineHeight: 1.4, color: TEXT, whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: 220, overflow: 'auto' }}>
                 {[`Fassung ${__BUILD__}`, ...befund, '', rohtext.trim() || '(kein Text erkannt)'].join('\n')}
               </pre>
             </details>
@@ -894,7 +897,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                 keine Angaben zur Person und kann weitergegeben werden, um die
                 Erkennung zu verbessern.
               </div>
-              <pre style={{ margin: 0, padding: 10, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 10.5, lineHeight: 1.45, color: TEXT, whiteSpace: 'pre', overflowX: 'auto', maxHeight: 220 }}>
+              <pre style={{ margin: 0, padding: 10, background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontSize: 10.5, lineHeight: 1.45, color: TEXT, whiteSpace: 'pre', overflowX: 'auto', maxHeight: 220 }}>
                 {[`Fassung ${__BUILD__}`, aufbauBericht(zeilenRef.current, zuteilung)].join('\n')}
               </pre>
               <button
@@ -906,7 +909,7 @@ export default function KartenScan({ onUebernehmen, onSchliessen }: {
                     () => setKopiert(false),
                   )
                 }}
-                style={{ marginTop: 8, padding: '8px 14px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 8, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                style={{ marginTop: 8, padding: '8px 14px', background: 'var(--lbf-card)', border: `0.5px solid ${ROT}`, borderRadius: 8, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
               >
                 {kopiert ? 'Kopiert' : 'Aufbau kopieren'}
               </button>

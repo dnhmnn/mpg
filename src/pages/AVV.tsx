@@ -132,12 +132,12 @@ export default function AVV() {
   const today = new Date().toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })
 
   const label: React.CSSProperties = {
-    fontSize: 10, fontWeight: 700, color: '#600812',
+    fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)',
     textTransform: 'uppercase', letterSpacing: '0.14em',
     marginBottom: 4, display: 'block',
   }
   const inp: React.CSSProperties = {
-    width: '100%', border: 'none', borderBottom: '1px solid rgba(96,8,18,0.2)',
+    width: '100%', border: 'none', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.2)',
     background: 'transparent', padding: '6px 0', fontSize: 14,
     color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none',
     boxSizing: 'border-box',
@@ -147,9 +147,9 @@ export default function AVV() {
     <div style={{ background: 'var(--warm-bg)', minHeight: '100dvh', fontFamily: "'Atkinson Hyperlegible', Georgia, serif" }}>
 
       {/* Header */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '24px 24px 20px', position: 'sticky', top: 0, zIndex: 10 }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: '24px 24px 20px', position: 'sticky', top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 680, margin: '0 auto' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Responda · Rechtliches</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Responda · Rechtliches</div>
           <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--lbf-text)', letterSpacing: '-0.02em' }}>
             Auftragsverarbeitungsvertrag
           </div>
@@ -162,8 +162,8 @@ export default function AVV() {
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 24px 80px' }}>
 
         {/* Vertragsparteien */}
-        <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812', padding: '20px 24px', marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>Vertragsparteien</div>
+        <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid var(--lbf-akzent)', padding: '20px 24px', marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>Vertragsparteien</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
             {/* Auftraggeber */}
@@ -194,7 +194,7 @@ export default function AVV() {
                 <div style={{ fontSize: 13 }}>91541 Rothenburg ob der Tauber</div>
                 <div style={{ fontSize: 13 }}>Deutschland</div>
                 <div style={{ marginTop: 8, fontSize: 13 }}>
-                  <a href="mailto:daniel@responda.systems" style={{ color: '#600812', textDecoration: 'none' }}>daniel@responda.systems</a>
+                  <a href="mailto:daniel@responda.systems" style={{ color: 'var(--lbf-akzent)', textDecoration: 'none' }}>daniel@responda.systems</a>
                 </div>
               </div>
             </div>
@@ -203,9 +203,9 @@ export default function AVV() {
 
         {/* Sections */}
         {SECTIONS.map(s => (
-          <div key={s.num} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid rgba(96,8,18,0.25)', padding: '20px 24px', marginBottom: 12 }}>
+          <div key={s.num} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid rgba(var(--lbf-rot-rgb),0.25)', padding: '20px 24px', marginBottom: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 12 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>{s.num}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', whiteSpace: 'nowrap' }}>{s.num}</span>
               <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--lbf-text)' }}>{s.title}</span>
             </div>
 
@@ -215,10 +215,10 @@ export default function AVV() {
 
             {'list' in s && s.list && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{s.list.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{s.list.label}</div>
                 {s.list.items.map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                    <span style={{ color: '#600812', fontWeight: 700, flexShrink: 0 }}>—</span>
+                    <span style={{ color: 'var(--lbf-akzent)', fontWeight: 700, flexShrink: 0 }}>—</span>
                     <span style={{ fontSize: 13, color: 'var(--lbf-text)', opacity: 0.9, lineHeight: 1.5 }}>{item}</span>
                   </div>
                 ))}
@@ -227,10 +227,10 @@ export default function AVV() {
 
             {'list2' in s && s.list2 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{s.list2.label}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>{s.list2.label}</div>
                 {s.list2.items.map((item, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
-                    <span style={{ color: '#600812', fontWeight: 700, flexShrink: 0 }}>—</span>
+                    <span style={{ color: 'var(--lbf-akzent)', fontWeight: 700, flexShrink: 0 }}>—</span>
                     <span style={{ fontSize: 13, color: 'var(--lbf-text)', opacity: 0.9, lineHeight: 1.5 }}>{item}</span>
                   </div>
                 ))}
@@ -240,8 +240,8 @@ export default function AVV() {
             {'toms' in s && s.toms && (
               <div style={{ marginTop: 4 }}>
                 {s.toms.map((tom, i) => (
-                  <div key={i} style={{ borderTop: i === 0 ? 'none' : '0.5px solid rgba(96,8,18,0.08)', padding: '10px 0', display: 'flex', gap: 12 }}>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap', minWidth: 140, paddingTop: 1 }}>{tom.label}</span>
+                  <div key={i} style={{ borderTop: i === 0 ? 'none' : '0.5px solid var(--lbf-border-light)', padding: '10px 0', display: 'flex', gap: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap', minWidth: 140, paddingTop: 1 }}>{tom.label}</span>
                     <span style={{ fontSize: 13, color: 'var(--lbf-text)', opacity: 0.9, lineHeight: 1.55 }}>{tom.text}</span>
                   </div>
                 ))}
@@ -251,8 +251,8 @@ export default function AVV() {
         ))}
 
         {/* Unterschriften */}
-        <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812', padding: '20px 24px', marginTop: 8 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 20 }}>Unterschriften</div>
+        <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid var(--lbf-akzent)', padding: '20px 24px', marginTop: 8 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 20 }}>Unterschriften</div>
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
             <div>
@@ -261,7 +261,7 @@ export default function AVV() {
                 <label style={label}>Datum</label>
                 <input style={inp} value={orgDate} onChange={e => setOrgDate(e.target.value)} placeholder="TT.MM.JJJJ" />
               </div>
-              <div style={{ borderTop: '1px solid rgba(96,8,18,0.2)', paddingTop: 8, marginTop: 32 }}>
+              <div style={{ borderTop: '1px solid rgba(var(--lbf-rot-rgb),0.2)', paddingTop: 8, marginTop: 32 }}>
                 <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
                   {orgName || '[Organisation]'}
                 </div>
@@ -272,7 +272,7 @@ export default function AVV() {
             <div>
               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 16 }}>Auftragnehmer</div>
               <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 4 }}>Rothenburg ob der Tauber, {today}</div>
-              <div style={{ borderTop: '1px solid rgba(96,8,18,0.2)', paddingTop: 8, marginTop: 32 }}>
+              <div style={{ borderTop: '1px solid rgba(var(--lbf-rot-rgb),0.2)', paddingTop: 8, marginTop: 32 }}>
                 <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Daniel Heilmann · Responda</div>
                 <div style={{ fontSize: 11, color: 'var(--warm-gray)', marginTop: 2 }}>Unterschrift</div>
               </div>

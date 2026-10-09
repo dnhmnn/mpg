@@ -17,15 +17,17 @@ import {
   fehlendeZeitpunkte, spaltentext, verlaufEintragen, verlaufSortiert, verlaufStreichen,
 } from './verlauf'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 const AMPEL: Record<string, { rand: string; grund: string }> = {
-  gut: { rand: '#86efac', grund: '#f0fdf4' },
-  warn: { rand: '#fde047', grund: '#fffbeb' },
-  kritisch: { rand: '#fca5a5', grund: '#fef2f2' },
+  gut: { rand: '#86efac', grund: 'var(--lbf-ok-grund)' },
+  warn: { rand: '#fde047', grund: 'var(--lbf-warn-grund)' },
+  kritisch: { rand: '#fca5a5', grund: 'var(--lbf-fehler-grund)' },
 }
 
 export default function Verlauf({ werte, setWerte }: {
@@ -57,7 +59,7 @@ export default function Verlauf({ werte, setWerte }: {
           <input
             type="time" name="verlauf_zeit" value={gezeigteZeit}
             onChange={(e) => setZeit(e.target.value)}
-            style={{ padding: '8px 10px', background: '#fff', border: `1px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 19, fontWeight: 600, color: TEXT }}
+            style={{ padding: '8px 10px', background: 'var(--lbf-input-bg)', border: `1px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 19, fontWeight: 600, color: TEXT }}
           />
         </label>
         {zeit ? (
@@ -96,7 +98,7 @@ export default function Verlauf({ werte, setWerte }: {
                   name={`verlauf_${v.id}`} inputMode="decimal" value={wert}
                   onChange={(e) => setEingabe((s) => ({ ...s, [v.id]: e.target.value }))}
                   style={{
-                    width: '100%', padding: '8px 30px 8px 9px', background: farbe ? farbe.grund : '#fff',
+                    width: '100%', padding: '8px 30px 8px 9px', background: farbe ? farbe.grund : 'var(--lbf-input-bg)',
                     border: `1px solid ${farbe ? farbe.rand : LINIE}`, borderRadius: 8,
                     fontFamily: 'inherit', fontSize: 19, fontWeight: 600, color: TEXT, boxSizing: 'border-box',
                   }}
@@ -116,7 +118,7 @@ export default function Verlauf({ werte, setWerte }: {
         type="button" onClick={eintragen} disabled={!etwasDa}
         style={{
           width: '100%', padding: '11px 12px',
-          background: etwasDa ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 10,
+          background: etwasDa ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.15)', border: 'none', borderRadius: 10,
           color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
           textTransform: 'uppercase', letterSpacing: '0.06em', cursor: etwasDa ? 'pointer' : 'default',
         }}
@@ -125,7 +127,7 @@ export default function Verlauf({ werte, setWerte }: {
       </button>
 
       {ohneZeit.length > 0 ? (
-        <div style={{ marginTop: 10, padding: '8px 10px', background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+        <div style={{ marginTop: 10, padding: '8px 10px', background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
           {ohneZeit.join(' und ')} {ohneZeit.length === 1 ? 'hat' : 'haben'} Messwerte, aber keinen Zeitpunkt —
           {ohneZeit.length === 1 ? ' er steht' : ' sie stehen'} deshalb nicht auf der Kurve.
         </div>
@@ -141,7 +143,7 @@ export default function Verlauf({ werte, setWerte }: {
             </span>
           </div>
           {spalten.map((s) => (
-            <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+            <div key={s.id} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '6px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
               <span style={{ fontSize: 15, fontWeight: 700, color: ROT, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                 {s.zeit || '--:--'}
               </span>

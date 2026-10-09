@@ -14,7 +14,7 @@ const FILE_TYPE_STYLES: Record<string, { color: string; label: string }> = {
   docx: { color: '#2563eb', label: 'DOC' },
   odt: { color: '#2563eb', label: 'ODT' },
   rtf: { color: '#2563eb', label: 'RTF' },
-  txt: { color: '#8a7a68', label: 'TXT' },
+  txt: { color: 'var(--warm-gray)', label: 'TXT' },
   xls: { color: '#16a34a', label: 'XLS' },
   xlsx: { color: '#16a34a', label: 'XLS' },
   ods: { color: '#16a34a', label: 'ODS' },
@@ -313,6 +313,7 @@ interface KonzeptForm {
   verknuepfte_termine: string[]
 }
 
+// Nur im Buch-Editor (helle Papierseite #fffef9) genutzt — Farben bewusst hart
 function TextBlockEditor({ initialText, onUpdate }: { initialText: string; onUpdate: (html: string) => void }) {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { if (ref.current) ref.current.innerHTML = initialText }, [])
@@ -327,14 +328,14 @@ function TextBlockEditor({ initialText, onUpdate }: { initialText: string; onUpd
         <div style={{ flex: 1, fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.18em' }}>Text</div>
         {[['B','bold'],['I','italic'],['U','underline']].map(([lbl, cmd]) => (
           <button key={cmd} type="button" onMouseDown={e => { e.preventDefault(); fmt(cmd) }}
-            style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: lbl === 'B' ? 700 : 400, fontStyle: lbl === 'I' ? 'italic' : 'normal', textDecoration: lbl === 'U' ? 'underline' : 'none', flexShrink: 0 }}>
+            style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.03)', cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: lbl === 'B' ? 700 : 400, fontStyle: lbl === 'I' ? 'italic' : 'normal', textDecoration: lbl === 'U' ? 'underline' : 'none', flexShrink: 0 }}>
             {lbl}
           </button>
         ))}
       </div>
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onUpdate(ref.current.innerHTML) }}
-        style={{ width: '100%', minHeight: 72, outline: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 0 6px 0', boxSizing: 'border-box' as const, wordBreak: 'break-word' } as React.CSSProperties}
+        style={{ width: '100%', minHeight: 72, outline: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 0 6px 0', boxSizing: 'border-box' as const, wordBreak: 'break-word' } as React.CSSProperties}
       />
     </>
   )
@@ -412,11 +413,12 @@ function PdfThumbnail({ url, typeColor }: { url: string; typeColor: string }) {
   )
 }
 
-function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove, onRename }: {
+function FileCard({ name, ext, url, accent, accentGrund, onSchreibstube, onVollbild, onRemove, onRename }: {
   name: string
   ext: string
   url: string
   accent: string
+  accentGrund?: string
   onSchreibstube?: () => void
   onVollbild?: () => void
   onRemove?: () => void
@@ -448,17 +450,17 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
   }
 
   return (
-    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderTop: `3px solid ${accent}`, position: 'relative' }}>
+    <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', display: 'flex', flexDirection: 'column', borderTop: `3px solid ${accent}`, position: 'relative' }}>
       {(onRemove || onRename) && (
         <button onClick={openManage} title="Optionen" style={{ position: 'absolute', top: 6, right: 6, zIndex: 1, width: 22, height: 22, borderRadius: '50%', background: 'rgba(26,14,8,0.5)', border: 'none', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>
         </button>
       )}
-      <a href={url} onClick={handleClick} style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', cursor: 'pointer', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(96,8,18,0.03)' }}>
+      <a href={url} onClick={handleClick} style={{ display: 'block', aspectRatio: '4 / 3', position: 'relative', textDecoration: 'none', cursor: 'pointer', background: isImage ? `center / cover no-repeat url("${url}")` : 'rgba(var(--lbf-rot-rgb),0.03)' }}>
         {ext === 'pdf' && <PdfThumbnail url={url} typeColor={typeStyle.color} />}
         {!isImage && ext !== 'pdf' && (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={typeStyle.color} strokeWidth="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" style={{ stroke: typeStyle.color }} strokeWidth="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span style={{ fontSize: 10, fontWeight: 700, color: typeStyle.color, letterSpacing: '0.06em' }}>{typeStyle.label}</span>
           </div>
         )}
@@ -469,14 +471,14 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
       {showChoice && (
         <>
           <div onClick={() => setShowChoice(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 900 }} />
-          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: '#fff', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: 'var(--lbf-card)', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
             <div title={name} style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
             <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Wie möchtest du die Datei öffnen?</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => { setShowChoice(false); onSchreibstube?.() }} style={{ background: '#600812', border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => { setShowChoice(false); onSchreibstube?.() }} style={{ background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 In Schreibstube öffnen
               </button>
-              <button onClick={() => { setShowChoice(false); openNormal() }} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => { setShowChoice(false); openNormal() }} style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Normal öffnen
               </button>
             </div>
@@ -486,7 +488,7 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
       {showManage && (
         <>
           <div onClick={() => setShowManage(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 900 }} />
-          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: '#fff', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: 'var(--lbf-card)', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
             {renaming ? (
               <>
                 <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginBottom: 8 }}>Neuer Name</div>
@@ -494,13 +496,13 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
                   value={renameValue}
                   onChange={e => setRenameValue(e.target.value)}
                   autoFocus
-                  style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', fontSize: 13, fontFamily: 'inherit', marginBottom: 14, color: 'var(--lbf-text)' }}
+                  style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', fontSize: 13, fontFamily: 'inherit', marginBottom: 14, color: 'var(--lbf-text)' }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <button onClick={() => { const v = renameValue.trim(); if (v) onRename?.(v); setShowManage(false) }} style={{ background: accent, border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button onClick={() => { const v = renameValue.trim(); if (v) onRename?.(v); setShowManage(false) }} style={{ background: accentGrund ?? accent, border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Speichern
                   </button>
-                  <button onClick={() => setRenaming(false)} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button onClick={() => setRenaming(false)} style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Zurück
                   </button>
                 </div>
@@ -510,12 +512,12 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
                 <div title={name} style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {onRename && (
-                    <button onClick={() => setRenaming(true)} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={() => setRenaming(true)} style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Umbenennen
                     </button>
                   )}
                   {onRemove && (
-                    <button onClick={() => { setShowManage(false); onRemove() }} style={{ background: '#fff', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 8, padding: '10px 0', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    <button onClick={() => { setShowManage(false); onRemove() }} style={{ background: 'var(--lbf-card)', border: '1px solid rgba(220,38,38,0.25)', borderRadius: 8, padding: '10px 0', color: '#dc2626', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Löschen
                     </button>
                   )}
@@ -532,8 +534,9 @@ function FileCard({ name, ext, url, accent, onSchreibstube, onVollbild, onRemove
   )
 }
 
-function AddFileCard({ accent, accentRgb, uploading, onUpload, onLibrary, accept }: {
+function AddFileCard({ accent, accentGrund, accentRgb, uploading, onUpload, onLibrary, accept }: {
   accent: string
+  accentGrund?: string
   accentRgb: string
   uploading: boolean
   onUpload: (file: File) => void
@@ -550,7 +553,7 @@ function AddFileCard({ accent, accentRgb, uploading, onUpload, onLibrary, accept
           <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Lade hoch…</span>
         ) : (
           <>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={accent} strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ stroke: accent }} strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             <span style={{ fontSize: 12, fontWeight: 700, color: accent }}>Hinzufügen</span>
           </>
         )}
@@ -560,13 +563,13 @@ function AddFileCard({ accent, accentRgb, uploading, onUpload, onLibrary, accept
       {showChoice && (
         <>
           <div onClick={() => setShowChoice(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 900 }} />
-          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: '#fff', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
+          <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', zIndex: 901, background: 'var(--lbf-card)', borderRadius: 14, padding: 18, width: 'min(300px, 86vw)', boxShadow: '0 8px 30px rgba(0,0,0,0.25)' }}>
             <div style={{ fontSize: 13, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 16 }}>Datei hinzufügen</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <button onClick={() => { setShowChoice(false); fileInputRef.current?.click() }} style={{ background: accent, border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => { setShowChoice(false); fileInputRef.current?.click() }} style={{ background: accentGrund ?? accent, border: 'none', borderRadius: 8, padding: '10px 0', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Hochladen
               </button>
-              <button onClick={() => { setShowChoice(false); onLibrary() }} style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => { setShowChoice(false); onLibrary() }} style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '10px 0', color: 'var(--lbf-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                 Aus Bibliothek
               </button>
             </div>
@@ -2483,44 +2486,49 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     .sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
 
   const anwesenheitsfarben: {[k: string]: {bg: string, label: string, color: string}} = {
-    da:           {bg: '#dcfce7', label: 'Da', color: '#166534'},
-    krank:        {bg: '#fef9c3', label: 'Kr', color: '#92400e'},
+    da:           {bg: 'var(--lbf-ok-grund-2)', label: 'Da', color: 'var(--lbf-ok-text)'},
+    krank:        {bg: 'var(--lbf-warn-grund-4)', label: 'Kr', color: 'var(--lbf-warn-text)'},
     entschuldigt: {bg: '#dbeafe', label: 'En', color: '#1e40af'},
-    fehlend:      {bg: '#fee2e2', label: 'Fe', color: '#991b1b'},
+    fehlend:      {bg: 'var(--lbf-fehler-grund-2)', label: 'Fe', color: 'var(--lbf-fehler-text)'},
   }
 
   // LBF helpers
   const addBtnStyle: React.CSSProperties = {
     width: 32, height: 32, borderRadius: 8, border: 'none',
-    background: 'rgba(96,8,18,0.07)', color: '#600812', fontSize: 20,
+    background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', fontSize: 20,
     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
     flexShrink: 0
   }
 
   function terminStatusColor(status: string): string {
-    if (status === 'geplant') return '#600812'
+    if (status === 'geplant') return 'var(--lbf-akzent)'
     if (status === 'laufend') return '#d97706'
     if (status === 'abgeschlossen') return '#16a34a'
     if (status === 'abgesagt') return 'rgba(139,113,90,0.4)'
-    return '#600812'
+    return 'var(--lbf-akzent)'
+  }
+
+  function terminStatusGrund(status: string): string {
+    if (status === 'laufend' || status === 'abgeschlossen' || status === 'abgesagt') return terminStatusColor(status)
+    return 'var(--lbf-akzent-grund)'
   }
 
   function terminStatusBg(status: string): string {
-    if (status === 'geplant') return 'rgba(96,8,18,0.07)'
+    if (status === 'geplant') return 'rgba(var(--lbf-rot-rgb),0.07)'
     if (status === 'laufend') return 'rgba(217,119,6,0.12)'
     if (status === 'abgeschlossen') return 'rgba(22,163,74,0.1)'
     if (status === 'abgesagt') return 'rgba(139,113,90,0.1)'
-    return 'rgba(96,8,18,0.07)'
+    return 'rgba(var(--lbf-rot-rgb),0.07)'
   }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* ── MASTHEAD HEADER ── */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Ausbildungen</div>
@@ -2560,7 +2568,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       </div>
 
       {/* ── VIEW NAVIGATION BAR ── */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.1)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as any }}>
         <div style={{ display: 'flex', paddingLeft: 'max(8px, env(safe-area-inset-left))', paddingRight: 'max(8px, env(safe-area-inset-right))', minWidth: 'max-content' }}>
           {([
             { key: 'termine' as const, label: 'Termine', icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>, count: undefined },
@@ -2581,11 +2589,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               }}
               className="ausb-nav-btn"
               style={{
-                color: viewMode === tab.key ? '#600812' : 'var(--warm-gray)',
+                color: viewMode === tab.key ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
                 borderBottomWidth: 2,
                 borderBottomStyle: 'solid',
-                borderBottomColor: viewMode === tab.key ? '#600812' : 'transparent',
-                background: 'none', border: 'none', borderBottom: viewMode === tab.key ? '2px solid #600812' : '2px solid transparent',
+                borderBottomColor: viewMode === tab.key ? 'var(--lbf-akzent)' : 'transparent',
+                background: 'none', border: 'none', borderBottom: viewMode === tab.key ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
                 padding: '6px 12px 0', height: 50, cursor: 'pointer', whiteSpace: 'nowrap',
                 fontFamily: 'inherit', position: 'relative',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
@@ -2594,7 +2602,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {tab.icon}
               <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{tab.label}</span>
               {tab.count != null && tab.count > 0 && (
-                <span style={{ position: 'absolute', top: 4, right: 6, background: '#600812', color: '#fff', borderRadius: 8, padding: '1px 4px', fontSize: 9, fontWeight: 700 }}>
+                <span style={{ position: 'absolute', top: 4, right: 6, background: 'var(--lbf-akzent-grund)', color: '#fff', borderRadius: 8, padding: '1px 4px', fontSize: 9, fontWeight: 700 }}>
                   {tab.count > 9 ? '9+' : tab.count}
                 </span>
               )}
@@ -2610,8 +2618,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           padding: '12px 20px', borderRadius: 12, fontWeight: 600, fontSize: 14,
           boxShadow: '0 4px 20px rgba(0,0,0,0.12)', whiteSpace: 'nowrap', zIndex: 9999,
           ...(message.type === 'success'
-            ? { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }
-            : { background: '#fff0f0', border: '1px solid rgba(96,8,18,0.2)', color: '#600812' })
+            ? { background: 'var(--lbf-ok-grund)', border: '1px solid #bbf7d0', color: 'var(--lbf-ok-text)' }
+            : { background: 'var(--lbf-fehler-grund-3)', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', color: 'var(--lbf-akzent)' })
         }}>
           {message.text}
         </div>
@@ -2661,7 +2669,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const isNext = termin.id === nextTerminId
                 const fillRatio = termin.max_teilnehmer > 0 ? teilnehmerCount / termin.max_teilnehmer : 0
                 const tnColor = fillRatio >= 1 ? '#16a34a' : fillRatio >= 0.5 ? '#d97706' : 'var(--warm-gray)'
-                const circleColor = termin.status === 'abgesagt' ? '#8a7a68' : statusColor
+                const circleColor = termin.status === 'abgesagt' ? 'var(--warm-gray)' : terminStatusGrund(termin.status)
                 return (
                   <div
                     key={termin.id}
@@ -2681,7 +2689,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.3 }}>{termin.name}</div>
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
                             {isNext && (
-                              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fde8d8', background: '#600812', padding: '2px 8px', borderRadius: 99 }}>Nächster</span>
+                              <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#fde8d8', background: 'var(--lbf-akzent-grund)', padding: '2px 8px', borderRadius: 99 }}>Nächster</span>
                             )}
                             <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: statusColor, background: statusBg, padding: '2px 8px', borderRadius: 99, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
                               {termin.status === 'laufend' && <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusColor, animation: 'pulseDot 1.4s ease-in-out infinite' }} />}
@@ -2701,7 +2709,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                     {/* 3-dot menu */}
                     <button
-                      style={{ position: 'absolute', top: 14, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                      style={{ position: 'absolute', top: 14, right: 10, background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                       onClick={(e) => {
                         e.stopPropagation()
                         const menuId = `menu-${termin.id}`
@@ -2723,7 +2731,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
                 {monthGroups.map(group => (
                   <div key={group.key}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{group.label}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{group.label}</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {group.items.map(renderTerminCard)}
                     </div>
@@ -2749,11 +2757,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div
                   key={t.id}
                   onClick={() => viewTeilnehmerDetail(t)}
-                  style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
+                  style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid var(--lbf-akzent)', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
                   {/* 3-dot menu */}
                   <button
-                    style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                    style={{ position: 'absolute', top: 10, right: 10, background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                     onClick={(e) => {
                       e.stopPropagation()
                       const menuId = `menu-${t.id}`
@@ -2770,7 +2778,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteTeilnehmer(t.id, `${t.vorname} ${t.nachname}`) }}>Löschen</button>
                   </div>
 
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{t.ausbildung_typ || 'Teilnehmer'}</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{t.ausbildung_typ || 'Teilnehmer'}</div>
                   <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4, paddingRight: 32 }}>{t.vorname} {t.nachname}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 8 }}>
                     {t.email && <div>{t.email}</div>}
@@ -2779,7 +2787,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
                   {t.lernbar_zugang_aktiv && (
                     <div style={{ marginTop: 8 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(96,8,18,0.07)', borderRadius: 5, padding: '3px 8px' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.08em', background: 'rgba(var(--lbf-rot-rgb),0.07)', borderRadius: 5, padding: '3px 8px' }}>
                         Lernbar aktiv
                       </span>
                     </div>
@@ -2805,10 +2813,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const assigned = modulProgress.filter(p => p.modul_id === m.id)
                 const done = assigned.filter(p => p.abgeschlossen_am)
                 return (
-                  <div key={m.id} onClick={() => openModulDetail(m)} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}>
+                  <div key={m.id} onClick={() => openModulDetail(m)} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid var(--lbf-akzent)', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}>
                     {/* 3-dot menu */}
                     <button
-                      style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                      style={{ position: 'absolute', top: 10, right: 10, background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                       onClick={(e) => {
                         e.stopPropagation()
                         const menuId = `menu-m-${m.id}`
@@ -2823,15 +2831,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditModul(m) }}>Bearbeiten</button>
                       <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteModul(m.id, m.name) }}>Löschen</button>
                     </div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{m.dauer_minuten} Min.</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>{m.dauer_minuten} Min.</div>
                     <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4, paddingRight: 32 }}>{m.name}</div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>{m.beschreibung && <div>{m.beschreibung}</div>}</div>
-                    <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
+                    <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
                       <span>{m.inhalte?.length || 0} Blöcke</span>
                       <span>{done.length}/{assigned.length} abgeschl.</span>
                     </div>
                     {assigned.length > 0 && (
-                      <div style={{height: '3px', background: 'rgba(96,8,18,0.06)', borderRadius: '0 0 12px 12px', overflow: 'hidden', margin: '0 -14px'}}>
+                      <div style={{height: '3px', background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: '0 0 12px 12px', overflow: 'hidden', margin: '0 -14px'}}>
                         <div style={{height: '100%', background: '#16a34a', width: `${Math.round((done.length / assigned.length) * 100)}%`, transition: 'width 0.3s'}} />
                       </div>
                     )}
@@ -2857,11 +2865,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div
                   key={k.id}
                   onClick={() => viewKonzeptDetail(k)}
-                  style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
+                  style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid var(--lbf-akzent)', boxShadow: 'var(--lbf-shadow)', padding: '14px 14px 10px', cursor: 'pointer', position: 'relative' }}
                 >
                   {/* 3-dot menu */}
                   <button
-                    style={{ position: 'absolute', top: 10, right: 10, background: 'rgba(250,249,247,0.9)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
+                    style={{ position: 'absolute', top: 10, right: 10, background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 8, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}
                     onClick={(e) => {
                       e.stopPropagation()
                       const menuId = `menu-${k.id}`
@@ -2876,12 +2884,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <button className="menu-item" onClick={(e) => { e.stopPropagation(); openEditKonzept(k) }}>Bearbeiten</button>
                     <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteKonzept(k.id, k.name) }}>Löschen</button>
                   </div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Konzept</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Konzept</div>
                   <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4, paddingRight: 32 }}>{k.name}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
                     {k.beschreibung && <div>{k.beschreibung}</div>}
                   </div>
-                  <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
+                  <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', margin: '0 -14px', padding: '8px 14px', display: 'flex', gap: 14, fontSize: 12, color: 'var(--warm-gray)', fontWeight: 600 }}>
                     <span>{k.lernziele?.length || 0} Lernziele</span>
                     <span>{k.handlungen?.length || 0} Handlungen</span>
                   </div>
@@ -2896,7 +2904,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {/* JAHRESÜBERSICHT VIEW */}
       {viewMode === 'jahresuebersicht' && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Jahresplan</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Jahresplan</div>
           <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>Jahresübersicht {aktuellesJahr}</div>
           <p style={{color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: '12px', marginBottom: '24px'}}>
             Anwesenheit aller Teilnehmer bei allen Terminen im Jahr {aktuellesJahr}
@@ -2912,16 +2920,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <table style={{borderCollapse: 'collapse', width: '100%', fontSize: '13px'}}>
                     <thead>
                       <tr>
-                        <th style={{textAlign: 'left', padding: '10px 12px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(96,8,18,0.1)', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', color: 'var(--lbf-text)'}}>
+                        <th style={{textAlign: 'left', padding: '10px 12px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(var(--lbf-rot-rgb),0.1)', position: 'sticky', left: 0, zIndex: 1, minWidth: '160px', color: 'var(--lbf-text)'}}>
                           Teilnehmer
                         </th>
                         {jahresTermine.map(t => (
-                          <th key={t.id} style={{padding: '10px 8px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', fontWeight: 600, color: 'var(--lbf-text)'}}>
+                          <th key={t.id} style={{padding: '10px 8px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(var(--lbf-rot-rgb),0.1)', textAlign: 'center', minWidth: '80px', fontWeight: 600, color: 'var(--lbf-text)'}}>
                             <div>{fmtDayMonth(t.start_datetime)}</div>
                             <div style={{fontWeight: 400, color: 'var(--warm-gray)', fontSize: '11px', maxWidth: '80px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{t.name}</div>
                           </th>
                         ))}
-                        <th style={{padding: '10px 12px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(96,8,18,0.1)', textAlign: 'center', minWidth: '80px', color: 'var(--lbf-text)'}}>
+                        <th style={{padding: '10px 12px', background: 'var(--warm-bg)', borderBottom: '2px solid rgba(var(--lbf-rot-rgb),0.1)', textAlign: 'center', minWidth: '80px', color: 'var(--lbf-text)'}}>
                           Gesamt
                         </th>
                       </tr>
@@ -2930,8 +2938,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {teilnehmer.map((t, idx) => {
                         let daCount = 0
                         return (
-                          <tr key={t.id} style={{background: idx % 2 === 0 ? '#ffffff' : '#faf9f7'}}>
-                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid rgba(96,8,18,0.06)', position: 'sticky', left: 0, background: idx % 2 === 0 ? '#ffffff' : '#faf9f7', zIndex: 1, color: 'var(--lbf-text)'}}>
+                          <tr key={t.id} style={{background: idx % 2 === 0 ? 'var(--lbf-card)' : 'var(--warm-bg)'}}>
+                            <td style={{padding: '10px 12px', fontWeight: 600, borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.06)', position: 'sticky', left: 0, background: idx % 2 === 0 ? 'var(--lbf-card)' : 'var(--warm-bg)', zIndex: 1, color: 'var(--lbf-text)'}}>
                               {t.vorname} {t.nachname}
                               {t.ausbildung_typ && <div style={{fontSize: '11px', color: 'var(--warm-gray)', fontWeight: 400}}>{t.ausbildung_typ}</div>}
                             </td>
@@ -2941,7 +2949,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               if (anw === 'da') daCount++
                               const cfg = anw ? anwesenheitsfarben[anw] : null
                               return (
-                                <td key={termin.id} style={{padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid rgba(96,8,18,0.06)'}}>
+                                <td key={termin.id} style={{padding: '10px 8px', textAlign: 'center', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.06)'}}>
                                   {cfg ? (
                                     <span style={{display: 'inline-block', padding: '2px 8px', borderRadius: '4px', background: cfg.bg, color: cfg.color, fontWeight: 700, fontSize: '11px'}}>
                                       {cfg.label}
@@ -2953,7 +2961,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 </td>
                               )
                             })}
-                            <td style={{padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid rgba(96,8,18,0.06)', fontWeight: 700}}>
+                            <td style={{padding: '10px 12px', textAlign: 'center', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.06)', fontWeight: 700}}>
                               <span style={{color: daCount > 0 ? '#16a34a' : 'var(--warm-gray)'}}>
                                 {daCount}/{jahresTermine.length}
                               </span>
@@ -2966,7 +2974,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 </div>
 
                 {/* Gesamtauswertung */}
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Gesamtauswertung</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Gesamtauswertung</div>
                 <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '12px'}}>
                   {teilnehmer.map(t => {
                     const ttList = terminTeilnehmer.filter(tt => tt.teilnehmer_id === t.id && jahresTermine.some(jt => jt.id === tt.termin_id))
@@ -2977,25 +2985,25 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     const prozent = jahresTermine.length > 0 ? Math.round((da / jahresTermine.length) * 100) : 0
                     const erreicht = prozent >= 80
                     return (
-                      <div key={t.id} style={{background: 'var(--lbf-card)', border: `1.5px solid ${erreicht ? '#16a34a' : 'rgba(96,8,18,0.1)'}`, borderRadius: '12px', padding: '16px', boxShadow: 'var(--lbf-shadow)'}}>
+                      <div key={t.id} style={{background: 'var(--lbf-card)', border: `1.5px solid ${erreicht ? '#16a34a' : 'rgba(var(--lbf-rot-rgb),0.1)'}`, borderRadius: '12px', padding: '16px', boxShadow: 'var(--lbf-shadow)'}}>
                         <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px'}}>
                           <div>
                             <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)'}}>{t.vorname} {t.nachname}</div>
                             {t.ausbildung_typ && <div style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)'}}>{t.ausbildung_typ}</div>}
                           </div>
-                          <span style={{padding: '4px 10px', borderRadius: '6px', background: erreicht ? '#dcfce7' : '#fef2f2', color: erreicht ? '#166534' : '#991b1b', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em'}}>
+                          <span style={{padding: '4px 10px', borderRadius: '6px', background: erreicht ? 'var(--lbf-ok-grund-2)' : 'var(--lbf-fehler-grund)', color: erreicht ? 'var(--lbf-ok-text)' : 'var(--lbf-fehler-text)', fontWeight: 700, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.04em'}}>
                             {erreicht ? 'Erreicht' : 'Nicht erreicht'}
                           </span>
                         </div>
-                        <div style={{background: 'rgba(96,8,18,0.06)', borderRadius: '6px', height: '6px', marginBottom: '8px'}}>
-                          <div style={{background: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : '#600812', borderRadius: '6px', height: '6px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
+                        <div style={{background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: '6px', height: '6px', marginBottom: '8px'}}>
+                          <div style={{background: prozent >= 80 ? '#16a34a' : prozent >= 50 ? '#d97706' : 'var(--lbf-akzent)', borderRadius: '6px', height: '6px', width: `${Math.min(prozent, 100)}%`, transition: 'width 0.3s'}} />
                         </div>
                         <div style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)', display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
                           <span style={{color: '#16a34a'}}><b>{da}</b> Da</span>
                           <span style={{color: '#d97706'}}><b>{krank}</b> Krank</span>
                           <span style={{color: '#2563eb'}}><b>{entschuldigt}</b> Entsch.</span>
                           <span style={{color: '#dc2626'}}><b>{fehlend}</b> Fehlend</span>
-                          <span style={{marginLeft: 'auto', fontWeight: 700, color: '#600812'}}>{prozent}%</span>
+                          <span style={{marginLeft: 'auto', fontWeight: 700, color: 'var(--lbf-akzent)'}}>{prozent}%</span>
                         </div>
                       </div>
                     )
@@ -3010,7 +3018,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {/* ARCHIV VIEW */}
       {viewMode === 'archiv' && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Archiv</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Archiv</div>
           <p style={{fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: '12px', marginBottom: '24px'}}>
             Abgeschlossene Termine — nach Jahr sortiert
           </p>
@@ -3029,7 +3037,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   return (
                     <div key={jahr}>
                       <div style={{display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px'}}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>{jahr}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>{jahr}</div>
                         <span style={{fontStyle: 'italic', fontSize: '12px', color: 'var(--warm-gray)'}}>{jahrTermine.length} Termine</span>
                       </div>
                       <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
@@ -3048,7 +3056,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 cursor: 'pointer', display: 'flex', alignItems: 'stretch'
                               }}
                             >
-                              <div style={{ minWidth: 56, padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '0.5px solid rgba(96,8,18,0.1)', gap: 2 }}>
+                              <div style={{ minWidth: 56, padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', gap: 2 }}>
                                 <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
                                 <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 24, lineHeight: 1, color: 'rgba(139,113,90,0.6)' }}>{dayNum}</div>
                                 <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
@@ -3084,7 +3092,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {viewMode === 'lernfeed' && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Lernfeed</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Lernfeed</div>
             <p style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 12, margin: 0 }}>
               Lernbeiträge für den Unitas-Feed — erscheinen in der Lernbar deiner Teilnehmer
             </p>
@@ -3132,7 +3140,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   const tags: string[] = (() => { try { const t = b.tags; return Array.isArray(t) ? t : JSON.parse(t as any) } catch { return [] } })()
                   return (
                     <div key={b.id}>
-                      {/* Book cover */}
+                      {/* Book cover — Deckelfarben gehoeren dem Inhalt, bleiben hart */}
                       <div style={{ cursor: 'pointer', borderRadius: 10, overflow: 'hidden', aspectRatio: '3/4', position: 'relative', background: bildUrlC ? '#1a0e08' : cfgC.bg, boxShadow: '3px 5px 18px rgba(0,0,0,0.28), inset -3px 0 8px rgba(0,0,0,0.18)', marginBottom: 8 }}
                         onClick={() => openEditBeitrag(b)}>
                         <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: cfgC.spine, zIndex: 3 }} />
@@ -3155,10 +3163,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                       {/* Actions */}
                       <div style={{ display: 'flex', gap: 5 }}>
-                        <button onClick={() => openEditBeitrag(b)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.04)', color: '#600812', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        <button onClick={() => openEditBeitrag(b)} style={{ flex: 1, padding: '5px 0', borderRadius: 7, border: '1px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.04)', color: 'var(--lbf-akzent)', fontWeight: 600, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Bearbeiten
                         </button>
-                        <button onClick={() => deleteBeitrag(b.id)} style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid rgba(96,8,18,0.12)', background: 'none', color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
+                        <button onClick={() => deleteBeitrag(b.id)} style={{ padding: '5px 8px', borderRadius: 7, border: '1px solid var(--lbf-border)', background: 'none', color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center' }}>
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                         </button>
                       </div>
@@ -3174,7 +3182,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {/* PRAESENTATIONEN LIST VIEW */}
       {viewMode === 'praesentationen' && (
         <div style={{ maxWidth: 900, margin: '0 auto', padding: '20px max(16px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Präsentationen</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Präsentationen</div>
           {praesentationenLoading ? (
             <div style={{ color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Lade…</div>
           ) : praesentationen.length === 0 ? (
@@ -3193,7 +3201,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 else if (firstSlide?.imageExistingUrl) coverImg = firstSlide.imageExistingUrl
                 const patBg = firstSlide?.pattern ? getPatternBg(firstSlide.pattern) : null
                 return (
-                  <div key={p.id} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', background: '#fff' }}>
+                  <div key={p.id} style={{ borderRadius: 12, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.1)', background: 'var(--lbf-card)' }}>
                     <div style={{ aspectRatio: '16/9', background: firstSlide?.bg || '#600812', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {coverImg && <img src={coverImg} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                       {patBg && <div style={{ position: 'absolute', inset: 0, backgroundImage: patBg.backgroundImage, backgroundSize: patBg.backgroundSize || 'auto', zIndex: 1 }} />}
@@ -3206,9 +3214,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <div style={{ padding: '10px 12px 12px' }}>
                       <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', marginBottom: 8, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.titel}</div>
                       <div style={{ display: 'flex', gap: 6 }}>
-                        <button onClick={() => openEditPraesentation(p)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
-                        <button onClick={() => { openEditPraesentation(p); setTimeout(() => { setShowPresentationMode(true); setPresentationModeSlideIdx(0) }, 50) }} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Präsentieren</button>
-                        <button onClick={() => deletePraesentation(p.id)} style={{ width: 30, padding: '6px 0', borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'transparent', color: 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+                        <button onClick={() => openEditPraesentation(p)} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
+                        <button onClick={() => { openEditPraesentation(p); setTimeout(() => { setShowPresentationMode(true); setPresentationModeSlideIdx(0) }, 50) }} style={{ flex: 1, padding: '6px 0', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>Präsentieren</button>
+                        <button onClick={() => deletePraesentation(p.id)} style={{ width: 30, padding: '6px 0', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'transparent', color: 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
                       </div>
                     </div>
                   </div>
@@ -3259,7 +3267,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const detailStatusColor = terminStatusColor(t.status)
         const detailStatusBg = terminStatusBg(t.status)
         const detailStatusLabel = t.status === 'geplant' ? 'Geplant' : t.status === 'laufend' ? 'Laufend' : t.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
-        const detailCircleColor = t.status === 'abgesagt' ? '#8a7a68' : detailStatusColor
+        const detailCircleColor = t.status === 'abgesagt' ? 'var(--warm-gray)' : terminStatusGrund(t.status)
 
         const TABS = [
           { key: 'info', label: 'Info', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> },
@@ -3271,9 +3279,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 350, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', overscrollBehavior: 'none' }}>
             {/* Header */}
-            <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: 14, paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))', flexShrink: 0 }}>
+            <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', paddingTop: 'calc(env(safe-area-inset-top) + 8px)', paddingBottom: 14, paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', marginBottom: 10 }}>
-                <button onClick={() => setTerminDetailPage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px', color: '#600812', marginLeft: -2, flexShrink: 0 }}>
+                <button onClick={() => setTerminDetailPage(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px', color: 'var(--lbf-akzent)', marginLeft: -2, flexShrink: 0 }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
                 <span style={{ marginLeft: 'auto', padding: '3px 9px', borderRadius: 99, background: detailStatusBg, color: detailStatusColor, fontWeight: 700, fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
@@ -3334,8 +3342,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     const ausstehend = alleRueckmeldungen.filter(r => r.status === 'ausstehend').map(r => r.display)
                     const rueckmeldungenGesamt = zusagen.length + absagen.length + ausstehend.length
                     return (
-                      <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
-                        <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Teilnehmer &amp; Einladung</div>
+                      <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-akzent)' }}>
+                        <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Teilnehmer &amp; Einladung</div>
                         <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 14 }}>
                           <span style={{ fontWeight: 700 }}>{getTerminTeilnehmerCount(t.id)}</span> / {t.max_teilnehmer} Teilnehmer
                         </div>
@@ -3353,11 +3361,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--warm-gray)', fontFamily: 'inherit', padding: 0, textDecoration: 'underline' }}
                                 >Neu generieren</button>
                               </div>
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, padding: '8px 12px' }}>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', background: 'var(--warm-bg)', border: '1px solid var(--lbf-border)', borderRadius: 8, padding: '8px 12px' }}>
                                 <span style={{ flex: 1, fontSize: 12, color: 'var(--lbf-text)', wordBreak: 'break-all' }}>{invUrl}</span>
                                 <button
                                   onClick={() => { navigator.clipboard.writeText(invUrl); showMessage('Link kopiert!', 'success') }}
-                                  style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 6, background: '#600812', border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                                  style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 6, background: 'var(--lbf-akzent-grund)', border: 'none', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
                                 >Kopieren</button>
                               </div>
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
@@ -3367,7 +3375,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   WhatsApp
                                 </a>
                                 <a href={`mailto:?subject=${encodeURIComponent('Einladung: '+t.name)}&body=${encodeURIComponent(invText)}`}
-                                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: '#600812', color: '#fff', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
+                                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 8, background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 12, textDecoration: 'none' }}>
                                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
                                   E-Mail
                                 </a>
@@ -3377,7 +3385,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         })() : (
                           <button
                             onClick={() => generateEinladungsToken(t)}
-                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: '#600812', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: rueckmeldungenGesamt > 0 ? 14 : 0 }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 8, background: 'var(--lbf-akzent-grund)', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginBottom: rueckmeldungenGesamt > 0 ? 14 : 0 }}
                           >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                             Einladungslink erstellen
@@ -3397,7 +3405,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Zugesagt ({zusagen.length})</div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     {zusagen.map((name, i) => (
-                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: '#dcfce7', color: '#166534', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
+                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -3407,7 +3415,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Abgesagt ({absagen.length})</div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     {absagen.map((name, i) => (
-                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: '#fee2e2', color: '#991b1b', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
+                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: 'var(--lbf-fehler-grund-2)', color: 'var(--lbf-fehler-text)', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -3431,14 +3439,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
                   {/* Termin-Infos */}
                   {t.description && (
-                    <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(96,8,18,0.15)' }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Beschreibung</div>
+                    <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(var(--lbf-rot-rgb),0.15)' }}>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Beschreibung</div>
                       <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>{t.description}</div>
                     </div>
                   )}
 
                   {/* Infos für Teilnehmer */}
-                  <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #16a34a' }}>
+                  <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 16px', marginBottom: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #16a34a' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
                       <div style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Infos für Teilnehmer</div>
                       <button onClick={() => { setEditingTNInfo(!editingTNInfo); setTNInfoText(t.teilnehmer_info || '') }}
@@ -3449,14 +3457,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {editingTNInfo ? (
                       <>
                         <textarea value={tnInfoText} onChange={e => setTNInfoText(e.target.value)} rows={4}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', lineHeight: 1.65, resize: 'vertical', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', lineHeight: 1.65, resize: 'vertical', boxSizing: 'border-box' }} />
                         <button onClick={async () => {
                           try { await pb.collection('ausbildungen_termine').update(t.id, { teilnehmer_info: tnInfoText }) } catch {}
                           setTermine(prev => prev.map(x => x.id === t.id ? { ...x, teilnehmer_info: tnInfoText } : x))
                           setTerminDetailPage(prev => prev ? { ...prev, teilnehmer_info: tnInfoText } : prev)
                           setEditingTNInfo(false)
                           showMessage('Gespeichert', 'success')
-                        }} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        }} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Speichern
                         </button>
                       </>
@@ -3468,9 +3476,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   </div>
 
                   {/* Lernkonzept / Infos für Dozenten */}
-                  <div style={{ background: '#fff', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                  <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-akzent)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Lernkonzept / Dozenten-Info</div>
+                      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Lernkonzept / Dozenten-Info</div>
                       <button onClick={() => { setEditingLernkonzept(!editingLernkonzept); setLernkonzeptText(t.lernkonzept || '') }}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 11, fontWeight: 600, padding: '2px 4px', fontFamily: 'inherit' }}>
                         {editingLernkonzept ? 'Abbrechen' : 'Bearbeiten'}
@@ -3479,14 +3487,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {editingLernkonzept ? (
                       <>
                         <textarea value={lernkonzeptText} onChange={e => setLernkonzeptText(e.target.value)} rows={5}
-                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', lineHeight: 1.65, resize: 'vertical', boxSizing: 'border-box' }} />
+                          style={{ width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', lineHeight: 1.65, resize: 'vertical', boxSizing: 'border-box' }} />
                         <button onClick={async () => {
                           try { await pb.collection('ausbildungen_termine').update(t.id, { lernkonzept: lernkonzeptText }) } catch {}
                           setTermine(prev => prev.map(x => x.id === t.id ? { ...x, lernkonzept: lernkonzeptText } : x))
                           setTerminDetailPage(prev => prev ? { ...prev, lernkonzept: lernkonzeptText } : prev)
                           setEditingLernkonzept(false)
                           showMessage('Gespeichert', 'success')
-                        }} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        }} style={{ marginTop: 8, padding: '8px 20px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Speichern
                         </button>
                       </>
@@ -3505,14 +3513,14 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   {/* Stats */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 20 }}>
                     {[
-                      { label: 'Eingeladen', val: forThisTermin.length + linkOnlyEinladungen.length, color: '#600812' },
+                      { label: 'Eingeladen', val: forThisTermin.length + linkOnlyEinladungen.length, color: 'var(--lbf-akzent)' },
                       { label: 'Zugesagt', val: zugesagtCount, color: '#d97706' },
                       { label: 'Anwesend', val: anwesendCount, color: '#16a34a' },
                       { label: 'Krank', val: forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'krank').length + linkOnlyEinladungen.filter(e => getEinladungAnwesenheitStatus(e) === 'krank').length, color: '#d97706' },
                       { label: 'Entschuldigt', val: forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'entschuldigt').length + linkOnlyEinladungen.filter(e => getEinladungAnwesenheitStatus(e) === 'entschuldigt').length, color: 'var(--warm-gray)' },
                       { label: 'Fehlend', val: forThisTermin.filter(tt => getAnwesenheitStatus(tt) === 'fehlend').length + linkOnlyEinladungen.filter(e => getEinladungAnwesenheitStatus(e) === 'fehlend').length, color: '#dc2626' },
                     ].map(s => (
-                      <div key={s.label} style={{ background: '#fff', borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+                      <div key={s.label} style={{ background: 'var(--lbf-card)', borderRadius: 10, padding: '12px 10px', textAlign: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
                         <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.val}</div>
                         <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>{s.label}</div>
                       </div>
@@ -3529,7 +3537,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <select
                       value=""
                       onChange={e => { if (e.target.value) addTeilnehmerToTermin(t.id, e.target.value) }}
-                      style={{ flex: 1, minWidth: 180, padding: '9px 10px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff', color: 'var(--lbf-text)', fontSize: 13, fontFamily: 'inherit' }}
+                      style={{ flex: 1, minWidth: 180, padding: '9px 10px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-input-bg)', color: 'var(--lbf-text)', fontSize: 13, fontFamily: 'inherit' }}
                     >
                       <option value="">Teilnehmer hinzufügen…</option>
                       {teilnehmer
@@ -3537,7 +3545,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         .map(tn => <option key={tn.id} value={tn.id}>{tn.vorname} {tn.nachname}</option>)}
                     </select>
                     <button onClick={() => addAlleTeilnehmerToTermin(t.id)}
-                      style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                      style={{ padding: '9px 14px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                       Alle hinzufügen
                     </button>
                   </div>
@@ -3560,10 +3568,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const statusColor = s === 'zugesagt' ? '#16a34a' : s === 'abgesagt' ? '#dc2626' : 'var(--warm-gray)'
                         const anw = getAnwesenheitStatus(tt)
                         return (
-                          <div key={tt.id} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                          <div key={tt.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>{name.charAt(0)}</span>
+                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(var(--lbf-rot-rgb),0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-akzent)', fontStyle: 'italic' }}>{name.charAt(0)}</span>
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
@@ -3571,7 +3579,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               </div>
                               {/* RSVP toggle */}
                               <button onClick={() => toggleRSVP(tt.id, tt.status)}
-                                style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(96,8,18,0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : '#fff', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                                style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${s === 'zugesagt' ? '#16a34a' : 'rgba(var(--lbf-rot-rgb),0.15)'}`, background: s === 'zugesagt' ? 'rgba(22,163,74,0.08)' : 'var(--lbf-card)', color: s === 'zugesagt' ? '#16a34a' : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                                 {s === 'zugesagt' ? 'Zugesagt' : 'Zusagen'}
                               </button>
                               <button onClick={() => removeTeilnehmerFromTermin(tt.id)} title="Vom Termin entfernen"
@@ -3583,7 +3591,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {anwOptions.map(opt => (
                                 <button key={opt.value} onClick={() => setAnwesenheitStatus(tt.id, anw, opt.value)}
-                                  style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${anw === opt.value ? opt.color : 'rgba(96,8,18,0.15)'}`, background: anw === opt.value ? opt.bg : '#fff', color: anw === opt.value ? opt.color : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${anw === opt.value ? opt.color : 'rgba(var(--lbf-rot-rgb),0.15)'}`, background: anw === opt.value ? opt.bg : 'var(--lbf-card)', color: anw === opt.value ? opt.color : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                   {opt.label}
                                 </button>
                               ))}
@@ -3597,10 +3605,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const statusLabel = s === 'zusagen' ? 'zugesagt' : s === 'absagen' ? 'abgesagt' : s
                         const anw = getEinladungAnwesenheitStatus(e)
                         return (
-                          <div key={e.id} style={{ background: '#fff', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                          <div key={e.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                <span style={{ fontSize: 14, fontWeight: 700, color: '#600812', fontStyle: 'italic' }}>{(e.name || '?').charAt(0)}</span>
+                              <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(var(--lbf-rot-rgb),0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-akzent)', fontStyle: 'italic' }}>{(e.name || '?').charAt(0)}</span>
                               </div>
                               <div style={{ flex: 1, minWidth: 0 }}>
                                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name}</div>
@@ -3609,7 +3617,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               {/* Rückmeldung einem Teilnehmer zuordnen (bei falsch geschriebenem Namen) */}
                               <select value="" onChange={ev => { if (ev.target.value) assignEinladung(e.id, ev.target.value) }}
                                 title="Diese Rückmeldung einem Teilnehmer zuordnen"
-                                style={{ maxWidth: 120, padding: '5px 6px', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.2)', background: '#fff', color: '#600812', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
+                                style={{ maxWidth: 120, padding: '5px 6px', borderRadius: 8, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'var(--lbf-input-bg)', color: 'var(--lbf-akzent)', fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
                                 <option value="">Zuordnen…</option>
                                 {forThisTermin.map(tt => (
                                   <option key={tt.teilnehmer_id} value={tt.teilnehmer_id}>{getTeilnehmerName(tt.teilnehmer_id)}</option>
@@ -3624,7 +3632,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                               {anwOptions.map(opt => (
                                 <button key={opt.value} onClick={() => setEinladungAnwesenheitStatus(e.id, anw, opt.value)}
-                                  style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${anw === opt.value ? opt.color : 'rgba(96,8,18,0.15)'}`, background: anw === opt.value ? opt.bg : '#fff', color: anw === opt.value ? opt.color : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                                  style={{ padding: '5px 12px', borderRadius: 8, border: `1px solid ${anw === opt.value ? opt.color : 'rgba(var(--lbf-rot-rgb),0.15)'}`, background: anw === opt.value ? opt.bg : 'var(--lbf-card)', color: anw === opt.value ? opt.color : 'var(--warm-gray)', fontSize: 11, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                                   {opt.label}
                                 </button>
                               ))}
@@ -3644,13 +3652,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div>
                   {/* Für Teilnehmer */}
                   <div style={{ marginBottom: 24 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#8a7a68', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Teilnehmer</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
                       {tnDateien.map((file, i) => {
                         const ext = file.split('.').pop()?.toLowerCase() ?? ''
                         const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
                         return (
-                          <FileCard key={`tn-${i}`} name={getFileDisplayName(file, anhangNames)} ext={ext} url={url} accent="#8a7a68"
+                          <FileCard key={`tn-${i}`} name={getFileDisplayName(file, anhangNames)} ext={ext} url={url} accent="var(--warm-gray)"
                             onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=anhang&index=${i}`) : undefined}
                             onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                             onRemove={() => removeTNFile(file)}
@@ -3662,7 +3670,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
                         const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
                         return (
-                          <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#8a7a68"
+                          <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="var(--warm-gray)"
                             onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
                             onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                             onRemove={() => unlinkTNFile(link.id)}
@@ -3670,20 +3678,20 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           />
                         )
                       })}
-                      <AddFileCard accent="#8a7a68" accentRgb="138,122,104" uploading={uploadingTNFile}
+                      <AddFileCard accent="var(--warm-gray)" accentRgb="138,122,104" uploading={uploadingTNFile}
                         onUpload={uploadTNFile} onLibrary={() => { setShowFilePicker('tn'); loadFilePicker() }} />
                     </div>
                   </div>
 
                   {/* Für Dozenten */}
                   <div>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Dozenten</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Für Dozenten</div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 10 }}>
                       {dozentDateien.map((file, i) => {
                         const ext = file.split('.').pop()?.toLowerCase() ?? ''
                         const url = `https://api.responda.systems/api/files/${t.collectionId}/${t.id}/${file}`
                         return (
-                          <FileCard key={`dz-${i}`} name={getFileDisplayName(file, dateienNames)} ext={ext} url={url} accent="#600812"
+                          <FileCard key={`dz-${i}`} name={getFileDisplayName(file, dateienNames)} ext={ext} url={url} accent="var(--lbf-akzent)" accentGrund="var(--lbf-akzent-grund)"
                             onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${t.id}&collection=ausbildungen_termine&field=dateien&index=${i}`) : undefined}
                             onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                             onRemove={() => removeDozentFile(file)}
@@ -3695,7 +3703,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         const ext = link.name.split('.').pop()?.toLowerCase() ?? ''
                         const url = `${pb.baseUrl}/api/files/files/${link.id}/${link.file}?token=${pb.authStore.token}`
                         return (
-                          <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="#600812"
+                          <FileCard key={link.id} name={link.name} ext={ext} url={url} accent="var(--lbf-akzent)" accentGrund="var(--lbf-akzent-grund)"
                             onSchreibstube={EDITABLE_EXTS.includes(ext) ? () => navigate(`/office?open=${link.id}`) : undefined}
                             onVollbild={ext === 'pdf' ? () => setPdfViewerUrl(url) : undefined}
                             onRemove={() => unlinkDozentFile(link.id)}
@@ -3703,7 +3711,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           />
                         )
                       })}
-                      <AddFileCard accent="#600812" accentRgb="96,8,18" uploading={uploadingDozentFile}
+                      <AddFileCard accent="var(--lbf-akzent)" accentGrund="var(--lbf-akzent-grund)" accentRgb="96,8,18" uploading={uploadingDozentFile}
                         accept=".pdf,.ppt,.pptx,.doc,.docx,.key,.pages"
                         onUpload={uploadDozentFile} onLibrary={() => { setShowFilePicker('dozent'); loadFilePicker() }} />
                     </div>
@@ -3716,16 +3724,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div>
                   {/* Dozenten-Team */}
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Dozenten-Team</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Dozenten-Team</div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                       {dozentTeam.map((d, i) => (
-                        <div key={d.user_id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#fff', borderRadius: 10, padding: '11px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderLeft: `3px solid ${d.isHaupt ? '#600812' : 'rgba(96,8,18,0.2)'}` }}>
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: d.isHaupt ? 'rgba(96,8,18,0.1)' : 'rgba(139,113,90,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <span style={{ fontSize: 13, fontWeight: 700, color: d.isHaupt ? '#600812' : 'var(--warm-gray)', fontStyle: 'italic' }}>{d.name?.charAt(0) || '?'}</span>
+                        <div key={d.user_id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lbf-card)', borderRadius: 10, padding: '11px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderLeft: `3px solid ${d.isHaupt ? 'var(--lbf-akzent)' : 'rgba(var(--lbf-rot-rgb),0.2)'}` }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: d.isHaupt ? 'rgba(var(--lbf-rot-rgb),0.1)' : 'rgba(139,113,90,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: d.isHaupt ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontStyle: 'italic' }}>{d.name?.charAt(0) || '?'}</span>
                           </div>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{d.name}</div>
-                            <div style={{ fontSize: 10, color: d.isHaupt ? '#600812' : 'var(--warm-gray)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.isHaupt ? 'Hauptdozent' : 'Co-Dozent'}</div>
+                            <div style={{ fontSize: 10, color: d.isHaupt ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{d.isHaupt ? 'Hauptdozent' : 'Co-Dozent'}</div>
                           </div>
                           {!d.isHaupt && (
                             <button onClick={() => removeCoDozent(d.user_id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 4 }}>
@@ -3739,7 +3747,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     {availableUsersForCoDozent.length > 0 && (
                       <div style={{ display: 'flex', gap: 8 }}>
                         <select defaultValue="" onChange={e => { if (e.target.value) { const u = allUsers.find(x => x.id === e.target.value); if (u) addCoDozent(u.id, u.name); e.target.value = '' } }}
-                          style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+                          style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-input-bg)', fontSize: 13, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
                           <option value="">+ Co-Dozent einladen …</option>
                           {availableUsersForCoDozent.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
                         </select>
@@ -3749,18 +3757,18 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
                   {/* Aufgaben aufteilen */}
                   <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Aufgaben aufteilen</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Aufgaben aufteilen</div>
                     {dozentAufgaben.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
                         {dozentAufgaben.map(a => (
-                          <div key={a.id} style={{ background: '#fff', borderRadius: 10, padding: '11px 14px', display: 'flex', alignItems: 'flex-start', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                            <button onClick={() => toggleDozentAufgabe(a.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${a.done ? '#16a34a' : 'rgba(96,8,18,0.25)'}`, background: a.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0, marginTop: 2 }}>
+                          <div key={a.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, padding: '11px 14px', display: 'flex', alignItems: 'flex-start', gap: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                            <button onClick={() => toggleDozentAufgabe(a.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${a.done ? '#16a34a' : 'rgba(var(--lbf-rot-rgb),0.25)'}`, background: a.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0, marginTop: 2 }}>
                               {a.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                             </button>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 14, color: a.done ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: a.done ? 'line-through' : 'none', lineHeight: 1.4 }}>{a.text}</div>
                               {a.assignee_name && (
-                                <div style={{ fontSize: 10, color: '#600812', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                <div style={{ fontSize: 10, color: 'var(--lbf-akzent)', fontWeight: 700, marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
                                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                                   {a.assignee_name}
                                 </div>
@@ -3777,15 +3785,15 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       <input value={newAufgabeText} onChange={e => setNewAufgabeText(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDozentAufgabe() } }}
                         placeholder="Neue Aufgabe beschreiben …"
-                        style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
+                        style={{ padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-input-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
                       <div style={{ display: 'flex', gap: 8 }}>
                         <select value={newAufgabeAssignee} onChange={e => setNewAufgabeAssignee(e.target.value)}
-                          style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 13, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
+                          style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-input-bg)', fontSize: 13, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }}>
                           <option value="">Zuständig: Kein</option>
                           {dozentTeam.map((d, i) => <option key={d.user_id || i} value={d.user_id}>{d.name}</option>)}
                         </select>
                         <button onClick={addDozentAufgabe} disabled={!newAufgabeText.trim()}
-                          style={{ padding: '9px 18px', borderRadius: 10, border: 'none', background: newAufgabeText.trim() ? '#600812' : 'rgba(96,8,18,0.1)', color: newAufgabeText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newAufgabeText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                          style={{ padding: '9px 18px', borderRadius: 10, border: 'none', background: newAufgabeText.trim() ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.1)', color: newAufgabeText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newAufgabeText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
                           +
                         </button>
                       </div>
@@ -3794,12 +3802,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
                   {/* Persönliche Checkliste */}
                   <div>
-                    <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Meine Checkliste</div>
+                    <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Meine Checkliste</div>
                     {dozentTodos.length > 0 && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 10 }}>
                         {dozentTodos.map(td => (
-                          <div key={td.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: '#fff', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                            <button onClick={() => toggleTodo(td.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${td.done ? '#16a34a' : 'rgba(96,8,18,0.25)'}`, background: td.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+                          <div key={td.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                            <button onClick={() => toggleTodo(td.id)} style={{ width: 20, height: 20, borderRadius: 6, border: `2px solid ${td.done ? '#16a34a' : 'rgba(var(--lbf-rot-rgb),0.25)'}`, background: td.done ? '#16a34a' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
                               {td.done && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>}
                             </button>
                             <span style={{ flex: 1, fontSize: 14, color: td.done ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: td.done ? 'line-through' : 'none' }}>{td.text}</span>
@@ -3814,9 +3822,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       <input value={newTodoText} onChange={e => setNewTodoText(e.target.value)}
                         onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTodo() } }}
                         placeholder="Persönlicher Punkt …"
-                        style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: '#fff', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
+                        style={{ flex: 1, padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-input-bg)', fontSize: 14, color: 'var(--lbf-text)', outline: 'none', fontFamily: 'inherit' }} />
                       <button onClick={addTodo} disabled={!newTodoText.trim()}
-                        style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: newTodoText.trim() ? '#600812' : 'rgba(96,8,18,0.1)', color: newTodoText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newTodoText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
+                        style={{ padding: '9px 16px', borderRadius: 10, border: 'none', background: newTodoText.trim() ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.1)', color: newTodoText.trim() ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 13, cursor: newTodoText.trim() ? 'pointer' : 'default', fontFamily: 'inherit' }}>
                         +
                       </button>
                     </div>
@@ -3828,12 +3836,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </div>
 
             {/* Bottom tab bar */}
-            <div style={{ background: '#fff', borderTop: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0 }}>
+            <div style={{ background: 'var(--lbf-card)', borderTop: '0.5px solid var(--lbf-border)', display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)', flexShrink: 0 }}>
               {TABS.map(tab => {
                 const active = terminDetailTab === tab.key
                 return (
                   <button key={tab.key} onClick={() => setTerminDetailTab(tab.key as any)}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'none', cursor: 'pointer', borderTop: active ? '2px solid #600812' : '2px solid transparent', color: active ? '#600812' : 'var(--warm-gray)', fontFamily: 'inherit' }}>
+                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, padding: '10px 4px 8px', border: 'none', background: 'none', cursor: 'pointer', borderTop: active ? '2px solid var(--lbf-akzent)' : '2px solid transparent', color: active ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontFamily: 'inherit' }}>
                     {tab.icon}
                     <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{tab.label}</span>
                   </button>
@@ -3844,7 +3852,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         )
       })()}
 
-      {/* BEITRAG BUCH-EDITOR */}
+      {/* BEITRAG BUCH-EDITOR — Buchseite bleibt papierhell (#fffef9), Farben darin bewusst hart */}
       {showBeitragModal && (() => {
         const TOTAL_PAGES = bookPages.length + 1
         const isTagsPage = bookPageIdx === bookPages.length
@@ -3897,7 +3905,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           return (
             <div key={block.id} style={{ marginBottom: 14, position: 'relative' }}>
               <button onClick={() => removeBlock(block.id)}
-                style={{ position: 'absolute', top: 0, right: 0, zIndex: 5, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.08)', color: '#8a7a68', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
+                style={{ position: 'absolute', top: 0, right: 0, zIndex: 5, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.08)', color: '#8a7a68', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
 
               {block.type === 'text' && (
                 <TextBlockEditor key={block.id} initialText={block.text} onUpdate={html => updateBlock(block.id, { text: html })} />
@@ -3908,7 +3916,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{ fontSize: 9, fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase' as const, letterSpacing: '0.18em' }}>Bild</div>
                   {block.imagePreview && (
                     <button onClick={() => setBeitragForm(prev => ({ ...prev, coverBlockId: prev.coverBlockId === block.id ? null : block.id }))}
-                      style={{ marginLeft: 'auto', marginRight: 26, display: 'flex', alignItems: 'center', gap: 4, background: beitragForm.coverBlockId === block.id ? beitragForm.color : 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ marginLeft: 'auto', marginRight: 26, display: 'flex', alignItems: 'center', gap: 4, background: beitragForm.coverBlockId === block.id ? beitragForm.color : 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill={beitragForm.coverBlockId === block.id ? '#fff' : '#600812'} stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                       <span style={{ fontSize: 10, fontWeight: 700, color: beitragForm.coverBlockId === block.id ? '#fff' : '#600812' }}>Titelbild</span>
                     </button>
@@ -3922,13 +3930,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   </div>
                 ) : (
                   <div style={{ marginRight: 26 }}>
-                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 72, border: '1.5px dashed rgba(96,8,18,0.18)', borderRadius: 8, cursor: 'pointer', gap: 5, background: 'rgba(96,8,18,0.02)' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 72, border: '1.5px dashed rgba(var(--lbf-rot-rgb),0.18)', borderRadius: 8, cursor: 'pointer', gap: 5, background: 'rgba(var(--lbf-rot-rgb),0.02)' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--lbf-rot-rgb),0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                       <span style={{ fontSize: 11, color: '#8a7a68', fontStyle: 'italic' }}>Bild hochladen</span>
                       <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) updateBlock(block.id, { imageFile: f, imagePreview: URL.createObjectURL(f) }) }} />
                     </label>
                     <button type="button" onClick={() => generateAIImage(block.id)} disabled={isGenThis || !beitragForm.titel.trim()}
-                      style={{ width: '100%', marginTop: 5, padding: '6px', borderRadius: 7, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', color: '#600812', fontSize: 11, fontWeight: 600, cursor: isGenThis || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      style={{ width: '100%', marginTop: 5, padding: '6px', borderRadius: 7, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.03)', color: '#600812', fontSize: 11, fontWeight: 600, cursor: isGenThis || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
                       {isGenThis ? '✦ Generiere…' : '✦ KI-Bild'}
                     </button>
                   </div>
@@ -3938,7 +3946,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {block.type === 'video' && <div style={{ marginRight: 26 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#065f46', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Video</div>
                 <input value={block.videoUrl} onChange={e => updateBlock(block.id, { videoUrl: e.target.value })} placeholder="YouTube-URL…"
-                  style={{ width: '100%', border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0', marginBottom: 8, boxSizing: 'border-box' as const }} />
+                  style={{ width: '100%', border: 'none', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0', marginBottom: 8, boxSizing: 'border-box' as const }} />
                 {block.videoUrl.trim() && (
                   <div style={{ position: 'relative', paddingBottom: '50%', background: '#000', borderRadius: 6, overflow: 'hidden' }}>
                     <iframe src={(() => { const yt = block.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?rel=0` : block.videoUrl })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
@@ -3949,16 +3957,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {block.type === 'quiz' && <div style={{ marginRight: 26 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#1e3a8a', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Quiz</div>
                 <textarea value={block.quizFrage} onChange={e => updateBlock(block.id, { quizFrage: e.target.value })} placeholder="Frage…" rows={2}
-                  style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontSize: 15, fontWeight: 600, color: '#1a0e08', lineHeight: 1.4, fontFamily: 'inherit', padding: '0 0 5px', boxSizing: 'border-box' as const, marginBottom: 8 }} />
+                  style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.12)', outline: 'none', background: 'transparent', fontSize: 15, fontWeight: 600, color: '#1a0e08', lineHeight: 1.4, fontFamily: 'inherit', padding: '0 0 5px', boxSizing: 'border-box' as const, marginBottom: 8 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {block.quizAntworten.map((a, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <button onClick={() => updateBlock(block.id, { quizRichtige: idx })}
-                        style={{ width: 17, height: 17, borderRadius: '50%', border: `2px solid ${block.quizRichtige === idx ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: block.quizRichtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        style={{ width: 17, height: 17, borderRadius: '50%', border: `2px solid ${block.quizRichtige === idx ? '#16a34a' : 'rgba(var(--lbf-rot-rgb),0.2)'}`, background: block.quizRichtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {block.quizRichtige === idx && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
                       </button>
                       <input value={a} onChange={e => { const arr = [...block.quizAntworten] as [string,string,string,string]; arr[idx] = e.target.value; updateBlock(block.id, { quizAntworten: arr }) }} placeholder={`Antwort ${idx + 1}…`}
-                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.08)', outline: 'none', background: 'transparent', fontSize: 13, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0' }} />
+                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', outline: 'none', background: 'transparent', fontSize: 13, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0' }} />
                     </div>
                   ))}
                 </div>
@@ -3974,16 +3982,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 Tags <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(kommagetrennt)</span>
               </div>
               <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="Reanimation, XABCDE, Beatmung…"
-                style={{ border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
+                style={{ border: 'none', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
               {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
                   {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
-                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
+                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', background: 'rgba(var(--lbf-rot-rgb),0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
                   ))}
                 </div>
               )}
               {/* File attachments */}
-              <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', paddingTop: 14 }}>
+              <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', paddingTop: 14 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
                   Dateien <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(PDF, Dokumente)</span>
                 </div>
@@ -4024,18 +4032,18 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {isFirstPage && (
                 <div style={{ padding: '10px 20px 0 26px', flexShrink: 0 }}>
                   <textarea autoFocus value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="Titel des Beitrags…" rows={2}
-                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: '0 0 8px', boxSizing: 'border-box' as const }} />
+                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.12)', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: '0 0 8px', boxSizing: 'border-box' as const }} />
                   <div style={{ paddingBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <button onClick={() => setBeitragForm(prev => ({ ...prev, gepinnt: !prev.gepinnt }))}
                       style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? beitragForm.color : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? beitragForm.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? beitragForm.color : 'rgba(var(--lbf-rot-rgb),0.2)'}`, background: beitragForm.gepinnt ? beitragForm.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {beitragForm.gepinnt && <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
                       </div>
                       <span style={{ fontSize: 11, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68' }}>{beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}</span>
                     </button>
                     <button onClick={generateBookViaAi} disabled={generatingBook || !beitragForm.titel.trim()}
                       title="Erstellt aus dem Titel einen kompletten Buch-Entwurf (Seiten + Quiz) — danach fachlich prüfen"
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', color: '#600812', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: generatingBook || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.03)', color: '#600812', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: generatingBook || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/></svg>
                       {generatingBook ? 'KI schreibt…' : 'Buch mit KI erstellen'}
                     </button>
@@ -4076,12 +4084,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{ display: 'flex', gap: 5, paddingBottom: 10, flexWrap: 'wrap' as const }}>
                     {(['text', 'bild', 'video', 'quiz'] as const).map(t => (
                       <button key={t} onClick={() => addBlock(t)}
-                        style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.04)', color: '#600812', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                        style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.04)', color: '#600812', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
                         {t === 'bild' ? 'Bild' : t === 'quiz' ? 'Quiz' : t === 'video' ? 'Video' : 'Text'}
                       </button>
                     ))}
                     <button onClick={() => setShowBlockPicker(false)}
-                      style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(96,8,18,0.1)', background: 'transparent', color: '#8a7a68', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                      style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.1)', background: 'transparent', color: '#8a7a68', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                   </div>
                 )}
               </div>
@@ -4098,7 +4106,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
               <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
               <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>
-                <button onClick={resetBeitragForm} style={{ background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
+                <button onClick={resetBeitragForm} style={{ background: 'rgba(var(--lbf-rot-rgb),0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -4106,7 +4114,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div style={{ fontSize: 9, color: '#8a7a68', fontStyle: 'italic' }}>{pageLabel}</div>
                 {!isFirstPage && !isTagsPage && bookPages.length > 1 && (
                   <button onClick={() => removePage(bookPageIdx)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 20px 0 0', color: 'rgba(96,8,18,0.3)', display: 'flex', alignItems: 'center' }}>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 20px 0 0', color: 'rgba(var(--lbf-rot-rgb),0.3)', display: 'flex', alignItems: 'center' }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                   </button>
                 )}
@@ -4114,31 +4122,31 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div key={`ep-${bookPageIdx}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `pageIn${bookDir >= 0 ? 'R' : 'L'} 0.2s ease-out` }}>
                 {renderPageContent()}
               </div>
-              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: '#fffef9', zIndex: 5 }}>
+              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', background: '#fffef9', zIndex: 5 }}>
                 <button onClick={() => goPage(-1)} disabled={!canPrev}
-                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? '#600812' : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(var(--lbf-rot-rgb),0.07)' : 'transparent', color: canPrev ? '#600812' : 'rgba(var(--lbf-rot-rgb),0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                   {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
                     <div key={i} onClick={() => { setBookDir(i > bookPageIdx ? 1 : -1); setBookPageIdx(i); setShowBlockPicker(false) }}
-                      style={{ width: i === bookPageIdx ? 20 : 6, height: 6, borderRadius: 3, background: i === bookPageIdx ? '#600812' : 'rgba(96,8,18,0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
+                      style={{ width: i === bookPageIdx ? 20 : 6, height: 6, borderRadius: 3, background: i === bookPageIdx ? '#600812' : 'rgba(var(--lbf-rot-rgb),0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
                   ))}
                   {!isTagsPage && (
                     <button onClick={addPage}
-                      style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginLeft: 2 }}>
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginLeft: 2 }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
                   )}
                 </div>
                 {canNext ? (
                   <button onClick={() => goPage(1)}
-                    style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>
                 ) : (
                   <button onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()}
-                    style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(96,8,18,0.12)' : '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
+                    style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(var(--lbf-rot-rgb),0.12)' : '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
                     {savingBeitrag ? 'Speichert…' : editingBeitragId ? 'Speichern' : 'Veröffentlichen'}
                   </button>
                 )}
@@ -4237,7 +4245,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   const u = allUsers.find((u: any) => u.id === uid)
                   setTerminForm({ ...terminForm, dozent_id: uid, dozent: u ? u.name : '' })
                 }}
-                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontFamily: 'inherit', fontSize: 14 }}
+                style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontFamily: 'inherit', fontSize: 14 }}
               >
                 <option value="">— Kein Dozent —</option>
                 {allUsers.map((u: any) => (
@@ -4304,10 +4312,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             .filter(tr => parseDate(tr.start_datetime).getFullYear() === jahr)
             .sort((a, b) => parseDate(a.start_datetime).getTime() - parseDate(b.start_datetime).getTime())
           const statusConfig: {[k:string]: {label:string, bg:string, color:string}} = {
-            da:           {label: 'Da',           bg: '#dcfce7', color: '#166534'},
-            krank:        {label: 'Krank',         bg: '#fef9c3', color: '#92400e'},
+            da:           {label: 'Da',           bg: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)'},
+            krank:        {label: 'Krank',         bg: 'var(--lbf-warn-grund-4)', color: 'var(--lbf-warn-text)'},
             entschuldigt: {label: 'Entschuldigt',  bg: '#dbeafe', color: '#1e40af'},
-            fehlend:      {label: 'Fehlend',       bg: '#fee2e2', color: '#991b1b'},
+            fehlend:      {label: 'Fehlend',       bg: 'var(--lbf-fehler-grund-2)', color: 'var(--lbf-fehler-text)'},
             zugesagt:     {label: 'Zugesagt',      bg: '#d1fae5', color: '#065f46'},
             abgesagt:     {label: 'Abgesagt',      bg: '#fce7f3', color: '#9d174d'},
             eingeladen:   {label: 'Eingeladen',    bg: 'var(--bg-subtle)', color: 'var(--text-secondary)'},
@@ -4364,31 +4372,31 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           <div className="modal show" onClick={() => setShowTeilnehmerDetailModal(false)}>
             <div className="modal-content large" onClick={e => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
               {/* LBF header */}
-              <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative', display: 'flex', alignItems: 'center', gap: 14}}>
-                <div style={{width: 44, height: 44, borderRadius: '50%', background: 'var(--lbf-border-light)', border: '1.5px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0}}>
+              <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: '20px 24px 16px', position: 'relative', display: 'flex', alignItems: 'center', gap: 14}}>
+                <div style={{width: 44, height: 44, borderRadius: '50%', background: 'var(--lbf-border-light)', border: '1.5px solid var(--lbf-akzent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-akzent)', flexShrink: 0}}>
                   {t.vorname[0]}{t.nachname[0]}
                 </div>
                 <div style={{flex: 1, minWidth: 0, paddingRight: 80}}>
-                  {t.ausbildung_typ && <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 4}}>{t.ausbildung_typ}</div>}
+                  {t.ausbildung_typ && <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 4}}>{t.ausbildung_typ}</div>}
                   <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)'}}>{t.vorname} {t.nachname}</div>
                   {t.email && <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2}}>{t.email}</div>}
                 </div>
                 <div style={{position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8}}>
-                  <button onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }} style={{background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 12px', color: '#600812', cursor: 'pointer', fontWeight: 700, fontSize: 12, fontFamily: 'inherit'}}>Bearbeiten</button>
-                  <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                  <button onClick={() => { setShowTeilnehmerDetailModal(false); openEditTeilnehmer(t) }} style={{background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, padding: '6px 12px', color: 'var(--lbf-akzent)', cursor: 'pointer', fontWeight: 700, fontSize: 12, fontFamily: 'inherit'}}>Bearbeiten</button>
+                  <button onClick={() => setShowTeilnehmerDetailModal(false)} style={{background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid var(--lbf-border)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                   </button>
                 </div>
               </div>
 
               {/* Tabs */}
-              <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: 'var(--lbf-card)', overflowX: 'auto'}}>
+              <div style={{display: 'flex', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', padding: '0 24px', background: 'var(--lbf-card)', overflowX: 'auto'}}>
                 {tabs.map(tab => (
                   <button key={tab.key} onClick={() => setSelectedTeilnehmerTab(tab.key)} style={{
                     padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
                     fontSize: 12, fontWeight: 700, fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em',
-                    color: selectedTeilnehmerTab === tab.key ? '#600812' : 'var(--warm-gray)',
-                    borderBottom: selectedTeilnehmerTab === tab.key ? '2px solid #600812' : '2px solid transparent',
+                    color: selectedTeilnehmerTab === tab.key ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
+                    borderBottom: selectedTeilnehmerTab === tab.key ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
                     marginBottom: '-0.5px', whiteSpace: 'nowrap' as const
                   }}>{tab.label}</button>
                 ))}
@@ -4425,7 +4433,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       </div>
                     </div>
                     {t.notizen && (
-                      <div style={{background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: '#92400e'}}>
+                      <div style={{background: 'var(--lbf-warn-grund)', border: '1px solid #fde68a', borderRadius: '8px', padding: '12px 14px', fontSize: '13px', color: 'var(--lbf-warn-text)'}}>
                         {t.notizen}
                       </div>
                     )}
@@ -4452,7 +4460,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           const mod = module.find(m => m.id === p.modul_id)
                           const isDone = !!p.abgeschlossen_am
                           return (
-                            <div key={p.id} style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px', background: isDone ? '#f0fdf4' : '#f8fafc', border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`}}>
+                            <div key={p.id} style={{display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 12px', borderRadius: '8px', background: isDone ? 'var(--lbf-ok-grund)' : '#f8fafc', border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`}}>
                               <div style={{width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0, background: isDone ? '#10b981' : '#cbd5e1'}} />
                               <div style={{flex: 1}}>
                                 <div style={{fontSize: '13px', fontWeight: 600}}>{mod?.name || 'Unbekanntes Modul'}</div>
@@ -4460,6 +4468,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{fontSize: '11px', color: '#059669', marginTop: '1px'}}>Abgeschlossen am {fmtDate(p.abgeschlossen_am)}</div>
                                 )}
                               </div>
+                              {/* bleibt hell: Schrift #065f46 gehoert nicht zum Token-Satz */}
                               <span style={{fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: isDone ? '#dcfce7' : '#f1f5f9', color: isDone ? '#065f46' : '#94a3b8'}}>
                                 {isDone ? 'Fertig' : 'Offen'}
                               </span>
@@ -4542,13 +4551,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               />
               {existingUserDetected && !teilnehmerForm.id && (
                 <div style={{
-                  background: '#f0fdf4',
+                  background: 'var(--lbf-ok-grund)',
                   border: '1px solid #86efac',
                   borderRadius: '6px',
                   padding: '10px',
                   marginTop: '8px',
                   fontSize: '13px',
-                  color: '#166534',
+                  color: 'var(--lbf-ok-text)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px'
@@ -4649,7 +4658,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               const statusColors: Record<string, string> = {geplant: '#3b82f6', laufend: '#10b981', abgeschlossen: '#6366f1', abgesagt: '#ef4444'}
               const sc = statusColors[selectedTermin.status] || '#64748b'
               return (
-                <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
+                <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: '20px 24px 16px', position: 'relative'}}>
                   <div style={{height: 3, background: sc, position: 'absolute', top: 0, left: 0, right: 0}} />
                   <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: sc, marginBottom: 6, marginTop: 4}}>
                     {statusLabels[selectedTermin.status]}
@@ -4674,12 +4683,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{position: 'absolute', top: 14, right: 14, display: 'flex', gap: 8}}>
                     <button
                       onClick={() => { setShowTerminDetailModal(false); openEditTermin(selectedTermin) }}
-                      style={{background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 12px', color: '#600812', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit'}}
+                      style={{background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, padding: '6px 12px', color: 'var(--lbf-akzent)', cursor: 'pointer', fontSize: 12, fontWeight: 700, fontFamily: 'inherit'}}
                     >
                       Bearbeiten
                     </button>
                     <button onClick={() => setShowTerminDetailModal(false)} style={{
-                      background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8,
+                      background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid var(--lbf-border)', borderRadius: 8,
                       width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
@@ -4693,7 +4702,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             })()}
 
             {/* Tabs */}
-            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: 'var(--lbf-card)', overflowX: 'auto'}}>
+            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', padding: '0 24px', background: 'var(--lbf-card)', overflowX: 'auto'}}>
               {([
                 {key: 'uebersicht', label: 'Übersicht'},
                 {key: 'teilnehmer', label: `Teilnehmer (${getTerminTeilnehmerCount(selectedTermin.id)})`},
@@ -4703,8 +4712,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <button key={tab.key} onClick={() => setCurrentTerminTab(tab.key)} style={{
                   padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
                   fontSize: 12, fontWeight: 700, fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em',
-                  color: currentTerminTab === tab.key ? '#600812' : 'var(--warm-gray)',
-                  borderBottom: currentTerminTab === tab.key ? '2px solid #600812' : '2px solid transparent',
+                  color: currentTerminTab === tab.key ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
+                  borderBottom: currentTerminTab === tab.key ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
                   marginBottom: '-0.5px', whiteSpace: 'nowrap' as const
                 }}>
                   {tab.label}
@@ -4842,7 +4851,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div style={{fontSize: '11px', fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px'}}>Zugesagt ({zusagen.length})</div>
                                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
                                   {zusagen.map(e => (
-                                    <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: '#dcfce7', color: '#166534', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
+                                    <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
                                   ))}
                                 </div>
                               </div>
@@ -4852,7 +4861,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div style={{fontSize: '11px', fontWeight: 700, color: '#dc2626', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '6px'}}>Abgesagt ({absagen.length})</div>
                                 <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
                                   {absagen.map(e => (
-                                    <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: '#fee2e2', color: '#991b1b', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
+                                    <span key={e.id} style={{padding: '4px 10px', borderRadius: '20px', background: 'var(--lbf-fehler-grund-2)', color: 'var(--lbf-fehler-text)', fontSize: '13px', fontWeight: 500}}>{e.name}</span>
                                   ))}
                                 </div>
                               </div>
@@ -4907,7 +4916,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               </div>
                               <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
                                 {linkedKonzept.handlungen.map((h, i) => (
-                                  <div key={i} style={{display: 'flex', gap: '10px', padding: '8px 12px', background: '#f0fdf4', borderRadius: '8px', borderLeft: '3px solid #10b981', fontSize: '13px', color: 'var(--text)'}}>
+                                  <div key={i} style={{display: 'flex', gap: '10px', padding: '8px 12px', background: 'var(--lbf-ok-grund)', borderRadius: '8px', borderLeft: '3px solid #10b981', fontSize: '13px', color: 'var(--text)'}}>
                                     <span style={{color: '#10b981', fontWeight: 700, fontSize: '11px', minWidth: '16px'}}>{i + 1}</span>
                                     {h}
                                   </div>
@@ -5012,11 +5021,11 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{display: 'flex', gap: '4px'}}>
                                     <button
                                       onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'zugesagt' ? 'eingeladen' : 'zugesagt' }).then(() => loadTerminTeilnehmer())}
-                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'zugesagt' ? '#dcfce7' : '#fff', color: s === 'zugesagt' ? '#166534' : '#64748b', borderColor: s === 'zugesagt' ? '#22c55e' : '#e2e8f0'}}
+                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'zugesagt' ? 'var(--lbf-ok-grund-2)' : 'var(--lbf-card)', color: s === 'zugesagt' ? 'var(--lbf-ok-text)' : '#64748b', borderColor: s === 'zugesagt' ? '#22c55e' : '#e2e8f0'}}
                                     >✓ Zugesagt</button>
                                     <button
                                       onClick={() => pb.collection('ausbildungen_termine_user').update(tt.id, { status: s === 'abgesagt' ? 'eingeladen' : 'abgesagt' }).then(() => loadTerminTeilnehmer())}
-                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'abgesagt' ? '#fee2e2' : '#fff', color: s === 'abgesagt' ? '#991b1b' : '#64748b', borderColor: s === 'abgesagt' ? '#ef4444' : '#e2e8f0'}}
+                                      style={{padding: '4px 10px', borderRadius: '6px', border: '1px solid', fontSize: '12px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', background: s === 'abgesagt' ? 'var(--lbf-fehler-grund-2)' : 'var(--lbf-card)', color: s === 'abgesagt' ? 'var(--lbf-fehler-text)' : '#64748b', borderColor: s === 'abgesagt' ? '#ef4444' : '#e2e8f0'}}
                                     >✕ Abgesagt</button>
                                   </div>
                                 </div>
@@ -5108,7 +5117,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       {/* Dozenten-Dokumente */}
                       {dokumente.filter(d => d.termin_id === selectedTermin.id && d.typ === 'dozent').length > 0 && (
                         <div style={{marginBottom: '24px'}}>
-                          <h4 style={{fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: '#b91c1c'}}>
+                          <h4 style={{fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: 'var(--lbf-fehler-text-2)'}}>
                             📚 Dozenten-Unterlagen
                           </h4>
                           <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
@@ -5482,8 +5491,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         <div className="modal show" onClick={() => setShowModulDetailModal(false)}>
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
             {/* Header */}
-            <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: '20px 24px 16px', position: 'relative'}}>
-              <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6}}>
+            <div style={{background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: '20px 24px 16px', position: 'relative'}}>
+              <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6}}>
                 Lernmodul · {selectedModul.dauer_minuten} Min.
               </div>
               <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.25, paddingRight: 50}}>{selectedModul.name}</div>
@@ -5491,8 +5500,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div style={{fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 4}}>{selectedModul.beschreibung}</div>
               )}
               <button onClick={() => setShowModulDetailModal(false)} style={{
-                position: 'absolute', top: 14, right: 14, background: 'rgba(96,8,18,0.06)',
-                border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer',
+                position: 'absolute', top: 14, right: 14, background: 'rgba(var(--lbf-rot-rgb),0.06)',
+                border: '0.5px solid var(--lbf-border)', borderRadius: 8, width: 30, height: 30, cursor: 'pointer',
                 color: 'var(--warm-gray)', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -5502,13 +5511,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
             </div>
 
             {/* Tabs */}
-            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.1)', padding: '0 24px', background: 'var(--lbf-card)'}}>
+            <div style={{display: 'flex', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', padding: '0 24px', background: 'var(--lbf-card)'}}>
               {(['inhalt', 'teilnehmer'] as const).map(tab => (
                 <button key={tab} onClick={() => setSelectedModulTab(tab)} style={{
                   padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer',
                   fontSize: 12, fontWeight: 700, fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em',
-                  color: selectedModulTab === tab ? '#600812' : 'var(--warm-gray)',
-                  borderBottom: selectedModulTab === tab ? '2px solid #600812' : '2px solid transparent',
+                  color: selectedModulTab === tab ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
+                  borderBottom: selectedModulTab === tab ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
                   marginBottom: '-0.5px', whiteSpace: 'nowrap' as const
                 }}>
                   {tab === 'inhalt' ? 'Inhalt' : `Teilnehmer (${modulProgress.filter(p => p.modul_id === selectedModul.id).length})`}
@@ -5563,6 +5572,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                       <div key={ai} style={{
                                         display: 'flex', alignItems: 'center', gap: '8px',
                                         padding: '6px 10px', borderRadius: '6px',
+                                        // bleibt hell: Antwortzeile im hellen Quiz-Kasten (#f5f3ff) mit fester dunkler Schrift
                                         background: ai === f.richtige ? '#d1fae5' : '#fff',
                                         border: `1px solid ${ai === f.richtige ? '#6ee7b7' : '#e2e8f0'}`,
                                         fontSize: '13px', color: ai === f.richtige ? '#065f46' : '#334155'
@@ -5646,7 +5656,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                             <div key={p.id} style={{
                               display: 'flex', alignItems: 'center', gap: '12px',
                               padding: '12px 14px', borderRadius: '10px',
-                              background: isDone ? '#f0fdf4' : '#fafafa',
+                              background: isDone ? 'var(--lbf-ok-grund)' : '#fafafa',
                               border: `1px solid ${isDone ? '#bbf7d0' : '#e2e8f0'}`
                             }}>
                               <div style={{
@@ -5671,6 +5681,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 onClick={() => toggleModulAbgeschlossen(p.id, isDone)}
                                 style={{
                                   padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit',
+                                  // bleibt hell: Schriftfarben #065f46/#475569 gehoeren nicht zum Token-Satz
                                   background: isDone ? '#dcfce7' : '#f1f5f9',
                                   color: isDone ? '#065f46' : '#475569'
                                 }}
@@ -5914,10 +5925,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           <div className="modal-content large" onClick={(e) => e.stopPropagation()} style={{padding: 0, overflow: 'hidden'}}>
             {/* Header */}
             <div style={{
-              background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+              background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)',
               padding: '20px 24px 16px', position: 'relative'
             }}>
-              <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6}}>
+              <div style={{fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6}}>
                 Ausbildungskonzept
               </div>
               <div style={{fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.25, paddingRight: 50}}>
@@ -5932,7 +5943,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 onClick={() => setShowKonzeptDetailModal(false)}
                 style={{
                   position: 'absolute', top: 14, right: 14,
-                  background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8,
+                  background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid var(--lbf-border)', borderRadius: 8,
                   width: 30, height: 30, cursor: 'pointer', color: 'var(--warm-gray)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}
@@ -6108,21 +6119,21 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {showFilePicker && (() => {
         const isTN = showFilePicker === 'tn'
         const currentLinks = isTN ? anhangLinks : dateienLinks
-        const accentColor = isTN ? '#8a7a68' : '#600812'
+        const accentColor = isTN ? 'var(--warm-gray)' : 'var(--lbf-akzent)'
         const query = filePickerSearch.toLowerCase()
         const filtered = filePickerItems.filter(f => f.name.toLowerCase().includes(query))
         return (
           <>
             <div onClick={() => setShowFilePicker(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 700 }} />
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 701, background: 'var(--warm-bg)', borderRadius: '20px 20px 0 0', maxHeight: '80dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-              <div style={{ flexShrink: 0, padding: '14px 16px 10px', borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.15)', margin: '0 auto 12px' }} />
+              <div style={{ flexShrink: 0, padding: '14px 16px 10px', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(var(--lbf-rot-rgb),0.15)', margin: '0 auto 12px' }} />
                 <div style={{ fontSize: 10, fontWeight: 700, color: accentColor, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
                   Aus Bibliothek — {isTN ? 'Für Teilnehmer' : 'Für Dozenten'}
                 </div>
                 <input value={filePickerSearch} onChange={e => setFilePickerSearch(e.target.value)}
                   placeholder="Suchen …" autoFocus
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '138,122,104' : '96,8,18'},0.15)`, background: '#fff', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: `1px solid rgba(${isTN ? '138,122,104' : '96,8,18'},0.15)`, background: 'var(--lbf-input-bg)', fontSize: 13, outline: 'none', fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' }} />
               </div>
               <div style={{ flex: 1, overflowY: 'auto', padding: '8px 16px 16px' }}>
                 {filePickerLoading ? (
@@ -6136,8 +6147,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       const alreadyLinked = currentLinks.some(l => l.id === item.id)
                       return (
                         <button key={item.id} onClick={() => isTN ? linkTNFile(item) : linkDozentFile(item)} disabled={alreadyLinked}
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '138,122,104' : '96,8,18'},0.04)` : '#fff', border: `1px solid rgba(${isTN ? '138,122,104' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={alreadyLinked ? '#16a34a' : accentColor} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', background: alreadyLinked ? `rgba(${isTN ? '138,122,104' : '96,8,18'},0.04)` : 'var(--lbf-card)', border: `1px solid rgba(${isTN ? '138,122,104' : '96,8,18'},${alreadyLinked ? '0.2' : '0.1'})`, borderRadius: 10, cursor: alreadyLinked ? 'default' : 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: alreadyLinked ? '#16a34a' : accentColor }} strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           <span style={{ flex: 1, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--lbf-text)' }}>{item.name}</span>
                           <span style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase', flexShrink: 0 }}>{ext}</span>
                           {alreadyLinked && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>}
@@ -6155,6 +6166,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       {/* PDF VIEWER */}
       {pdfViewerUrl && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 600, background: '#111', display: 'flex', flexDirection: 'column' }}>
+          {/* Betrachter bleibt dunkel: #1a0e08 ist hier Flaeche, nicht Schrift */}
           <div style={{ flexShrink: 0, height: 52, background: '#1a0e08', borderBottom: '0.5px solid rgba(253,232,216,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 20px' }}>
             <div style={{ fontStyle: 'italic', fontSize: 13, color: '#fde8d8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{decodeURIComponent(pdfViewerUrl.split('/').pop() || '')}</div>
             <button onClick={() => setPdfViewerUrl(null)} style={{ background: 'rgba(253,232,216,0.1)', border: 'none', borderRadius: 8, padding: '6px 14px', color: '#fde8d8', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Schließen</button>
@@ -6173,31 +6185,31 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         return (
           <div style={{ position: 'fixed', inset: 0, zIndex: 500, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
             {/* Editor header */}
-            <div style={{ flexShrink: 0, height: 54, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
+            <div style={{ flexShrink: 0, height: 54, background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 16px' }}>
               <button onClick={() => setShowPraesentationEditor(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 4, flexShrink: 0 }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
               </button>
               <input value={praesentationTitel} onChange={e => setPraesentationTitel(e.target.value)} placeholder="Titel der Präsentation …"
-                style={{ flex: 1, background: 'var(--warm-bg)', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, padding: '6px 12px', color: 'var(--lbf-text)', fontSize: 14, fontStyle: 'italic', outline: 'none', fontFamily: 'inherit' }} />
+                style={{ flex: 1, background: 'var(--warm-bg)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, padding: '6px 12px', color: 'var(--lbf-text)', fontSize: 14, fontStyle: 'italic', outline: 'none', fontFamily: 'inherit' }} />
               <button onClick={() => { setShowPresentationMode(true); setPresentationModeSlideIdx(0) }}
-                style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3" fill="#600812" stroke="none"/></svg>
+                style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, display: 'flex', alignItems: 'center', gap: 5 }}>
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="5 3 19 12 5 21 5 3" fill="currentColor" stroke="none"/></svg>
                 Präsentieren
               </button>
               <button onClick={savePraesentation} disabled={savingPraesentation || !praesentationTitel.trim()}
-                style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: praesentationTitel.trim() ? '#600812' : 'rgba(96,8,18,0.3)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: praesentationTitel.trim() ? 'pointer' : 'default', fontFamily: 'inherit', flexShrink: 0 }}>
+                style={{ padding: '7px 16px', borderRadius: 8, border: 'none', background: praesentationTitel.trim() ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.3)', color: '#fff', fontWeight: 700, fontSize: 12, cursor: praesentationTitel.trim() ? 'pointer' : 'default', fontFamily: 'inherit', flexShrink: 0 }}>
                 {savingPraesentation ? 'Speichert…' : 'Speichern'}
               </button>
             </div>
 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
               {/* Left: slide thumbnails */}
-              <div style={{ width: 130, background: '#fff', borderRight: '0.5px solid rgba(96,8,18,0.08)', overflowY: 'auto', padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
+              <div style={{ width: 130, background: 'var(--lbf-card)', borderRight: '0.5px solid var(--lbf-border-light)', overflowY: 'auto', padding: '10px 8px', display: 'flex', flexDirection: 'column', gap: 6, flexShrink: 0 }}>
                 {praesentationSlides.map((s, i) => {
                   const sPat = s.pattern ? getPatternBg(s.pattern) : null
                   return (
                     <div key={s.id} onClick={() => setCurrentSlideIdx(i)} style={{ position: 'relative', cursor: 'pointer' }}>
-                      <div style={{ aspectRatio: '16/9', background: s.bg, borderRadius: 5, border: i === currentSlideIdx ? '2px solid #600812' : '2px solid rgba(96,8,18,0.12)', overflow: 'hidden', position: 'relative' }}>
+                      <div style={{ aspectRatio: '16/9', background: s.bg, borderRadius: 5, border: i === currentSlideIdx ? '2px solid var(--lbf-akzent)' : '2px solid var(--lbf-border)', overflow: 'hidden', position: 'relative' }}>
                         {s.imagePreview && <img src={s.imagePreview} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />}
                         {sPat && <div style={{ position: 'absolute', inset: 0, backgroundImage: sPat.backgroundImage, backgroundSize: sPat.backgroundSize || 'auto', zIndex: 1 }} />}
                         {s.title && <div style={{ position: 'absolute', bottom: 3, left: 4, right: 4, fontSize: 5.5, color: s.textColor || '#fff', fontStyle: 'italic', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', zIndex: 2 }}>{s.title}</div>}
@@ -6209,7 +6221,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     </div>
                   )
                 })}
-                <button onClick={addPraesSlide} style={{ width: '100%', padding: '6px 0', borderRadius: 6, border: '1px dashed rgba(96,8,18,0.25)', background: 'transparent', color: '#600812', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>+ Folie</button>
+                <button onClick={addPraesSlide} style={{ width: '100%', padding: '6px 0', borderRadius: 6, border: '1px dashed rgba(var(--lbf-rot-rgb),0.25)', background: 'transparent', color: 'var(--lbf-akzent)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>+ Folie</button>
               </div>
 
               {/* Center: slide canvas */}
@@ -6234,55 +6246,55 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               </div>
 
               {/* Right: properties */}
-              <div style={{ width: 190, background: '#fff', borderLeft: '0.5px solid rgba(96,8,18,0.08)', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
+              <div style={{ width: 190, background: 'var(--lbf-card)', borderLeft: '0.5px solid var(--lbf-border-light)', overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Hintergrund</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Hintergrund</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 5 }}>
                     {COLORS.map(c => (
                       <button key={c} onClick={() => updateSlideField(slide.id, { bg: c })}
-                        style={{ width: '100%', aspectRatio: '1', borderRadius: 6, border: `2px solid ${slide.bg === c ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: c, cursor: 'pointer', padding: 0 }} />
+                        style={{ width: '100%', aspectRatio: '1', borderRadius: 6, border: `2px solid ${slide.bg === c ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: c, cursor: 'pointer', padding: 0 }} />
                     ))}
                   </div>
                   <input type="color" value={slide.bg} onChange={e => updateSlideField(slide.id, { bg: e.target.value })}
-                    style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid rgba(96,8,18,0.15)', marginTop: 6, cursor: 'pointer', background: 'transparent' }} />
+                    style={{ width: '100%', height: 28, borderRadius: 6, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', marginTop: 6, cursor: 'pointer', background: 'transparent' }} />
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Muster</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Muster</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
                     <button onClick={() => updateSlideField(slide.id, { pattern: null })}
-                      style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${!slide.pattern ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: 'var(--warm-bg)', cursor: 'pointer', fontSize: 7, color: 'var(--warm-gray)' }}>Kein</button>
+                      style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${!slide.pattern ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: 'var(--warm-bg)', cursor: 'pointer', fontSize: 7, color: 'var(--warm-gray)' }}>Kein</button>
                     {PATTERNS_P.map(pat => {
                       const pp = getPatternBg(pat)
                       return pp ? (
                         <button key={pat} onClick={() => updateSlideField(slide.id, { pattern: pat })}
-                          style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${slide.pattern === pat ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: slide.bg, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', cursor: 'pointer' }} />
+                          style={{ aspectRatio: '1', borderRadius: 5, border: `2px solid ${slide.pattern === pat ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: slide.bg, backgroundImage: pp.backgroundImage, backgroundSize: pp.backgroundSize || 'auto', cursor: 'pointer' }} />
                       ) : null
                     })}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Textfarbe</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Textfarbe</div>
                   <div style={{ display: 'flex', gap: 5 }}>
                     {['#ffffff','#fde8d8','#1a0e08','#600812'].map(c => (
                       <button key={c} onClick={() => updateSlideField(slide.id, { textColor: c })}
-                        style={{ flex: 1, height: 26, borderRadius: 6, border: `2px solid ${slide.textColor === c ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: c, cursor: 'pointer', padding: 0 }} />
+                        style={{ flex: 1, height: 26, borderRadius: 6, border: `2px solid ${slide.textColor === c ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: c, cursor: 'pointer', padding: 0 }} />
                     ))}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Layout</div>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Layout</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {(['title','content','image','blank'] as const).map(l => (
                       <button key={l} onClick={() => updateSlideField(slide.id, { layout: l })}
-                        style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${slide.layout === l ? '#600812' : 'rgba(96,8,18,0.12)'}`, background: slide.layout === l ? 'rgba(96,8,18,0.07)' : 'transparent', color: slide.layout === l ? '#600812' : 'var(--warm-gray)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', fontWeight: slide.layout === l ? 700 : 400 }}>
+                        style={{ padding: '5px 8px', borderRadius: 6, border: `1px solid ${slide.layout === l ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: slide.layout === l ? 'rgba(var(--lbf-rot-rgb),0.07)' : 'transparent', color: slide.layout === l ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', fontWeight: slide.layout === l ? 700 : 400 }}>
                         {l === 'title' ? 'Titel' : l === 'content' ? 'Inhalt' : l === 'image' ? 'Bild' : 'Leer'}
                       </button>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: 8, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Bild</div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px dashed rgba(96,8,18,0.25)', borderRadius: 8, cursor: 'pointer', color: '#600812', fontSize: 11 }}>
+                  <div style={{ fontSize: 8, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: 8 }}>Bild</div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', border: '1px dashed rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 8, cursor: 'pointer', color: 'var(--lbf-akzent)', fontSize: 11 }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                     Bild hochladen
                     <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
@@ -6397,8 +6409,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           max-width: 320px;
         }
 
-        .toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-        .toast-error   { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+        .toast-success { background: var(--lbf-ok-grund); border: 1px solid #bbf7d0; color: var(--lbf-ok-text); }
+        .toast-error   { background: var(--lbf-fehler-grund); border: 1px solid #fecaca; color: var(--lbf-fehler-text-2); }
 
         .action-toolbar {
           background: var(--bg-card);
@@ -6547,7 +6559,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         .menu-item:hover { background: var(--bg-hover); }
         .menu-item.danger { color: #dc2626; }
-        .menu-item.danger:hover { background: #fef2f2; }
+        .menu-item.danger:hover { background: var(--lbf-fehler-grund); }
 
         .card-type {
           font-size: 11px;
@@ -6588,9 +6600,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .status-badge.geplant      { background: #eff6ff; color: #1d4ed8; }
-        .status-badge.laufend      { background: #fffbeb; color: #b45309; }
-        .status-badge.abgeschlossen { background: #f0fdf4; color: #15803d; }
-        .status-badge.abgesagt     { background: #fef2f2; color: #b91c1c; }
+        .status-badge.laufend      { background: var(--lbf-warn-grund); color: var(--lbf-warn-text-2); }
+        .status-badge.abgeschlossen { background: var(--lbf-ok-grund); color: var(--lbf-ok-text-2); }
+        .status-badge.abgesagt     { background: var(--lbf-fehler-grund); color: var(--lbf-fehler-text-2); }
         .status-badge.lernbar      { background: #eff6ff; color: #1d4ed8; }
 
         .card-stats {
@@ -6738,7 +6750,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
         .btn-small:hover { background: var(--bg-hover); }
         .btn-small.danger { color: #dc2626; }
-        .btn-small.danger:hover { background: #fef2f2; }
+        .btn-small.danger:hover { background: var(--lbf-fehler-grund); }
         .btn-small.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
 
         .btn-icon {
@@ -6755,7 +6767,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         }
 
         .btn-icon:hover { background: var(--bg-hover); color: var(--text); }
-        .btn-icon.danger:hover { background: #fef2f2; color: #dc2626; }
+        .btn-icon.danger:hover { background: var(--lbf-fehler-grund); color: #dc2626; }
 
         .tabs {
           display: flex;

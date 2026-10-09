@@ -18,10 +18,12 @@ import { useState } from 'react'
 import { TRACER_GRUPPEN, tracerGruppeVon } from '../../../katalog/tracerdiagnosen'
 import { Knopf } from './DokuFeld'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 export default function Tracerdiagnose({ wert, onChange, onGruppe }: {
   wert: string
@@ -57,7 +59,7 @@ export default function Tracerdiagnose({ wert, onChange, onGruppe }: {
           type="button" onClick={() => onChange('')}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-            padding: '9px 11px', background: ROT, border: `0.5px solid ${ROT}`, borderRadius: 8,
+            padding: '9px 11px', background: ROT_GRUND, border: `0.5px solid ${ROT_GRUND}`, borderRadius: 8,
             fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
           }}
         >
@@ -90,7 +92,7 @@ export default function Tracerdiagnose({ wert, onChange, onGruppe }: {
             type="button" onClick={() => setGruppe('')}
             style={{
               display: 'flex', alignItems: 'center', gap: 7, width: '100%', marginBottom: 8,
-              padding: '8px 11px', background: 'rgba(96,8,18,0.05)',
+              padding: '8px 11px', background: 'var(--lbf-akzent-weich)',
               border: `0.5px solid ${LINIE}`, borderRadius: 8,
               fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
             }}
@@ -124,11 +126,11 @@ export default function Tracerdiagnose({ wert, onChange, onGruppe }: {
           onChange={(e) => setFrei(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (frei.trim()) waehlen(frei) } }}
           placeholder="oder eigenen Text"
-          style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
+          style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
         />
         <button
           type="button" onClick={() => frei.trim() && waehlen(frei)} disabled={!frei.trim()}
-          style={{ padding: '8px 14px', background: frei.trim() ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
+          style={{ padding: '8px 14px', background: frei.trim() ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
         >
           Übernehmen
         </button>
@@ -162,7 +164,7 @@ export function FuehrendeDiagnose({ wert, onChange }: {
           type="button" onClick={() => onChange('')}
           style={{
             display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-            padding: '9px 11px', background: 'rgba(96,8,18,0.05)',
+            padding: '9px 11px', background: 'var(--lbf-akzent-weich)',
             border: `0.5px solid ${LINIE}`, borderRadius: 8,
             fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
           }}
@@ -200,11 +202,11 @@ export function FuehrendeDiagnose({ wert, onChange }: {
           onChange={(e) => setFrei(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); if (frei.trim()) onChange(frei.trim()) } }}
           placeholder="oder eigenen Text"
-          style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
+          style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
         />
         <button
           type="button" onClick={() => frei.trim() && onChange(frei.trim())} disabled={!frei.trim()}
-          style={{ padding: '8px 14px', background: frei.trim() ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
+          style={{ padding: '8px 14px', background: frei.trim() ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
         >
           Übernehmen
         </button>

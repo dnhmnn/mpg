@@ -28,18 +28,18 @@ class ErrorBoundary extends React.Component<
           fontFamily: 'Inter, sans-serif',
           maxWidth: '600px',
           margin: '100px auto',
-          background: '#fee2e2',
+          background: 'var(--lbf-fehler-grund-2)',
           borderRadius: '12px',
           border: '2px solid #ef4444'
         }}>
           <h1 style={{ color: '#ef4444', fontSize: '24px', marginBottom: '16px' }}>
             ⚠️ Fehler beim Laden der App
           </h1>
-          <p style={{ marginBottom: '16px', color: '#991b1b' }}>
+          <p style={{ marginBottom: '16px', color: 'var(--lbf-fehler-text)' }}>
             <strong>Error:</strong> {this.state.error?.message}
           </p>
           <pre style={{
-            background: '#fff',
+            background: '#fff', // bleibt hell: Stacktrace-Schrift #1a1a1a ist hart, kein Token dafuer
             padding: '12px',
             borderRadius: '8px',
             overflow: 'auto',

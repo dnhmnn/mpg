@@ -40,14 +40,14 @@ function vitalStatus(key: string, raw: string): 'ok' | 'warn' | 'critical' | nul
   return 'critical'
 }
 const statusColor = { ok: '#16a34a', warn: '#d97706', critical: '#dc2626' }
-const statusBg    = { ok: '#f0fdf4', warn: '#fffbeb', critical: '#fef2f2' }
+const statusBg    = { ok: 'var(--lbf-ok-grund)', warn: 'var(--lbf-warn-grund)', critical: 'var(--lbf-fehler-grund)' }
 const statusBorder = { ok: '#86efac', warn: '#fde047', critical: '#fca5a5' }
 const VITAL_LABEL: Record<string, string> = {
   rr_sys:'RR syst.', rr_dia:'RR diast.', hf:'HF', af:'AF',
   spo2:'SpO₂', etco2:'etCO₂', temp:'Temp', bz_mg:'BZ', schmerz:'Schmerz',
 }
 
-const pill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '.35rem', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 999, padding: '.2rem .6rem', background: '#fff', fontSize: '.85rem', cursor: 'pointer', margin: '2px', color: '#1a0e08', fontFamily: 'inherit' }
+const pill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: '.35rem', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 999, padding: '.2rem .6rem', background: 'var(--lbf-card)', fontSize: '.85rem', cursor: 'pointer', margin: '2px', color: 'var(--lbf-text)', fontFamily: 'inherit' }
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }
 const now = () => { const d = new Date(); return d.toISOString().slice(0,16) }
 const pik = (ch: React.ReactNode, sz = 18) => (
@@ -349,13 +349,13 @@ export default function OrgPatienten() {
 
   if (success) return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: '#fff', borderLeft: `3px solid ${success === 'OFFLINE' ? '#d97706' : '#16a34a'}`, borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+      <div style={{ background: 'var(--lbf-card)', borderLeft: `3px solid ${success === 'OFFLINE' ? '#d97706' : '#16a34a'}`, borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
         <div style={{ width: 52, height: 52, background: success === 'OFFLINE' ? 'rgba(217,119,6,0.1)' : 'rgba(22,163,74,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           {success === 'OFFLINE' ? pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>, 26) : pik(<polyline points="20 6 9 17 4 12"/>, 26)}
         </div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', marginBottom: 8 }}>{success === 'OFFLINE' ? 'Offline gespeichert' : 'Erfolgreich übermittelt'}</div>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>{success === 'OFFLINE' ? 'Offline gespeichert' : 'Erfolgreich übermittelt'}</div>
         <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24 }}>{success === 'OFFLINE' ? 'Wird beim nächsten Öffnen automatisch übermittelt.' : success}</div>
-        <button style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={() => { setSuccess(null); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>Neues Formular</button>
+        <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={() => { setSuccess(null); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>Neues Formular</button>
       </div>
     </div>
   )
@@ -368,20 +368,20 @@ export default function OrgPatienten() {
 
   return <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)' }}>
     {/* ── MASTHEAD ── */}
-    <header style={{ position: 'sticky', top: 0, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+    <header style={{ position: 'sticky', top: 0, background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
       <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Protokoll</div>
+          <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Protokoll</div>
           <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{org.org_name}</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-          <button onClick={saveLocal} title="Speichern" style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#600812', padding: 0 }}>
+          <button onClick={saveLocal} title="Speichern" style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lbf-akzent)', padding: 0 }}>
             {pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>)}
           </button>
-          <button onClick={() => setMenuOpen(true)} title="Abschnitte" style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: '#600812', padding: 0 }}>
+          <button onClick={() => setMenuOpen(true)} title="Abschnitte" style={{ width: 34, height: 34, borderRadius: 8, background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lbf-akzent)', padding: 0 }}>
             {pik(<><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></>)}
           </button>
         </div>
@@ -395,11 +395,11 @@ export default function OrgPatienten() {
         onClick={() => setMenuOpen(false)}
       >
         <div
-          style={{ background: '#fff', width: 280, height: '100%', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: 2, borderLeft: '0.5px solid rgba(96,8,18,0.12)' }}
+          style={{ background: 'var(--lbf-card)', width: 280, height: '100%', overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: 2, borderLeft: '0.5px solid var(--lbf-border)' }}
           onClick={e => e.stopPropagation()}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem', paddingBottom: '.75rem', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812' }}>Abschnitte</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.75rem', paddingBottom: '.75rem', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)' }}>Abschnitte</span>
             <button onClick={() => setMenuOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--warm-gray)', lineHeight: 1, padding: 4 }}>×</button>
           </div>
           {STEPS.map((title, i) => (
@@ -412,16 +412,16 @@ export default function OrgPatienten() {
                 fontFamily: 'inherit', fontSize: 13,
                 fontWeight: activeStep === i ? 700 : 400,
                 fontStyle: activeStep === i ? 'italic' : 'normal',
-                background: activeStep === i ? 'rgba(96,8,18,0.07)' : 'transparent',
-                color: activeStep === i ? '#600812' : '#1a0e08',
-                borderLeft: activeStep === i ? '2px solid #600812' : '2px solid transparent',
+                background: activeStep === i ? 'rgba(var(--lbf-rot-rgb),0.07)' : 'transparent',
+                color: activeStep === i ? 'var(--lbf-akzent)' : 'var(--lbf-text)',
+                borderLeft: activeStep === i ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
               }}
             >
               <span style={{ opacity: .4, fontSize: 11, minWidth: 20, textAlign: 'right' }}>{i + 1}</span>
               {title}
             </button>
           ))}
-          <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', marginTop: '.5rem', paddingTop: '.75rem' }}>
+          <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', marginTop: '.5rem', paddingTop: '.75rem' }}>
             <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig(); setMenuOpen(false) } }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '.55rem .8rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'transparent', color: 'var(--warm-gray)' }}>
               {pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Formular zurücksetzen
             </button>
@@ -511,12 +511,12 @@ export default function OrgPatienten() {
             <div style={field}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                 <span style={lbl}>Notfallgeschehen</span>
-                <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '0.5px solid rgba(96,8,18,0.15)', flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 0, borderRadius: 8, overflow: 'hidden', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', flexShrink: 0 }}>
                   {(['freitext', 'klick'] as const).map(m => (
                     <button key={m} type="button" onClick={() => m === 'klick' ? openKlick() : setAnamneseModus(m)} style={{
                       padding: '4px 12px', border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                       fontSize: '.78rem', fontWeight: anamneseModus === m ? 700 : 400,
-                      background: anamneseModus === m ? '#600812' : 'transparent',
+                      background: anamneseModus === m ? 'var(--lbf-akzent-grund)' : 'transparent',
                       color: anamneseModus === m ? '#fff' : 'var(--warm-gray)',
                       transition: 'all .15s',
                     }}>{m === 'freitext' ? 'Freitext' : 'Klickstruktur'}</button>
@@ -547,8 +547,8 @@ export default function OrgPatienten() {
                 <span style={lbl}>Verlaufsbeschreibung</span>
                 <button type="button" onClick={() => setVerlaufModal(true)} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5,
-                  padding: '4px 10px', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.15)',
-                  background: 'rgba(96,8,18,0.04)', color: '#1a0e08', fontSize: '.78rem',
+                  padding: '4px 10px', borderRadius: 8, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)',
+                  background: 'rgba(var(--lbf-rot-rgb),0.04)', color: 'var(--lbf-text)', fontSize: '.78rem',
                   fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0,
                 }}>
                   {pik(<><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>, 14)} Vitalwerte
@@ -558,9 +558,9 @@ export default function OrgPatienten() {
               {verlaufModal && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
                   onClick={() => setVerlaufModal(false)}>
-                  <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 640, boxShadow: '0 8px 40px rgba(0,0,0,.3)', overflow: 'hidden' }}
+                  <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 640, boxShadow: '0 8px 40px rgba(0,0,0,.3)', overflow: 'hidden' }}
                     onClick={e => e.stopPropagation()}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.1rem', borderBottom: '0.5px solid rgba(96,8,18,0.12)', background: 'rgba(96,8,18,0.04)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem 1.1rem', borderBottom: '0.5px solid var(--lbf-border)', background: 'rgba(var(--lbf-rot-rgb),0.04)' }}>
                       <span style={{ fontWeight: 700, fontSize: '.95rem' }}>Vitalwerte — Zeile auswählen</span>
                       <button type="button" onClick={() => setVerlaufModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.3rem', cursor: 'pointer', color: 'var(--warm-gray)', lineHeight: 1 }}>×</button>
                     </div>
@@ -571,7 +571,7 @@ export default function OrgPatienten() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.84rem' }}>
                           <thead>
                             <tr>{['Zeit','RR sys','RR dia','HF','O₂','SpO₂','etCO₂','Schmerz',''].map(h =>
-                              <th key={h} style={{ background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.12)', padding: '5px 8px', fontWeight: 700, color: 'var(--warm-gray)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
+                              <th key={h} style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '0.5px solid var(--lbf-border)', padding: '5px 8px', fontWeight: 700, color: 'var(--warm-gray)', textAlign: 'left', whiteSpace: 'nowrap' }}>{h}</th>
                             )}</tr>
                           </thead>
                           <tbody>
@@ -589,12 +589,12 @@ export default function OrgPatienten() {
                                 <tr key={i} style={{ cursor: 'pointer' }}
                                   onClick={() => { setVerlaufText(parts.join(', ')); setVerlaufModal(false) }}>
                                   {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2','schmerz'] as (keyof VRow)[]).map(k => (
-                                    <td key={k} style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: '5px 8px', color: r[k] ? '#1a0e08' : 'var(--warm-gray)' }}>
+                                    <td key={k} style={{ border: '0.5px solid var(--lbf-border)', padding: '5px 8px', color: r[k] ? 'var(--lbf-text)' : 'var(--warm-gray)' }}>
                                       {r[k] || '–'}
                                     </td>
                                   ))}
-                                  <td style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: '5px 8px' }}>
-                                    <span style={{ color: '#600812', fontWeight: 700, fontSize: '.78rem', whiteSpace: 'nowrap' }}>Übernehmen</span>
+                                  <td style={{ border: '0.5px solid var(--lbf-border)', padding: '5px 8px' }}>
+                                    <span style={{ color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: '.78rem', whiteSpace: 'nowrap' }}>Übernehmen</span>
                                   </td>
                                 </tr>
                               )
@@ -612,7 +612,7 @@ export default function OrgPatienten() {
               {!hide('vormedikation_patient') && <div style={field}><label style={lbl}>Dauermedikation Patient (Freitext)<textarea style={ta} name="vormedikation_patient" /></label></div>}
             </div>
             <div style={field}>
-              <div style={{ fontWeight: 600, fontSize: 14, color: '#1a0e08', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--lbf-text)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
                 Dauermedikation
                 <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--warm-gray)' }}>Wirkstoff aus Datenbank übernehmen oder Barcode scannen</span>
               </div>
@@ -630,7 +630,7 @@ export default function OrgPatienten() {
               {photos.length > 0 && <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', marginTop: '.5rem' }}>
                 {photos.map((src, i) => (
                   <div key={i} style={{ position: 'relative' }}>
-                    <img src={src} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.12)' }} />
+                    <img src={src} style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 8, border: '0.5px solid var(--lbf-border)' }} />
                     <button type="button" onClick={() => setPhotos(p => p.filter((_, j) => j !== i))} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.5)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer', padding: '1px 5px', fontWeight: 700 }}>×</button>
                   </div>
                 ))}
@@ -643,13 +643,13 @@ export default function OrgPatienten() {
         <div style={{ display: currentOrigStep === 6 ? undefined : 'none' }}>
           <PubSection title="NACA / Bewusstsein / Verdachtsdiagnose" open icon={pik(<><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>)}>
             <div style={{ marginBottom: '.75rem' }}>
-              <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>NACA-Score</div>
+              <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>NACA-Score</div>
               <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                 {['0','I','II','III','IV','V','VI','VII'].map(v => <label key={v} style={pill}><input type="radio" name="naca" value={v} /> {v}</label>)}
               </div>
             </div>
             <div style={{ marginBottom: '.75rem' }}>
-              <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Bewusstsein</div>
+              <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Bewusstsein</div>
               <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                 {['nicht beurteilbar','wach','getrübt','bewusstlos','reaktionslos','auf Ansprache','Reaktion auf Schmerz','analgosediert / Narkose'].map(v => <label key={v} style={pill}><input type="radio" name="bewusstsein" value={v} /> {v}</label>)}
               </div>
@@ -675,7 +675,7 @@ export default function OrgPatienten() {
                 </div>
               </div>
             ))}
-            <div style={{ background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 8, padding: '8px 12px', fontWeight: 700, color: '#1a0e08' }}>GCS Summe: <span style={{ fontSize: '1.2rem' }}>{gcsSum || '—'}</span></div>
+            <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '0.5px solid var(--lbf-border)', borderRadius: 8, padding: '8px 12px', fontWeight: 700, color: 'var(--lbf-text)' }}>GCS Summe: <span style={{ fontSize: '1.2rem' }}>{gcsSum || '—'}</span></div>
             {renderCustomFields('gcs')}
           </PubSection>
         </div>
@@ -747,7 +747,7 @@ export default function OrgPatienten() {
                     return isEmpty ? [...vv.slice(0, -1), row] : [...vv, row]
                   })
                 }}
-                style={{ marginTop: '.5rem', width: '100%', padding: '.5rem .85rem', borderRadius: 10, border: '1px dashed #600812', background: 'rgba(107,15,26,0.04)', color: '#600812', fontWeight: 700, fontSize: '.88rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ marginTop: '.5rem', width: '100%', padding: '.5rem .85rem', borderRadius: 10, border: '1px dashed var(--lbf-akzent)', background: 'rgba(107,15,26,0.04)', color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: '.88rem', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 + Jetzt zum Verlauf hinzufügen
               </button>
@@ -782,22 +782,22 @@ export default function OrgPatienten() {
               <label style={lbl}>Sonstige Neurologie<input style={inp} name="neu_sonstige" type="text" /></label>
               <label style={lbl}>Zeitpunkt Symptombeginn<input style={inp} name="neu_zeit" type="time" /></label>
             </div>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Extremitätenbewegung</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Extremitätenbewegung</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.75rem', marginBottom: '.75rem' }}>
               {[['ext_r_arm','Arm rechts'],['ext_l_arm','Arm links'],['ext_r_bein','Bein rechts'],['ext_l_bein','Bein links']].map(([n,l]) => (
                 <div key={n}>
-                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: '#1a0e08' }}>{l}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--lbf-text)' }}>{l}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                     {['unauff.','vermindert','Parese','keine'].map(v => <label key={v} style={pill}><input type="radio" name={n} value={v} /> {v}</label>)}
                   </div>
                 </div>
               ))}
             </div>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Pupillen</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Pupillen</div>
             <div style={grid}>
               {[['pw_r','Pupille re.','lr_r'],['pw_l','Pupille li.','lr_l']].map(([n,l,lr]) => (
                 <div key={n}>
-                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: '#1a0e08' }}>{l}</div>
+                  <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--lbf-text)' }}>{l}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                     {['eng','mittel','weit'].map(v => <label key={v} style={pill}><input type="radio" name={n} value={v} /> {v}</label>)}
                     <label style={pill}><input type="checkbox" name={n === 'pw_r' ? 'pw_r_entrundet' : 'pw_l_entrundet'} /> entrundet</label>
@@ -863,7 +863,7 @@ export default function OrgPatienten() {
               ['Gynäkologie', [['e_gyn_schwanger','Schwangerschaft'],['e_gyn_geburt','Droh./präklin. Geburt'],['e_gyn_eklampsie','(Prä-)Eklampsie'],['e_gyn_blutung','Vag. Blutung'],['e_gyn_sonstige','Sonstige']]],
               ['Weitere', [['e_anaphylaxie','Anaphylaxie'],['e_hitze','Hitzeerschöpfung'],['e_unterkuehlung','Unterkühlung'],['e_sepsis','Sepsis/sept. Schock'],['e_influenza','Influenza'],['e_hepatitis_hiv','Hepatitis/HIV'],['e_lumbago','Akutes Lumbago'],['e_epistaxis','Epistaxis'],['e_soziales','Soziales Problem'],['e_behandlungskompl','Behandlungskompl.'],['e_weitere_sonstige','Sonstige']]],
             ] as [string, [string,string][]][]).map(([cat, items]) => (
-              <div key={cat} style={{ borderTop: '0.5px solid rgba(96,8,18,0.12)', paddingTop: '.5rem', marginTop: '.5rem' }}>
+              <div key={cat} style={{ borderTop: '0.5px solid var(--lbf-border)', paddingTop: '.5rem', marginTop: '.5rem' }}>
                 <div style={{ fontWeight: 700, fontSize: '.85rem', marginBottom: 4, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{cat}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                   {items.map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
@@ -879,25 +879,25 @@ export default function OrgPatienten() {
           <PubSection title="Verlauf" open icon={pik(<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>)}>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.85rem' }}>
-                <thead><tr>{['Zeit','RR sys','RR dia','HF','O₂ l/min','SpO₂ %','etCO₂',''].map(h => <th key={h} style={{ background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.12)', padding: '6px 8px', fontWeight: 700, color: '#1a0e08', textAlign: 'left' }}>{h}</th>)}</tr></thead>
+                <thead><tr>{['Zeit','RR sys','RR dia','HF','O₂ l/min','SpO₂ %','etCO₂',''].map(h => <th key={h} style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '0.5px solid var(--lbf-border)', padding: '6px 8px', fontWeight: 700, color: 'var(--lbf-text)', textAlign: 'left' }}>{h}</th>)}</tr></thead>
                 <tbody>
                   {verlauf.map((r, i) => (
                     <tr key={i}>
                       {(['zeit','rr_sys','rr_dia','hf','o2','spo2','etco2'] as (keyof VRow)[]).map(k => {
                         const st = k !== 'zeit' && k !== 'o2' ? vitalStatus(k, r[k]) : null
                         return (
-                          <td key={k} style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4, background: st === 'critical' ? '#fef2f2' : st === 'warn' ? '#fffbeb' : undefined }}>
+                          <td key={k} style={{ border: '0.5px solid var(--lbf-border)', padding: 4, background: st === 'critical' ? 'var(--lbf-fehler-grund)' : st === 'warn' ? 'var(--lbf-warn-grund)' : undefined }}>
                             <input style={{ ...inp, marginTop: 0, minWidth: 60, background: 'transparent' }} type={k === 'zeit' ? 'time' : 'number'} value={r[k]} onChange={e => setVerlauf(vv => vv.map((row, j) => j === i ? { ...row, [k]: e.target.value } : row))} />
                           </td>
                         )
                       })}
-                      <td style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4 }}><button type="button" onClick={() => setVerlauf(vv => vv.filter((_,j) => j !== i))} style={{ background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: '#600812', padding: '4px 8px' }}>×</button></td>
+                      <td style={{ border: '0.5px solid var(--lbf-border)', padding: 4 }}><button type="button" onClick={() => setVerlauf(vv => vv.filter((_,j) => j !== i))} style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: 'var(--lbf-akzent)', padding: '4px 8px' }}>×</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <button type="button" onClick={() => { const d = new Date(); const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; setVerlauf(vv => [...vv, { ...emptyV(), zeit: hhmm }]) }} style={{ marginTop: '.5rem', border: '0.5px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.04)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: '#600812', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+            <button type="button" onClick={() => { const d = new Date(); const hhmm = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; setVerlauf(vv => [...vv, { ...emptyV(), zeit: hhmm }]) }} style={{ marginTop: '.5rem', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'rgba(var(--lbf-rot-rgb),0.04)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--lbf-akzent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
 
             {/* Verlaufsgrafik */}
             {(() => {
@@ -930,7 +930,7 @@ export default function OrgPatienten() {
               const gridYBig   = Array.from({ length: Math.floor(gridH / bigStep)   + 1 }, (_, i) => i * bigStep)
 
               return (
-                <div style={{ marginTop: '1rem', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 10, overflow: 'hidden', background: '#fff' }}>
+                <div style={{ marginTop: '1rem', border: '0.5px solid var(--lbf-border)', borderRadius: 10, overflow: 'hidden', background: 'var(--lbf-card)' }}>
                   <div style={{ padding: '8px 12px 0', fontSize: '.78rem', fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '.04em' }}>Verlaufsgrafik</div>
                   <div style={{ overflowX: 'auto', padding: '0 4px 8px' }}>
                     <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', minWidth: 320, height: 'auto', display: 'block' }}>
@@ -940,11 +940,11 @@ export default function OrgPatienten() {
                       })}
                       {gridYBig.map(v => {
                         const y = cy(v, 0, gridH)
-                        return <line key={`gb${v}`} x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="rgba(96,8,18,0.15)" strokeWidth={0.8} />
+                        return <line key={`gb${v}`} x1={PAD.l} y1={y} x2={W - PAD.r} y2={y} stroke="rgba(var(--lbf-rot-rgb),0.15)" strokeWidth={0.8} />
                       })}
                       {rows.map((r, i) => {
                         const x = cx(times[i])
-                        return <line key={`gx${i}`} x1={x} y1={PAD.t} x2={x} y2={H - PAD.b} stroke="rgba(96,8,18,0.15)" strokeWidth={0.8} />
+                        return <line key={`gx${i}`} x1={x} y1={PAD.t} x2={x} y2={H - PAD.b} stroke="rgba(var(--lbf-rot-rgb),0.15)" strokeWidth={0.8} />
                       })}
                       <line x1={PAD.l} y1={PAD.t} x2={PAD.l} y2={H - PAD.b} stroke="var(--warm-gray)" strokeWidth={1} />
                       <line x1={PAD.l} y1={H - PAD.b} x2={W - PAD.r} y2={H - PAD.b} stroke="var(--warm-gray)" strokeWidth={1} />
@@ -1000,14 +1000,14 @@ export default function OrgPatienten() {
               ['Verkehr', [['v_vt_fussgaenger','Fußgänger'],['v_vt_escooter','E-Scooter'],['v_vt_fahrrad','Fahrrad'],['v_vt_ebike','E-Bike'],['v_vt_motorrad','Motorrad'],['v_vt_pkw','PKW'],['v_vt_lkw','LKW'],['v_vt_bus','Bus']]],
               ['Gewalt', [['v_gew_schlag','Schlag'],['v_gew_schuss','Schuss'],['v_gew_stich','Stich'],['v_gew_verbrechen','Gewaltverbrechen'],['v_gew_sonstige','Sonstige']]],
             ] as [string,[string,string][]][]).map(([cat, items]) => (
-              <div key={cat} style={{ borderTop: '0.5px solid rgba(96,8,18,0.12)', paddingTop: '.5rem', marginTop: '.5rem' }}>
+              <div key={cat} style={{ borderTop: '0.5px solid var(--lbf-border)', paddingTop: '.5rem', marginTop: '.5rem' }}>
                 <div style={{ fontWeight: 700, fontSize: '.85rem', marginBottom: 4, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '.5px' }}>{cat}</div>
                 <div style={{ display: 'flex', flexWrap: 'wrap' }}>
                   {items.map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
                 </div>
               </div>
             ))}
-            <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.12)', paddingTop: '.75rem', marginTop: '.75rem' }}>
+            <div style={{ borderTop: '0.5px solid var(--lbf-border)', paddingTop: '.75rem', marginTop: '.75rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '.5rem', marginBottom: '.5rem' }}>
                 <label style={lbl}>Verbrennung Grad<input style={inp} name="v_verbrennung_grad" type="text" placeholder="I / II / III" /></label>
                 <label style={lbl}>Verbrennung %<input style={inp} name="v_verbrennung_pct" type="number" /></label>
@@ -1022,15 +1022,15 @@ export default function OrgPatienten() {
         {/* Step 14: Atemwege / Lagerung / Immobilisation */}
         <div style={{ display: currentOrigStep === 15 ? undefined : 'none' }}>
           <PubSection title="Atemwege / Lagerung / Immobilisation" open icon={pik(<><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></>)}>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Atemwegsmanagement</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Atemwegsmanagement</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
               {[['awm_freihalten','Freihalten'],['awm_absaugung','Absaugung'],['awm_opa','OPA/Guedel'],['awm_npa','NPA/Wendl'],['awm_lma','LMA/SGA'],['awm_intubation','Intubation (OTI)']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Lagerung</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Lagerung</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.75rem' }}>
               {[['lag_flach','Flachlagerung'],['lag_schock','Schocklagerung'],['lag_ok_hoch','OK hoch'],['lag_ssl','Stabile Seitenlage'],['lag_sitzend','Sitzend'],['lag_haengend','Hängeposition']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Immobilisation</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Immobilisation</div>
             <div style={{ display: 'flex', flexWrap: 'wrap' }}>
               {[['immo_hws','HWS-Orthese'],['immo_spineboard','Spineboard'],['immo_vakuum','Vakuummatratze']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
@@ -1041,18 +1041,18 @@ export default function OrgPatienten() {
         {/* Step 15: Beatmung / Defibrillation */}
         <div style={{ display: currentOrigStep === 16 ? undefined : 'none' }}>
           <PubSection title="Beatmung / Defibrillation" open icon={pik(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>)}>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Beatmung</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Beatmung</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
               {[['beat_manuell','Manuell'],['beat_maschinell','Maschinell'],['beat_niv','NIV'],['beat_notfallnarkose','Notfallnarkose']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(120px,1fr))', gap: '.5rem', marginBottom: '.75rem' }}>
               {[['beat_fio2','FiO₂'],['beat_af','AF /min'],['beat_peep','PEEP mbar'],['beat_pmax','Pmax mbar'],['beat_amv','AMV l/min']].map(([n,l]) => <label key={n} style={lbl}>{l}<input style={inp} name={n} type="number" /></label>)}
             </div>
-            <div style={{ fontWeight: 700, marginBottom: 4, color: '#1a0e08' }}>Defibrillation</div>
+            <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Defibrillation</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
               {[['defi_aed','AED'],['defi_defi','Defi'],['defi_mono','Monophasisch'],['defi_bi','Biphasisch']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
-            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: '#1a0e08' }}>Erstanwendung durch</div>
+            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4, color: 'var(--lbf-text)' }}>Erstanwendung durch</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', marginBottom: '.5rem' }}>
               {[['defi_erstanw_laie','Laie'],['defi_erstanw_fr','First Resp.'],['defi_erstanw_rd','Rettungsdienst'],['defi_erstanw_arzt','Arzt']].map(([n,l]) => <label key={n} style={pill}><input type="checkbox" name={n} /> {l}</label>)}
             </div>
@@ -1076,21 +1076,21 @@ export default function OrgPatienten() {
             <div style={{ fontWeight: 700, margin: '1rem 0 .5rem' }}>Medikamente</div>
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '.9rem' }}>
-                <thead><tr>{['Medikament','Dosis','Einheit','Route','Zeit','Hinweis',''].map(h => <th key={h} style={{ background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.12)', padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: '#1a0e08' }}>{h}</th>)}</tr></thead>
+                <thead><tr>{['Medikament','Dosis','Einheit','Route','Zeit','Hinweis',''].map(h => <th key={h} style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '0.5px solid var(--lbf-border)', padding: '6px 8px', textAlign: 'left', fontWeight: 700, color: 'var(--lbf-text)' }}>{h}</th>)}</tr></thead>
                 <tbody>
                   {meds.map((m, i) => (
                     <tr key={i}>
-                      {(['name','dose','unit'] as (keyof Med)[]).map(k => <td key={k} style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m[k]} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,[k]:e.target.value} : r))} /></td>)}
-                      <td style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4 }}><select style={{ ...sel, marginTop: 0 }} value={m.route} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,route:e.target.value} : r))}><option value="">—</option>{['i.v.','i.o.','p.o.','s.c.','i.m.','inhal.'].map(v=><option key={v}>{v}</option>)}</select></td>
-                      <td style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} type="time" value={m.time} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,time:e.target.value} : r))} /></td>
-                      <td style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m.note} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,note:e.target.value} : r))} /></td>
-                      <td style={{ border: '0.5px solid rgba(96,8,18,0.12)', padding: 4 }}><button type="button" onClick={() => setMeds(ms => ms.filter((_,j) => j!==i))} style={{ background: 'rgba(96,8,18,0.06)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: '#600812', padding: '4px 8px' }}>×</button></td>
+                      {(['name','dose','unit'] as (keyof Med)[]).map(k => <td key={k} style={{ border: '0.5px solid var(--lbf-border)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m[k]} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,[k]:e.target.value} : r))} /></td>)}
+                      <td style={{ border: '0.5px solid var(--lbf-border)', padding: 4 }}><select style={{ ...sel, marginTop: 0 }} value={m.route} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,route:e.target.value} : r))}><option value="">—</option>{['i.v.','i.o.','p.o.','s.c.','i.m.','inhal.'].map(v=><option key={v}>{v}</option>)}</select></td>
+                      <td style={{ border: '0.5px solid var(--lbf-border)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} type="time" value={m.time} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,time:e.target.value} : r))} /></td>
+                      <td style={{ border: '0.5px solid var(--lbf-border)', padding: 4 }}><input style={{ ...inp, marginTop: 0 }} value={m.note} onChange={e => setMeds(ms => ms.map((r,j) => j===i ? {...r,note:e.target.value} : r))} /></td>
+                      <td style={{ border: '0.5px solid var(--lbf-border)', padding: 4 }}><button type="button" onClick={() => setMeds(ms => ms.filter((_,j) => j!==i))} style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 6, cursor: 'pointer', fontWeight: 700, color: 'var(--lbf-akzent)', padding: '4px 8px' }}>×</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <button type="button" onClick={() => setMeds(ms => [...ms, { name:'',dose:'',unit:'',route:'',time:'',note:'' }])} style={{ marginTop: '.5rem', border: '0.5px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.04)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: '#600812', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
+            <button type="button" onClick={() => setMeds(ms => [...ms, { name:'',dose:'',unit:'',route:'',time:'',note:'' }])} style={{ marginTop: '.5rem', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'rgba(var(--lbf-rot-rgb),0.04)', padding: '.45rem .75rem', borderRadius: 10, cursor: 'pointer', fontWeight: 600, color: 'var(--lbf-akzent)', fontSize: '.9rem', fontFamily: 'inherit' }}>+ Zeile hinzufügen</button>
             {renderCustomFields('zugang')}
           </PubSection>
         </div>
@@ -1134,10 +1134,11 @@ export default function OrgPatienten() {
               <label style={lbl}>Name Ausfüller<input style={inp} name="ausfueller_name" type="text" /></label>
               <label style={lbl}>Datum/Uhrzeit<input style={inp} name="ausfueller_zeit" type="datetime-local" defaultValue={now()} /></label>
             </div>
-            <div style={{ marginTop: '.75rem', border: '0.5px dashed rgba(96,8,18,0.15)', borderRadius: 12, padding: '.75rem', background: 'rgba(96,8,18,0.04)' }}>
-              <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a0e08' }}>Unterschrift (Finger/Maus)</div>
-              <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
-              <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '0.5px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.06)', padding: '.35rem .6rem', borderRadius: 8, cursor: 'pointer', fontSize: '.9rem', fontWeight: 600, color: '#1a0e08', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Signatur löschen</button>
+            <div style={{ marginTop: '.75rem', border: '0.5px dashed rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 12, padding: '.75rem', background: 'rgba(var(--lbf-rot-rgb),0.04)' }}>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--lbf-text)' }}>Unterschrift (Finger/Maus)</div>
+              {/* Zeichenfläche bleibt weiß mit schwarzer Tinte — die Unterschrift wird gedruckt. */}
+              <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid var(--lbf-border)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
+              <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'rgba(var(--lbf-rot-rgb),0.06)', padding: '.35rem .6rem', borderRadius: 8, cursor: 'pointer', fontSize: '.9rem', fontWeight: 600, color: 'var(--lbf-text)', fontFamily: 'inherit', display: 'inline-flex', alignItems: 'center', gap: 4 }}>{pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Signatur löschen</button>
             </div>
             {renderCustomFields('unterschrift')}
           </PubSection>
@@ -1147,18 +1148,18 @@ export default function OrgPatienten() {
     </PubWrap>
 
     {/* Bottom navigation */}
-    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: '#fff', borderTop: '0.5px solid rgba(96,8,18,0.12)', padding: '.75rem max(1rem, env(safe-area-inset-right)) calc(.75rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left))', zIndex: 20 }}>
+    <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, background: 'var(--lbf-card)', borderTop: '0.5px solid var(--lbf-border)', padding: '.75rem max(1rem, env(safe-area-inset-right)) calc(.75rem + env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left))', zIndex: 20 }}>
       <div style={{ maxWidth: 800, margin: '0 auto', display: 'flex', alignItems: 'center', gap: '.5rem' }}>
         <button
           disabled={activeStep === 0}
           onClick={() => setActiveStep(s => Math.max(0, s - 1))}
-          style={{ ...btnNav, background: activeStep === 0 ? 'rgba(96,8,18,0.03)' : 'rgba(96,8,18,0.06)', border: '1px solid rgba(96,8,18,0.15)', color: activeStep === 0 ? 'var(--warm-gray)' : '#600812', cursor: activeStep === 0 ? 'not-allowed' : 'pointer' }}
+          style={{ ...btnNav, background: activeStep === 0 ? 'rgba(var(--lbf-rot-rgb),0.03)' : 'rgba(var(--lbf-rot-rgb),0.06)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', color: activeStep === 0 ? 'var(--warm-gray)' : 'var(--lbf-akzent)', cursor: activeStep === 0 ? 'not-allowed' : 'pointer' }}
         >
           {pik(<polyline points="15 18 9 12 15 6"/>, 16)}
         </button>
 
         <div style={{ flex: 1, textAlign: 'center' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
             {activeStep + 1} / {totalSteps}
           </div>
           <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -1169,7 +1170,7 @@ export default function OrgPatienten() {
         {activeStep < totalSteps - 1 ? (
           <button
             onClick={() => setActiveStep(s => Math.min(totalSteps - 1, s + 1))}
-            style={{ ...btnNav, background: '#600812', color: '#fff', cursor: 'pointer', border: 'none' }}
+            style={{ ...btnNav, background: 'var(--lbf-akzent-grund)', color: '#fff', cursor: 'pointer', border: 'none' }}
           >
             Weiter {pik(<polyline points="9 18 15 12 9 6"/>, 16)}
           </button>
@@ -1177,7 +1178,7 @@ export default function OrgPatienten() {
           <button
             disabled={sending}
             onClick={submit}
-            style={{ ...btnNav, background: sending ? 'rgba(96,8,18,0.15)' : '#600812', border: 'none', color: '#fff', cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}
+            style={{ ...btnNav, background: sending ? 'rgba(var(--lbf-rot-rgb),0.15)' : 'var(--lbf-akzent-grund)', border: 'none', color: '#fff', cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}
           >
             {sending ? 'Sende…' : 'Absenden'}
           </button>

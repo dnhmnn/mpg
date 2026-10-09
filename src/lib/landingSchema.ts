@@ -56,6 +56,7 @@ export interface Design {
   bg: string; white: string; cream: string; radius: number
 }
 
+// Farben der öffentlichen Website — sie gehören dem Inhalt, nicht dem App-Thema.
 export const DEFAULT_DESIGN: Design = {
   primary: '#600812', dark: '#3d0408', text: '#1a0e08', gray: '#8a7a68',
   bg: '#faf9f7', white: '#ffffff', cream: '#fde8d8', radius: 14,

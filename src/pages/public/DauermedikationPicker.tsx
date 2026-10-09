@@ -236,6 +236,8 @@ export default function DauermedikationPicker({
       {value.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: '.75rem' }}>
           {value.map((m, i) => (
+            // Bleibt hell: der Name steht hart in #111827 und wäre auf der
+            // dunklen Warnfläche unlesbar.
             <div key={i} style={{
               display: 'inline-flex', alignItems: 'flex-start', gap: 6,
               background: '#fef9c3', border: '1px solid #fde047',
@@ -327,6 +329,7 @@ export default function DauermedikationPicker({
             )}
 
             {/* Search dropdown */}
+            {/* Bleibt weiß: Kopfzeile und Treffer stehen hart in kalten Grautönen. */}
             {showHits && hits.length > 0 && (
               <div style={{
                 position: 'absolute', top: '100%', left: 0, right: 0,
@@ -391,12 +394,12 @@ export default function DauermedikationPicker({
           )}
 
           {scanMsg && (
-            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#166534', marginBottom: '.75rem' }}>
+            <div style={{ background: 'var(--lbf-ok-grund)', border: '1px solid #86efac', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--lbf-ok-text)', marginBottom: '.75rem' }}>
               {scanMsg}
             </div>
           )}
           {scanError && (
-            <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: '#991b1b', marginBottom: '.75rem' }}>
+            <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--lbf-fehler-text)', marginBottom: '.75rem' }}>
               {scanError}
             </div>
           )}

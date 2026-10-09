@@ -136,7 +136,7 @@ export default function Login() {
           width: 100%;
           padding: 13px 14px;
           border-radius: 10px;
-          border: 1.5px solid rgba(96,8,18,0.15);
+          border: 1.5px solid rgba(var(--lbf-rot-rgb),0.15);
           background: var(--lbf-card);
           color: var(--lbf-text);
           font-size: 15px;
@@ -145,7 +145,7 @@ export default function Login() {
           transition: border-color 0.2s;
           -webkit-appearance: none;
         }
-        .l-input:focus { outline: none; border-color: #600812; }
+        .l-input:focus { outline: none; border-color: var(--lbf-akzent); }
         .l-input::placeholder { color: var(--warm-gray); opacity: 0.7; }
         .l-input:disabled { opacity: 0.5; }
         .l-btn { transition: opacity 0.15s, transform 0.12s; }
@@ -159,46 +159,46 @@ export default function Login() {
       </Link>
 
       {/* Card */}
-      <div style={{ width: '100%', maxWidth: 360, background: 'var(--lbf-card)', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
+      <div style={{ width: '100%', maxWidth: 360, background: 'var(--lbf-card)', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid var(--lbf-border-light)' }}>
 
         {step === 'login' && (
           <>
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Anmeldung</div>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Anmeldung</div>
               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Willkommen zurück</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>Melde dich an um fortzufahren</div>
             </div>
 
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>E-Mail oder Benutzername</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>E-Mail oder Benutzername</label>
                 <input className="l-input" type="text" autoComplete="username" value={identifier} onChange={e => setIdentifier(e.target.value)}
                   placeholder="email@beispiel.de oder benutzername" required disabled={loading} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>Passwort</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Passwort</label>
                 <input className="l-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
                   placeholder="••••••••" required disabled={loading} />
               </div>
 
               {!error && disabledHint && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
+                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
                   Dein Zugang wurde deaktiviert oder ist abgelaufen. Bitte Admin kontaktieren.
                 </div>
               )}
               {!error && betaHint && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
+                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
                   Diese Beta-Umgebung ist nur für Supervisoren zugänglich.
                 </div>
               )}
               {error && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
+                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
                   {error}
                 </div>
               )}
 
               <button type="submit" disabled={loading} className="l-btn"
-                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: '#600812', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: loading ? 0.7 : 1, letterSpacing: '0.02em' }}>
+                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: loading ? 0.7 : 1, letterSpacing: '0.02em' }}>
                 {loading ? 'Anmeldung läuft…' : 'Anmelden'}
               </button>
             </form>
@@ -213,13 +213,13 @@ export default function Login() {
         {step === 'mfa' && (
           <>
             <button onClick={() => { setStep('login'); setError(''); setMfaCode('') }}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#600812', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--lbf-akzent)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
               Zurück
             </button>
 
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Sicherheit</div>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Sicherheit</div>
               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Code eingeben</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>
                 Wir haben einen Code an deine hinterlegte E-Mail-Adresse gesendet
@@ -228,7 +228,7 @@ export default function Login() {
 
             <form onSubmit={handleMfa} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>Code</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Code</label>
                 <input
                   className="l-input"
                   type="text"
@@ -246,13 +246,13 @@ export default function Login() {
               </div>
 
               {error && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: '#b91c1c', fontStyle: 'italic' }}>
+                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
                   {error}
                 </div>
               )}
 
               <button type="submit" disabled={loading || mfaCode.length < 4} className="l-btn"
-                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: '#600812', border: 'none', cursor: (loading || mfaCode.length < 4) ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: (loading || mfaCode.length < 4) ? 0.7 : 1, letterSpacing: '0.02em' }}>
+                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: (loading || mfaCode.length < 4) ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: (loading || mfaCode.length < 4) ? 0.7 : 1, letterSpacing: '0.02em' }}>
                 {loading ? 'Wird geprüft…' : 'Bestätigen'}
               </button>
             </form>
@@ -262,32 +262,32 @@ export default function Login() {
         {step === 'reset' && (
           <>
             <button onClick={() => { setStep('login'); setResetMsg('') }}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: '#600812', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--lbf-akzent)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
               Zurück
             </button>
 
             <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 6 }}>Passwort</div>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Passwort</div>
               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Zurücksetzen</div>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>Wir senden dir einen Reset-Link per E-Mail</div>
             </div>
 
             <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>E-Mail</label>
+                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>E-Mail</label>
                 <input className="l-input" type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)}
                   placeholder="deine@email.de" required disabled={resetLoading} />
               </div>
 
               {resetMsg && (
-                <div style={{ padding: '10px 14px', background: resetSuccess ? 'rgba(22,163,74,0.06)' : 'rgba(192,57,43,0.06)', border: `1px solid ${resetSuccess ? 'rgba(22,163,74,0.2)' : 'rgba(192,57,43,0.2)'}`, borderRadius: 8, fontSize: 13, fontStyle: 'italic', color: resetSuccess ? '#15803d' : '#b91c1c' }}>
+                <div style={{ padding: '10px 14px', background: resetSuccess ? 'rgba(22,163,74,0.06)' : 'rgba(192,57,43,0.06)', border: `1px solid ${resetSuccess ? 'rgba(22,163,74,0.2)' : 'rgba(192,57,43,0.2)'}`, borderRadius: 8, fontSize: 13, fontStyle: 'italic', color: resetSuccess ? 'var(--lbf-ok-text-2)' : 'var(--lbf-fehler-text-2)' }}>
                   {resetMsg}
                 </div>
               )}
 
               <button type="submit" disabled={resetLoading || resetSuccess} className="l-btn"
-                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: '#600812', border: 'none', cursor: resetLoading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: (resetLoading || resetSuccess) ? 0.7 : 1, letterSpacing: '0.02em' }}>
+                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: resetLoading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: (resetLoading || resetSuccess) ? 0.7 : 1, letterSpacing: '0.02em' }}>
                 {resetLoading ? 'Wird gesendet…' : 'Reset-Link senden'}
               </button>
             </form>

@@ -13,8 +13,8 @@ function pik(ch: React.ReactNode, sz = 20) {
 function DynamicField({ field, value, onChange }: { field: TemplateFieldDef; value: unknown; onChange: (v: unknown) => void }) {
   const inputStyle: React.CSSProperties = {
     width: '100%', padding: '12px 14px', borderRadius: 10,
-    border: '1.5px solid rgba(96,8,18,0.15)', background: '#faf9f7',
-    fontSize: 15, color: '#1a0e08', fontFamily: 'inherit', outline: 'none',
+    border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)',
+    fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none',
     boxSizing: 'border-box',
   }
 
@@ -25,9 +25,9 @@ function DynamicField({ field, value, onChange }: { field: TemplateFieldDef; val
           type="checkbox"
           checked={!!value}
           onChange={e => onChange(e.target.checked)}
-          style={{ width: 20, height: 20, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }}
+          style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }}
         />
-        <span style={{ fontSize: 15, color: '#1a0e08', fontWeight: 600 }}>{field.label}{field.required && <span style={{ color: '#dc2626', marginLeft: 2 }}>*</span>}</span>
+        <span style={{ fontSize: 15, color: 'var(--lbf-text)', fontWeight: 600 }}>{field.label}{field.required && <span style={{ color: '#dc2626', marginLeft: 2 }}>*</span>}</span>
       </label>
     )
   }
@@ -146,7 +146,7 @@ export default function OrgFormular() {
 
   const baseStyle: React.CSSProperties = {
     minHeight: '100dvh',
-    background: '#faf9f7',
+    background: 'var(--warm-bg)',
     fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
     display: 'flex',
     flexDirection: 'column',
@@ -157,7 +157,7 @@ export default function OrgFormular() {
   if (loading) {
     return (
       <div style={{ ...baseStyle, justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: '#8a7a68', fontStyle: 'italic' }}>Formular wird geladen…</div>
+        <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Formular wird geladen…</div>
       </div>
     )
   }
@@ -166,8 +166,8 @@ export default function OrgFormular() {
     return (
       <div style={{ ...baseStyle, justifyContent: 'center', padding: '40px 20px' }}>
         <div style={{ maxWidth: 400, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#600812', marginBottom: 8 }}>Formular nicht gefunden</div>
-          <div style={{ fontSize: 14, color: '#8a7a68', fontStyle: 'italic' }}>Dieses Formular ist nicht verfügbar oder wurde deaktiviert.</div>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-akzent)', marginBottom: 8 }}>Formular nicht gefunden</div>
+          <div style={{ fontSize: 14, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Dieses Formular ist nicht verfügbar oder wurde deaktiviert.</div>
         </div>
       </div>
     )
@@ -180,13 +180,13 @@ export default function OrgFormular() {
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#fff' }}>
             {pik(<><polyline points="20 6 9 17 4 12"/></>, 28)}
           </div>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#1a0e08', marginBottom: 8 }}>Eingereicht!</div>
-          <div style={{ fontSize: 14, color: '#8a7a68', fontStyle: 'italic', marginBottom: 24 }}>
-            Deine Antworten für <strong style={{ fontStyle: 'normal', color: '#1a0e08' }}>{template.title}</strong> wurden erfolgreich übermittelt.
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', marginBottom: 8 }}>Eingereicht!</div>
+          <div style={{ fontSize: 14, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 24 }}>
+            Deine Antworten für <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{template.title}</strong> wurden erfolgreich übermittelt.
           </div>
           <button
             onClick={() => { setSubmitted(false); setValues({}) }}
-            style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
           >
             Neues Formular ausfüllen
           </button>
@@ -198,7 +198,7 @@ export default function OrgFormular() {
   return (
     <div style={baseStyle}>
       {/* Header */}
-      <div style={{ width: '100%', background: '#600812', padding: 'calc(env(safe-area-inset-top) + 24px) 24px 24px', textAlign: 'center' }}>
+      <div style={{ width: '100%', background: 'var(--lbf-akzent-grund)', padding: 'calc(env(safe-area-inset-top) + 24px) 24px 24px', textAlign: 'center' }}>
         <div style={{ fontStyle: 'italic', fontSize: 12, color: 'rgba(253,232,216,0.7)', marginBottom: 4, fontWeight: 400 }}>{org.org_name}</div>
         <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: '#fde8d8', lineHeight: 1.25 }}>{template.title}</div>
         {template.description && (
@@ -214,10 +214,10 @@ export default function OrgFormular() {
             <div key={field.id} style={{ marginBottom: 20 }}>
               {field.fieldType !== 'checkbox' && (
                 <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: '#600812' }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: 'var(--lbf-akzent)' }}>
                     {field.label}{field.required && <span style={{ color: '#dc2626', marginLeft: 2 }}>*</span>}
                   </span>
-                  {field.hint && <span style={{ fontSize: 12, fontStyle: 'italic', color: '#8a7a68', marginTop: -4 }}>{field.hint}</span>}
+                  {field.hint && <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: -4 }}>{field.hint}</span>}
                   <DynamicField field={field} value={values[field.id]} onChange={v => setValue(field.id, v)} />
                 </label>
               )}
@@ -240,12 +240,12 @@ export default function OrgFormular() {
         <button
           type="submit"
           disabled={submitting}
-          style={{ width: '100%', padding: '15px', borderRadius: 12, border: 'none', background: submitting ? 'rgba(96,8,18,0.4)' : '#600812', color: '#fff', fontSize: 16, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginTop: 8 }}
+          style={{ width: '100%', padding: '15px', borderRadius: 12, border: 'none', background: submitting ? 'rgba(var(--lbf-rot-rgb),0.4)' : 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 16, fontWeight: 700, cursor: submitting ? 'not-allowed' : 'pointer', fontFamily: 'inherit', marginTop: 8 }}
         >
           {submitting ? 'Wird eingereicht…' : 'Absenden'}
         </button>
 
-        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 11, fontStyle: 'italic', color: '#8a7a68', opacity: 0.6 }}>
+        <div style={{ textAlign: 'center', marginTop: 20, fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', opacity: 0.6 }}>
           © 2025 Responda Systems
         </div>
       </form>

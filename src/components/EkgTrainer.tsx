@@ -74,11 +74,11 @@ export default function EkgTrainer({ user, showMessage }: Props) {
     <div style={{ padding: '18px 16px calc(90px + env(safe-area-inset-bottom))', maxWidth: 600, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.16em' }}>EKG-Trainer</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>EKG-Trainer</div>
           <div style={{ fontStyle: 'italic', fontWeight: 800, fontSize: 22, color: 'var(--lbf-text)', letterSpacing: '-0.02em' }}>EKGs lesen üben</div>
         </div>
         {canEdit && (
-          <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, border: 'none', borderRadius: 10, background: '#600812', color: '#fff', padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={() => setShowAdd(true)} style={{ display: 'flex', alignItems: 'center', gap: 5, border: 'none', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Fall
           </button>
@@ -88,7 +88,7 @@ export default function EkgTrainer({ user, showMessage }: Props) {
         Nur zu Übungs-/Ausbildungszwecken. EKG-Deutung ersetzt keine ärztliche Beurteilung oder das 12-Kanal-Original.
       </div>
 
-      {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>{error}</div>}
+      {error && <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 14, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>{error}</div>}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Fälle…</div>
@@ -113,7 +113,7 @@ export default function EkgTrainer({ user, showMessage }: Props) {
             {gefiltert.length} Fall{gefiltert.length === 1 ? '' : 'e'} · Modus wählen:
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <button onClick={() => setModus('quiz')} disabled={!gefiltert.length} style={modeCard('#600812')}>
+            <button onClick={() => setModus('quiz')} disabled={!gefiltert.length} style={modeCard('var(--lbf-akzent-grund)')}>
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <span style={{ fontWeight: 800, fontSize: 15 }}>Schnell-Quiz</span>
               <span style={{ fontSize: 11, opacity: 0.85, fontStyle: 'italic' }}>Diagnose raten</span>
@@ -133,7 +133,7 @@ export default function EkgTrainer({ user, showMessage }: Props) {
 }
 
 function chip(active: boolean): React.CSSProperties {
-  return { padding: '6px 13px', borderRadius: 999, border: active ? '1.5px solid #600812' : '1px solid rgba(96,8,18,0.15)', background: active ? '#600812' : 'transparent', color: active ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }
+  return { padding: '6px 13px', borderRadius: 999, border: active ? '1.5px solid var(--lbf-akzent)' : '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: active ? 'var(--lbf-akzent-grund)' : 'transparent', color: active ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }
 }
 function modeCard(bg: string): React.CSSProperties {
   return { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '20px 12px', borderRadius: 14, border: 'none', background: bg, color: '#fff', cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 10px rgba(0,0,0,0.12)' }
@@ -180,22 +180,22 @@ function Player({ faelle, modus, allDiagnosen, onExit, userId }: { faelle: EkgFa
     <div style={{ padding: '14px 14px calc(90px + env(safe-area-inset-bottom))', maxWidth: 640, margin: '0 auto' }}>
       {/* Kopf */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-        <button onClick={onExit} style={{ border: 'none', background: 'rgba(96,8,18,0.06)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812', flexShrink: 0 }}>
+        <button onClick={onExit} style={{ border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 8, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--lbf-akzent)', flexShrink: 0 }}>
           <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
         </button>
-        <div style={{ flex: 1, height: 6, background: 'rgba(96,8,18,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-          <div style={{ height: '100%', width: `${((idx) / reihenfolge.length) * 100}%`, background: '#600812', transition: 'width 0.3s' }} />
+        <div style={{ flex: 1, height: 6, background: 'rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 3, overflow: 'hidden' }}>
+          <div style={{ height: '100%', width: `${((idx) / reihenfolge.length) * 100}%`, background: 'var(--lbf-akzent)', transition: 'width 0.3s' }} />
         </div>
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--warm-gray)', flexShrink: 0 }}>{idx + 1}/{reihenfolge.length}</span>
       </div>
 
-      {/* EKG-Bild */}
+      {/* EKG-Bild — weißer Grund bleibt: EKG-Streifen sind Papierbilder, transparente Kurven brauchen hellen Grund */}
       <div onClick={() => setZoom(true)} style={{ background: '#fff', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.08)', marginBottom: 12, cursor: 'zoom-in' }}>
         {fileUrl(fall)
           ? <img src={fileUrl(fall)} alt="EKG" style={{ width: '100%', display: 'block' }} />
           : <div style={{ padding: 40, textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Kein Bild hinterlegt</div>}
       </div>
-      {fall.kategorie && <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>{fall.kategorie}{fall.schwierigkeit ? ` · ${'★'.repeat(fall.schwierigkeit)}` : ''}</div>}
+      {fall.kategorie && <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 10 }}>{fall.kategorie}{fall.schwierigkeit ? ` · ${'★'.repeat(fall.schwierigkeit)}` : ''}</div>}
 
       {modus === 'quiz' ? (
         <>
@@ -208,7 +208,7 @@ function Player({ faelle, modus, allDiagnosen, onExit, userId }: { faelle: EkgFa
               return (
                 <button key={opt} onClick={() => answerQuiz(opt)} disabled={show} style={{
                   textAlign: 'left', padding: '12px 15px', borderRadius: 11, fontFamily: 'inherit', fontSize: 14, fontWeight: 600, cursor: show ? 'default' : 'pointer',
-                  border: `1.5px solid ${show && isRight ? '#16a34a' : show && chosen ? '#dc2626' : 'rgba(96,8,18,0.15)'}`,
+                  border: `1.5px solid ${show && isRight ? '#16a34a' : show && chosen ? '#dc2626' : 'rgba(var(--lbf-rot-rgb),0.15)'}`,
                   background: show && isRight ? 'rgba(22,163,74,0.08)' : show && chosen ? 'rgba(220,38,38,0.06)' : 'var(--lbf-card)',
                   color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8,
                 }}>
@@ -227,9 +227,9 @@ function Player({ faelle, modus, allDiagnosen, onExit, userId }: { faelle: EkgFa
               const val = (fall[s.key] as string) || '—'
               const open = reveal && i < step
               return (
-                <div key={s.key} style={{ border: '1px solid rgba(96,8,18,0.12)', borderRadius: 11, overflow: 'hidden' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: open ? 'rgba(96,8,18,0.04)' : 'var(--lbf-card)' }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</span>
+                <div key={s.key} style={{ border: '1px solid var(--lbf-border)', borderRadius: 11, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: open ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'var(--lbf-card)' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{s.label}</span>
                     {open && <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)', textAlign: 'right', marginLeft: 12 }}>{val}</span>}
                   </div>
                 </div>
@@ -237,7 +237,7 @@ function Player({ faelle, modus, allDiagnosen, onExit, userId }: { faelle: EkgFa
             })}
           </div>
           {step < SCHRITTE.length && (
-            <button onClick={() => { setReveal(true); setStep(step + 1) }} style={{ width: '100%', marginTop: 12, padding: '13px', borderRadius: 12, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => { setReveal(true); setStep(step + 1) }} style={{ width: '100%', marginTop: 12, padding: '13px', borderRadius: 12, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
               {step === 0 ? 'Analyse starten' : `${SCHRITTE[step].label} aufdecken`}
             </button>
           )}
@@ -246,12 +246,12 @@ function Player({ faelle, modus, allDiagnosen, onExit, userId }: { faelle: EkgFa
 
       {/* Auflösung / Erklärung */}
       {((modus === 'quiz' && answered) || (modus === 'gefuehrt' && step >= SCHRITTE.length)) && (
-        <div style={{ marginTop: 14, background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 16px' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Auflösung</div>
+        <div style={{ marginTop: 14, background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid var(--lbf-akzent)', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 16px' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Auflösung</div>
           <div style={{ fontWeight: 800, fontSize: 16, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 8 }}>{fall.diagnose}</div>
           {fall.erklaerung && <div style={{ fontSize: 14, lineHeight: 1.6, color: 'var(--lbf-text)', whiteSpace: 'pre-wrap' }}>{fall.erklaerung}</div>}
           {fall.quelle && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 8 }}>Quelle: {fall.quelle}</div>}
-          <button onClick={next} style={{ width: '100%', marginTop: 14, padding: '13px', borderRadius: 12, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={next} style={{ width: '100%', marginTop: 14, padding: '13px', borderRadius: 12, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit' }}>
             {idx + 1 >= reihenfolge.length ? `Fertig — ${modus === 'quiz' ? correctCount + '/' + reihenfolge.length + ' richtig' : 'abschließen'}` : 'Nächstes EKG'}
           </button>
         </div>
@@ -296,16 +296,16 @@ function AddFall({ user, onClose, onSaved, showMessage }: { user: User; onClose:
     } finally { setSaving(false) }
   }
 
-  const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
-  const lab: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }
+  const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
+  const lab: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }
 
   return (
     <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 600, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
       <div onClick={e => e.stopPropagation()} style={{ background: 'var(--lbf-card)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 560, maxHeight: '92dvh', overflowY: 'auto', padding: '18px 18px calc(20px + env(safe-area-inset-bottom))' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>EKG-Fall hinzufügen</div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>EKG-Fall hinzufügen</div>
 
-        <div onClick={() => fileRef.current?.click()} style={{ border: '1.5px dashed rgba(96,8,18,0.3)', borderRadius: 12, padding: preview ? 0 : '28px', textAlign: 'center', cursor: 'pointer', marginBottom: 14, overflow: 'hidden' }}>
-          {preview ? <img src={preview} alt="Vorschau" style={{ width: '100%', display: 'block' }} /> : <span style={{ fontSize: 13, fontWeight: 700, color: '#600812' }}>EKG-Bild hochladen</span>}
+        <div onClick={() => fileRef.current?.click()} style={{ border: '1.5px dashed rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 12, padding: preview ? 0 : '28px', textAlign: 'center', cursor: 'pointer', marginBottom: 14, overflow: 'hidden' }}>
+          {preview ? <img src={preview} alt="Vorschau" style={{ width: '100%', display: 'block' }} /> : <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)' }}>EKG-Bild hochladen</span>}
         </div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => pick(e.target.files?.[0])} />
 
@@ -328,8 +328,8 @@ function AddFall({ user, onClose, onSaved, showMessage }: { user: User; onClose:
         <div style={{ marginBottom: 16 }}><label style={lab}>Quelle / Lizenz</label><input style={inp} value={form.quelle} onChange={e => setForm({ ...form, quelle: e.target.value })} placeholder="z.B. eigene Fortbildung / CC-BY …" /></div>
 
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-          <button onClick={save} disabled={saving} style={{ border: 'none', background: '#600812', color: '#fff', borderRadius: 10, padding: '10px 18px', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>{saving ? 'Speichern…' : 'Speichern'}</button>
+          <button onClick={onClose} style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '10px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+          <button onClick={save} disabled={saving} style={{ border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', borderRadius: 10, padding: '10px 18px', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>{saving ? 'Speichern…' : 'Speichern'}</button>
         </div>
       </div>
     </div>

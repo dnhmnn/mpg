@@ -46,6 +46,7 @@ export default function SigCanvas({ canvasRef }: SigCanvasProps) {
       ref={canvasRef}
       width={500}
       height={150}
+      // Zeichenflaeche bleibt weiss mit dunkler Tinte — die Unterschrift wird gedruckt
       style={{
         width: '100%', height: '100px',
         border: '1px solid var(--border)', borderRadius: '8px',

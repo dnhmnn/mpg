@@ -65,7 +65,7 @@ function niceTitle(n: string): string {
 function impStatusColor(s: ImpStatus): string {
   if (s === 'fertig') return '#16a34a'
   if (s === 'fehler') return '#dc2626'
-  if (s === 'übersprungen' || s === 'warten') return '#8a7a68'
+  if (s === 'übersprungen' || s === 'warten') return 'var(--warm-gray)'
   return '#d97706'
 }
 function impStatusLabel(r: ImpRow): string {
@@ -353,20 +353,20 @@ export default function Wissen() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       {/* Header */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate('/supervisor')} style={{ display: 'flex', border: 'none', background: 'none', color: '#600812', cursor: 'pointer', padding: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <button onClick={() => navigate('/supervisor')} style={{ display: 'flex', border: 'none', background: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Wissensbasis</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>Grundlage des KI-Assistenten · nur Supervisor</div>
           </div>
-          <button onClick={openImport} title="Dateien / ZIP importieren" style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(96,8,18,0.25)', borderRadius: 10, background: 'transparent', color: '#600812', padding: '9px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={openImport} title="Dateien / ZIP importieren" style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 10, background: 'transparent', color: 'var(--lbf-akzent)', padding: '9px 13px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Import
           </button>
-          <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: '#600812', color: '#fff', padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Artikel
           </button>
@@ -378,14 +378,14 @@ export default function Wissen() {
       )}
 
       <div style={{ maxWidth: 780, margin: '0 auto', padding: '16px 16px 80px' }}>
-        <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.55, marginBottom: 16 }}>
+        <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.55, marginBottom: 16 }}>
           Diese Wissensbasis ist die Grundlage, aus der der Lern-Assistent antwortet. Je mehr saubere, fachlich geprüfte Artikel (mit Schlagwörtern und ggf. Bild), desto besser die Antworten. Importierte Einträge bitte vor dem Verlassen darauf prüfen.
         </div>
 
         <input type="text" placeholder="Wissensbasis durchsuchen…" value={search} onChange={e => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 16 }} />
+          style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box', marginBottom: 16 }} />
 
-        {error && <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>{error}</div>}
+        {error && <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 14, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>{error}</div>}
 
         {loading ? (
           <div style={{ textAlign: 'center', padding: 40, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade…</div>
@@ -401,19 +401,20 @@ export default function Wissen() {
               .filter(g => g.items.length > 0)
               .map(g => (
                 <div key={g.name}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>
                     {g.name} <span style={{ color: 'var(--warm-gray)', letterSpacing: 0 }}>· {g.items.length}</span>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {g.items.map(a => (
-                      <div key={a.id} onClick={() => setViewing(a)} style={{ display: 'flex', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812', padding: '12px 14px', cursor: 'pointer' }}>
-                        {fileUrl(a) && <img src={fileUrl(a)} alt="" style={{ width: 54, height: 54, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: '#fff', border: '0.5px solid rgba(96,8,18,0.1)' }} />}
+                      <div key={a.id} onClick={() => setViewing(a)} style={{ display: 'flex', gap: 12, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-akzent)', padding: '12px 14px', cursor: 'pointer' }}>
+                        {/* Weißer Grund hinter dem Vorschaubild bleibt — gehört zum Bild */}
+                        {fileUrl(a) && <img src={fileUrl(a)} alt="" style={{ width: 54, height: 54, borderRadius: 8, objectFit: 'cover', flexShrink: 0, background: '#fff', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }} />}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)' }}>{a.titel || '(ohne Titel)'}</div>
                           <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.inhalt.replace(/^#{2,3}\s+/gm, '').replace(/^!!!\s*\w+[:\s]*/gm, '').replace(/\*\*/g, '').replace(/\s+/g, ' ').trim()}</div>
                           {parseTags(a.tags).length > 0 && (
                             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                              {parseTags(a.tags).slice(0, 6).map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: '#600812', fontSize: 12 }}>#{t}</span>)}
+                              {parseTags(a.tags).slice(0, 6).map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-akzent)', fontSize: 12 }}>#{t}</span>)}
                             </div>
                           )}
                         </div>
@@ -443,50 +444,50 @@ export default function Wissen() {
       {editorOpen && (
         <div onClick={() => setEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--lbf-card)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 620, maxHeight: '92dvh', overflowY: 'auto', padding: '18px 18px calc(20px + env(safe-area-inset-bottom))' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>{editingId ? 'Artikel bearbeiten' : 'Neuer Wissensartikel'}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>{editingId ? 'Artikel bearbeiten' : 'Neuer Wissensartikel'}</div>
 
             <input type="text" value={form.titel} onChange={e => setForm({ ...form, titel: e.target.value })} placeholder="Titel (z.B. Sinustachykardie)"
               style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: 'var(--lbf-text)', fontFamily: 'inherit', marginBottom: 12, boxSizing: 'border-box' }} />
 
-            {/* Bild */}
-            <div onClick={() => fileRef.current?.click()} style={{ border: '1.5px dashed rgba(96,8,18,0.3)', borderRadius: 12, padding: preview ? 0 : '22px', textAlign: 'center', cursor: 'pointer', marginBottom: 12, overflow: 'hidden', position: 'relative' }}>
-              {preview ? <img src={preview} alt="" style={{ width: '100%', display: 'block', maxHeight: 240, objectFit: 'contain', background: '#fff' }} /> : <span style={{ fontSize: 13, fontWeight: 700, color: '#600812' }}>Bild hinzufügen (optional)</span>}
+            {/* Bild — weißer Grund hinter der Vorschau bleibt, gehört zum Bild */}
+            <div onClick={() => fileRef.current?.click()} style={{ border: '1.5px dashed rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 12, padding: preview ? 0 : '22px', textAlign: 'center', cursor: 'pointer', marginBottom: 12, overflow: 'hidden', position: 'relative' }}>
+              {preview ? <img src={preview} alt="" style={{ width: '100%', display: 'block', maxHeight: 240, objectFit: 'contain', background: '#fff' }} /> : <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)' }}>Bild hinzufügen (optional)</span>}
             </div>
             {preview && <button onClick={() => { setFile(null); setPreview(''); setRemoveBild(true) }} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer', marginBottom: 12, padding: 0, fontFamily: 'inherit' }}>Bild entfernen</button>}
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => pickFile(e.target.files?.[0])} />
 
-            <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Inhalt</label>
+            <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Inhalt</label>
             <textarea value={form.inhalt} onChange={e => setForm({ ...form, inhalt: e.target.value })} rows={9} placeholder={'Der Fachtext, aus dem die KI antwortet…\n\n## Definition\n…\n\n## Therapie\n- Punkt 1\n\n!!! cave Wichtige Warnung'}
-              style={{ width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none', resize: 'vertical', minHeight: 160, boxSizing: 'border-box', marginBottom: 4 }} />
+              style={{ width: '100%', padding: '11px 13px', borderRadius: 9, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, lineHeight: 1.6, fontFamily: 'inherit', outline: 'none', resize: 'vertical', minHeight: 160, boxSizing: 'border-box', marginBottom: 4 }} />
             <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12, lineHeight: 1.5 }}>
               Struktur wie im Nachschlagewerk: <b>## Abschnitt</b> = aufklappbares Kapitel · <b>!!! cave</b> = rote Warn-Box · <b>!!! merke</b> = Merke-Box · <b>!!! tipp</b> = Tipp-Box · <b>- </b> = Aufzählung · <b>**fett**</b>
             </div>
 
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Fachgebiet</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Fachgebiet</label>
               <select value={form.kategorie} onChange={e => setForm({ ...form, kategorie: e.target.value })}
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}>
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}>
                 <option value="">— Fachgebiet wählen —</option>
                 {WISSEN_KATEGORIEN.map(k => <option key={k} value={k}>{k}</option>)}
               </select>
             </div>
             <div style={{ marginBottom: 12 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Schlagwörter (Komma-getrennt)</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Schlagwörter (Komma-getrennt)</label>
               <input type="text" value={form.tags} onChange={e => setForm({ ...form, tags: e.target.value })} placeholder="EKG, Tachykardie, Rhythmus"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
               <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Wichtig — daran findet die KI den Artikel zur Frage.</span>
             </div>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Quelle / Lizenz (optional)</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 5 }}>Quelle / Lizenz (optional)</label>
               <input type="text" value={form.quelle} onChange={e => setForm({ ...form, quelle: e.target.value })} placeholder="z.B. eigene SOP / ERC-Leitlinie 2021"
-                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
+                style={{ width: '100%', padding: '10px 12px', borderRadius: 9, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }} />
             </div>
 
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
               {editingId && <button onClick={del} style={{ border: '1px solid rgba(220,38,38,0.3)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Löschen</button>}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button onClick={() => setEditorOpen(false)} style={{ border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-                <button onClick={save} disabled={saving} style={{ border: 'none', background: '#600812', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>{saving ? 'Speichern…' : 'Speichern'}</button>
+                <button onClick={() => setEditorOpen(false)} style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+                <button onClick={save} disabled={saving} style={{ border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>{saving ? 'Speichern…' : 'Speichern'}</button>
               </div>
             </div>
           </div>
@@ -497,7 +498,7 @@ export default function Wissen() {
       {importOpen && (
         <div onClick={() => { if (!importing) setImportOpen(false) }} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--lbf-card)', borderRadius: '18px 18px 0 0', width: '100%', maxWidth: 620, maxHeight: '92dvh', overflowY: 'auto', padding: '18px 18px calc(20px + env(safe-area-inset-bottom))' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Dateien / ZIP importieren</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Dateien / ZIP importieren</div>
             <div style={{ fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 14 }}>
               Lade PDF-, Text- oder Bild-Dateien (auch als ZIP) hoch. Die KI liest den Text automatisch aus und macht daraus fertige Wissenseinträge — Titel, Kurzfassung und Schlagwörter. Bilder werden als Abbildungen übernommen.
             </div>
@@ -508,10 +509,10 @@ export default function Wissen() {
               onDragOver={e => { e.preventDefault(); if (!importing) setDragOver(true) }}
               onDragLeave={() => setDragOver(false)}
               onDrop={e => { e.preventDefault(); setDragOver(false); if (!importing) onImportFiles(e.dataTransfer.files) }}
-              style={{ border: `1.5px dashed ${dragOver ? '#600812' : 'rgba(96,8,18,0.3)'}`, borderRadius: 12, padding: '22px', textAlign: 'center', cursor: importing ? 'default' : 'pointer', marginBottom: 14, background: dragOver ? 'rgba(96,8,18,0.04)' : 'transparent' }}
+              style={{ border: `1.5px dashed ${dragOver ? 'var(--lbf-akzent)' : 'rgba(var(--lbf-rot-rgb),0.3)'}`, borderRadius: 12, padding: '22px', textAlign: 'center', cursor: importing ? 'default' : 'pointer', marginBottom: 14, background: dragOver ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'transparent' }}
             >
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 6 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <div style={{ fontSize: 14, fontWeight: 700, color: '#600812' }}>Dateien wählen oder hierher ziehen</div>
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--lbf-akzent)', marginBottom: 6 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-akzent)' }}>Dateien wählen oder hierher ziehen</div>
               <div style={{ fontSize: 11.5, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 3 }}>ZIP · PDF · TXT · MD · CSV · PNG/JPG — mehrere gleichzeitig möglich</div>
             </div>
             <input ref={impFileRef} type="file" multiple accept=".zip,.pdf,.txt,.md,.markdown,.csv,.log,image/*" style={{ display: 'none' }}
@@ -521,7 +522,7 @@ export default function Wissen() {
             {impRows.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12, maxHeight: '38dvh', overflowY: 'auto' }}>
                 {impRows.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(96,8,18,0.03)', borderRadius: 9, padding: '8px 11px' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(var(--lbf-rot-rgb),0.03)', borderRadius: 9, padding: '8px 11px' }}>
                     <span style={{ width: 8, height: 8, borderRadius: '50%', background: impStatusColor(r.status), flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
@@ -541,7 +542,7 @@ export default function Wissen() {
             {impRows.length > 0 && !(impStarted && !importing) && (
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginBottom: 14, cursor: importing ? 'default' : 'pointer' }}>
                 <input type="checkbox" checked={impConfirm} disabled={importing} onChange={e => setImpConfirm(e.target.checked)}
-                  style={{ marginTop: 2, width: 16, height: 16, accentColor: '#600812', flexShrink: 0 }} />
+                  style={{ marginTop: 2, width: 16, height: 16, accentColor: 'var(--lbf-akzent)', flexShrink: 0 }} />
                 <span style={{ fontSize: 12, color: 'var(--lbf-text)', lineHeight: 1.4 }}>
                   Ich bestätige, dass die Dateien <b>keine Patienten- oder Personendaten</b> enthalten. Der Text wird zur Auswertung an Mistral (EU) gesendet.
                 </span>
@@ -550,17 +551,17 @@ export default function Wissen() {
 
             {/* Footer */}
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              {importing && <span style={{ fontSize: 12, fontWeight: 700, color: '#600812' }}>{impCreated} angelegt…</span>}
+              {importing && <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)' }}>{impCreated} angelegt…</span>}
               {!importing && impStarted && <span style={{ fontSize: 12, fontWeight: 700, color: impCreated > 0 ? '#16a34a' : 'var(--warm-gray)' }}>{impCreated} Einträge angelegt</span>}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
                 {importing ? (
                   <button onClick={cancelImport} disabled={stopping} style={{ border: '1px solid rgba(220,38,38,0.4)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: stopping ? 'default' : 'pointer', opacity: stopping ? 0.6 : 1, fontFamily: 'inherit' }}>{stopping ? 'Stoppt…' : 'Stopp'}</button>
                 ) : (
-                  <button onClick={() => setImportOpen(false)} style={{ border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{impStarted ? 'Schließen' : 'Abbrechen'}</button>
+                  <button onClick={() => setImportOpen(false)} style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{impStarted ? 'Schließen' : 'Abbrechen'}</button>
                 )}
                 {!(impStarted && !importing) && (
                   <button onClick={runImport} disabled={importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0}
-                    style={{ border: 'none', background: '#600812', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: (importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 'not-allowed' : 'pointer', opacity: (importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 0.6 : 1, fontFamily: 'inherit' }}>
+                    style={{ border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: (importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 'not-allowed' : 'pointer', opacity: (importing || !impConfirm || impRows.filter(r => r.kind !== 'unsupported').length === 0) ? 0.6 : 1, fontFamily: 'inherit' }}>
                     {importing ? 'Wertet aus…' : 'Auswerten & anlegen'}
                   </button>
                 )}

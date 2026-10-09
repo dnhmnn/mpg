@@ -64,15 +64,16 @@ export interface AtemschutzTrupp {
   quittiert: Record<string, string>  // alarm_key -> ISO-Zeit
 }
 
-export const FMS: Record<number, { kurz: string; lang: string; farbe: string }> = {
+// farbe: Schrift und Linie; grund: gefuellte Flaeche mit weisser Schrift (nur wo abweichend)
+export const FMS: Record<number, { kurz: string; lang: string; farbe: string; grund?: string }> = {
   1: { kurz: '1', lang: 'Einsatzbereit über Funk', farbe: '#16a34a' },
   2: { kurz: '2', lang: 'Einsatzbereit auf Wache', farbe: '#16a34a' },
   3: { kurz: '3', lang: 'Anfahrt Einsatzort', farbe: '#d97706' },
-  4: { kurz: '4', lang: 'Ankunft Einsatzstelle', farbe: '#600812' },
+  4: { kurz: '4', lang: 'Ankunft Einsatzstelle', farbe: 'var(--lbf-akzent)', grund: 'var(--lbf-akzent-grund)' },
   5: { kurz: '5', lang: 'Sprechwunsch', farbe: '#2563eb' },
-  6: { kurz: '6', lang: 'Nicht einsatzbereit', farbe: '#8a7a68' },
-  7: { kurz: '7', lang: 'Patient aufgenommen', farbe: '#600812' },
-  8: { kurz: '8', lang: 'Am Transportziel', farbe: '#600812' },
+  6: { kurz: '6', lang: 'Nicht einsatzbereit', farbe: 'var(--warm-gray)' },
+  7: { kurz: '7', lang: 'Patient aufgenommen', farbe: 'var(--lbf-akzent)', grund: 'var(--lbf-akzent-grund)' },
+  8: { kurz: '8', lang: 'Am Transportziel', farbe: 'var(--lbf-akzent)', grund: 'var(--lbf-akzent-grund)' },
 }
 
 export interface Kraft {

@@ -6,13 +6,13 @@
 import { adresseLesen, type Adressteil } from './adresse'
 import type { Werte } from './DokuFeld'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 const eingabe: React.CSSProperties = {
-  width: '100%', padding: '9px 10px', background: '#fff',
+  width: '100%', padding: '9px 10px', background: 'var(--lbf-input-bg)',
   border: `0.5px solid ${LINIE}`, borderRadius: 8,
   fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box',
 }

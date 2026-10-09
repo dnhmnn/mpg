@@ -10,10 +10,12 @@ import { pb } from '../../../lib/pocketbase'
 import type { Werte } from './DokuFeld'
 import { POSTEN, besatzungLesen, einsichtIds, type Besetzung, type Posten } from './besatzung'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 type Treffer = { id: string; name: string; email: string }
 
@@ -70,11 +72,11 @@ function Platz({ posten, person, orgId, onSetzen }: {
         <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
           {posten.label}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, padding: '8px 10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 8, padding: '8px 10px' }}>
           <span style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
             width: 28, height: 28, flexShrink: 0, borderRadius: 14,
-            background: mitKonto ? ROT : 'transparent',
+            background: mitKonto ? ROT_GRUND : 'transparent',
             border: mitKonto ? 'none' : `1px solid ${LINIE}`,
             color: mitKonto ? '#fff' : GRAU, fontSize: 13, fontWeight: 700,
           }}>
@@ -109,16 +111,16 @@ function Platz({ posten, person, orgId, onSetzen }: {
         type="text" value={frage} onChange={(e) => tippen(e.target.value)}
         placeholder="Name suchen oder eintragen"
         autoComplete="off"
-        style={{ width: '100%', padding: '9px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
+        style={{ width: '100%', padding: '9px 10px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
       />
       {getippt.length >= 2 ? (
-        <div style={{ border: `0.5px solid ${LINIE}`, borderTop: 'none', borderRadius: '0 0 8px 8px', background: '#fff', overflow: 'hidden' }}>
+        <div style={{ border: `0.5px solid ${LINIE}`, borderTop: 'none', borderRadius: '0 0 8px 8px', background: 'var(--lbf-card)', overflow: 'hidden' }}>
           {treffer.map((t) => (
             <button
               key={t.id} type="button" onClick={() => nehmen({ id: t.id, name: t.name })}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.06)', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}
             >
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, flexShrink: 0, borderRadius: 13, background: ROT, color: '#fff', fontSize: 12, fontWeight: 700 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, flexShrink: 0, borderRadius: 13, background: ROT_GRUND, color: '#fff', fontSize: 12, fontWeight: 700 }}>
                 {t.name.charAt(0).toUpperCase()}
               </span>
               <span style={{ minWidth: 0 }}>
@@ -132,7 +134,7 @@ function Platz({ posten, person, orgId, onSetzen }: {
               haben kein Konto, stehen aber auf dem Bogen. */}
           <button
             type="button" onClick={() => nehmen({ id: '', name: getippt })}
-            style={{ display: 'block', width: '100%', padding: '8px 10px', background: 'rgba(250,249,247,0.8)', border: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: 13, color: TEXT, cursor: 'pointer' }}
+            style={{ display: 'block', width: '100%', padding: '8px 10px', background: 'var(--lbf-fuss)', border: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: 13, color: TEXT, cursor: 'pointer' }}
           >
             „{getippt}“ ohne Konto eintragen
             <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>

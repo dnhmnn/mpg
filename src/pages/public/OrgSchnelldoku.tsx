@@ -107,16 +107,16 @@ export default function OrgSchnelldoku() {
       <div style={{ minHeight: '100vh', background: 'var(--warm-bg)' }}>
         <PubHeader title="Schnelldokumentation" onBack={() => navigate(`/${orgCode}`)} />
         <div style={{ padding: 20, maxWidth: 560, margin: '0 auto' }}>
-          <div style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #16a34a', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '18px 20px' }}>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #16a34a', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '18px 20px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#16a34a' }}>Gespeichert</div>
-            <div style={{ fontSize: 22, fontWeight: 800, fontStyle: 'italic', color: '#600812', marginTop: 6 }}>{fertig}</div>
+            <div style={{ fontSize: 22, fontWeight: 800, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 6 }}>{fertig}</div>
             <p style={{ color: 'var(--warm-gray)', fontSize: 13, marginTop: 10, marginBottom: 0 }}>
               Das Protokoll liegt als offener Vorgang bereit und kann in der vollständigen
               Dokumentation ergänzt werden.
             </p>
           </div>
           <button onClick={() => { setFertig(''); setGesprochen(''); setVitals({}); setName(''); setVorname(''); setGebdatum(''); setUnbekannt(false); setZiel('') }}
-            style={{ width: '100%', marginTop: 16, background: '#600812', color: '#fde8d8', border: 'none', borderRadius: 10, padding: '14px 0', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            style={{ width: '100%', marginTop: 16, background: 'var(--lbf-akzent-grund)', color: '#fde8d8', border: 'none', borderRadius: 10, padding: '14px 0', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Nächstes Protokoll
           </button>
         </div>
@@ -143,18 +143,18 @@ export default function OrgSchnelldoku() {
 
         {/* Erkannte Werte — Vorschlag, nicht Übernahme */}
         {offeneVorschlaege.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 16px', marginBottom: '1rem' }}>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid var(--lbf-akzent)', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 16px', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 10 }}>
               <div style={{ ...lbl, marginBottom: 0, flex: 1 }}>Erkannt — zum Übernehmen antippen</div>
               <button onClick={alleUebernehmen}
-                style={{ background: 'none', border: 'none', padding: 0, color: '#600812', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                style={{ background: 'none', border: 'none', padding: 0, color: 'var(--lbf-akzent)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                 Alle
               </button>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {offeneVorschlaege.map(v => (
                 <button key={v.feld} onClick={() => uebernehmen(v.feld, v.wert)}
-                  style={{ background: '#fff', border: '1.5px solid rgba(96,8,18,0.25)', borderRadius: 999, padding: '9px 14px', fontSize: 14, color: '#1a0e08' }}>
+                  style={{ background: 'var(--lbf-card)', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 999, padding: '9px 14px', fontSize: 14, color: 'var(--lbf-text)' }}>
                   <span style={{ color: 'var(--warm-gray)' }}>{FELDNAME[v.feld]}</span>{' '}
                   <strong style={{ fontWeight: 700 }}>{v.wert}</strong>{' '}
                   <span style={{ color: 'var(--warm-gray)', fontSize: 12 }}>{einheit(v.feld)}</span>
@@ -166,10 +166,10 @@ export default function OrgSchnelldoku() {
 
         {/* Was nicht übernommen wurde — sichtbar, nicht verschluckt */}
         {ergebnis.verworfen.length > 0 && (
-          <div style={{ background: '#fff', borderRadius: 12, borderLeft: '3px solid #d97706', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 16px', marginBottom: '1rem' }}>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #d97706', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '14px 16px', marginBottom: '1rem' }}>
             <div style={{ ...lbl, color: '#d97706' }}>Nicht übernommen</div>
             {ergebnis.verworfen.map((v, i) => (
-              <div key={i} style={{ fontSize: 13, marginTop: 6, color: '#1a0e08' }}>
+              <div key={i} style={{ fontSize: 13, marginTop: 6, color: 'var(--lbf-text)' }}>
                 <span style={{ fontStyle: 'italic' }}>„{v.quelle}"</span>
                 <span style={{ color: 'var(--warm-gray)' }}> — {v.grund}</span>
               </div>
@@ -197,7 +197,7 @@ export default function OrgSchnelldoku() {
           <div style={lbl}>Patient</div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, fontSize: 14 }}>
             <input type="checkbox" checked={unbekannt} onChange={e => setUnbekannt(e.target.checked)}
-              style={{ width: 20, height: 20, accentColor: '#600812' }} />
+              style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)' }} />
             Patient unbekannt
           </label>
           {!unbekannt && (
@@ -221,9 +221,9 @@ export default function OrgSchnelldoku() {
       </div>
 
       {/* Absenden immer erreichbar, ohne Scrollen */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(250,249,247,0.95)', borderTop: '0.5px solid rgba(96,8,18,0.12)', padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--warm-bg)', borderTop: '0.5px solid var(--lbf-border)', padding: '12px 20px', paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}>
         <button onClick={absenden} disabled={sendet}
-          style={{ width: '100%', maxWidth: 520, margin: '0 auto', display: 'block', background: '#600812', color: '#fde8d8', border: 'none', borderRadius: 10, padding: '15px 0', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: sendet ? 0.6 : 1 }}>
+          style={{ width: '100%', maxWidth: 520, margin: '0 auto', display: 'block', background: 'var(--lbf-akzent-grund)', color: '#fde8d8', border: 'none', borderRadius: 10, padding: '15px 0', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', opacity: sendet ? 0.6 : 1 }}>
           {sendet ? 'Wird gespeichert …' : 'Protokoll speichern'}
         </button>
       </div>

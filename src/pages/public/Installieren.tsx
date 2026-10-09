@@ -44,7 +44,8 @@ function istInstalliert(): boolean {
   } catch { return false }
 }
 
-const AKZENT = '#600812'
+const AKZENT = 'var(--lbf-akzent)'
+const AKZENT_GRUND = 'var(--lbf-akzent-grund)'
 
 export default function Installieren() {
   const geraet = useMemo(geraetErkennen, [])
@@ -59,7 +60,7 @@ export default function Installieren() {
   }, [geraet, adresse])
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', color: '#1a0e08' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', color: 'var(--lbf-text)' }}>
       <div style={{
         maxWidth: 560, margin: '0 auto',
         padding: '32px 20px 60px',
@@ -94,7 +95,7 @@ export default function Installieren() {
           <SchreibtischAnleitung qr={qr} adresse={adresse} />
         )}
 
-        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '0.5px solid rgba(96,8,18,0.12)' }}>
+        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '0.5px solid var(--lbf-border)' }}>
           <div style={abschnitt}>Warum nicht aus dem App Store</div>
           <p style={{ color: 'var(--warm-gray)', fontSize: 13, lineHeight: 1.6, margin: '6px 0 0' }}>
             Responda ist eine Anwendung für die eigene Organisation, kein
@@ -117,7 +118,7 @@ const abschnitt: React.CSSProperties = {
 function Karte({ children, rand = AKZENT }: { children: React.ReactNode; rand?: string }) {
   return (
     <div style={{
-      background: '#fff', borderRadius: 12, borderLeft: `3px solid ${rand}`,
+      background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${rand}`,
       boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '16px 18px', marginBottom: 14,
     }}>
       {children}
@@ -130,7 +131,7 @@ function Schritt({ nr, titel, children }: { nr: number; titel: string; children?
     <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: 18 }}>
       <div style={{
         flex: '0 0 auto', width: 30, height: 30, borderRadius: '50%',
-        background: AKZENT, color: '#fde8d8',
+        background: AKZENT_GRUND, color: '#fde8d8',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: 800, fontSize: 15, fontStyle: 'italic',
       }}>
@@ -147,8 +148,8 @@ function Schritt({ nr, titel, children }: { nr: number; titel: string; children?
 /** Das Teilen-Symbol von iOS, damit man nicht raten muss, was gemeint ist. */
 function TeilenSymbol() {
   return (
-    <svg width="17" height="21" viewBox="0 0 24 30" fill="none" stroke={AKZENT} strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: '-4px', margin: '0 3px' }}
+    <svg width="17" height="21" viewBox="0 0 24 30" fill="none" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" style={{ stroke: AKZENT, verticalAlign: '-4px', margin: '0 3px' }}
       aria-label="Teilen-Symbol">
       <path d="M12 2v18M12 2L7 7M12 2l5 5" />
       <path d="M5 13H3v14h18V13h-2" />
@@ -183,7 +184,7 @@ function IosAnleitung({ safari }: { safari: boolean }) {
         </Schritt>
 
         <div style={{
-          borderTop: '0.5px solid rgba(96,8,18,0.08)', paddingTop: 12, marginTop: 2,
+          borderTop: '0.5px solid var(--lbf-border-light)', paddingTop: 12, marginTop: 2,
           color: 'var(--warm-gray)', fontSize: 13, fontStyle: 'italic',
         }}>
           Danach liegt Responda als Symbol auf dem Startbildschirm und startet
@@ -205,7 +206,7 @@ function AndroidAnleitung() {
           </p>
           <a href={APK_URL} download
             style={{
-              display: 'block', textAlign: 'center', background: AKZENT, color: '#fde8d8',
+              display: 'block', textAlign: 'center', background: AKZENT_GRUND, color: '#fde8d8',
               textDecoration: 'none', borderRadius: 10, padding: '15px 0',
               fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em',
             }}>
@@ -224,7 +225,7 @@ function AndroidAnleitung() {
             Je nach Browser heißt es etwas anders.
           </Schritt>
           <div style={{
-            borderTop: '0.5px solid rgba(96,8,18,0.08)', paddingTop: 12,
+            borderTop: '0.5px solid var(--lbf-border-light)', paddingTop: 12,
             color: 'var(--warm-gray)', fontSize: 13, fontStyle: 'italic',
           }}>
             Danach liegt Responda als Symbol auf dem Startbildschirm und startet

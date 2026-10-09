@@ -10,10 +10,10 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 /** Die Zeichenfläche in Gerätepunkten — gross genug, dass es gedruckt trägt. */
 const BREITE = 800
@@ -118,6 +118,7 @@ export default function Unterschrift({ wert, onChange }: {
         aria-label="Fläche zum Unterschreiben"
         style={{
           width: '100%', height: 150, display: 'block',
+          // Die Zeichenfläche bleibt weiß mit dunkler Tinte — sie kommt aufs Papier.
           background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8,
           // Ohne das scrollt die Seite, statt dass der Strich entsteht.
           touchAction: 'none', cursor: 'crosshair',

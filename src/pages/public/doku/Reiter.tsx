@@ -28,8 +28,10 @@ export type ReiterStand = {
   gefuellt: number
 }
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf — der aktive Reiter. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
 const GRUEN = '#16a34a'
 const WARN = '#dc2626'
@@ -42,10 +44,10 @@ export function ampel(r: ReiterStand): Ampel {
 }
 
 const FARBE: Record<Ampel, { rand: string; grund: string; schrift: string }> = {
-  offen: { rand: WARN, grund: '#fef2f2', schrift: TEXT },
-  fertig: { rand: GRUEN, grund: '#f0fdf4', schrift: TEXT },
-  angefasst: { rand: 'rgba(96,8,18,0.45)', grund: '#fff', schrift: TEXT },
-  leer: { rand: 'rgba(96,8,18,0.12)', grund: '#fff', schrift: GRAU },
+  offen: { rand: WARN, grund: 'var(--lbf-fehler-grund)', schrift: TEXT },
+  fertig: { rand: GRUEN, grund: 'var(--lbf-ok-grund)', schrift: TEXT },
+  angefasst: { rand: 'rgba(var(--lbf-rot-rgb),0.45)', grund: 'var(--lbf-card)', schrift: TEXT },
+  leer: { rand: 'var(--lbf-border)', grund: 'var(--lbf-card)', schrift: GRAU },
 }
 
 export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal, ueberlagernd }: {
@@ -146,9 +148,9 @@ export default function Reiter({ staende, aktiv, onWaehlen, beschriftung, schmal
                * abgeschnitten.
                */
               borderRadius: ueberlagernd ? 9 : '0 9px 9px 0',
-              background: istAktiv ? ROT : f.grund,
+              background: istAktiv ? ROT_GRUND : f.grund,
               color: istAktiv ? '#fff' : f.schrift,
-              border: `0.5px solid ${istAktiv ? ROT : 'rgba(96,8,18,0.12)'}`,
+              border: `0.5px solid ${istAktiv ? ROT_GRUND : 'var(--lbf-border)'}`,
               borderLeft: `4px solid ${istAktiv ? '#fff' : f.rand}`,
               boxShadow: istAktiv ? 'none' : '1px 1px 3px rgba(0,0,0,0.06)',
               fontFamily: 'inherit', fontSize: schmal ? 11 : 8.5, fontWeight: 700,

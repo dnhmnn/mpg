@@ -4,7 +4,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { pb } from '../../lib/pocketbase'
 import { incidentsAll, metaGet, metaSet, deviceId } from '../../lib/eks/db'
 
-const RED = '#600812'
+const RED = 'var(--lbf-akzent)'
 
 interface Zeile { id: string; keyword?: string; unit?: string; adresse?: string; datum?: string; status?: string; lokal?: boolean }
 
@@ -97,10 +97,10 @@ function Huelle({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button onClick={() => navigate('/hub')} style={{ border: 'none', background: 'none', color: RED, cursor: 'pointer', padding: 0, display: 'flex' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={RED} strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Responda EKS</div>

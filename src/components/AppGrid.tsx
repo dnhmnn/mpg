@@ -58,7 +58,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
                 style={{
                   position: 'absolute', top: -6, right: -6, zIndex: 10,
                   width: 22, height: 22, borderRadius: '50%',
-                  background: '#600812', border: '2px solid #faf9f7',
+                  background: 'var(--lbf-akzent-grund)', border: '2px solid var(--warm-bg)',
                   color: '#fff', fontSize: 16, lineHeight: 1,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', fontWeight: 700,

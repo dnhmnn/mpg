@@ -38,10 +38,11 @@ type Props = {
   gesperrt?: boolean
 }
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.12)'
+const LINIE = 'var(--lbf-border)'
 
 function gewaehlt(wert: unknown, code: string): boolean {
   if (Array.isArray(wert)) return wert.map(String).includes(code)
@@ -78,15 +79,15 @@ function Knopf({ text, an, rund, onClick, gesperrt, klein }: {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: klein ? '2px 7px 2px 5px' : '3px 8px 3px 5px', margin: '0 4px 4px 0',
-        background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
-        border: `0.5px solid ${an ? ROT : LINIE}`, borderRadius: rund ? 14 : 6,
+        background: an ? ROT_GRUND : 'var(--lbf-card)', color: an ? '#fff' : TEXT,
+        border: `0.5px solid ${an ? ROT_GRUND : LINIE}`, borderRadius: rund ? 14 : 6,
         fontFamily: 'inherit', fontSize: klein ? 11 : 12, fontWeight: an ? 700 : 400,
         cursor: gesperrt ? 'default' : 'pointer', textAlign: 'left', lineHeight: 1.25,
       }}
     >
       <span aria-hidden style={{
         width: 11, height: 11, flexShrink: 0, borderRadius: rund ? 6 : 2,
-        border: `1.5px solid ${an ? '#fff' : 'rgba(96,8,18,0.35)'}`,
+        border: `1.5px solid ${an ? '#fff' : 'rgba(var(--lbf-rot-rgb),0.35)'}`,
         background: an ? '#fff' : 'transparent',
       }} />
       {text}
@@ -95,7 +96,7 @@ function Knopf({ text, an, rund, onClick, gesperrt, klein }: {
 }
 
 const eingabeStil: React.CSSProperties = {
-  width: '100%', padding: '6px 8px', background: '#fff',
+  width: '100%', padding: '6px 8px', background: 'var(--lbf-input-bg)',
   border: `0.5px solid ${LINIE}`, borderRadius: 6,
   fontFamily: 'inherit', fontSize: 14, color: TEXT, boxSizing: 'border-box',
 }
@@ -369,7 +370,7 @@ export default function NaepFormular({ zustand, onChange, nur, gesperrt }: Props
             ))}
             {gesperrt ? null : (
               <button type="button" onClick={() => setzeListe([...liste, {}])}
-                style={{ padding: '5px 12px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 6, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
+                style={{ padding: '5px 12px', background: 'var(--lbf-card)', border: `0.5px solid ${ROT}`, borderRadius: 6, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
                 {def.liste.titel} ergänzen
               </button>
             )}
@@ -387,7 +388,7 @@ export default function NaepFormular({ zustand, onChange, nur, gesperrt }: Props
       <section
         id={`naep-${a.code}`}
         style={{
-          background: '#fff', borderRadius: 12, marginBottom: 10,
+          background: 'var(--lbf-card)', borderRadius: 12, marginBottom: 10,
           boxShadow: tiefe === 0 ? '0 1px 4px rgba(0,0,0,0.07)' : 'none',
           borderLeft: `3px solid ${ROT}`,
           marginLeft: tiefe * 10, overflow: 'hidden',
@@ -446,7 +447,7 @@ export default function NaepFormular({ zustand, onChange, nur, gesperrt }: Props
                   {reihen.map((reihe, i) => (
                     <tr key={i}>
                       {spalten.map((s) => (
-                        <td key={s.code} style={{ padding: '2px 3px', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+                        <td key={s.code} style={{ padding: '2px 3px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
                           {s.art === 'auswahl' ? (
                             <div style={{ minWidth: 170 }}>
                               {s.optionen.map((o) => (
@@ -483,7 +484,7 @@ export default function NaepFormular({ zustand, onChange, nur, gesperrt }: Props
             </div>
             {gesperrt ? null : (
               <button type="button" onClick={() => setzeReihen([...reihen, {}])}
-                style={{ marginTop: 6, padding: '5px 12px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 6, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
+                style={{ marginTop: 6, padding: '5px 12px', background: 'var(--lbf-card)', border: `0.5px solid ${ROT}`, borderRadius: 6, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
                 Messung ergänzen
               </button>
             )}

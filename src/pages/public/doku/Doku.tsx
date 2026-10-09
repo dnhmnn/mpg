@@ -52,10 +52,12 @@ const KartenScan = lazy(() => import('./KartenScan'))
 // Die Druckansicht zieht beide Seitenvorlagen nach sich — erst beim Öffnen.
 const PdfAnsicht = lazy(() => import('./PdfAnsicht'))
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.12)'
+const LINIE = 'var(--lbf-border)'
 
 function felderVon(abschnittId: string): AelrdFeld[] {
   const a = AELRD_ABSCHNITTE.find((x) => x.id === abschnittId)
@@ -147,7 +149,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
       // `overflow: clip` statt `hidden`: beides schneidet an den runden Ecken
       // ab, aber `hidden` macht den Block zum Scrollbehälter und setzt damit
       // die mitlaufenden Zwischenüberschriften außer Kraft.
-      style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'clip', marginBottom: 10, scrollMarginTop: 108 }}
+      style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'clip', marginBottom: 10, scrollMarginTop: 108 }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, padding: '11px 12px', borderBottom: `0.5px solid ${LINIE}` }}>
         <h2 style={{ flex: 1, margin: 0, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: ROT }}>
@@ -162,7 +164,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
           {aktion ? (
             <button
               type="button" onClick={aktion.onClick}
-              style={{ width: '100%', padding: '9px 12px', marginBottom: 12, background: 'rgba(96,8,18,0.05)', border: `0.5px solid ${LINIE}`, borderRadius: 8, color: ROT, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+              style={{ width: '100%', padding: '9px 12px', marginBottom: 12, background: 'var(--lbf-akzent-weich)', border: `0.5px solid ${LINIE}`, borderRadius: 8, color: ROT, fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
             >
               {aktion.text}
             </button>
@@ -181,7 +183,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                   // Bleibt beim Scrollen stehen: auf einem Zettel mit fast
                   // fünfzig Feldern verliert man sonst, wo man gerade ist.
                   position: 'sticky', top: 62, zIndex: 5,
-                  background: '#fff', margin: '10px -12px 7px', padding: '7px 12px 5px',
+                  background: 'var(--lbf-card)', margin: '10px -12px 7px', padding: '7px 12px 5px',
                   display: 'flex', alignItems: 'baseline', gap: 8,
                   borderBottom: `0.5px solid ${LINIE}`,
                 }}>
@@ -190,7 +192,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
                     <span style={{
                       display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                       width: 22, height: 22, flexShrink: 0, borderRadius: 11,
-                      background: ROT, color: '#fff',
+                      background: ROT_GRUND, color: '#fff',
                       fontSize: 12, fontWeight: 800, lineHeight: 1,
                     }}>
                       {teil.kennung}
@@ -593,7 +595,7 @@ export default function Doku({
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', paddingBottom: 40 }}>
-      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: '#fff', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 14px' }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--lbf-card)', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Patientendokumentation</div>
@@ -613,7 +615,7 @@ export default function Doku({
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 38, height: 38, flexShrink: 0, borderRadius: 19,
-              background: '#fff', border: `0.5px solid ${LINIE}`, color: ROT,
+              background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, color: ROT,
               cursor: 'pointer', fontFamily: 'inherit', padding: 0,
             }}
           >
@@ -624,7 +626,7 @@ export default function Doku({
             </svg>
           </button>
         </div>
-        <div style={{ height: 3, background: 'rgba(96,8,18,0.08)', borderRadius: 2, marginTop: 7, overflow: 'hidden' }}>
+        <div style={{ height: 3, background: 'var(--lbf-border-light)', borderRadius: 2, marginTop: 7, overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${imWeg.length ? (fertig / imWeg.length) * 100 : 0}%`, background: ROT, transition: 'width .2s' }} />
         </div>
       </header>
@@ -638,13 +640,13 @@ export default function Doku({
           <input
             type="search" value={suche} onChange={(e) => setSuche(e.target.value)}
             placeholder="Feld suchen, z. B. Pupillen"
-            style={{ width: '100%', padding: '9px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 999, fontFamily: 'inherit', fontSize: 14, color: TEXT, boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '9px 11px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 999, fontFamily: 'inherit', fontSize: 14, color: TEXT, boxSizing: 'border-box' }}
           />
           {/* Beim Stellen einer Rückfrage: was das Antippen bedeutet. Ohne
               diesen Satz sieht der Beauftragte nur ein Protokoll, das sich
               nicht ausfüllen lässt. */}
         {markieren ? (
-          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.45 }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-card)', border: `0.5px solid ${ROT}`, borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.45 }}>
             Tippen Sie die Felder an, um die es geht.
             {markiert.length > 0 ? (
               <span style={{ fontWeight: 700, color: ROT }}>{` ${markiert.length} angetippt.`}</span>
@@ -654,7 +656,7 @@ export default function Doku({
         {/* Beim Lesen: zu welchen Feldern gefragt wurde — mit dem Weg dorthin,
             denn sie stehen auf verschiedenen Zetteln. */}
         {!markieren && hervorgehoben.length > 0 ? (
-          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 10 }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-card)', border: `0.5px solid ${ROT}`, borderRadius: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: ROT, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
               Rückfrage zu
             </div>
@@ -664,7 +666,7 @@ export default function Doku({
                 return (
                   <button
                     key={f} type="button" disabled={!z} onClick={() => z && zumBlock(z.id)}
-                    style={{ padding: '5px 9px', background: 'rgba(96,8,18,0.05)', border: `0.5px solid ${LINIE}`, borderRadius: 999, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, fontStyle: 'italic', cursor: z ? 'pointer' : 'default' }}
+                    style={{ padding: '5px 9px', background: 'var(--lbf-akzent-weich)', border: `0.5px solid ${LINIE}`, borderRadius: 999, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, fontStyle: 'italic', cursor: z ? 'pointer' : 'default' }}
                   >
                     {aelrdFeld(f)?.label ?? f}
                   </button>
@@ -675,7 +677,7 @@ export default function Doku({
         ) : null}
           {/* Was das Gerät behalten hat — sichtbar, nicht heimlich. */}
         {wiederhergestellt ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 10 }}>
             <span style={{ flex: 1, fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.4 }}>
               Entwurf von diesem Gerät wiederhergestellt — Stand {standText(wiederhergestellt)}.
             </span>
@@ -699,35 +701,35 @@ export default function Doku({
           </div>
         ) : null}
         {laedt ? (
-          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: GRAU }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: GRAU }}>
             Protokoll wird geladen …
           </div>
         ) : null}
         {ladefehler ? (
-          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#991b1b' }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-fehler-grund)', border: '0.5px solid #fca5a5', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-fehler-text)' }}>
             {ladefehler}
           </div>
         ) : null}
         {protokollId && !fristLaeuft(werte) ? (
-          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
             Die Änderungsfrist ist abgelaufen — das Protokoll ist eingereicht.
             Änderungen gehen von hier nicht mehr hinaus.
           </div>
         ) : null}
         {sichertNicht ? (
-          <div style={{ marginBottom: 10, padding: '8px 11px', background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+          <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
             Dieses Gerät behält nichts — bei einem Neuladen wäre die Eingabe weg.
             Privates Fenster oder abgeschaltete Website-Daten?
           </div>
         ) : null}
         {treffer.length > 0 ? (
-            <div style={{ background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 10, marginTop: 6, overflow: 'hidden' }}>
               {treffer.map(({ feld, abschnitt }) => (
                 <button
                   key={feld.id} type="button"
                   // Die Suche wechselt den Reiter.
                   onClick={() => { setSuche(''); zumBlock(zettelVonAbschnitt[abschnitt.id] ?? abschnitt.id) }}
-                  style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderBottom: '0.5px solid rgba(96,8,18,0.06)', border: 'none', background: 'transparent', color: TEXT, textAlign: 'left', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
+                  style={{ display: 'flex', width: '100%', justifyContent: 'space-between', gap: 10, padding: '9px 11px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', border: 'none', background: 'transparent', color: TEXT, textAlign: 'left', fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }}
                 >
                   <span>{feld.label}</span>
                   <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, textAlign: 'right' }}>{abschnitt.titel}</span>
@@ -844,7 +846,7 @@ export default function Doku({
               <button
                 type="button" disabled={!naechster}
                 onClick={() => naechster && zuStation(naechster)}
-                style={{ flex: 2, padding: '11px 12px', background: naechster ? ROT : 'rgba(96,8,18,0.2)', border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: naechster ? 'pointer' : 'default' }}
+                style={{ flex: 2, padding: '11px 12px', background: naechster ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.2)', border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: naechster ? 'pointer' : 'default' }}
               >
                 Weiter ›
               </button>
@@ -880,7 +882,7 @@ export default function Doku({
           <button
             type="button"
             onClick={() => { setWerte({}); setGesendet(null); zumBlock('patient') }}
-            style={{ marginTop: 22, padding: '13px 22px', background: ROT, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}
+            style={{ marginTop: 22, padding: '13px 22px', background: ROT_GRUND, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}
           >
             Neues Protokoll
           </button>

@@ -37,22 +37,22 @@ const ROLE_NAMES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer'
 // ── LBF styles ──
 const INPUT: React.CSSProperties = {
   width: '100%', padding: '11px 13px', borderRadius: 10,
-  border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)',
+  border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)',
   fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box',
   outline: 'none',
 }
 const LABEL: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, color: '#600812',
+  fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)',
   textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6, display: 'block',
 }
 const BTN_PRIMARY: React.CSSProperties = {
   padding: '10px 16px', borderRadius: 10, border: 'none',
-  background: '#600812', color: '#fff', fontWeight: 700,
+  background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700,
   fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em',
 }
 const BTN_SECONDARY: React.CSSProperties = {
-  padding: '10px 16px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.25)',
-  background: 'var(--lbf-card)', color: '#600812', fontWeight: 600,
+  padding: '10px 16px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.25)',
+  background: 'var(--lbf-card)', color: 'var(--lbf-akzent)', fontWeight: 600,
   fontSize: 13, cursor: 'pointer', fontFamily: 'inherit',
 }
 
@@ -404,10 +404,10 @@ export default function Unitarii() {
     <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
       {/* Masthead (Patienten/Lager-Stil) */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Benutzerverwaltung</div>
@@ -415,21 +415,21 @@ export default function Unitarii() {
           </div>
           {tab === 'benutzer' && (
             <>
-              <button onClick={openRoleTemplates} title="Rollen-Vorlagen verwalten" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <button onClick={openRoleTemplates} title="Rollen-Vorlagen verwalten" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
               </button>
-              <button onClick={() => openEditUser()} title="Benutzer anlegen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <button onClick={() => openEditUser()} title="Benutzer anlegen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
             </>
           )}
           {tab === 'neuigkeiten' && (
-            <button onClick={() => openEditN()} title="Neue Neuigkeit" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button onClick={() => openEditN()} title="Neue Neuigkeit" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
           {tab === 'temp' && (
-            <button onClick={openTempCreate} title="Temporären Zugang erstellen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <button onClick={openTempCreate} title="Temporären Zugang erstellen" style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           )}
@@ -437,7 +437,7 @@ export default function Unitarii() {
       </div>
 
       {/* Tab Bar */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.08)', display: 'flex', justifyContent: 'center', gap: 0 }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border-light)', display: 'flex', justifyContent: 'center', gap: 0 }}>
         {([
           { key: 'benutzer',    label: 'Benutzer',    count: regularUsers.length },
           { key: 'neuigkeiten', label: 'Neuigkeiten', count: neuigkeiten.length },
@@ -447,9 +447,9 @@ export default function Unitarii() {
           return (
             <button key={t.key} onClick={() => { setTab(t.key as any) }} style={{
               flex: 1, maxWidth: 200, padding: '12px 10px 10px', background: 'transparent', border: 'none',
-              borderTop: active ? '2px solid #600812' : '2px solid transparent',
+              borderTop: active ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
               fontWeight: 700, fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.08em',
-              color: active ? '#600812' : 'var(--warm-gray)',
+              color: active ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
               cursor: 'pointer', fontFamily: 'inherit',
             }}>
               {t.label} {t.count > 0 && <span style={{ marginLeft: 4, opacity: 0.6 }}>· {t.count}</span>}
@@ -464,7 +464,7 @@ export default function Unitarii() {
         {/* ── BENUTZER ── */}
         {tab === 'benutzer' && (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Alle Benutzer</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Alle Benutzer</div>
 
             {regularUsers.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Benutzer</div>
@@ -479,7 +479,7 @@ export default function Unitarii() {
         {/* ── NEUIGKEITEN ── */}
         {tab === 'neuigkeiten' && (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Veröffentlicht in Unitas</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Veröffentlicht in Unitas</div>
 
             {neuigkeiten.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Neuigkeiten</div>
@@ -488,7 +488,7 @@ export default function Unitarii() {
                 {neuigkeiten.map(n => {
                   const url = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
                   return (
-                    <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: `3px solid ${n.gepinnt ? '#d97706' : '#600812'}`, overflow: 'hidden' }}>
+                    <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: `3px solid ${n.gepinnt ? '#d97706' : 'var(--lbf-akzent)'}`, overflow: 'hidden' }}>
                       {n.gepinnt && (
                         <div style={{ background: 'rgba(217,119,6,0.08)', padding: '5px 14px', fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Angeheftet</div>
                       )}
@@ -505,7 +505,7 @@ export default function Unitarii() {
                           </span>
                           <span style={{ display: 'flex', gap: 6 }}>
                             <button onClick={() => openEditN(n)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11 }}>Bearbeiten</button>
-                            <button onClick={() => deleteN(n.id)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11, color: '#b91c1c', borderColor: 'rgba(185,28,28,0.3)' }}>Löschen</button>
+                            <button onClick={() => deleteN(n.id)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11, color: 'var(--lbf-fehler-text-2)', borderColor: 'rgba(185,28,28,0.3)' }}>Löschen</button>
                           </span>
                         </div>
                       </div>
@@ -520,7 +520,7 @@ export default function Unitarii() {
         {/* ── TEMPORÄRE ── */}
         {tab === 'temp' && (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Zugänge mit Ablaufdatum</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Zugänge mit Ablaufdatum</div>
             <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 14 }}>
               Echte Benutzer-Accounts die nach Ablauf automatisch deaktiviert werden.
             </div>
@@ -573,10 +573,10 @@ export default function Unitarii() {
 
             <div>
               <div style={LABEL}>Zugriffsrechte (dauerhaft)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                    <input type="checkbox" checked={!!userForm.permissions[key]} onChange={e => setUserForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                    <input type="checkbox" checked={!!userForm.permissions[key]} onChange={e => setUserForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                     {label}
                   </label>
                 ))}
@@ -585,7 +585,7 @@ export default function Unitarii() {
 
             <div>
               <div style={LABEL}>Temporäre Zusatzrechte</div>
-              <div style={{ padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {Object.entries(userForm.temp_permissions).length === 0 ? (
                   <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Keine aktiv — Beispiel: Unitas-User für 4h Lager-Zugriff</div>
                 ) : (
@@ -593,12 +593,12 @@ export default function Unitarii() {
                     const label = PERM_LABELS.find(p => p.key === key)?.label || key
                     const left = fmtCountdown(val.until)
                     return (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+                      <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{label}</div>
                           <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>läuft in {left}</div>
                         </div>
-                        <button onClick={() => removeTempPerm(key)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11, color: '#b91c1c', borderColor: 'rgba(185,28,28,0.3)' }}>Entfernen</button>
+                        <button onClick={() => removeTempPerm(key)} style={{ ...BTN_SECONDARY, padding: '5px 11px', fontSize: 11, color: 'var(--lbf-fehler-text-2)', borderColor: 'rgba(185,28,28,0.3)' }}>Entfernen</button>
                       </div>
                     )
                   })
@@ -645,10 +645,10 @@ export default function Unitarii() {
             </Field>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
             <button onClick={() => setEditOpen(false)} style={{ ...BTN_SECONDARY, flex: 1 }}>Abbrechen</button>
             {editingUser && editingUser.id !== user?.id && (
-              <button onClick={() => { deleteUser(editingUser.id); setEditOpen(false) }} style={{ ...BTN_SECONDARY, color: '#b91c1c', borderColor: 'rgba(185,28,28,0.3)' }}>Löschen</button>
+              <button onClick={() => { deleteUser(editingUser.id); setEditOpen(false) }} style={{ ...BTN_SECONDARY, color: 'var(--lbf-fehler-text-2)', borderColor: 'rgba(185,28,28,0.3)' }}>Löschen</button>
             )}
             <button onClick={saveUser} disabled={savingUser} style={{ ...BTN_PRIMARY, flex: 2, opacity: savingUser ? 0.5 : 1 }}>
               {savingUser ? 'Speichert…' : 'Speichern'}
@@ -673,10 +673,10 @@ export default function Unitarii() {
 
             <div>
               <div style={LABEL}>Zugriffsrechte für Rolle "{templateRole}"</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                    <input type="checkbox" checked={!!templateDraft[key]} onChange={e => setTemplateDraft(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                    <input type="checkbox" checked={!!templateDraft[key]} onChange={e => setTemplateDraft(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                     {label}
                   </label>
                 ))}
@@ -684,7 +684,7 @@ export default function Unitarii() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
             <button onClick={resetTemplateDraft} style={BTN_SECONDARY}>Auf Standard zurücksetzen</button>
             <button onClick={saveRoleTemplate} disabled={savingTemplate} style={{ ...BTN_PRIMARY, flex: 1, opacity: savingTemplate ? 0.5 : 1 }}>
               {savingTemplate ? 'Speichert…' : 'Vorlage speichern'}
@@ -704,7 +704,7 @@ export default function Unitarii() {
             </Field>
             <ToggleRow label="Anpinnen (erscheint oben)" value={nForm.gepinnt} onChange={v => setNForm(p => ({ ...p, gepinnt: v }))} />
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
             <button onClick={() => setNOpen(false)} style={{ ...BTN_SECONDARY, flex: 1 }}>Abbrechen</button>
             <button onClick={saveN} disabled={savingN || !nForm.titel.trim()} style={{ ...BTN_PRIMARY, flex: 2, opacity: (savingN || !nForm.titel.trim()) ? 0.5 : 1 }}>
               {savingN ? 'Speichert…' : editingN ? 'Speichern' : 'Veröffentlichen'}
@@ -733,10 +733,10 @@ export default function Unitarii() {
             </Field>
             <div>
               <div style={LABEL}>Berechtigungen</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                    <input type="checkbox" checked={!!tempForm.permissions[key]} onChange={e => setTempForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                    <input type="checkbox" checked={!!tempForm.permissions[key]} onChange={e => setTempForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                     {label}
                   </label>
                 ))}
@@ -749,9 +749,9 @@ export default function Unitarii() {
                   return (
                     <button key={opt.h} onClick={() => setTempForm(p => ({ ...p, durationHours: opt.h, customExpiresAt: '' }))} style={{
                       ...BTN_SECONDARY,
-                      background: active ? '#600812' : '#fff',
-                      color: active ? '#fff' : '#600812',
-                      borderColor: active ? '#600812' : 'rgba(96,8,18,0.25)',
+                      background: active ? 'var(--lbf-akzent-grund)' : 'var(--lbf-card)',
+                      color: active ? '#fff' : 'var(--lbf-akzent)',
+                      borderColor: active ? 'var(--lbf-akzent)' : 'rgba(var(--lbf-rot-rgb),0.25)',
                       padding: '7px 14px', fontSize: 12,
                     }}>{opt.l}</button>
                   )
@@ -760,7 +760,7 @@ export default function Unitarii() {
               <input type="datetime-local" value={tempForm.customExpiresAt} onChange={e => setTempForm(p => ({ ...p, customExpiresAt: e.target.value }))} style={{ ...INPUT, marginTop: 8 }} placeholder="oder exaktes Datum" />
             </Field>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+          <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
             <button onClick={() => setTempOpen(false)} style={{ ...BTN_SECONDARY, flex: 1 }}>Abbrechen</button>
             <button onClick={saveTemp} disabled={savingTemp} style={{ ...BTN_PRIMARY, flex: 2, opacity: savingTemp ? 0.5 : 1 }}>
               {savingTemp ? 'Erstellt…' : 'Zugang erstellen'}
@@ -787,7 +787,7 @@ export default function Unitarii() {
 function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSelf: boolean }) {
   const expSoon = u.expires_at && new Date(u.expires_at).getTime() > Date.now()
   const expired = u.expires_at && new Date(u.expires_at).getTime() <= Date.now()
-  const stripColor = u.disabled || expired ? 'rgba(139,113,90,0.5)' : (expSoon ? '#d97706' : '#600812')
+  const stripColor = u.disabled || expired ? 'rgba(139,113,90,0.5)' : (expSoon ? '#d97706' : 'var(--lbf-akzent)')
   const statusLabel = u.disabled
     ? 'DEAKTIVIERT'
     : expired ? 'ABGELAUFEN'
@@ -802,7 +802,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
       alignItems: 'center', gap: 12, cursor: 'pointer',
     }}>
       <div style={{
-        width: 38, height: 38, borderRadius: '50%', background: '#600812',
+        width: 38, height: 38, borderRadius: '50%', background: 'var(--lbf-akzent-grund)',
         color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontWeight: 700, fontSize: 15, flexShrink: 0,
       }}>{(u.name || displayEmail || '?').charAt(0).toUpperCase()}</div>
@@ -813,7 +813,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
         </div>
         {displayEmail && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-          {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(96,8,18,0.06)', borderRadius: 4 }}>{u.role}</span>}
+          {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 4 }}>{u.role}</span>}
           {u.supervisor && <span style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Supervisor</span>}
           {(() => {
             const tempActive = Object.values(u.temp_permissions || {}).filter(v => v?.until && new Date(v.until).getTime() > Date.now()).length
@@ -841,10 +841,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)', cursor: 'pointer' }}>
+    <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', cursor: 'pointer' }}>
       <span style={{ fontSize: 13, color: 'var(--lbf-text)', fontWeight: 600 }}>{label}</span>
       <div onClick={() => onChange(!value)} style={{
-        width: 42, height: 24, borderRadius: 12, background: value ? '#600812' : 'rgba(139,113,90,0.3)',
+        width: 42, height: 24, borderRadius: 12, background: value ? 'var(--lbf-akzent-grund)' : 'rgba(139,113,90,0.3)',
         position: 'relative', transition: 'background 0.15s',
       }}>
         <div style={{
@@ -867,11 +867,11 @@ function Sheet({ title, onClose, children }: { title: string; onClose: () => voi
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
-          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(var(--lbf-rot-rgb),0.2)' }} />
         </div>
-        <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+        <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{title}</div>
-          <button onClick={onClose} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
+          <button onClick={onClose} style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>

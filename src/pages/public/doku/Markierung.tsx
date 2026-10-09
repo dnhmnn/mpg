@@ -10,7 +10,7 @@
 
 import type React from 'react'
 
-const ROT = '#600812'
+const ROT = 'var(--lbf-akzent)'
 
 export function Feldrahmen({ markiert, anklickbar, beschriftung, onKlick, children }: {
   /** Zu diesem Feld steht eine Rückfrage offen. */
@@ -31,9 +31,9 @@ export function Feldrahmen({ markiert, anklickbar, beschriftung, onKlick, childr
         position: 'relative',
         borderRadius: 10,
         // Der Umriss statt eines Rahmens: er verschiebt nichts.
-        outline: markiert ? `1.5px solid ${ROT}` : `1px dashed rgba(96,8,18,0.25)`,
+        outline: markiert ? `1.5px solid ${ROT}` : `1px dashed rgba(var(--lbf-rot-rgb),0.25)`,
         outlineOffset: 2,
-        background: markiert ? 'rgba(96,8,18,0.05)' : undefined,
+        background: markiert ? 'var(--lbf-akzent-weich)' : undefined,
       }}
     >
       {children}

@@ -15,13 +15,17 @@ import { pflichtKarte } from '../../../katalog/pflicht'
 import type { Werte } from './DokuFeld'
 import { kette, offeneUebernahme, zeitenUebernehmen, type Zeitstrahl as Strahl } from './zeitstrahl'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+// Leaflet zeichnet Linie und Punkte selbst und kennt keine CSS-Variablen.
+const ROT_KARTE = '#600812'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 const eingabe: React.CSSProperties = {
-  width: '100%', padding: '9px 10px', background: '#fff',
+  width: '100%', padding: '9px 10px', background: 'var(--lbf-input-bg)',
   border: `0.5px solid ${LINIE}`, borderRadius: 8,
   fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box',
 }
@@ -98,12 +102,12 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
       const map = leaflet.current
       if (ebene.current) map.removeLayer(ebene.current)
       const gruppe = L.layerGroup()
-      L.geoJSON(verlauf, { style: { color: ROT, weight: 4, opacity: 0.85 } }).addTo(gruppe)
+      L.geoJSON(verlauf, { style: { color: ROT_KARTE, weight: 4, opacity: 0.85 } }).addTo(gruppe)
       const punkt = (farbe: string) => L.divIcon({
         html: `<div style="width:12px;height:12px;background:${farbe};border-radius:50%;border:2.5px solid #fff"></div>`,
         className: '', iconSize: [12, 12], iconAnchor: [6, 6],
       })
-      L.marker([von.breite, von.laenge], { icon: punkt(ROT) }).addTo(gruppe)
+      L.marker([von.breite, von.laenge], { icon: punkt(ROT_KARTE) }).addTo(gruppe)
       L.marker([nach.breite, nach.laenge], { icon: punkt('#16a34a') }).addTo(gruppe)
       gruppe.addTo(map)
       ebene.current = gruppe
@@ -210,7 +214,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
         type="button" onClick={routeBerechnen} disabled={laeuft}
         style={{
           width: '100%', padding: '10px 12px', marginBottom: 8,
-          background: laeuft ? 'rgba(96,8,18,0.2)' : 'rgba(96,8,18,0.05)',
+          background: laeuft ? 'rgba(var(--lbf-rot-rgb),0.2)' : 'var(--lbf-akzent-weich)',
           border: `0.5px solid ${LINIE}`, borderRadius: 8, color: ROT,
           fontFamily: 'inherit', fontSize: 12, fontWeight: 700, cursor: laeuft ? 'default' : 'pointer',
         }}
@@ -224,7 +228,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
         </div>
       ) : null}
       {meldung ? (
-        <div style={{ padding: '8px 10px', marginBottom: 8, background: '#fffbeb', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: '#854d0e', lineHeight: 1.45 }}>
+        <div style={{ padding: '8px 10px', marginBottom: 8, background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
           {meldung}
         </div>
       ) : null}
@@ -261,13 +265,13 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
           return (
             <div key={h.id} style={{
               display: 'flex', alignItems: 'center', gap: 9, padding: '6px 10px',
-              borderBottom: i < halte.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none',
-              background: fehlt ? (stand!.stufe === 'pflicht' ? '#fef2f2' : '#fffbeb') : steht ? '#fff' : 'rgba(250,249,247,0.7)',
+              borderBottom: i < halte.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' : 'none',
+              background: fehlt ? (stand!.stufe === 'pflicht' ? 'var(--lbf-fehler-grund)' : 'var(--lbf-warn-grund)') : steht ? 'var(--lbf-card)' : 'var(--lbf-fuss)',
             }}>
               <span style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 22, height: 22, flexShrink: 0, borderRadius: 11,
-                background: steht ? ROT : 'transparent',
+                background: steht ? ROT_GRUND : 'transparent',
                 border: steht ? 'none' : `1px solid ${LINIE}`,
                 color: steht ? '#fff' : GRAU, fontSize: 11, fontWeight: 800,
               }}>
@@ -277,10 +281,10 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
                 <span style={{ display: 'block', fontSize: 13, fontWeight: 700, color: TEXT }}>
                   {h.titel}
                   {pflicht || stand ? (
-                    <span style={{ color: fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : GRAU, fontWeight: 700, marginLeft: 4 }}>*</span>
+                    <span style={{ color: fehlt ? (stand!.stufe === 'pflicht' ? 'var(--lbf-fehler-text-2)' : 'var(--lbf-warn-text-2)') : GRAU, fontWeight: 700, marginLeft: 4 }}>*</span>
                   ) : null}
                 </span>
-                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : GRAU }}>
+                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: fehlt ? (stand!.stufe === 'pflicht' ? 'var(--lbf-fehler-text-2)' : 'var(--lbf-warn-text-2)') : GRAU }}>
                   {h.unter}
                 </span>
                 {/*
@@ -306,7 +310,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
                 type="time" name={h.feld} value={steht}
                 onChange={(e) => setzen(h.feld, e.target.value)}
                 style={{
-                  width: 96, flexShrink: 0, padding: '6px 8px', background: '#fff',
+                  width: 96, flexShrink: 0, padding: '6px 8px', background: 'var(--lbf-input-bg)',
                   border: `1px solid ${fehlt ? (stand!.stufe === 'pflicht' ? '#b91c1c' : '#b45309') : steht ? ROT : LINIE}`, borderRadius: 8,
                   fontFamily: 'inherit', fontSize: 16, fontWeight: 700,
                   color: steht ? ROT : GRAU, boxSizing: 'border-box',
@@ -322,7 +326,7 @@ export default function Zeitstrahl({ werte, setWerte, setzen }: {
         onClick={() => setWerte((v) => zeitenUebernehmen(v, strahl))}
         style={{
           width: '100%', padding: '11px 12px', marginTop: 8,
-          background: offen > 0 ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 10,
+          background: offen > 0 ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.15)', border: 'none', borderRadius: 10,
           color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700,
           textTransform: 'uppercase', letterSpacing: '0.06em', cursor: offen > 0 ? 'pointer' : 'default',
         }}

@@ -71,18 +71,18 @@ const S = {
     padding: '20px 16px calc(40px + env(safe-area-inset-bottom))'
   },
   group: {
-    background: '#ffffff',
+    background: 'var(--lbf-card)',
     borderRadius: '12px',
     overflow: 'hidden' as const,
-    border: '0.5px solid rgba(96,8,18,0.1)',
-    borderLeft: '3px solid #600812',
+    border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)',
+    borderLeft: '3px solid var(--lbf-akzent)',
     marginBottom: '16px',
     boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
   },
   groupHeader: {
     fontSize: '10px',
     fontWeight: 700,
-    color: '#600812',
+    color: 'var(--lbf-akzent)',
     letterSpacing: '0.14em',
     textTransform: 'uppercase' as const,
     marginBottom: '6px',
@@ -93,9 +93,9 @@ const S = {
     alignItems: 'center' as const,
     gap: '14px',
     padding: '13px 16px',
-    background: '#ffffff',
+    background: 'var(--lbf-card)',
     border: 'none',
-    borderBottom: '0.5px solid rgba(96,8,18,0.07)',
+    borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.07)',
     cursor: 'pointer',
     width: '100%',
     textAlign: 'left' as const,
@@ -108,7 +108,7 @@ const S = {
     width: '30px',
     height: '30px',
     borderRadius: '8px',
-    background: '#600812',
+    background: 'var(--lbf-akzent-grund)',
     display: 'flex' as const,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
@@ -117,13 +117,13 @@ const S = {
   itemLabel: {
     flex: 1,
     fontSize: '15px',
-    color: '#1a0e08',
+    color: 'var(--lbf-text)',
     fontWeight: 500
   },
   chevron: {
     width: '16px',
     height: '16px',
-    color: 'rgba(96,8,18,0.3)'
+    color: 'rgba(var(--lbf-rot-rgb),0.3)'
   },
   detailHeader: {
     display: 'flex' as const,
@@ -138,7 +138,7 @@ const S = {
     background: 'none',
     border: 'none',
     cursor: 'pointer',
-    color: '#600812',
+    color: 'var(--lbf-akzent)',
     fontSize: '15px',
     fontFamily: 'inherit',
     padding: '4px 0',
@@ -147,23 +147,23 @@ const S = {
   detailTitle: {
     fontSize: '18px',
     fontWeight: 700,
-    color: '#1a0e08',
+    color: 'var(--lbf-text)',
     flex: 1,
     fontStyle: 'italic' as const
   },
   sectionHeader: {
     fontSize: '10px',
     fontWeight: 700,
-    color: '#600812',
+    color: 'var(--lbf-akzent)',
     letterSpacing: '0.14em',
     textTransform: 'uppercase' as const,
     marginBottom: '6px',
     paddingLeft: '2px'
   },
   card: {
-    background: '#ffffff',
+    background: 'var(--lbf-card)',
     borderRadius: '12px',
-    border: '0.5px solid rgba(96,8,18,0.1)',
+    border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)',
     overflow: 'hidden' as const,
     marginBottom: '20px',
     boxShadow: '0 1px 4px rgba(0,0,0,0.06)'
@@ -173,14 +173,14 @@ const S = {
     flexDirection: 'column' as const,
     gap: '4px',
     padding: '12px 16px',
-    borderBottom: '0.5px solid rgba(96,8,18,0.07)'
+    borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.07)'
   },
   fieldLast: {
     borderBottom: 'none'
   },
   fieldLabel: {
     fontSize: '10px',
-    color: '#600812',
+    color: 'var(--lbf-akzent)',
     fontWeight: 700,
     textTransform: 'uppercase' as const,
     letterSpacing: '0.12em'
@@ -190,7 +190,7 @@ const S = {
     border: 'none',
     outline: 'none',
     fontSize: '15px',
-    color: '#1a0e08',
+    color: 'var(--lbf-text)',
     fontFamily: 'inherit',
     padding: '2px 0'
   },
@@ -207,7 +207,7 @@ const S = {
     display: 'block' as const,
     width: '100%',
     padding: '14px',
-    background: '#600812',
+    background: 'var(--lbf-akzent-grund)',
     color: '#fff',
     border: 'none',
     borderRadius: '12px',
@@ -254,7 +254,7 @@ function ToggleSwitch({ on, onChange }: { on: boolean; onChange: () => void }) {
           width: '27px',
           height: '27px',
           borderRadius: '50%',
-          background: '#fff',
+          background: '#fff', // Schalterknopf bleibt weiss auf farbiger Schiene, auch im Dunkelmodus
           boxShadow: '0 2px 4px rgba(0,0,0,0.25)',
           transition: 'left 0.2s'
         }}
@@ -773,11 +773,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 display: 'flex',
                 alignItems: 'center',
                 padding: '13px 16px',
-                borderBottom: isLast ? 'none' : '1px solid rgba(96,8,18,0.08)',
+                borderBottom: isLast ? 'none' : '1px solid var(--lbf-border-light)',
                 gap: '12px'
               }}
             >
-              <span style={{ flex: 1, fontSize: '16px', color: '#1a0e08' }}>{item.label}</span>
+              <span style={{ flex: 1, fontSize: '16px', color: 'var(--lbf-text)' }}>{item.label}</span>
               <ToggleSwitch on={notifPrefs[item.key]} onChange={() => toggleNotif(item.key)} />
             </div>
           )
@@ -785,12 +785,12 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       </div>
 
       <div style={{ ...S.sectionHeader, marginTop: '8px' }}>E-MAIL</div>
-      <div style={{ fontSize: '12px', color: 'rgba(96,8,18,0.5)', marginBottom: '8px', paddingLeft: '4px' }}>
+      <div style={{ fontSize: '12px', color: 'rgba(var(--lbf-rot-rgb),0.5)', marginBottom: '8px', paddingLeft: '4px' }}>
         Erhalte eine E-Mail wenn neue Hinweise vorliegen
       </div>
       <div style={S.card}>
         <div style={{ display: 'flex', alignItems: 'center', padding: '13px 16px', gap: '12px' }}>
-          <span style={{ flex: 1, fontSize: '16px', color: '#1a0e08' }}>Per E-Mail benachrichtigen</span>
+          <span style={{ flex: 1, fontSize: '16px', color: 'var(--lbf-text)' }}>Per E-Mail benachrichtigen</span>
           <ToggleSwitch on={notifPrefs.email} onChange={() => toggleNotif('email')} />
         </div>
       </div>
@@ -817,9 +817,9 @@ export default function SettingsPage({ user }: SettingsPageProps) {
               gap: '14px',
               padding: '14px 16px',
               borderRadius: '12px',
-              border: themeMode === opt.value ? '0.5px solid rgba(96,8,18,0.15)' : '0.5px solid rgba(96,8,18,0.08)',
-              borderLeft: themeMode === opt.value ? '3px solid #600812' : '3px solid rgba(96,8,18,0.15)',
-              background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : '#ffffff',
+              border: themeMode === opt.value ? '0.5px solid rgba(var(--lbf-rot-rgb),0.15)' : '0.5px solid var(--lbf-border-light)',
+              borderLeft: themeMode === opt.value ? '3px solid var(--lbf-akzent)' : '3px solid rgba(var(--lbf-rot-rgb),0.15)',
+              background: themeMode === opt.value ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'var(--lbf-card)',
               cursor: 'pointer',
               textAlign: 'left' as const,
               fontFamily: 'inherit',
@@ -828,11 +828,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             }}
           >
             <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: '15px', color: themeMode === opt.value ? '#600812' : '#1a0e08' }}>{opt.label}</div>
+              <div style={{ fontWeight: 700, fontSize: '15px', color: themeMode === opt.value ? 'var(--lbf-akzent)' : 'var(--lbf-text)' }}>{opt.label}</div>
               <div style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: '2px' }}>{opt.desc}</div>
             </div>
             {themeMode === opt.value && (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2.5">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
             )}
@@ -841,7 +841,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       </div>
 
       <div style={{ ...S.sectionHeader, marginTop: '4px' }}>DOCK</div>
-      <div style={{ fontSize: '12px', color: 'rgba(96,8,18,0.5)', marginBottom: '12px', paddingLeft: '4px' }}>
+      <div style={{ fontSize: '12px', color: 'rgba(var(--lbf-rot-rgb),0.5)', marginBottom: '12px', paddingLeft: '4px' }}>
         Wähle bis zu {MAX_DOCK_PINS} Apps für das Dock.
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(72px, 1fr))', gap: '10px' }}>
@@ -857,8 +857,8 @@ export default function SettingsPage({ user }: SettingsPageProps) {
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px',
                 padding: '10px 6px', borderRadius: '14px', border: 'none', cursor: blocked ? 'not-allowed' : 'pointer',
-                background: pinned ? 'rgba(96,8,18,0.06)' : 'transparent',
-                outline: pinned ? '2px solid #600812' : '1.5px solid rgba(96,8,18,0.12)',
+                background: pinned ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'transparent',
+                outline: pinned ? '2px solid var(--lbf-akzent)' : '1.5px solid var(--lbf-border)',
                 outlineOffset: '-1.5px',
                 opacity: blocked ? 0.35 : 1,
                 transition: 'all 0.15s', fontFamily: 'inherit',
@@ -867,21 +867,21 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             >
               <div style={{
                 width: '46px', height: '46px', borderRadius: '12px',
-                background: pinned ? app.color || '#600812' : 'rgba(96,8,18,0.06)',
+                background: pinned ? app.color || 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)',
                 color: pinned ? '#fff' : colorMatch,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)', transition: 'all 0.15s'
               }}>
                 <AppIcon icon={app.icon} />
               </div>
-              <span style={{ fontSize: '10px', color: '#1a0e08', fontWeight: pinned ? 600 : 400, textAlign: 'center', lineHeight: 1.2 }}>
+              <span style={{ fontSize: '10px', color: 'var(--lbf-text)', fontWeight: pinned ? 600 : 400, textAlign: 'center', lineHeight: 1.2 }}>
                 {app.name}
               </span>
               {pinned && (
                 <div style={{
                   position: 'absolute', top: '4px', right: '4px',
                   width: '14px', height: '14px', borderRadius: '50%',
-                  background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  background: 'var(--lbf-akzent-grund)', display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3">
                     <polyline points="20 6 9 17 4 12"/>
@@ -892,7 +892,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           )
         })}
       </div>
-      <div style={{ marginTop: '12px', fontSize: '12px', color: 'rgba(96,8,18,0.5)', textAlign: 'center' }}>
+      <div style={{ marginTop: '12px', fontSize: '12px', color: 'rgba(var(--lbf-rot-rgb),0.5)', textAlign: 'center' }}>
         {dockPins.length} / {MAX_DOCK_PINS} gepinnt
       </div>
     </div>
@@ -907,7 +907,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           <button
             onClick={openAddUser}
             style={{
-              background: '#600812', border: 'none', borderRadius: '8px',
+              background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: '8px',
               padding: '6px 12px', color: '#fff', fontSize: '13px',
               fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
             }}
@@ -918,11 +918,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       </div>
       <div style={S.card}>
         {loadingUsers ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(96,8,18,0.4)' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(var(--lbf-rot-rgb),0.4)' }}>
             Lade Benutzer...
           </div>
         ) : users.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(96,8,18,0.4)' }}>
+          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(var(--lbf-rot-rgb),0.4)' }}>
             Keine Benutzer gefunden
           </div>
         ) : (
@@ -930,7 +930,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             <div
               key={u.id}
               className="user-row"
-              style={{ borderBottom: idx === users.length - 1 ? 'none' : '1px solid rgba(96,8,18,0.08)' }}
+              style={{ borderBottom: idx === users.length - 1 ? 'none' : '1px solid var(--lbf-border-light)' }}
             >
               <div className="user-avatar">{(u.name || u.email)[0].toUpperCase()}</div>
               <div className="user-info">
@@ -1011,16 +1011,16 @@ export default function SettingsPage({ user }: SettingsPageProps) {
   return (
     <div style={S.page}>
       {/* MASTHEAD */}
-      <div style={{ background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))', flexShrink: 0 }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))', flexShrink: 0 }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => view !== 'main' ? goBack() : navigate('/hub')}
-            style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 0, flexShrink: 0 }}
+            style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 0, flexShrink: 0 }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>
               {view !== 'main' ? viewTitles[view] : 'Einstellungen'}
             </div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
@@ -1114,17 +1114,17 @@ export default function SettingsPage({ user }: SettingsPageProps) {
                 </div>
               </div>
               <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: '#600812', marginBottom: 6 }}>
+                <div style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>
                   Zugriffsrechte
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--warm-bg)', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.1)' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--warm-bg)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                   {PERM_LABELS.map(({ key, label }) => (
                     <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', color: 'var(--lbf-text)' }}>
                       <input
                         type="checkbox"
                         checked={!!userFormPermissions[key]}
                         onChange={(e) => setUserFormPermissions(p => ({ ...p, [key]: e.target.checked }))}
-                        style={{ width: 16, height: 16, accentColor: '#600812' }}
+                        style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }}
                       />
                       {label}
                     </label>

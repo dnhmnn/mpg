@@ -4,7 +4,7 @@ import { eventsOf } from '../../lib/eks/db'
 import type { EksEventType, EksState } from '../../lib/eks/types'
 import { Feld, Overlay } from './TabAtemschutz'
 
-const RED = '#600812'
+const RED = 'var(--lbf-akzent)', RED_GRUND = 'var(--lbf-akzent-grund)'
 
 export default function TabETB({ state, dispatch, offen }: {
   state: EksState
@@ -48,6 +48,7 @@ export default function TabETB({ state, dispatch, offen }: {
         `<tr><td>${new Date(ms.t).toLocaleTimeString('de-DE')}</td><td>${esc(m.name)}</td><td>${ms.druck} bar</td></tr>`)).join('')}
       </table>`).join('')
 
+    // Druckausgabe: Papierfarben bleiben hart
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Einsatztagebuch</title><style>
       body{font-family:Georgia,serif;color:#1a0e08;padding:28px;line-height:1.5}
       h1{font-size:20px;color:#600812;margin:0 0 4px} h2{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:#600812;margin:22px 0 6px}
@@ -76,14 +77,14 @@ export default function TabETB({ state, dispatch, offen }: {
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
           <button onClick={drucken} style={b('var(--warm-gray)')}>Drucken / PDF</button>
           <button disabled={!text.trim()} onClick={async () => { await dispatch('etb.entry', { text: text.trim() }); setText('') }}
-            style={{ ...b(RED, true), opacity: text.trim() ? 1 : 0.5 }}>Eintragen</button>
+            style={{ ...b(RED_GRUND, true), opacity: text.trim() ? 1 : 0.5 }}>Eintragen</button>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
         {([['alle', 'Alle'], ['manuell', 'Manuell'], ['atemschutz', 'Atemschutz']] as const).map(([k, l]) => (
           <button key={k} onClick={() => setFilter(k)} style={{
-            border: `1px solid ${filter === k ? RED : 'rgba(96,8,18,0.2)'}`, background: filter === k ? RED : 'transparent',
+            border: `1px solid ${filter === k ? RED : 'rgba(var(--lbf-rot-rgb),0.2)'}`, background: filter === k ? RED_GRUND : 'transparent',
             color: filter === k ? '#fff' : RED, borderRadius: 999, padding: '4px 12px', fontSize: 12, fontWeight: 700,
             cursor: 'pointer', fontFamily: 'inherit',
           }}>{l}</button>
@@ -150,7 +151,7 @@ function KorrekturModal({ onClose, onSave }: { onClose: () => void; onSave: (t: 
       <Feld label="Grund"><input value={grund} onChange={e => setGrund(e.target.value)} className="eks-input" /></Feld>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
         <button onClick={onClose} style={b('var(--warm-gray)')}>Abbrechen</button>
-        <button disabled={!text.trim()} onClick={() => onSave(text.trim(), grund)} style={{ ...b(RED, true), opacity: text.trim() ? 1 : 0.5 }}>Speichern</button>
+        <button disabled={!text.trim()} onClick={() => onSave(text.trim(), grund)} style={{ ...b(RED_GRUND, true), opacity: text.trim() ? 1 : 0.5 }}>Speichern</button>
       </div>
     </Overlay>
   )

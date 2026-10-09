@@ -131,17 +131,17 @@ export default function ProtokollBearbeiten() {
           else el.value = String(v)
           if (chf.has(el.name)) {
             el.style.boxShadow = 'inset 0 0 0 2px #d97706'
-            el.style.background = '#fef3c7'
+            el.style.background = 'var(--lbf-warn-grund-2)'
           } else if (tfchf.has(el.name)) {
             el.style.boxShadow = 'inset 0 0 0 2px #16a34a'
-            el.style.background = '#f0fdf4'
+            el.style.background = 'var(--lbf-ok-grund)'
           }
         })
         ;['notfallgeschehen', 'verlaufsbeschreibung'].forEach(n => {
           const el = form.querySelector<HTMLTextAreaElement>(`[name="${n}"]`)
           if (!el) return
-          if (chf.has(n)) { el.style.boxShadow = 'inset 0 0 0 2px #d97706'; el.style.background = '#fef3c7' }
-          else if (tfchf.has(n)) { el.style.boxShadow = 'inset 0 0 0 2px #16a34a'; el.style.background = '#f0fdf4' }
+          if (chf.has(n)) { el.style.boxShadow = 'inset 0 0 0 2px #d97706'; el.style.background = 'var(--lbf-warn-grund-2)' }
+          else if (tfchf.has(n)) { el.style.boxShadow = 'inset 0 0 0 2px #16a34a'; el.style.background = 'var(--lbf-ok-grund)' }
         })
       }, 50)
     } catch { alert('Protokoll nicht gefunden.'); navigate('/unitas') }
@@ -275,14 +275,14 @@ export default function ProtokollBearbeiten() {
           const reopen = originalPayloadRef.current.tf_reopen as any
           const minsLeft = reopen ? Math.ceil((new Date(reopen.expires_at).getTime() - Date.now()) / 60000) : 0
           return (
-            <div style={{ background: '#f0fdf4', border: '0.5px solid #86efac', borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: '#166534', fontWeight: 600, fontSize: '.9rem' }}>
+            <div style={{ background: 'var(--lbf-ok-grund)', border: '0.5px solid #86efac', borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: 'var(--lbf-ok-text)', fontWeight: 600, fontSize: '.9rem' }}>
               Nachbearbeitung aktiv · noch {minsLeft >= 60 ? `${Math.ceil(minsLeft / 60)}h` : `${minsLeft}min`} · Deine Änderungen werden grün markiert
             </div>
           )
         })()}
 
         {lockedReason && (
-          <div style={{ background: lockedReason.startsWith('Nachbearbeitung') ? '#f0fdf4' : '#fef2f2', border: `0.5px solid ${lockedReason.startsWith('Nachbearbeitung') ? '#86efac' : '#fca5a5'}`, borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: lockedReason.startsWith('Nachbearbeitung') ? '#166534' : '#991b1b', fontWeight: 600, fontSize: '.9rem' }}>
+          <div style={{ background: lockedReason.startsWith('Nachbearbeitung') ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)', border: `0.5px solid ${lockedReason.startsWith('Nachbearbeitung') ? '#86efac' : '#fca5a5'}`, borderRadius: 12, padding: '12px 16px', marginBottom: '.75rem', color: lockedReason.startsWith('Nachbearbeitung') ? 'var(--lbf-ok-text)' : 'var(--lbf-fehler-text)', fontWeight: 600, fontSize: '.9rem' }}>
             {lockedReason.startsWith('Nachbearbeitung') ? '✓' : '🔒'} {lockedReason}
           </div>
         )}
@@ -815,7 +815,7 @@ export default function ProtokollBearbeiten() {
                   <div style={{ color: 'var(--text-secondary)', fontSize: '.9rem' }}>Keine Unterschrift hinterlegt.</div>
                 ) : (
                   <>
-                    <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid var(--border)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} />
+                    <canvas ref={canvasRef} width={800} height={200} style={{ width: '100%', height: 160, border: '0.5px solid var(--border)', borderRadius: 10, touchAction: 'none', cursor: 'crosshair', background: '#fff' }} /* Unterschrift bleibt weiss, wird gedruckt */ />
                     <button type="button" onClick={clearSig} style={{ marginTop: 8, border: '0.5px solid var(--border-medium)', background: 'var(--bg-hover)', padding: '.35rem .6rem', borderRadius: 8, cursor: 'pointer', fontSize: '.9rem', fontWeight: 600, color: 'var(--text)', fontFamily: 'inherit' }}>Signatur löschen</button>
                   </>
                 )}
@@ -843,14 +843,14 @@ export default function ProtokollBearbeiten() {
               const sn = stellungnahmen.find(s => s.rueckfrage_id === rq.id)
               return (
                 <div key={rq.id} style={{
-                  background: sn ? '#f0fdf4' : '#fffbeb',
+                  background: sn ? 'var(--lbf-ok-grund)' : 'var(--lbf-warn-grund)',
                   border: `1px solid ${sn ? '#bbf7d0' : '#fcd34d'}`,
                   borderRadius: 10, padding: 12, marginBottom: 12,
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
                     <span style={{ fontWeight: 700, fontSize: 13 }}>Rückfrage{rq.created_by ? ` von ${rq.created_by}` : ''}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? '#dcfce7' : '#fef9c3', color: sn ? '#166534' : '#92400e' }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999, background: sn ? 'var(--lbf-ok-grund-2)' : 'var(--lbf-warn-grund-4)', color: sn ? 'var(--lbf-ok-text)' : 'var(--lbf-warn-text)' }}>
                       {sn ? 'Beantwortet' : 'Offen'}
                     </span>
                   </div>
@@ -859,8 +859,8 @@ export default function ProtokollBearbeiten() {
                     {rq.frage}
                   </div>
                   {sn && (
-                    <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: '#166534', marginBottom: 2 }}>Deine Stellungnahme:</div>
+                    <div style={{ fontSize: 14, background: 'var(--lbf-ok-grund-2)', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--lbf-ok-text)', marginBottom: 2 }}>Deine Stellungnahme:</div>
                       {sn.text}
                     </div>
                   )}

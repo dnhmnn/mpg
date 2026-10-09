@@ -13,7 +13,7 @@ import { aelrdFeld, type AelrdFeld } from '../../katalog/aelrd'
 import { istSpiegelFeld, istSpiegelOption } from '../../katalog/aelrdSpiegel'
 import { field, inp, lbl, ta } from './pubStyles'
 
-const ROT = '#600812'
+const ROT = 'var(--lbf-akzent)'
 
 type Props = {
   /** Feld-IDs aus dem ÄLRD-Katalog. */
@@ -44,9 +44,9 @@ function Optionen({ feld, werte }: { feld: AelrdFeld; werte?: Record<string, unk
           key={o.wert}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 6,
-            padding: '8px 12px', border: '1.5px solid rgba(96,8,18,0.15)',
-            borderRadius: 18, background: '#fff',
-            fontSize: 14, color: '#1a0e08', cursor: 'pointer',
+            padding: '8px 12px', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)',
+            borderRadius: 18, background: 'var(--lbf-card)',
+            fontSize: 14, color: 'var(--lbf-text)', cursor: 'pointer',
           }}
         >
           {/* Mehrfachwahl braucht technisch Kästchen — gezeichnet wird
@@ -76,8 +76,8 @@ function Skala({ feld, werte }: { feld: AelrdFeld; werte?: Record<string, unknow
           key={n}
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            minWidth: 40, padding: '8px 0', border: '1.5px solid rgba(96,8,18,0.15)',
-            borderRadius: 8, background: '#fff', fontSize: 15, cursor: 'pointer',
+            minWidth: 40, padding: '8px 0', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)',
+            borderRadius: 8, background: 'var(--lbf-card)', fontSize: 15, cursor: 'pointer',
           }}
         >
           <input
@@ -96,7 +96,7 @@ function EinFeld({ feld, werte }: { feld: AelrdFeld; werte?: Record<string, unkn
   if (feld.typ === 'check') {
     return (
       <div style={field}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, color: '#1a0e08', cursor: 'pointer' }}>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 15, color: 'var(--lbf-text)', cursor: 'pointer' }}>
           <input
             type="checkbox" name={feld.id}
             defaultChecked={Boolean(werte?.[feld.id])}

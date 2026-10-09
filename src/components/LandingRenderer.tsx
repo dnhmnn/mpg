@@ -166,6 +166,7 @@ function SectionView({ s, d, preview }: { s: Section; d: Design; preview?: boole
       <section {...common}>
         <div className="wrap">
           {s.heading && <h2 dangerouslySetInnerHTML={{ __html: safeHtml(s.heading) }} />}
+          {/* Platzhalter gehört zur Website und deren Design, nicht zum App-Thema. */}
           {s.image
             ? <img className="sec-img" src={s.image} alt={s.caption || ''} />
             : <div style={{ padding: 40, textAlign: 'center', border: '1.5px dashed rgba(96,8,18,0.25)', borderRadius: 12, color: '#8a7a68', fontStyle: 'italic' }}>Noch kein Bild gewählt</div>}

@@ -425,8 +425,8 @@ export default function Patienten() {
 
   const auditColor: Record<string, string> = {
     'eingesehen': '#16a34a',
-    'bearbeitet': '#600812',
-    'archiviert': '#8a7a68',
+    'bearbeitet': 'var(--lbf-akzent-grund)',
+    'archiviert': 'var(--warm-gray)',
     'gelöscht': '#c0392b',
     'gelöscht (Aufbewahrungsfrist)': '#c0392b',
   }
@@ -460,12 +460,12 @@ export default function Patienten() {
           font-family: inherit;
           letter-spacing: 0.02em;
         }
-        .pat-toast.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-        .pat-toast.error   { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+        .pat-toast.success { background: var(--lbf-ok-grund); border: 1px solid #bbf7d0; color: var(--lbf-ok-text); }
+        .pat-toast.error   { background: var(--lbf-fehler-grund); border: 1px solid #fecaca; color: var(--lbf-fehler-text-2); }
 
         .pat-toolbar {
-          background: #fff;
-          border-bottom: 0.5px solid rgba(96,8,18,0.1);
+          background: var(--lbf-card);
+          border-bottom: 0.5px solid rgba(var(--lbf-rot-rgb),0.1);
           position: sticky;
           top: calc(env(safe-area-inset-top) + 60px);
           z-index: 99;
@@ -499,10 +499,10 @@ export default function Patienten() {
           position: relative;
           transition: color 0.15s, border-color 0.15s;
         }
-        .pat-tab-btn:hover { color: #1a0e08; }
+        .pat-tab-btn:hover { color: var(--lbf-text); }
         .pat-tab-btn.active {
-          color: #600812;
-          border-bottom-color: #600812;
+          color: var(--lbf-akzent);
+          border-bottom-color: var(--lbf-akzent);
         }
         .pat-tab-btn .pat-tab-label {
           font-size: 9px;
@@ -547,11 +547,11 @@ export default function Patienten() {
           padding: 14px 16px 12px 14px;
           flex: 1;
         }
-        .pat-card.offen         { border-left-color: #600812; }
+        .pat-card.offen         { border-left-color: var(--lbf-akzent); }
         .pat-card.freigegeben   { border-left-color: #16a34a; }
         /* Eine offene Rueckfrage haelt das Protokoll auf — der Balken sagt es. */
         .pat-card.rueckfrage    { border-left-color: #d97706; }
-        .pat-card.nach          { border-left-color: #600812; }
+        .pat-card.nach          { border-left-color: var(--lbf-akzent); }
         .pat-card.archiviert    { border-left-color: rgba(139,113,90,0.4); }
         .pat-card.old           { border-left-color: #d97706; }
 
@@ -618,15 +618,15 @@ export default function Patienten() {
           flex-shrink: 0;
           font-style: italic;
         }
-        .pat-badge.nach          { background: rgba(96,8,18,0.07); color: #600812; }
-        .pat-badge.archiviert    { background: rgba(139,113,90,0.1); color: #8a7a68; }
+        .pat-badge.nach          { background: rgba(var(--lbf-rot-rgb),0.07); color: var(--lbf-akzent); }
+        .pat-badge.archiviert    { background: rgba(139,113,90,0.1); color: var(--warm-gray); }
         .pat-badge.old-warn      { background: rgba(217,119,6,0.1); color: #d97706; }
 
         .pat-btn {
           font-size: 12px;
           font-weight: 700;
           padding: 6px 12px;
-          border: 1px solid rgba(96,8,18,0.15);
+          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
           border-radius: 8px;
           cursor: pointer;
           background: var(--warm-bg);
@@ -636,18 +636,18 @@ export default function Patienten() {
           font-family: inherit;
           letter-spacing: 0.02em;
         }
-        .pat-btn:hover { background: rgba(96,8,18,0.06); }
+        .pat-btn:hover { background: rgba(var(--lbf-rot-rgb),0.06); }
         /* Die eine Handlung, auf die eine Karte hinauslaeuft. */
-        .pat-btn.haupt { background: #600812; border-color: #600812; color: #fff; }
+        .pat-btn.haupt { background: var(--lbf-akzent-grund); border-color: var(--lbf-akzent-grund); color: #fff; }
         .pat-btn.haupt:hover { background: #4a0610; }
         .pat-btn:disabled, .pat-btn.haupt:disabled {
-          background: rgba(96,8,18,0.04);
-          border-color: rgba(96,8,18,0.08);
+          background: rgba(var(--lbf-rot-rgb),0.04);
+          border-color: var(--lbf-border-light);
           color: var(--warm-gray);
           cursor: not-allowed;
         }
-        .pat-btn.danger { background: #fff0f0; border-color: rgba(220,38,38,0.3); color: #dc2626; }
-        .pat-btn.danger:hover { background: #fde8e8; }
+        .pat-btn.danger { background: var(--lbf-fehler-grund-3); border-color: rgba(220,38,38,0.3); color: #dc2626; }
+        .pat-btn.danger:hover { background: var(--lbf-fehler-grund-4); }
 
         .pat-empty {
           text-align: center;
@@ -664,12 +664,12 @@ export default function Patienten() {
           text-transform: uppercase;
           letter-spacing: 0.14em;
           padding: 10px 0 8px;
-          border-bottom: 0.5px solid rgba(96,8,18,0.12);
+          border-bottom: 0.5px solid var(--lbf-border);
           margin-bottom: 12px;
         }
 
         .pat-warn-banner {
-          background: #fff8ed;
+          background: var(--lbf-warn-grund-3);
           border: 0.5px solid rgba(217,119,6,0.3);
           border-left: 3px solid #d97706;
           border-radius: 12px;
@@ -680,15 +680,15 @@ export default function Patienten() {
           gap: 14px;
         }
         .pat-warn-text { flex: 1; }
-        .pat-warn-title { font-weight: 700; font-size: 13px; color: #92400e; font-style: italic; }
-        .pat-warn-sub { font-size: 12px; color: #b45309; margin-top: 2px; font-style: italic; }
+        .pat-warn-title { font-weight: 700; font-size: 13px; color: var(--lbf-warn-text); font-style: italic; }
+        .pat-warn-sub { font-size: 12px; color: var(--lbf-warn-text-2); margin-top: 2px; font-style: italic; }
 
         .pat-audit-row {
           display: flex;
           align-items: center;
           gap: 10px;
           padding: 10px 14px;
-          background: #fff;
+          background: var(--lbf-card);
           border-radius: 10px;
           margin-bottom: 6px;
           border-left: 3px solid rgba(139,113,90,0.3);
@@ -709,7 +709,7 @@ export default function Patienten() {
         .pat-audit-title {
           font-weight: 700;
           font-size: 13px;
-          color: #1a0e08;
+          color: var(--lbf-text);
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -733,10 +733,10 @@ export default function Patienten() {
       `}</style>
 
       {/* ── MASTHEAD ── */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Patienten</div>
@@ -745,7 +745,7 @@ export default function Patienten() {
           {(activeTab === 'patienten' || activeTab === 'nach') && (
             <button
               onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}
-              style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+              style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
               title="Neue Nacherfassung"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -827,12 +827,12 @@ export default function Patienten() {
         {activeTab === 'patienten' && (
           dataLoading ? (
             <div className="pat-empty">
-              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(96,8,18,0.15)', borderTopColor: '#600812', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(var(--lbf-rot-rgb),0.15)', borderTopColor: 'var(--lbf-akzent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
               <div>Lade Dokus...</div>
             </div>
           ) : patients.length === 0 && freigegebenPatients.length === 0 ? (
             <div className="pat-empty">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: '#600812' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: 'var(--lbf-akzent)' }}>
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
@@ -961,12 +961,12 @@ export default function Patienten() {
         {activeTab === 'nach' && (
           dataLoading ? (
             <div className="pat-empty">
-              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(96,8,18,0.15)', borderTopColor: '#600812', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(var(--lbf-rot-rgb),0.15)', borderTopColor: 'var(--lbf-akzent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
               <div>Lade Nacherfassungen...</div>
             </div>
           ) : nacherfassungen.length === 0 ? (
             <div className="pat-empty">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: '#600812' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: 'var(--lbf-akzent)' }}>
                 <circle cx="12" cy="12" r="10"/>
                 <line x1="12" y1="8" x2="12" y2="12"/>
                 <line x1="12" y1="16" x2="12.01" y2="16"/>
@@ -999,7 +999,7 @@ export default function Patienten() {
         {activeTab === 'archiv' && (
           !archivLoaded ? (
             <div className="pat-empty">
-              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(96,8,18,0.15)', borderTopColor: '#600812', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(var(--lbf-rot-rgb),0.15)', borderTopColor: 'var(--lbf-akzent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
               <div>Lade Archiv...</div>
             </div>
           ) : (
@@ -1016,7 +1016,7 @@ export default function Patienten() {
 
             {Object.keys(archiveByYear).length === 0 ? (
               <div className="pat-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: '#600812' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: 'var(--lbf-akzent)' }}>
                   <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
                   <line x1="10" y1="12" x2="14" y2="12"/>
                 </svg>
@@ -1081,14 +1081,14 @@ export default function Patienten() {
         {activeTab === 'audit' && (
           !auditLoaded ? (
             <div className="pat-empty">
-              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(96,8,18,0.15)', borderTopColor: '#600812', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
+              <div style={{ width: '28px', height: '28px', border: '2px solid rgba(var(--lbf-rot-rgb),0.15)', borderTopColor: 'var(--lbf-akzent)', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 14px' }} />
               <div>Lade Audit-Log...</div>
             </div>
           ) : (
           <>
             {auditLogs.length === 0 && (
               <div className="pat-empty">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: '#600812' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: '14px', color: 'var(--lbf-akzent)' }}>
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
                 <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', marginBottom: '6px', fontSize: 15 }}>Keine Einträge</div>
@@ -1097,7 +1097,7 @@ export default function Patienten() {
             )}
             {auditLogs.map(entry => (
               <div key={entry.id} className="pat-audit-row">
-                <span className="pat-audit-action" style={{ background: auditColor[entry.action] || '#8a7a68' }}>
+                <span className="pat-audit-action" style={{ background: auditColor[entry.action] || 'var(--warm-gray)' }}>
                   {entry.action}
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1111,7 +1111,7 @@ export default function Patienten() {
             {/* QR Zugriffslog */}
             {accessLogs.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '20px 0 10px', paddingTop: '16px', borderTop: '0.5px solid rgba(96,8,18,0.12)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '20px 0 10px', paddingTop: '16px', borderTop: '0.5px solid var(--lbf-border)' }}>
                   QR-Code Zugriffe
                 </div>
                 {accessLogs.map(entry => {
@@ -1119,7 +1119,7 @@ export default function Patienten() {
                     granted: '#16a34a',
                     dob_failed: '#d97706',
                     locked: '#c0392b',
-                    expired: '#8a7a68',
+                    expired: 'var(--warm-gray)',
                   }
                   const eventLabel: Record<string, string> = {
                     granted: 'Zugriff gewährt',
@@ -1129,7 +1129,7 @@ export default function Patienten() {
                   }
                   return (
                     <div key={entry.id} className="pat-audit-row">
-                      <span className="pat-audit-action" style={{ background: eventColor[entry.event] || '#8a7a68' }}>
+                      <span className="pat-audit-action" style={{ background: eventColor[entry.event] || 'var(--warm-gray)' }}>
                         {eventLabel[entry.event] || entry.event}
                       </span>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -1195,7 +1195,7 @@ export default function Patienten() {
           <>
             <div onClick={() => setProtokollSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3000 }} />
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 3001, background: 'var(--warm-bg)', borderRadius: '16px 16px 0 0', maxHeight: '92dvh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid rgba(96,8,18,0.12)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ padding: '14px 20px', borderBottom: '0.5px solid var(--lbf-border)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                   <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{sheetName}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
@@ -1204,7 +1204,7 @@ export default function Patienten() {
                 </div>
                 <button
                   onClick={() => setProtokollSheet(null)}
-                  style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', flexShrink: 0 }}
+                  style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: 8, width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--lbf-akzent)', flexShrink: 0 }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <line x1="18" y1="6" x2="6" y2="18"/>
@@ -1236,17 +1236,17 @@ export default function Patienten() {
         ]
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.45)', zIndex: 3100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-            <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 460, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(96,8,18,0.1)', maxHeight: '90dvh', overflowY: 'auto' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Mannschaft nachtragen</div>
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 14, width: '100%', maxWidth: 460, padding: '24px', boxShadow: '0 16px 48px rgba(0,0,0,0.2)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', maxHeight: '90dvh', overflowY: 'auto' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Mannschaft nachtragen</div>
               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>{patName}</div>
               {roles.map(({ key, label }) => {
                 const existing = (mannschaftModal as any).payload?.mannschaft?.[key]
                 const picked = mannPicked[key]
                 return (
                   <div key={key} style={{ marginBottom: 16 }}>
-                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{label}</label>
+                    <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{label}</label>
                     {picked ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(96,8,18,0.04)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8 }}>
                         <span style={{ flex: 1, fontStyle: 'italic', fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{picked.name}</span>
                         <button onClick={() => setMannPicked(prev => { const n = { ...prev }; delete n[key]; return n })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
                       </div>
@@ -1261,13 +1261,13 @@ export default function Patienten() {
                           placeholder="Name suchen…"
                           value={mannSearch[key] || ''}
                           onChange={e => searchMannschaft(key, e.target.value)}
-                          style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(96,8,18,0.2)', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--warm-bg)', color: 'var(--lbf-text)', outline: 'none' }}
+                          style={{ width: '100%', padding: '9px 12px', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', boxSizing: 'border-box' as const, background: 'var(--warm-bg)', color: 'var(--lbf-text)', outline: 'none' }}
                         />
                         {(mannResults[key] || []).length > 0 && (
-                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 8, boxShadow: '0 8px 20px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', marginTop: 4 }}>
+                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, boxShadow: '0 8px 20px rgba(0,0,0,0.12)', zIndex: 10, overflow: 'hidden', marginTop: 4 }}>
                             {mannResults[key].map((u: any) => (
-                              <div key={u.id} onClick={() => { setMannPicked(prev => ({ ...prev, [key]: u })); setMannSearch(prev => ({ ...prev, [key]: '' })); setMannResults(prev => ({ ...prev, [key]: [] })) }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: 'var(--lbf-text)', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}
-                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(96,8,18,0.04)')}
+                              <div key={u.id} onClick={() => { setMannPicked(prev => ({ ...prev, [key]: u })); setMannSearch(prev => ({ ...prev, [key]: '' })); setMannResults(prev => ({ ...prev, [key]: [] })) }} style={{ padding: '10px 14px', cursor: 'pointer', fontSize: 14, color: 'var(--lbf-text)', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}
+                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--lbf-rot-rgb),0.04)')}
                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                               >
                                 <span style={{ fontStyle: 'italic', fontWeight: 700 }}>{u.name}</span> <span style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{u.email}</span>
@@ -1290,7 +1290,7 @@ export default function Patienten() {
                 <button
                   onClick={saveMannschaftNachtraeglich}
                   disabled={savingMannschaft || Object.keys(mannPicked).length === 0}
-                  style={{ padding: '9px 18px', background: Object.keys(mannPicked).length > 0 ? '#600812' : 'var(--lbf-border-light)', color: Object.keys(mannPicked).length > 0 ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: Object.keys(mannPicked).length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
+                  style={{ padding: '9px 18px', background: Object.keys(mannPicked).length > 0 ? 'var(--lbf-akzent-grund)' : 'var(--lbf-border-light)', color: Object.keys(mannPicked).length > 0 ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13, cursor: Object.keys(mannPicked).length > 0 ? 'pointer' : 'not-allowed', fontFamily: 'inherit', letterSpacing: '0.04em' }}
                 >
                   {savingMannschaft ? 'Speichern…' : 'Speichern'}
                 </button>

@@ -24,11 +24,13 @@ const ProtokollInhalt = lazy(() =>
   import('./ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })),
 )
 
-const ROT = '#600812'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
 const GRUEN = '#16a34a'
 const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.12)'
+const LINIE = 'var(--lbf-border)'
 
 type Nutzlast = Record<string, unknown>
 export type Rolle = 'fragen' | 'antworten' | 'lesen'
@@ -43,7 +45,7 @@ const marke: React.CSSProperties = {
 }
 
 const knopf: React.CSSProperties = {
-  padding: '9px 14px', borderRadius: 10, border: 'none', background: ROT, color: '#fff',
+  padding: '9px 14px', borderRadius: 10, border: 'none', background: ROT_GRUND, color: '#fff',
   fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase',
   letterSpacing: '0.06em', cursor: 'pointer',
 }
@@ -77,7 +79,7 @@ function druckkopf(p: Nutzlast, name: string) {
 function Verlauf({ rq, antwort }: { rq: Rueckfrage; antwort: { text: string; von?: string } | null }) {
   const felder = rq.felder ?? []
   return (
-    <div style={{ marginTop: 10, padding: '9px 11px', background: antwort ? 'rgba(22,163,74,0.05)' : 'rgba(96,8,18,0.04)', border: `0.5px solid ${antwort ? 'rgba(22,163,74,0.25)' : LINIE}`, borderRadius: 10 }}>
+    <div style={{ marginTop: 10, padding: '9px 11px', background: antwort ? 'rgba(22,163,74,0.05)' : 'rgba(var(--lbf-rot-rgb),0.04)', border: `0.5px solid ${antwort ? 'rgba(22,163,74,0.25)' : LINIE}`, borderRadius: 10 }}>
       <div style={{ ...marke, color: GRAU, marginBottom: 4 }}>
         {istVermerk(rq) ? 'Vermerk' : rq.von ? `${rq.von} fragte` : 'Frage'}
       </div>
@@ -241,7 +243,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
                     <button
                       key={f} type="button" onClick={() => umschalten(f)}
                       aria-label={`${feldname(f)} wieder herausnehmen`}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 9px', background: 'rgba(96,8,18,0.05)', border: `0.5px solid ${LINIE}`, borderRadius: 999, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, fontStyle: 'italic', cursor: 'pointer' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 9px', background: 'var(--lbf-akzent-weich)', border: `0.5px solid ${LINIE}`, borderRadius: 999, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, fontStyle: 'italic', cursor: 'pointer' }}
                     >
                       {feldname(f)}
                       <span aria-hidden="true" style={{ fontSize: 13, fontStyle: 'normal', lineHeight: 1 }}>×</span>
@@ -252,7 +254,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
               <button
                 type="button" onClick={fragenSenden}
                 disabled={schreibt || !frage.trim()}
-                style={{ ...knopf, width: '100%', marginTop: 12, background: frage.trim() && !schreibt ? ROT : 'rgba(96,8,18,0.2)', cursor: frage.trim() && !schreibt ? 'pointer' : 'default' }}
+                style={{ ...knopf, width: '100%', marginTop: 12, background: frage.trim() && !schreibt ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.2)', cursor: frage.trim() && !schreibt ? 'pointer' : 'default' }}
               >
                 {schreibt ? 'Sendet …' : 'Rückfrage senden'}
               </button>
@@ -269,7 +271,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
                   {offen.map((rq, i) => (
                     <button
                       key={rq.id} type="button" onClick={() => { setGewaehlt(rq.id); setAntwort('') }}
-                      style={{ padding: '5px 10px', borderRadius: 999, border: `0.5px solid ${LINIE}`, background: dran?.id === rq.id ? ROT : 'transparent', color: dran?.id === rq.id ? '#fff' : ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                      style={{ padding: '5px 10px', borderRadius: 999, border: `0.5px solid ${LINIE}`, background: dran?.id === rq.id ? ROT_GRUND : 'transparent', color: dran?.id === rq.id ? '#fff' : ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
                     >
                       {`Nr. ${i + 1}`}
                     </button>
@@ -278,7 +280,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
               ) : null}
               {dran ? (
                 <>
-                  <div style={{ padding: '9px 11px', background: 'rgba(96,8,18,0.04)', border: `0.5px solid ${LINIE}`, borderRadius: 10, fontSize: 13, color: TEXT, lineHeight: 1.5 }}>
+                  <div style={{ padding: '9px 11px', background: 'rgba(var(--lbf-rot-rgb),0.04)', border: `0.5px solid ${LINIE}`, borderRadius: 10, fontSize: 13, color: TEXT, lineHeight: 1.5 }}>
                     <div style={{ ...marke, color: GRAU, marginBottom: 4 }}>
                       {dran.von ? `${dran.von} fragt` : 'Frage'}
                     </div>
@@ -298,7 +300,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
                   <button
                     type="button" onClick={antwortSenden}
                     disabled={schreibt || !antwort.trim()}
-                    style={{ ...knopf, width: '100%', marginTop: 10, background: antwort.trim() && !schreibt ? ROT : 'rgba(96,8,18,0.2)', cursor: antwort.trim() && !schreibt ? 'pointer' : 'default' }}
+                    style={{ ...knopf, width: '100%', marginTop: 10, background: antwort.trim() && !schreibt ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.2)', cursor: antwort.trim() && !schreibt ? 'pointer' : 'default' }}
                   >
                     {schreibt ? 'Sendet …' : 'Stellungnahme absenden'}
                   </button>
@@ -341,7 +343,7 @@ export default function RueckfrageFenster({ patientId, titel, payload: anfang, r
           ) : null}
 
           {fehler ? (
-            <p style={{ marginTop: 10, padding: '8px 11px', background: '#fef2f2', border: '0.5px solid #fca5a5', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: '#991b1b' }}>
+            <p style={{ marginTop: 10, padding: '8px 11px', background: 'var(--lbf-fehler-grund)', border: '0.5px solid #fca5a5', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-fehler-text)' }}>
               {fehler}
             </p>
           ) : null}

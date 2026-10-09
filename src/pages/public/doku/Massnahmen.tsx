@@ -22,10 +22,12 @@ import {
   massnahmeStreichen, massnahmenAbsteigend, ohneGrund,
 } from './massnahmen'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 export default function Massnahmen({ werte, setWerte }: {
   werte: Werte
@@ -90,7 +92,7 @@ export default function Massnahmen({ werte, setWerte }: {
             <input
               type="time" name="massnahme_zeit" value={gezeigteZeit}
               onChange={(e) => setZeit(e.target.value)}
-              style={{ padding: '8px 10px', background: '#fff', border: `1px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 19, fontWeight: 600, color: TEXT }}
+              style={{ padding: '8px 10px', background: 'var(--lbf-input-bg)', border: `1px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 19, fontWeight: 600, color: TEXT }}
             />
           </label>
           {zeit ? (
@@ -124,7 +126,7 @@ export default function Massnahmen({ werte, setWerte }: {
             type="button" onClick={() => { setKategorie(''); setFrei(''); setArt('') }}
             style={{
               display: 'flex', alignItems: 'center', gap: 7, width: '100%', marginBottom: 10,
-              padding: '8px 11px', background: 'rgba(96,8,18,0.05)',
+              padding: '8px 11px', background: 'var(--lbf-akzent-weich)',
               border: `0.5px solid ${LINIE}`, borderRadius: 8,
               fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
             }}
@@ -133,7 +135,7 @@ export default function Massnahmen({ werte, setWerte }: {
             <span style={{ flex: 1, fontSize: 13, fontWeight: 700, color: ROT }}>
               {kat.titel}
               {verlangt.get(kat.id) && !verlangt.get(kat.id)!.erfuellt ? (
-                <span style={{ color: '#b91c1c', marginLeft: 3 }}>*</span>
+                <span style={{ color: 'var(--lbf-fehler-text-2)', marginLeft: 3 }}>*</span>
               ) : null}
             </span>
             <span style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>andere Art</span>
@@ -163,8 +165,8 @@ export default function Massnahmen({ werte, setWerte }: {
               type="button" onClick={() => { setArt(''); setFrei(''); setOffenerGrund('') }}
               style={{
                 display: 'flex', alignItems: 'center', gap: 7, width: '100%',
-                padding: '8px 11px', background: ROT,
-                border: `0.5px solid ${ROT}`, borderRadius: 8,
+                padding: '8px 11px', background: ROT_GRUND,
+                border: `0.5px solid ${ROT_GRUND}`, borderRadius: 8,
                 fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
               }}
             >
@@ -191,11 +193,11 @@ export default function Massnahmen({ werte, setWerte }: {
                     onChange={(e) => setFrei(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setArt(frei) } }}
                     placeholder="oder eigenen Text"
-                    style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
+                    style={{ flex: 1, minWidth: 0, padding: '8px 10px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
                   />
                   <button
                     type="button" onClick={() => setArt(frei)} disabled={!frei.trim()}
-                    style={{ padding: '8px 14px', background: frei.trim() ? ROT : 'rgba(96,8,18,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
+                    style={{ padding: '8px 14px', background: frei.trim() ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.15)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: frei.trim() ? 'pointer' : 'default' }}
                   >
                     Übernehmen
                   </button>
@@ -305,13 +307,13 @@ export default function Massnahmen({ werte, setWerte }: {
                 {eintraege.length === 1 ? 'Ein Eintrag' : `${eintraege.length} Einträge`}
               </span>
               {offen.length > 0 ? (
-                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#b45309', border: '0.5px solid #fde047', background: '#fffbeb', borderRadius: 999, padding: '2px 7px' }}>
+                <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--lbf-warn-text-2)', border: '0.5px solid #fde047', background: 'var(--lbf-warn-grund)', borderRadius: 999, padding: '2px 7px' }}>
                   {offen.length}× ohne Begründung
                 </span>
               ) : null}
             </div>
             {eintraege.map((m) => (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '6px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+              <div key={m.id} style={{ display: 'flex', alignItems: 'baseline', gap: 9, padding: '6px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
                 <span style={{ fontSize: 15, fontWeight: 700, color: ROT, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                   {m.zeit || '--:--'}
                 </span>
@@ -331,7 +333,7 @@ export default function Massnahmen({ werte, setWerte }: {
                     ) : (
                       // Ältere Einträge ohne Größe und Ort fallen hier auf —
                       // wie die fehlende Begründung darunter.
-                      <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#b45309' }}>
+                      <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--lbf-warn-text-2)' }}>
                         Kanülengröße und Anlageort fehlen
                       </span>
                     )
@@ -356,7 +358,7 @@ export default function Massnahmen({ werte, setWerte }: {
                       style={{
                         display: 'block', marginTop: 2, padding: 0, background: 'none', border: 'none',
                         fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                        color: m.grund ? ROT : '#b45309', textAlign: 'left',
+                        color: m.grund ? ROT : 'var(--lbf-warn-text-2)', textAlign: 'left',
                       }}
                     >
                       {m.grund ? rechtsgrund(m.grund)?.text : 'Rechtliche Begründung fehlt'}

@@ -146,7 +146,7 @@ function ToggleSwitch({ on, onChange }: { on: boolean; onChange: () => void }) {
 const fieldInputStyle: React.CSSProperties = {
   width: '100%',
   background: 'var(--warm-bg)',
-  border: '1.5px solid rgba(96,8,18,0.15)',
+  border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)',
   borderRadius: 8,
   padding: '10px 12px',
   fontSize: 14,
@@ -159,7 +159,7 @@ const fieldInputStyle: React.CSSProperties = {
 const fieldLabelStyle: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 700,
-  color: '#600812',
+  color: 'var(--lbf-akzent)',
   textTransform: 'uppercase',
   letterSpacing: '0.1em',
   marginBottom: 6
@@ -583,8 +583,8 @@ export default function Supervisor() {
   const totalUsers = orgs.reduce((s, o) => s + o.userCount, 0)
   const activeCount = orgs.filter(o => o.is_active).length
 
-  const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none' }
-  const labelStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6, display: 'block' }
+  const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none' }
+  const labelStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6, display: 'block' }
 
   if (loading || (!user?.supervisor && !loading)) {
     return (
@@ -598,7 +598,7 @@ export default function Supervisor() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)' }}>
       <div style={{
         background: 'var(--lbf-card)',
-        borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+        borderBottom: '0.5px solid var(--lbf-border)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
@@ -609,9 +609,9 @@ export default function Supervisor() {
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
           <a
             href="/hub"
-            style={{ display: 'flex', alignItems: 'center', color: '#600812', textDecoration: 'none', flexShrink: 0 }}
+            style={{ display: 'flex', alignItems: 'center', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
           </a>
@@ -621,18 +621,18 @@ export default function Supervisor() {
               {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : tab === 'kachel' ? 'Kachel-Generator' : 'Rechtliche Texte'}
             </div>
           </div>
-          <button onClick={() => navigate('/website')} title="Website-Editor (responda.systems)" style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(96,8,18,0.25)', borderRadius: 10, background: 'transparent', color: '#600812', padding: '8px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+          <button onClick={() => navigate('/website')} title="Website-Editor (responda.systems)" style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 10, background: 'transparent', color: 'var(--lbf-akzent)', padding: '8px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
             Website
           </button>
-          <button onClick={() => navigate('/wissen')} title="Wissensbasis für den KI-Assistenten" style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: '#600812', color: '#fff', padding: '8px 13px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+          <button onClick={() => navigate('/wissen')} title="Wissensbasis für den KI-Assistenten" style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', padding: '8px 13px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/></svg>
             Wissen
           </button>
         </div>
       </div>
 
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', display: 'flex', overflowX: 'auto', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', display: 'flex', overflowX: 'auto', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
         {([
           { key: 'orgs', label: 'Organisationen' },
           { key: 'profil', label: 'Mein Profil' },
@@ -651,8 +651,8 @@ export default function Supervisor() {
               background: 'none', border: 'none', cursor: 'pointer',
               fontFamily: 'inherit', fontWeight: 700,
               fontSize: 10, textTransform: 'uppercase', letterSpacing: '0.1em',
-              color: tab === t.key ? '#600812' : 'var(--warm-gray)',
-              borderTop: `2px solid ${tab === t.key ? '#600812' : 'transparent'}`,
+              color: tab === t.key ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
+              borderTop: `2px solid ${tab === t.key ? 'var(--lbf-akzent)' : 'transparent'}`,
               padding: '12px 14px', whiteSpace: 'nowrap', flexShrink: 0,
             }}
           >{t.label}</button>
@@ -671,10 +671,10 @@ export default function Supervisor() {
             { label: 'BENUTZER', value: totalUsers }
           ].map(stat => (
             <div key={stat.label} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '14px 12px' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>
                 {stat.label}
               </div>
-              <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
+              <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>
                 {dataLoading ? '—' : stat.value}
               </div>
             </div>
@@ -690,7 +690,7 @@ export default function Supervisor() {
             style={{
               flex: 1,
               background: 'var(--lbf-card)',
-              border: '1px solid rgba(96,8,18,0.12)',
+              border: '1px solid var(--lbf-border)',
               borderRadius: 10,
               padding: '10px 14px',
               fontSize: 14,
@@ -708,7 +708,7 @@ export default function Supervisor() {
               setShowNewOrgModal(true)
             }}
             style={{
-              background: '#600812',
+              background: 'var(--lbf-akzent-grund)',
               color: '#fff',
               border: 'none',
               borderRadius: 10,
@@ -725,7 +725,7 @@ export default function Supervisor() {
           </button>
         </div>
 
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
           ORGANISATIONEN
         </div>
 
@@ -750,7 +750,7 @@ export default function Supervisor() {
                   borderTop: 'none',
                   borderRight: 'none',
                   borderBottom: 'none',
-                  borderLeft: `3px solid ${org.is_active ? '#600812' : 'rgba(138,122,104,0.4)'}`,
+                  borderLeft: `3px solid ${org.is_active ? 'var(--lbf-akzent)' : 'rgba(138,122,104,0.4)'}`,
                   padding: '14px 16px',
                   textAlign: 'left',
                   cursor: 'pointer',
@@ -794,7 +794,7 @@ export default function Supervisor() {
 
       {tab === 'profil' && (
         <div style={{ padding: '20px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 40px)', maxWidth: 600, margin: '0 auto' }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>MEIN PROFIL</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>MEIN PROFIL</div>
           <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
             {[
               { label: 'Name', value: profilName, setter: setProfilName, type: 'text' },
@@ -802,19 +802,19 @@ export default function Supervisor() {
               { label: 'Telefon', value: profilPhone, setter: setProfilPhone, type: 'tel' },
             ].map(f => (
               <div key={f.label}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>{f.label}</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>{f.label}</div>
                 <input type={f.type} value={f.value} onChange={e => f.setter(e.target.value)}
-                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' as const, outline: 'none' }} />
+                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box' as const, outline: 'none' }} />
               </div>
             ))}
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Neues Passwort <span style={{ fontWeight: 400, fontSize: 10, color: 'var(--warm-gray)' }}>(leer = unverändert)</span></div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>Neues Passwort <span style={{ fontWeight: 400, fontSize: 10, color: 'var(--warm-gray)' }}>(leer = unverändert)</span></div>
               <input type="text" value={profilPassword} onChange={e => setProfilPassword(e.target.value)} placeholder="••••••••"
-                style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'monospace', color: 'var(--lbf-text)', boxSizing: 'border-box' as const, outline: 'none' }} />
+                style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'monospace', color: 'var(--lbf-text)', boxSizing: 'border-box' as const, outline: 'none' }} />
             </div>
-            {profilMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: profilMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{profilMsg}</div>}
+            {profilMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: profilMsg.startsWith('Fehler') ? 'var(--lbf-fehler-text-2)' : '#16a34a' }}>{profilMsg}</div>}
             <button onClick={saveProfil} disabled={profilSaving}
-              style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: profilSaving ? 'not-allowed' : 'pointer', opacity: profilSaving ? 0.7 : 1 }}>
+              style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 0', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: profilSaving ? 'not-allowed' : 'pointer', opacity: profilSaving ? 0.7 : 1 }}>
               {profilSaving ? 'Speichern…' : 'Profil speichern'}
             </button>
           </div>
@@ -830,7 +830,7 @@ export default function Supervisor() {
 
               {/* Sichtbarkeit */}
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px 24px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>ABSCHNITTE</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>ABSCHNITTE</div>
                 <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 16 }}>Abschnitte ein- oder ausblenden</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
                   {([
@@ -839,7 +839,7 @@ export default function Supervisor() {
                     { key: 'pricing', label: 'Preise' },
                     { key: 'contact', label: 'Kontakt' },
                   ] as const).map((s, i, arr) => (
-                    <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: i < arr.length - 1 ? '0.5px solid rgba(96,8,18,0.08)' : 'none' }}>
+                    <div key={s.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '13px 0', borderBottom: i < arr.length - 1 ? '0.5px solid var(--lbf-border-light)' : 'none' }}>
                       <span style={{ fontSize: 14, fontWeight: 600, color: website.show[s.key] ? 'var(--lbf-text)' : 'var(--warm-gray)' }}>{s.label}</span>
                       <ToggleSwitch on={website.show[s.key]} onChange={() => setWebsite(p => ({ ...p, show: { ...p.show, [s.key]: !p.show[s.key] } }))} />
                     </div>
@@ -849,7 +849,7 @@ export default function Supervisor() {
 
               {/* Hero */}
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px 24px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>HERO</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 16 }}>HERO</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
                     <label style={labelStyle}>Überschrift <span style={{ fontWeight: 400, fontSize: 10, color: 'var(--warm-gray)' }}>(HTML erlaubt: &lt;em&gt; für kursiv, &lt;br&gt; für Zeilenumbruch)</span></label>
@@ -869,17 +869,17 @@ export default function Supervisor() {
               {/* Zielgruppen */}
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>ZIELGRUPPEN</div>
-                  <button onClick={addAudience} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>ZIELGRUPPEN</div>
+                  <button onClick={addAudience} style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {website.audience.map((a, i) => (
-                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '14px', border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '14px', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <input value={a.title} onChange={e => updateAudience(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Titel" />
                         <textarea value={a.description} onChange={e => updateAudience(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Beschreibung..." />
                       </div>
-                      <button onClick={() => removeAudience(i)} style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+                      <button onClick={() => removeAudience(i)} style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid #fecaca', background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
                     </div>
                   ))}
                 </div>
@@ -888,8 +888,8 @@ export default function Supervisor() {
               {/* Navigation */}
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>NAVIGATION</div>
-                  <button onClick={addNavItem} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>NAVIGATION</div>
+                  <button onClick={addNavItem} style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
                 </div>
                 <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12 }}>Links in der Navigationsleiste. Href: #section-id für Seitenabschnitte oder https://... für externe Links.</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -897,7 +897,7 @@ export default function Supervisor() {
                     <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input value={item.label} onChange={e => updateNavItem(i, 'label', e.target.value)} style={{ ...inputStyle, width: '40%', fontWeight: 700 }} placeholder="Label z.B. Über uns" />
                       <input value={item.href} onChange={e => updateNavItem(i, 'href', e.target.value)} style={{ ...inputStyle, flex: 1 }} placeholder="#ueber-uns oder https://..." />
-                      <button onClick={() => removeNavItem(i)} style={{ padding: '8px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+                      <button onClick={() => removeNavItem(i)} style={{ padding: '8px 10px', borderRadius: 7, border: '1px solid #fecaca', background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
                     </div>
                   ))}
                 </div>
@@ -906,17 +906,17 @@ export default function Supervisor() {
               {/* Features */}
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>FEATURES</div>
-                  <button onClick={addFeature} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>FEATURES</div>
+                  <button onClick={addFeature} style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Hinzufügen</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {website.features.map((f, i) => (
-                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
                         <input value={f.title} onChange={e => updateFeature(i, 'title', e.target.value)} style={{ ...inputStyle, fontWeight: 700 }} placeholder="Feature-Name" />
                         <textarea value={f.description} onChange={e => updateFeature(i, 'description', e.target.value)} rows={2} style={{ ...inputStyle, resize: 'vertical', fontSize: 13 }} placeholder="Kurze Beschreibung..." />
                       </div>
-                      <button onClick={() => removeFeature(i)} style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
+                      <button onClick={() => removeFeature(i)} style={{ padding: '6px 10px', borderRadius: 7, border: '1px solid #fecaca', background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>×</button>
                     </div>
                   ))}
                 </div>
@@ -925,17 +925,17 @@ export default function Supervisor() {
               {/* Preise */}
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px 24px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>PREISE</div>
-                  <button onClick={addPricingTier} style={{ fontSize: 12, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Tier hinzufügen</button>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>PREISE</div>
+                  <button onClick={addPricingTier} style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.07)', border: 'none', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontFamily: 'inherit' }}>+ Tier hinzufügen</button>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                   {website.pricing.map((tier, i) => (
-                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 12, padding: '16px', border: `0.5px solid ${tier.featured ? '#600812' : 'rgba(96,8,18,0.1)'}` }}>
+                    <div key={i} style={{ background: 'var(--warm-bg)', borderRadius: 12, padding: '16px', border: `0.5px solid ${tier.featured ? 'var(--lbf-akzent)' : 'rgba(var(--lbf-rot-rgb),0.1)'}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: tier.featured ? '#600812' : 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: tier.featured ? 'var(--lbf-akzent)' : 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                           {tier.name || 'Neuer Tier'}{tier.featured ? ' · EMPFOHLEN' : ''}
                         </div>
-                        <button onClick={() => removePricingTier(i)} style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>× Entfernen</button>
+                        <button onClick={() => removePricingTier(i)} style={{ padding: '4px 10px', borderRadius: 7, border: '1px solid #fecaca', background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text-2)', fontWeight: 600, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>× Entfernen</button>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
                         <div>
@@ -962,7 +962,7 @@ export default function Supervisor() {
                           <label style={{ ...labelStyle, marginBottom: 0 }}>Hervorgehoben</label>
                           <button
                             onClick={() => updatePricingTier(i, 'featured', !tier.featured)}
-                            style={{ width: 44, height: 26, borderRadius: 13, background: tier.featured ? '#600812' : '#e5e5ea', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0 }}
+                            style={{ width: 44, height: 26, borderRadius: 13, background: tier.featured ? 'var(--lbf-akzent)' : '#e5e5ea', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0 }}
                           >
                             <span style={{ position: 'absolute', top: 2, left: tier.featured ? 20 : 2, width: 22, height: 22, borderRadius: '50%', background: 'var(--lbf-card)', boxShadow: '0 1px 3px rgba(0,0,0,0.2)', transition: 'left 0.2s' }} />
                           </button>
@@ -983,9 +983,9 @@ export default function Supervisor() {
                 </div>
               </div>
 
-              {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{saveMsg}</div>}
+              {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? 'var(--lbf-fehler-text-2)' : '#16a34a' }}>{saveMsg}</div>}
               <button onClick={saveWebsite} disabled={websiteSaving}
-                style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: websiteSaving ? 'not-allowed' : 'pointer', opacity: websiteSaving ? 0.7 : 1 }}>
+                style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: websiteSaving ? 'not-allowed' : 'pointer', opacity: websiteSaving ? 0.7 : 1 }}>
                 {websiteSaving ? 'Speichern…' : 'Änderungen speichern'}
               </button>
             </div>
@@ -1000,28 +1000,28 @@ export default function Supervisor() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>IMPRESSUM</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>IMPRESSUM</div>
                 <textarea
                   value={legal.impressum}
                   onChange={e => setLegal(p => ({ ...p, impressum: e.target.value }))}
                   rows={12}
                   placeholder="Angaben gemäß § 5 TMG..."
-                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 13, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 13, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
                 />
               </div>
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '20px' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>DATENSCHUTZ</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>DATENSCHUTZ</div>
                 <textarea
                   value={legal.datenschutz}
                   onChange={e => setLegal(p => ({ ...p, datenschutz: e.target.value }))}
                   rows={12}
                   placeholder="Datenschutzerklärung gemäß DSGVO..."
-                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 13, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
+                  style={{ width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 13, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none', resize: 'vertical' }}
                 />
               </div>
-              {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? '#b91c1c' : '#16a34a' }}>{saveMsg}</div>}
+              {saveMsg && <div style={{ fontSize: 13, fontStyle: 'italic', color: saveMsg.startsWith('Fehler') ? 'var(--lbf-fehler-text-2)' : '#16a34a' }}>{saveMsg}</div>}
               <button onClick={saveLegal} disabled={legalSaving}
-                style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: legalSaving ? 'not-allowed' : 'pointer', opacity: legalSaving ? 0.7 : 1 }}>
+                style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 0', fontWeight: 700, fontSize: 15, fontFamily: 'inherit', cursor: legalSaving ? 'not-allowed' : 'pointer', opacity: legalSaving ? 0.7 : 1 }}>
                 {legalSaving ? 'Speichern…' : 'Rechtliche Texte speichern'}
               </button>
             </div>
@@ -1080,7 +1080,7 @@ export default function Supervisor() {
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: 16,
-                  color: '#600812',
+                  color: 'var(--lbf-akzent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1092,7 +1092,7 @@ export default function Supervisor() {
             </div>
 
             <div style={{ overflowY: 'auto', padding: '0 20px calc(env(safe-area-inset-bottom) + 32px)', flex: 1 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>
                 ORGANISATION BEARBEITEN
               </div>
 
@@ -1154,7 +1154,7 @@ export default function Supervisor() {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Aktiv</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Aktiv</div>
                 <ToggleSwitch on={editActive} onChange={() => setEditActive(v => !v)} />
               </div>
 
@@ -1174,7 +1174,7 @@ export default function Supervisor() {
                 disabled={saving}
                 style={{
                   width: '100%',
-                  background: '#600812',
+                  background: 'var(--lbf-akzent-grund)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 10,
@@ -1193,7 +1193,7 @@ export default function Supervisor() {
               <div style={{ height: '0.5px', background: 'var(--lbf-border-light)', marginBottom: 20 }} />
 
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
                   BENUTZER
                 </div>
                 <button
@@ -1202,7 +1202,7 @@ export default function Supervisor() {
                     setNewUserMsg('')
                   }}
                   style={{
-                    background: '#600812',
+                    background: 'var(--lbf-akzent-grund)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 8,
@@ -1235,7 +1235,7 @@ export default function Supervisor() {
                         display: 'flex',
                         alignItems: 'center',
                         gap: 12,
-                        borderBottom: idx < orgUsers.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none',
+                        borderBottom: idx < orgUsers.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' : 'none',
                         cursor: 'pointer'
                       }}
                       onClick={() => openEditUser(u)}
@@ -1244,15 +1244,15 @@ export default function Supervisor() {
                         width: 36,
                         height: 36,
                         borderRadius: '50%',
-                        border: '1.5px solid #600812',
+                        border: '1.5px solid var(--lbf-akzent)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         fontWeight: 700,
                         fontSize: 12,
-                        color: '#600812',
+                        color: 'var(--lbf-akzent)',
                         flexShrink: 0,
-                        background: 'rgba(96,8,18,0.04)'
+                        background: 'rgba(var(--lbf-rot-rgb),0.04)'
                       }}>
                         {getInitials(u.name, u.email)}
                       </div>
@@ -1268,7 +1268,7 @@ export default function Supervisor() {
                         fontSize: 9,
                         fontWeight: 700,
                         textTransform: 'uppercase',
-                        color: '#600812',
+                        color: 'var(--lbf-akzent)',
                         letterSpacing: '0.06em',
                         flexShrink: 0
                       }}>
@@ -1297,7 +1297,7 @@ export default function Supervisor() {
 
               {showNewUserSheet && (
                 <div style={{ background: 'var(--warm-bg)', borderRadius: 12, padding: '16px', marginBottom: 20 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>
                     NEUER BENUTZER
                   </div>
                   <div style={{ marginBottom: 12 }}>
@@ -1352,7 +1352,7 @@ export default function Supervisor() {
                       disabled={creatingUser}
                       style={{
                         flex: 1,
-                        background: '#600812',
+                        background: 'var(--lbf-akzent-grund)',
                         color: '#fff',
                         border: 'none',
                         borderRadius: 10,
@@ -1369,8 +1369,8 @@ export default function Supervisor() {
                     <button
                       onClick={() => setShowNewUserSheet(false)}
                       style={{
-                        background: 'rgba(96,8,18,0.06)',
-                        color: '#600812',
+                        background: 'rgba(var(--lbf-rot-rgb),0.06)',
+                        color: 'var(--lbf-akzent)',
                         border: 'none',
                         borderRadius: 10,
                         padding: '11px 16px',
@@ -1459,7 +1459,7 @@ export default function Supervisor() {
                 disabled={creatingOrg}
                 style={{
                   flex: 1,
-                  background: '#600812',
+                  background: 'var(--lbf-akzent-grund)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 10,
@@ -1476,8 +1476,8 @@ export default function Supervisor() {
               <button
                 onClick={() => setShowNewOrgModal(false)}
                 style={{
-                  background: 'rgba(96,8,18,0.06)',
-                  color: '#600812',
+                  background: 'rgba(var(--lbf-rot-rgb),0.06)',
+                  color: 'var(--lbf-akzent)',
                   border: 'none',
                   borderRadius: 10,
                   padding: '12px 16px',
@@ -1576,7 +1576,7 @@ export default function Supervisor() {
                 disabled={savingUser}
                 style={{
                   flex: 1,
-                  background: '#600812',
+                  background: 'var(--lbf-akzent-grund)',
                   color: '#fff',
                   border: 'none',
                   borderRadius: 10,
@@ -1593,8 +1593,8 @@ export default function Supervisor() {
               <button
                 onClick={() => setEditingUser(null)}
                 style={{
-                  background: 'rgba(96,8,18,0.06)',
-                  color: '#600812',
+                  background: 'rgba(var(--lbf-rot-rgb),0.06)',
+                  color: 'var(--lbf-akzent)',
                   border: 'none',
                   borderRadius: 10,
                   padding: '12px 16px',

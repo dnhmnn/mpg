@@ -250,6 +250,7 @@ function BarcodeScanner({ onDetect, onError }: { onDetect: (code: string) => voi
         <video ref={videoRef} muted playsInline style={{ width: '100%', aspectRatio: '4 / 3', objectFit: 'cover', borderRadius: 12, background: '#000', display: 'block' }} />
         <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
           <div style={{ width: '78%', height: '38%', border: '2px solid rgba(253,232,216,0.9)', borderRadius: 12, boxShadow: '0 0 0 9999px rgba(0,0,0,0.28)' }} />
+        {/* Taste liegt auf dem Kamerabild: Creme-Grund mit #600812 bleibt fest */}
         </div>
         {torchAvailable && (
           <button type="button" onClick={toggleTorch} style={{ position: 'absolute', bottom: 10, right: 10, background: torchOn ? '#fde8d8' : 'rgba(26,14,8,0.6)', color: torchOn ? '#600812' : '#fde8d8', border: 'none', borderRadius: 999, padding: '7px 14px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
@@ -2471,10 +2472,10 @@ export default function Lager() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* MASTHEAD HEADER */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -2491,7 +2492,7 @@ export default function Lager() {
               {!istOnline && offlineStand !== null && ` · Stand ${new Date(offlineStand).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
             </div>
           </div>
-          <button onClick={() => setShowSettingsModal(true)} style={{ width: 34, height: 34, border: 'none', borderRadius: 8, background: 'rgba(96,8,18,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
+          <button onClick={() => setShowSettingsModal(true)} style={{ width: 34, height: 34, border: 'none', borderRadius: 8, background: 'rgba(var(--lbf-rot-rgb),0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--lbf-akzent)' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
           </button>
         </div>
@@ -2588,8 +2589,8 @@ export default function Lager() {
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Bald fällig</div>
           </div>
           <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Abgel.</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: '#600812', lineHeight: 1 }}>{stats.exp}</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Abgel.</div>
+            <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>{stats.exp}</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Abgelaufen</div>
           </div>
           <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
@@ -2621,9 +2622,9 @@ export default function Lager() {
 
         {/* ERROR */}
         {error && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 16, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>
+          <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 16, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>
             {error}
-            <button onClick={loadStock} style={{ marginLeft: 16, background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: '#b91c1c', fontFamily: 'inherit' }}>Erneut versuchen</button>
+            <button onClick={loadStock} style={{ marginLeft: 16, background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: 'var(--lbf-fehler-text-2)', fontFamily: 'inherit' }}>Erneut versuchen</button>
           </div>
         )}
 
@@ -2640,8 +2641,8 @@ export default function Lager() {
             filteredItems.map(item => {
               const isLow = item.min_stock > 0 && item.qty < item.min_stock
               const isZero = item.qty === 0
-              const borderColor = isZero ? 'rgba(139,113,90,0.4)' : item.status === 'ok' ? '#16a34a' : item.status === 'warn' ? '#d97706' : '#600812'
-              const expiryColor = item.status === 'exp' ? '#600812' : item.status === 'warn' ? '#d97706' : 'var(--warm-gray)'
+              const borderColor = isZero ? 'rgba(139,113,90,0.4)' : item.status === 'ok' ? '#16a34a' : item.status === 'warn' ? '#d97706' : 'var(--lbf-akzent)'
+              const expiryColor = item.status === 'exp' ? 'var(--lbf-akzent)' : item.status === 'warn' ? '#d97706' : 'var(--warm-gray)'
 
               return (
                 <div
@@ -2692,7 +2693,7 @@ export default function Lager() {
       </div>
 
       {/* LOCATION TABS */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderTop: '0.5px solid rgba(96,8,18,0.12)', padding: '10px 12px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom))', display: 'flex', gap: 8, justifyContent: 'center', zIndex: 100, overflowX: 'auto' }}>
+      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderTop: '0.5px solid var(--lbf-border)', padding: '10px 12px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom))', display: 'flex', gap: 8, justifyContent: 'center', zIndex: 100, overflowX: 'auto' }}>
         {locations.map(loc => (
           <button
             key={loc.id}
@@ -2706,8 +2707,8 @@ export default function Lager() {
               fontFamily: 'inherit',
               cursor: 'pointer',
               flexShrink: 0,
-              background: currentLocationId === loc.id ? '#600812' : 'rgba(96,8,18,0.07)',
-              color: currentLocationId === loc.id ? '#fff' : '#600812',
+              background: currentLocationId === loc.id ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.07)',
+              color: currentLocationId === loc.id ? '#fff' : 'var(--lbf-akzent)',
             }}
           >
             {loc.name}
@@ -2719,18 +2720,18 @@ export default function Lager() {
       {showLogModal && (
         <div className="lager-modal-overlay" onClick={() => setShowLogModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Logbuch</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Logbuch</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 420, overflowY: 'auto' }}>
               {transactions.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Transaktionen vorhanden</div>
               ) : (
                 transactions.map(txn => (
-                  <div key={txn.id} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 8, padding: '10px 12px', borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? '#600812' : '#d97706'}` }}>
+                  <div key={txn.id} style={{ background: 'var(--lbf-fuss)', borderRadius: 8, padding: '10px 12px', borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? 'var(--lbf-akzent)' : '#d97706'}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                       <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{new Date(txn.created).toLocaleString('de-DE')}</div>
                       <div style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
-                        background: txn.type === 'einbuchung' ? '#dcfce7' : txn.type === 'ausbuchung' ? '#fee2e2' : '#fef3c7',
-                        color: txn.type === 'einbuchung' ? '#166534' : txn.type === 'ausbuchung' ? '#b91c1c' : '#92400e'
+                        background: txn.type === 'einbuchung' ? 'var(--lbf-ok-grund-2)' : txn.type === 'ausbuchung' ? 'var(--lbf-fehler-grund-2)' : 'var(--lbf-warn-grund-2)',
+                        color: txn.type === 'einbuchung' ? 'var(--lbf-ok-text)' : txn.type === 'ausbuchung' ? 'var(--lbf-fehler-text-2)' : 'var(--lbf-warn-text)'
                       }}>
                         {txn.type === 'einbuchung' ? 'Einbuchung' : txn.type === 'ausbuchung' ? 'Ausbuchung' : 'Korrektur'}
                       </div>
@@ -2757,7 +2758,7 @@ export default function Lager() {
       {showItemsModal && (
         <div className="lager-modal-overlay" onClick={() => setShowItemsModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Artikel-Datenbank</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Artikel-Datenbank</div>
             <button
               className="lager-btn primary"
               style={{ width: '100%', marginBottom: 16 }}
@@ -2770,7 +2771,7 @@ export default function Lager() {
                 <div style={{ textAlign: 'center', padding: '24px', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Artikel vorhanden</div>
               ) : (
                 allItems.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8 }}>
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 8 }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{item.name}</div>
                       <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
@@ -2782,7 +2783,7 @@ export default function Lager() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => showQrLabel(item)} title="QR-Etikett erzeugen">QR</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '', auto_order: !!item.auto_order }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: '#600812', borderColor: 'rgba(96,8,18,0.2)' }} onClick={() => deleteItem(item.id)}>Löschen</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: 'var(--lbf-akzent)', borderColor: 'rgba(var(--lbf-rot-rgb),0.2)' }} onClick={() => deleteItem(item.id)}>Löschen</button>
                     </div>
                   </div>
                 ))
@@ -2799,37 +2800,37 @@ export default function Lager() {
       {showSettingsModal && (
         <div className="lager-modal-overlay" onClick={() => setShowSettingsModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Lager-Standorte</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Lager-Standorte</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {locations.map(loc => (
-                <div key={loc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8 }}>
+                <div key={loc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 8 }}>
                   <div style={{ fontWeight: 600, color: 'var(--lbf-text)' }}>{loc.name}</div>
-                  <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: '#600812', borderColor: 'rgba(96,8,18,0.2)' }} onClick={() => deleteLocation(loc.id)} disabled={locations.length <= 1}>Löschen</button>
+                  <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: 'var(--lbf-akzent)', borderColor: 'rgba(var(--lbf-rot-rgb),0.2)' }} onClick={() => deleteLocation(loc.id)} disabled={locations.length <= 1}>Löschen</button>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Neuer Standort</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Neuer Standort</label>
               <input className="lager-input" type="text" placeholder="Standort-Name" value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)} />
               <button className="lager-btn primary" onClick={addLocation}>Standort hinzufügen</button>
             </div>
 
             {/* Meine Benachrichtigungen */}
-            <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 18 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meine Benachrichtigungen</div>
+            <div style={{ borderTop: '0.5px solid var(--lbf-border)', paddingTop: 18 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meine Benachrichtigungen</div>
               <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>Täglicher E-Mail-Digest bei niedrigem Bestand oder ablaufenden Artikeln</div>
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', marginBottom: 14 }}>
-                <input type="checkbox" checked={alertPrefs.enabled} onChange={(e) => setAlertPrefs(p => ({ ...p, enabled: e.target.checked }))} style={{ width: 18, height: 18, accentColor: '#600812' }} />
+                <input type="checkbox" checked={alertPrefs.enabled} onChange={(e) => setAlertPrefs(p => ({ ...p, enabled: e.target.checked }))} style={{ width: 18, height: 18, accentColor: 'var(--lbf-akzent)' }} />
                 <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>E-Mail-Benachrichtigungen aktiv</span>
               </label>
 
               <div style={{ opacity: alertPrefs.enabled ? 1 : 0.5, pointerEvents: alertPrefs.enabled ? 'auto' : 'none' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 8 }}>Welche Warnungen</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 8 }}>Welche Warnungen</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
                   {([['low', 'Unter Mindestbestand'], ['expired', 'Abgelaufen'], ['expiring', 'Läuft bald ab']] as const).map(([key, label]) => (
                     <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                      <input type="checkbox" checked={alertPrefs[key]} onChange={(e) => setAlertPrefs(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                      <input type="checkbox" checked={alertPrefs[key]} onChange={(e) => setAlertPrefs(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                       <span style={{ fontSize: 14, color: 'var(--lbf-text)' }}>{label}</span>
                     </label>
                   ))}
@@ -2837,7 +2838,7 @@ export default function Lager() {
 
                 <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
                   <div style={{ flex: '0 0 130px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Vorlaufzeit MHD</label>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Vorlaufzeit MHD</label>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <input className="lager-input" type="number" min="1" value={alertPrefs.leadDays} onChange={(e) => setAlertPrefs(p => ({ ...p, leadDays: parseInt(e.target.value) || 0 }))} style={{ width: 70 }} />
                       <span style={{ fontSize: 13, color: 'var(--warm-gray)' }}>Tage</span>
@@ -2846,14 +2847,14 @@ export default function Lager() {
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Empfänger</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Empfänger</label>
                   <input className="lager-input" type="email" value={alertPrefs.email} onChange={(e) => setAlertPrefs(p => ({ ...p, email: e.target.value }))} placeholder={user?.email || 'deine@email.de'} />
                   <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Leer lassen = an deine eigene Adresse ({user?.email || '—'})</span>
                 </div>
               </div>
 
               {alertTestMsg && (
-                <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 12, background: alertTestMsg.type === 'success' ? 'rgba(22,163,74,0.08)' : 'rgba(192,57,43,0.08)', color: alertTestMsg.type === 'success' ? '#15803d' : '#b91c1c' }}>
+                <div style={{ padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 12, background: alertTestMsg.type === 'success' ? 'rgba(22,163,74,0.08)' : 'rgba(192,57,43,0.08)', color: alertTestMsg.type === 'success' ? 'var(--lbf-ok-text-2)' : 'var(--lbf-fehler-text-2)' }}>
                   {alertTestMsg.text}
                 </div>
               )}
@@ -2875,15 +2876,15 @@ export default function Lager() {
       {showInventoryModal && (
         <div className="lager-modal-overlay" onClick={() => setShowInventoryModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Inventur</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Inventur</div>
 
             {/* TABS */}
-            <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid rgba(96,8,18,0.1)' }}>
+            <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
               {(['new', 'history', 'schedule'] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => { setInventoryTab(tab); if (tab === 'history') loadAuditHistory() }}
-                  style={{ background: 'none', border: 'none', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: 'inherit', color: inventoryTab === tab ? '#600812' : 'var(--warm-gray)', borderBottom: inventoryTab === tab ? '2px solid #600812' : '2px solid transparent', marginBottom: -2 }}
+                  style={{ background: 'none', border: 'none', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: 'inherit', color: inventoryTab === tab ? 'var(--lbf-akzent)' : 'var(--warm-gray)', borderBottom: inventoryTab === tab ? '2px solid var(--lbf-akzent)' : '2px solid transparent', marginBottom: -2 }}
                 >
                   {tab === 'new' ? 'Inventur' : tab === 'history' ? 'Historie' : 'Zeitplan'}
                 </button>
@@ -2901,21 +2902,21 @@ export default function Lager() {
                 return (
                 <div>
                   {/* Kopf: Standort + Fortschrittsbalken */}
-                  <div style={{ background: 'rgba(250,249,247,0.8)', padding: 12, borderRadius: 8, marginBottom: 12, border: '1px solid rgba(96,8,18,0.1)' }}>
+                  <div style={{ background: 'var(--lbf-fuss)', padding: 12, borderRadius: 8, marginBottom: 12, border: '1px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#600812' }}>{locations.find(l => l.id === auditLocationId)?.name || 'Lager'}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-akzent)' }}>{locations.find(l => l.id === auditLocationId)?.name || 'Lager'}</div>
                       <div style={{ fontSize: 12, color: 'var(--lbf-text)', fontWeight: 700 }}>{geprueft} / {auditItems.length}</div>
                     </div>
-                    <div style={{ background: 'rgba(96,8,18,0.08)', borderRadius: 6, height: 6 }}>
-                      <div style={{ background: '#600812', borderRadius: 6, height: 6, width: `${auditItems.length ? Math.round(geprueft / auditItems.length * 100) : 0}%`, transition: 'width 0.25s' }} />
+                    <div style={{ background: 'var(--lbf-border-light)', borderRadius: 6, height: 6 }}>
+                      <div style={{ background: 'var(--lbf-akzent)', borderRadius: 6, height: 6, width: `${auditItems.length ? Math.round(geprueft / auditItems.length * 100) : 0}%`, transition: 'width 0.25s' }} />
                     </div>
                   </div>
 
                   {/* Ansicht umschalten: Liste (alle auf einmal) oder Einzeln (durchklicken) */}
-                  <div style={{ display: 'flex', gap: 0, marginBottom: 12, background: 'rgba(96,8,18,0.06)', borderRadius: 8, padding: 3 }}>
+                  <div style={{ display: 'flex', gap: 0, marginBottom: 12, background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 8, padding: 3 }}>
                     {(['liste', 'einzeln'] as const).map(m => (
                       <button key={m} onClick={() => setAuditViewMode(m)}
-                        style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 12, background: auditViewMode === m ? '#fff' : 'transparent', color: auditViewMode === m ? '#600812' : 'var(--warm-gray)', boxShadow: auditViewMode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
+                        style={{ flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: 12, background: auditViewMode === m ? 'var(--lbf-card)' : 'transparent', color: auditViewMode === m ? 'var(--lbf-akzent)' : 'var(--warm-gray)', boxShadow: auditViewMode === m ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>
                         {m === 'liste' ? 'Liste' : 'Einzeln'}
                       </button>
                     ))}
@@ -2930,7 +2931,7 @@ export default function Lager() {
                     return (
                       <div>
                         <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 8 }}>Artikel {auditIndex + 1} von {auditItems.length}{cur.checked ? ' · bereits geprüft' : ''}</div>
-                        <div style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 12, padding: 16, border: `1px solid ${weicht ? '#f2c088' : 'rgba(96,8,18,0.12)'}`, marginBottom: 12 }}>
+                        <div style={{ background: 'var(--lbf-fuss)', borderRadius: 12, padding: 16, border: `1px solid ${weicht ? '#f2c088' : 'var(--lbf-border)'}`, marginBottom: 12 }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: 2 }}>{cur.expand?.item_id?.name || 'Artikel'}</div>
@@ -2940,11 +2941,11 @@ export default function Lager() {
                               </div>
                             </div>
                             <button onClick={() => openAuditEdit(cur)} title="Artikel bearbeiten"
-                              style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                              style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                             </button>
                           </div>
-                          <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 6 }}>Gezählt</label>
+                          <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 6 }}>Gezählt</label>
                           <input className="lager-input" type="number" min="0" value={val} autoFocus
                             onChange={e => setAuditRowValues(prev => ({ ...prev, [cur.id]: Number(e.target.value) }))}
                             style={{ fontSize: 20, fontWeight: 800, textAlign: 'center' }} />
@@ -2988,7 +2989,7 @@ export default function Lager() {
                       const weicht = val !== ai.expected_quantity
                       const busy = auditSaving === ai.id
                       return (
-                        <div key={ai.id} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '10px 12px', borderLeft: `3px solid ${weicht ? '#d97706' : 'rgba(96,8,18,0.25)'}` }}>
+                        <div key={ai.id} style={{ background: 'var(--lbf-fuss)', borderRadius: 10, padding: '10px 12px', borderLeft: `3px solid ${weicht ? '#d97706' : 'rgba(var(--lbf-rot-rgb),0.25)'}` }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ai.expand?.item_id?.name || 'Artikel'}</div>
@@ -2998,7 +2999,7 @@ export default function Lager() {
                               </div>
                             </div>
                             <button onClick={() => openAuditEdit(ai)} title="Artikel bearbeiten (Barcode, Charge, Stammdaten)"
-                              style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 5, flexShrink: 0, lineHeight: 0 }}>
+                              style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 5, flexShrink: 0, lineHeight: 0 }}>
                               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                             </button>
                             <input className="lager-input" type="number" min="0" value={val}
@@ -3023,10 +3024,10 @@ export default function Lager() {
                         {erledigt.map(ai => {
                           const diff = ai.actual_quantity - ai.expected_quantity
                           return (
-                            <div key={ai.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: diff === 0 ? 'rgba(250,249,247,0.6)' : diff > 0 ? '#f0fdf4' : '#fef2f2', borderRadius: 10, padding: '8px 12px', opacity: 0.85 }}>
+                            <div key={ai.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: diff === 0 ? 'var(--lbf-fuss)' : diff > 0 ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)', borderRadius: 10, padding: '8px 12px', opacity: 0.85 }}>
                               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" style={{ flexShrink: 0 }}><polyline points="20 6 9 17 4 12"/></svg>
                               <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ai.expand?.item_id?.name || 'Artikel'}</div>
-                              <div style={{ fontSize: 12, fontWeight: 700, color: diff === 0 ? 'var(--warm-gray)' : diff > 0 ? '#16a34a' : '#600812', flexShrink: 0 }}>
+                              <div style={{ fontSize: 12, fontWeight: 700, color: diff === 0 ? 'var(--warm-gray)' : diff > 0 ? '#16a34a' : 'var(--lbf-akzent)', flexShrink: 0 }}>
                                 {ai.actual_quantity}{diff !== 0 && ` (${diff > 0 ? '+' : ''}${diff})`}
                               </div>
                             </div>
@@ -3048,18 +3049,18 @@ export default function Lager() {
                     const neverAudited = !lastAudit && locInterval !== 'disabled'
                     const isOverdue = neverAudited || (nextDue !== null && nextDue < new Date())
                     return (
-                      <div key={loc.id} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 12, padding: 16, border: `1px solid ${isOverdue ? '#fecaca' : 'rgba(96,8,18,0.1)'}`, borderLeft: `4px solid ${isOverdue ? '#600812' : openAudit ? '#d97706' : 'var(--lbf-input-border)'}` }}>
+                      <div key={loc.id} style={{ background: 'var(--lbf-fuss)', borderRadius: 12, padding: 16, border: `1px solid ${isOverdue ? '#fecaca' : 'rgba(var(--lbf-rot-rgb),0.1)'}`, borderLeft: `4px solid ${isOverdue ? 'var(--lbf-akzent)' : openAudit ? '#d97706' : 'var(--lbf-input-border)'}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                           <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{loc.name}</div>
                           <div style={{ display: 'flex', gap: 6 }}>
-                            {openAudit && <span style={{ fontSize: 10, background: '#fef3c7', color: '#92400e', padding: '2px 8px', borderRadius: 999, fontWeight: 700, textTransform: 'uppercase' as const }}>Offen</span>}
-                            {isOverdue && <span style={{ fontSize: 10, background: '#fee2e2', color: '#600812', padding: '2px 8px', borderRadius: 999, fontWeight: 700, textTransform: 'uppercase' as const }}>Überfällig</span>}
+                            {openAudit && <span style={{ fontSize: 10, background: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)', padding: '2px 8px', borderRadius: 999, fontWeight: 700, textTransform: 'uppercase' as const }}>Offen</span>}
+                            {isOverdue && <span style={{ fontSize: 10, background: 'var(--lbf-fehler-grund-2)', color: 'var(--lbf-akzent)', padding: '2px 8px', borderRadius: 999, fontWeight: 700, textTransform: 'uppercase' as const }}>Überfällig</span>}
                           </div>
                         </div>
                         <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 12, display: 'flex', flexDirection: 'column', gap: 2 }}>
                           <div>Letzte Inventur: {lastAudit ? `${new Date(lastAudit.audit_date).toLocaleDateString('de-DE')} · ${lastAudit.user}` : 'Noch nie durchgeführt'}</div>
                           {locInterval !== 'disabled' && (
-                            <div style={{ color: isOverdue ? '#600812' : 'var(--warm-gray)' }}>Nächste fällig: {neverAudited ? 'Sofort' : nextDue?.toLocaleDateString('de-DE')}</div>
+                            <div style={{ color: isOverdue ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }}>Nächste fällig: {neverAudited ? 'Sofort' : nextDue?.toLocaleDateString('de-DE')}</div>
                           )}
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -3102,13 +3103,13 @@ export default function Lager() {
                           const diff = ai.actual_quantity - ai.expected_quantity
                           const hasDiff = diff !== 0
                           return (
-                            <div key={ai.id} style={{ padding: '10px 12px', borderRadius: 8, background: hasDiff ? (diff > 0 ? '#f0fdf4' : '#fef2f2') : 'rgba(250,249,247,0.8)', borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : '#600812') : 'var(--lbf-input-border)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div key={ai.id} style={{ padding: '10px 12px', borderRadius: 8, background: hasDiff ? (diff > 0 ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)') : 'var(--lbf-fuss)', borderLeft: `3px solid ${hasDiff ? (diff > 0 ? '#16a34a' : 'var(--lbf-akzent)') : 'var(--lbf-input-border)'}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <div>
                                 <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{ai.expand?.item_id?.name || ai.item_id}</div>
                                 <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>Erwartet: {ai.expected_quantity} → Gezählt: {ai.actual_quantity}</div>
                               </div>
                               {hasDiff ? (
-                                <span style={{ fontWeight: 800, fontSize: 14, color: diff > 0 ? '#16a34a' : '#600812' }}>{diff > 0 ? '+' : ''}{diff}</span>
+                                <span style={{ fontWeight: 800, fontSize: 14, color: diff > 0 ? '#16a34a' : 'var(--lbf-akzent)' }}>{diff > 0 ? '+' : ''}{diff}</span>
                               ) : (
                                 <span style={{ fontSize: 12, color: '#16a34a', fontWeight: 700 }}>OK</span>
                               )}
@@ -3124,10 +3125,10 @@ export default function Lager() {
                       <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Inventuren vorhanden</div>
                     ) : (
                       auditHistory.map(audit => (
-                        <div key={audit.id} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #600812', cursor: 'pointer' }} onClick={() => { setSelectedHistoryAudit(audit); loadHistoryAuditItems(audit.id) }}>
+                        <div key={audit.id} style={{ background: 'var(--lbf-fuss)', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid var(--lbf-akzent)', cursor: 'pointer' }} onClick={() => { setSelectedHistoryAudit(audit); loadHistoryAuditItems(audit.id) }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                             <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>{new Date(audit.audit_date).toLocaleString('de-DE')}</div>
-                            <span style={{ fontSize: 10, background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>Abgeschlossen</span>
+                            <span style={{ fontSize: 10, background: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>Abgeschlossen</span>
                           </div>
                           <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
                             <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{locations.find(l => l.id === audit.location_id)?.name || 'Standort'}</strong>
@@ -3145,7 +3146,7 @@ export default function Lager() {
             {inventoryTab === 'schedule' && (
               <div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Standard-Intervall (für Standorte ohne eigene Einstellung)</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Standard-Intervall (für Standorte ohne eigene Einstellung)</label>
                   <select className="lager-input" value={inventurSchedule.interval} onChange={(e) => setInventurSchedule(prev => ({ ...prev, interval: e.target.value }))}>
                     <option value="disabled">Deaktiviert</option>
                     <option value="weekly">Wöchentlich</option>
@@ -3164,7 +3165,7 @@ export default function Lager() {
                     const neverAudited = !lastAudit
                     const isOverdue = locInterval !== 'disabled' && (neverAudited || (nextDue !== null && nextDue < new Date()))
                     return (
-                      <div key={loc.id} style={{ padding: '10px 12px', borderRadius: 8, background: locInterval === 'disabled' ? 'rgba(250,249,247,0.8)' : isOverdue ? '#fef2f2' : '#f0fdf4', border: `1px solid ${locInterval === 'disabled' ? 'rgba(96,8,18,0.1)' : isOverdue ? '#fecaca' : '#bbf7d0'}` }}>
+                      <div key={loc.id} style={{ padding: '10px 12px', borderRadius: 8, background: locInterval === 'disabled' ? 'var(--lbf-fuss)' : isOverdue ? 'var(--lbf-fehler-grund)' : 'var(--lbf-ok-grund)', border: `1px solid ${locInterval === 'disabled' ? 'rgba(var(--lbf-rot-rgb),0.1)' : isOverdue ? '#fecaca' : '#bbf7d0'}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, marginBottom: 6 }}>
                           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', flex: 1, minWidth: 0 }}>{loc.name}</div>
                           <select className="lager-input" style={{ width: 'auto', fontSize: 12, padding: '6px 8px' }}
@@ -3188,9 +3189,9 @@ export default function Lager() {
                           {locInterval === 'disabled' ? (
                             <span style={{ color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine automatische Fälligkeit</span>
                           ) : neverAudited ? (
-                            <span style={{ color: '#600812', fontWeight: 700 }}>Noch nie – sofort fällig</span>
+                            <span style={{ color: 'var(--lbf-akzent)', fontWeight: 700 }}>Noch nie – sofort fällig</span>
                           ) : (
-                            <span style={{ color: isOverdue ? '#600812' : '#166534', fontWeight: 600 }}>
+                            <span style={{ color: isOverdue ? 'var(--lbf-akzent)' : 'var(--lbf-ok-text)', fontWeight: 600 }}>
                               {nextDue?.toLocaleDateString('de-DE')}
                               {isOverdue && ' — Überfällig'}
                             </span>
@@ -3218,7 +3219,7 @@ export default function Lager() {
         return (
           <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setAuditEdit(null) }}>
             <div className="lager-modal">
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Artikel bearbeiten</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Artikel bearbeiten</div>
               <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Änderungen gelten für {locName}</div>
 
               {/* Stammdaten */}
@@ -3241,7 +3242,7 @@ export default function Lager() {
               </div>
 
               {/* Barcodes — mehrere je Artikel (verschiedene Hersteller) */}
-              <div style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, margin: '14px 0' }}>
+              <div style={{ padding: '10px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, margin: '14px 0' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: getBarcodes(it).length ? 8 : 0 }}>
                   <div style={{ ...lbl, marginBottom: 0, flex: 1 }}>Barcodes</div>
                   {it && <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', it)}>+ Scannen</button>}
@@ -3273,7 +3274,7 @@ export default function Lager() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {auditEditStocks.map(s => auditStockEdit?.id === s.id ? (
-                    <div key={s.id} style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)' }}>
+                    <div key={s.id} style={{ padding: '10px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)' }}>
                       <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', marginBottom: 8 }}>{s.quantity} {it?.unit || 'Stk.'} bearbeiten</div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <input className="lager-input" type="text" placeholder="Chargen-Nr. / LOT (leer = ohne Charge)" value={auditStockEdit.batch}
@@ -3287,16 +3288,16 @@ export default function Lager() {
                       </div>
                     </div>
                   ) : (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, fontSize: 13 }}>
+                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, fontSize: 13 }}>
                       <span style={{ fontWeight: 700, color: 'var(--lbf-text)', minWidth: 44 }}>{s.quantity} {it?.unit || 'Stk.'}</span>
-                      <span style={{ fontStyle: 'italic', color: s.batch ? '#600812' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
+                      <span style={{ fontStyle: 'italic', color: s.batch ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
                         {s.batch ? `Charge ${s.batch}` : 'ohne Charge'}
                       </span>
                       <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
                         {s.expiry_date ? `MHD ${new Date(s.expiry_date).toLocaleDateString('de-DE')}` : ''}
                       </span>
                       <button onClick={() => setAuditStockEdit({ id: s.id, batch: s.batch || '', expiry: s.expiry_date ? s.expiry_date.slice(0, 10) : '' })}
-                        style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                        style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                       </button>
                     </div>
@@ -3320,7 +3321,7 @@ export default function Lager() {
         return (
           <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setAuditChargeDialog(null) }}>
             <div className="lager-modal" style={{ maxWidth: 480 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>
                 {d.diff > 0 ? 'Mehrmenge einbuchen' : 'Fehlmenge abbuchen'}
               </div>
               <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 14 }}>
@@ -3354,11 +3355,11 @@ export default function Lager() {
       {showBuchungModal && (
         <div className="lager-modal-overlay" onClick={() => setShowBuchungModal(false)}>
           <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
               {buchungType === 'ein' ? 'Artikel einbuchen' : 'Artikel ausbuchen'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, position: 'relative' }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel *</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel *</label>
               <input
                 className="lager-input"
                 type="text"
@@ -3367,16 +3368,16 @@ export default function Lager() {
                 onChange={e => { setBuchungSearch(e.target.value); setSelectedBuchungItem('') }}
               />
               {buchungSearch && (
-                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                   {allItems.filter(i => i.name.toLowerCase().includes(buchungSearch.toLowerCase())).map(item => (
                     <div
                       key={item.id}
                       onClick={() => { setSelectedBuchungItem(item.id); setBuchungSearch(item.name) }}
                       style={{
                         padding: '9px 14px', cursor: 'pointer', fontSize: 14,
-                        background: selectedBuchungItem === item.id ? 'rgba(96,8,18,0.05)' : undefined,
+                        background: selectedBuchungItem === item.id ? 'var(--lbf-akzent-weich)' : undefined,
                         fontWeight: selectedBuchungItem === item.id ? 700 : 400,
-                        borderBottom: '0.5px solid rgba(96,8,18,0.06)',
+                        borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)',
                         color: 'var(--lbf-text)',
                       }}
                     >{item.name}</div>
@@ -3394,27 +3395,27 @@ export default function Lager() {
             </div>
             {buchungType === 'aus' ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
                 <input className="lager-input" type="number" value={buchungQty || ''} onChange={(e) => setBuchungQty(Number(e.target.value))} min="1" />
                 <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Wird zuerst von der Charge mit dem nächsten Ablaufdatum abgezogen (FIFO). Die entnommene Charge wird protokolliert.</span>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginTop: 6 }}>Einsatz-Nr. (optional)</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginTop: 6 }}>Einsatz-Nr. (optional)</label>
                 <input className="lager-input" type="text" value={buchungEinsatz} onChange={(e) => setBuchungEinsatz(e.target.value)} placeholder="z.B. E-2026-0147" />
                 <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Damit ist bei einem Rückruf nachvollziehbar, wohin die Charge gegangen ist.</span>
               </div>
             ) : (
               <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Mengen &amp; Chargen *</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Mengen &amp; Chargen *</label>
                 <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 10 }}>Pro Charge/MHD eine Zeile — z.B. zwei Packungen mit unterschiedlichem LOT.</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {einChargen.map((r, idx) => (
-                    <div key={idx} style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)' }}>
+                    <div key={idx} style={{ background: 'var(--lbf-fuss)', borderRadius: 10, padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 8 }}>
                         <div style={{ flex: '0 0 82px' }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>Menge</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>Menge</div>
                           <input className="lager-input" type="number" min="1" value={r.menge || ''} onChange={e => setEinChargen(prev => prev.map((x, i) => i === idx ? { ...x, menge: Number(e.target.value) } : x))} />
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>MHD (optional)</div>
+                          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>MHD (optional)</div>
                           <input className="lager-input" type="date" value={r.mhd} onChange={e => setEinChargen(prev => prev.map((x, i) => i === idx ? { ...x, mhd: e.target.value } : x))} />
                         </div>
                         {einChargen.length > 1 && (
@@ -3424,7 +3425,7 @@ export default function Lager() {
                           </button>
                         )}
                       </div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>Chargen-Nr. (optional)</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3 }}>Chargen-Nr. (optional)</div>
                       <input className="lager-input" type="text" value={r.charge} placeholder="LOT / Charge vom Etikett" onChange={e => setEinChargen(prev => prev.map((x, i) => i === idx ? { ...x, charge: e.target.value } : x))} />
                     </div>
                   ))}
@@ -3448,8 +3449,8 @@ export default function Lager() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
               <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--lbf-text)' }}>{detailItem.name}</div>
               <span style={{
-                background: detailItem.status === 'exp' ? '#fee2e2' : detailItem.status === 'warn' ? '#fef3c7' : '#dcfce7',
-                color: detailItem.status === 'exp' ? '#600812' : detailItem.status === 'warn' ? '#92400e' : '#15803d',
+                background: detailItem.status === 'exp' ? 'var(--lbf-fehler-grund-2)' : detailItem.status === 'warn' ? 'var(--lbf-warn-grund-2)' : 'var(--lbf-ok-grund-2)',
+                color: detailItem.status === 'exp' ? 'var(--lbf-akzent)' : detailItem.status === 'warn' ? 'var(--lbf-warn-text)' : 'var(--lbf-ok-text-2)',
                 padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const
               }}>
                 {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Achtung' : 'In Ordnung'}
@@ -3467,16 +3468,16 @@ export default function Lager() {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>SOLL für {locations.find(l => l.id === currentLocationId)?.name || 'diesen Standort'}</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>SOLL für {locations.find(l => l.id === currentLocationId)?.name || 'diesen Standort'}</label>
                 <input className="lager-input" type="number" value={detailSoll || ''} onChange={(e) => setDetailSoll(e.target.value === '' ? 0 : (parseInt(e.target.value) || 0))} min="0" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung</label>
                 <input className="lager-input" type="text" value={detailNote} onChange={(e) => setDetailNote(e.target.value)} placeholder="Freitext..." />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum</label>
               <input className="lager-input" type="date" value={detailExpiry} onChange={(e) => setDetailExpiry(e.target.value)} />
             </div>
             <button className="lager-btn primary" style={{ width: '100%', marginBottom: 20 }} onClick={saveItemDetail}>Speichern</button>
@@ -3485,9 +3486,9 @@ export default function Lager() {
             {(() => {
               const rawItem = allItems.find(i => i.id === detailItem.id)
               return (
-                <div style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, marginBottom: 18 }}>
+                <div style={{ padding: '10px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, marginBottom: 18 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                    <div style={{ flex: 1, fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Barcodes</div>
+                    <div style={{ flex: 1, fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Barcodes</div>
                     {rawItem && (
                       <button className="lager-btn" style={{ flexShrink: 0, fontSize: 12 }} onClick={() => openScanner('assign', rawItem)}>+ Scannen</button>
                     )}
@@ -3517,12 +3518,12 @@ export default function Lager() {
 
             {detailStockEntries.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Bestände / Chargen</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Bestände / Chargen</div>
                 <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginBottom: 8 }}>Stift antippen, um Charge und MHD nachzutragen oder zu ändern.</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
                   {detailStockEntries.map(s => (
                     stockEdit?.id === s.id ? (
-                      <div key={s.id} style={{ padding: '10px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, border: '1px solid rgba(96,8,18,0.2)' }}>
+                      <div key={s.id} style={{ padding: '10px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)' }}>
                         <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', marginBottom: 8 }}>{s.quantity} {detailItem.unit || 'Stk.'} bearbeiten</div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                           <input className="lager-input" type="text" placeholder="Chargen-Nr. / LOT (leer = ohne Charge)" value={stockEdit.batch}
@@ -3536,9 +3537,9 @@ export default function Lager() {
                         </div>
                       </div>
                     ) : (
-                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, fontSize: 13 }}>
+                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, fontSize: 13 }}>
                         <span style={{ fontWeight: 700, color: 'var(--lbf-text)', minWidth: 44 }}>{s.quantity} {detailItem.unit || 'Stk.'}</span>
-                        <span style={{ fontStyle: 'italic', color: s.batch ? '#600812' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
+                        <span style={{ fontStyle: 'italic', color: s.batch ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontWeight: s.batch ? 700 : 400 }}>
                           {s.batch ? `Charge ${s.batch}` : 'ohne Charge'}
                         </span>
                         <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
@@ -3546,7 +3547,7 @@ export default function Lager() {
                         </span>
                         <button title="Charge / MHD bearbeiten"
                           onClick={() => setStockEdit({ id: s.id, batch: s.batch || '', expiry: s.expiry_date ? s.expiry_date.slice(0, 10) : '' })}
-                          style={{ background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
+                          style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 4, flexShrink: 0, lineHeight: 0 }}>
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
                         </button>
                       </div>
@@ -3556,7 +3557,7 @@ export default function Lager() {
               </>
             )}
 
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Verlauf</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Verlauf</div>
             <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {detailLoadingData ? (
                 <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>Lade...</div>
@@ -3564,7 +3565,7 @@ export default function Lager() {
                 <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>Keine Transaktionen</div>
               ) : (
                 detailTransactions.map(txn => (
-                  <div key={txn.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? '#600812' : '#d97706'}`, fontSize: 13 }}>
+                  <div key={txn.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? 'var(--lbf-akzent)' : '#d97706'}`, fontSize: 13 }}>
                     <div>
                       <div style={{ fontWeight: 700, color: 'var(--lbf-text)' }}>
                         {txn.type === 'einbuchung' ? `+${txn.quantity}` : txn.type === 'ausbuchung' ? `${txn.quantity}` : `Korrektur ${txn.quantity > 0 ? '+' : ''}${txn.quantity}`} {detailItem.unit}
@@ -3598,11 +3599,11 @@ export default function Lager() {
       {showMultiBuchungModal && (
         <div className="lager-modal-overlay" onClick={() => setShowMultiBuchungModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Mehrfachbuchung</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Mehrfachbuchung</div>
 
-            <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid rgba(96,8,18,0.1)' }}>
+            <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
               {(['ein', 'aus'] as const).map(t => (
-                <button key={t} onClick={() => setMultiBuchungType(t)} style={{ background: 'none', border: 'none', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: 'inherit', color: multiBuchungType === t ? '#600812' : 'var(--warm-gray)', borderBottom: multiBuchungType === t ? '2px solid #600812' : '2px solid transparent', marginBottom: -2 }}>
+                <button key={t} onClick={() => setMultiBuchungType(t)} style={{ background: 'none', border: 'none', padding: '8px 16px', cursor: 'pointer', fontWeight: 600, fontSize: 14, fontFamily: 'inherit', color: multiBuchungType === t ? 'var(--lbf-akzent)' : 'var(--warm-gray)', borderBottom: multiBuchungType === t ? '2px solid var(--lbf-akzent)' : '2px solid transparent', marginBottom: -2 }}>
                   {t === 'ein' ? 'Einbuchen' : 'Ausbuchen'}
                 </button>
               ))}
@@ -3610,7 +3611,7 @@ export default function Lager() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
               <div style={{ position: 'relative' }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Artikel</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'block', marginBottom: 4 }}>Artikel</label>
                 <input
                   className="lager-input"
                   type="text"
@@ -3619,16 +3620,16 @@ export default function Lager() {
                   onChange={e => { setMultiBuchungSearch(e.target.value); setMultiBuchungNewItemId('') }}
                 />
                 {multiBuchungSearch && (
-                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', position: 'relative', zIndex: 10 }}>
+                  <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', position: 'relative', zIndex: 10 }}>
                     {allItems.filter(i => i.name.toLowerCase().includes(multiBuchungSearch.toLowerCase())).map(item => (
                       <div
                         key={item.id}
                         onClick={() => { setMultiBuchungNewItemId(item.id); setMultiBuchungSearch(item.name) }}
                         style={{
                           padding: '8px 12px', cursor: 'pointer', fontSize: 14,
-                          background: multiBuchungNewItemId === item.id ? 'rgba(96,8,18,0.05)' : undefined,
+                          background: multiBuchungNewItemId === item.id ? 'var(--lbf-akzent-weich)' : undefined,
                           fontWeight: multiBuchungNewItemId === item.id ? 700 : 400,
-                          borderBottom: '0.5px solid rgba(96,8,18,0.06)',
+                          borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)',
                           color: 'var(--lbf-text)',
                         }}
                       >{item.name}</div>
@@ -3638,12 +3639,12 @@ export default function Lager() {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge</label>
+                  <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge</label>
                   <input className="lager-input" type="number" value={multiBuchungNewQty} onChange={(e) => setMultiBuchungNewQty(parseInt(e.target.value) || 1)} min="1" style={{ width: 80 }} />
                 </div>
                 {multiBuchungType === 'ein' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum</label>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum</label>
                     <input className="lager-input" type="date" value={multiBuchungNewExpiry} onChange={(e) => setMultiBuchungNewExpiry(e.target.value)} style={{ width: 140 }} />
                   </div>
                 )}
@@ -3653,14 +3654,14 @@ export default function Lager() {
 
             {multiBuchungItems.length > 0 && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8 }}>Buchungsliste</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8 }}>Buchungsliste</div>
                 {multiBuchungItems.map((entry, idx) => {
                   const item = allItems.find(i => i.id === entry.itemId)
                   return (
-                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(250,249,247,0.8)', borderRadius: 8, marginBottom: 4 }}>
+                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, marginBottom: 4 }}>
                       <span style={{ fontWeight: 700, color: 'var(--lbf-text)' }}>{item?.name || entry.itemId}</span>
                       <span style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{entry.qty} {item?.unit || 'Stück'}{entry.expiry ? ` · ${new Date(entry.expiry).toLocaleDateString('de-DE')}` : ''}</span>
-                      <button onClick={() => setMultiBuchungItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: 24, height: 24, borderRadius: '50%', border: '1px solid rgba(96,8,18,0.2)', background: 'none', color: '#600812', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>x</button>
+                      <button onClick={() => setMultiBuchungItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: 24, height: 24, borderRadius: '50%', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', fontSize: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>x</button>
                     </div>
                   )
                 })}
@@ -3679,7 +3680,7 @@ export default function Lager() {
       {shopPicker.open && (
         <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShopPicker(prev => ({ ...prev, open: false }))}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Produkt wählen</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Produkt wählen</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
               Treffer für „{itemFormData.name}"{itemFormData.supplier ? ` bei ${itemFormData.supplier}` : ''} — antippen, um es zu hinterlegen.
             </div>
@@ -3690,12 +3691,12 @@ export default function Lager() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 380, overflowY: 'auto' }}>
                 {shopPicker.products.map(p => (
                   <button key={p.url} onClick={() => chooseShopProduct(p.url)}
-                    style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 10, background: 'var(--lbf-card)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    style={{ textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, padding: '11px 13px', border: '1px solid var(--lbf-border)', borderRadius: 10, background: 'var(--lbf-card)', cursor: 'pointer', fontFamily: 'inherit' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.35 }}>{p.name}</div>
-                      {p.price && <div style={{ fontStyle: 'italic', fontSize: 12, color: '#600812', fontWeight: 700, marginTop: 2 }}>{p.price}</div>}
+                      {p.price && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--lbf-akzent)', fontWeight: 700, marginTop: 2 }}>{p.price}</div>}
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}><polyline points="9 6 15 12 9 18"/></svg>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, color: 'var(--lbf-akzent)' }}><polyline points="9 6 15 12 9 18"/></svg>
                   </button>
                 ))}
               </div>
@@ -3722,41 +3723,41 @@ export default function Lager() {
       {showAddItemModal && (
         <div className="lager-modal-overlay" onClick={() => setShowAddItemModal(false)}>
           <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
               {editingItemId ? 'Artikel bearbeiten' : 'Artikel anlegen'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikelname *</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikelname *</label>
               <input className="lager-input" type="text" value={itemFormData.name} onChange={(e) => setItemFormData({...itemFormData, name: e.target.value})} placeholder="z.B. Einmalhandschuhe" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Einheit</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Einheit</label>
               <input className="lager-input" type="text" value={itemFormData.unit} onChange={(e) => setItemFormData({...itemFormData, unit: e.target.value})} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Mindestbestand</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Mindestbestand</label>
               <input className="lager-input" type="number" value={itemFormData.min_stock} onChange={(e) => setItemFormData({...itemFormData, min_stock: parseInt(e.target.value) || 0})} min="0" />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Barcode / QR-Code</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Barcode / QR-Code</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input className="lager-input" style={{ flex: 1 }} type="text" value={itemFormData.barcode} onChange={(e) => setItemFormData({...itemFormData, barcode: e.target.value})} placeholder="EAN scannen oder eintippen" />
                 <button className="lager-btn" onClick={() => openScanner('form')}>Scannen</button>
               </div>
             </div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', margin: '4px 0 10px' }}>Bestellung / Lieferant</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', margin: '4px 0 10px' }}>Bestellung / Lieferant</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Lieferant</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Lieferant</label>
                 <input className="lager-input" type="text" value={itemFormData.supplier} onChange={(e) => setItemFormData({...itemFormData, supplier: e.target.value})} placeholder="z.B. Söhngen" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel-Nr.</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel-Nr.</label>
                 <input className="lager-input" type="text" value={itemFormData.supplier_item_no} onChange={(e) => setItemFormData({...itemFormData, supplier_item_no: e.target.value})} placeholder="beim Lieferanten" />
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-Link</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-Link</label>
               <input className="lager-input" style={{ width: '100%' }} type="url" value={itemFormData.order_url} onChange={(e) => setItemFormData({...itemFormData, order_url: e.target.value})} placeholder="https://shop.lieferant.de/artikel..." />
               <div style={{ display: 'flex', gap: 8 }}>
                 <button className="lager-btn primary" style={{ flex: 1 }} onClick={openShopPicker} title="Produkte im Shop des Lieferanten suchen und auswählen">
@@ -3767,10 +3768,10 @@ export default function Lager() {
                 </button>
               </div>
               {aiHint && (
-                <span style={{ fontSize: 12, fontWeight: 600, color: (aiHint.startsWith('✓') || aiHint.startsWith('🔎')) ? '#15803d' : '#b91c1c' }}>{aiHint}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: (aiHint.startsWith('✓') || aiHint.startsWith('🔎')) ? 'var(--lbf-ok-text-2)' : 'var(--lbf-fehler-text-2)' }}>{aiHint}</span>
               )}
               {/(?:[?&](?:search|s|q|sSearch)=)|\/search\b/i.test(itemFormData.order_url) && (
-                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', borderRadius: 10, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ fontSize: 12, color: 'var(--lbf-text)', lineHeight: 1.5 }}>
                     <strong>So hinterlegst du den exakten Artikel:</strong><br />
                     1. Shop-Suche öffnen &nbsp;2. richtiges Produkt anklicken &nbsp;3. Produkt-Link kopieren und hier oben einfügen.
@@ -3785,11 +3786,11 @@ export default function Lager() {
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-E-Mail</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bestell-E-Mail</label>
               <input className="lager-input" type="email" value={itemFormData.supplier_email} onChange={(e) => setItemFormData({...itemFormData, supplier_email: e.target.value})} placeholder="bestellung@lieferant.de" />
             </div>
             <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 14, opacity: itemFormData.supplier_email ? 1 : 0.5 }}>
-              <input type="checkbox" checked={itemFormData.auto_order} disabled={!itemFormData.supplier_email} onChange={(e) => setItemFormData({...itemFormData, auto_order: e.target.checked})} style={{ width: 17, height: 17, accentColor: '#600812', marginTop: 1 }} />
+              <input type="checkbox" checked={itemFormData.auto_order} disabled={!itemFormData.supplier_email} onChange={(e) => setItemFormData({...itemFormData, auto_order: e.target.checked})} style={{ width: 17, height: 17, accentColor: 'var(--lbf-akzent)', marginTop: 1 }} />
               <span>
                 <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', display: 'block' }}>Automatisch nachbestellen</span>
                 <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>Bestellt täglich um 07:30 automatisch per E-Mail beim Lieferanten, wenn der Mindestbestand unterschritten ist (erfordert Bestell-E-Mail).</span>
@@ -3806,11 +3807,11 @@ export default function Lager() {
       {showScanModal && (
         <div className="lager-modal-overlay" onClick={() => setShowScanModal(false)}>
           <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
               {scanMode === 'form' ? 'Code für Artikel scannen' : scanMode === 'assign' ? `Code mit „${scanAssignItem?.name || 'Artikel'}" verknüpfen` : 'Artikel scannen'}
             </div>
             {scanError ? (
-              <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 10, fontSize: 13 }}>{scanError}</div>
+              <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 14, borderRadius: 10, fontSize: 13 }}>{scanError}</div>
             ) : scanFoundItem ? (
               <>
                 <div style={{ textAlign: 'center', padding: '6px 0 14px' }}>
@@ -3846,14 +3847,14 @@ export default function Lager() {
                   </div>
                 )}
                 <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>Unbekannter Code:</div>
-                <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15, color: '#600812', margin: '4px 0 10px', wordBreak: 'break-all' as const }}>{scanTeachCode}</div>
+                <div style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: 15, color: 'var(--lbf-akzent)', margin: '4px 0 10px', wordBreak: 'break-all' as const }}>{scanTeachCode}</div>
                 <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
                   Einmal einem Artikel zuordnen — danach wird er bei jedem Scan automatisch erkannt.
                 </div>
                 <input className="lager-input" type="text" placeholder="Artikel suchen..." value={scanTeachSearch} onChange={e => setScanTeachSearch(e.target.value)} style={{ marginBottom: 8 }} />
                 <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
                   {allItems.filter(i => !scanTeachSearch || i.name.toLowerCase().includes(scanTeachSearch.toLowerCase())).map(item => (
-                    <div key={item.id} onClick={() => assignBarcode(item, scanTeachCode)} style={{ padding: '9px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--lbf-text)' }}>
+                    <div key={item.id} onClick={() => assignBarcode(item, scanTeachCode)} style={{ padding: '9px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 8, cursor: 'pointer', fontSize: 14, fontWeight: 600, color: 'var(--lbf-text)' }}>
                       {item.name}
                       {getBarcodes(item).length > 0 && <span style={{ fontStyle: 'italic', fontWeight: 400, fontSize: 11, color: 'var(--warm-gray)', marginLeft: 6 }}>{getBarcodes(item).length} Code(s)</span>}
                     </div>
@@ -3892,12 +3893,12 @@ export default function Lager() {
         return (
           <div className="lager-modal-overlay" onClick={() => setShowOrderModal(false)}>
             <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
                 Bestellliste — {locations.find(l => l.id === currentLocationId)?.name || 'Lager'}
               </div>
               {/* Artikel manuell auf die Bestellliste setzen */}
-              <div style={{ background: 'rgba(250,249,247,0.8)', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Brauchen wir — Artikel hinzufügen</div>
+              <div style={{ background: 'var(--lbf-fuss)', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 10, padding: '10px 12px', marginBottom: 14 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Brauchen wir — Artikel hinzufügen</div>
                 <input className="lager-input" type="search" placeholder="Artikel suchen…" value={bedarfSearch} onChange={e => setBedarfSearch(e.target.value)} />
                 {bedarfSearch.trim() && (
                   <div style={{ maxHeight: 170, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
@@ -3905,7 +3906,7 @@ export default function Lager() {
                       const menge = bedarfMenge[item.id] ?? 1
                       const schonDrin = getBedarf(item, currentLocationId)
                       return (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', background: 'var(--lbf-card)', borderRadius: 8, border: '1px solid rgba(96,8,18,0.08)' }}>
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 9px', background: 'var(--lbf-card)', borderRadius: 8, border: '1px solid var(--lbf-border-light)' }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.name}</div>
                             {schonDrin > 0 && <div style={{ fontSize: 11, fontStyle: 'italic', color: '#d97706' }}>bereits {schonDrin} angemeldet</div>}
@@ -3940,11 +3941,11 @@ export default function Lager() {
                     {entries.map(e => {
                       const ord = openOrders.find(o => o.item_id === e.display.id)
                       return (
-                        <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, borderLeft: `3px solid ${ord ? '#16a34a' : e.manuell > 0 && e.autoNeed === 0 ? '#600812' : '#d97706'}` }}>
+                        <div key={e.display.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 8, borderLeft: `3px solid ${ord ? '#16a34a' : e.manuell > 0 && e.autoNeed === 0 ? 'var(--lbf-akzent)' : '#d97706'}` }}>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>
                               {e.display.name}
-                              {e.manuell > 0 && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.08)', borderRadius: 999, padding: '2px 7px', textTransform: 'uppercase' as const }}>Bedarf</span>}
+                              {e.manuell > 0 && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'var(--lbf-border-light)', borderRadius: 999, padding: '2px 7px', textTransform: 'uppercase' as const }}>Bedarf</span>}
                             </div>
                             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
                               IST {e.display.qty} / SOLL {e.display.min_stock}
@@ -3953,12 +3954,12 @@ export default function Lager() {
                               {e.raw?.supplier_item_no ? ` · Art.-Nr. ${e.raw.supplier_item_no}` : ''}
                             </div>
                             {ord && (
-                              <div style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, color: '#15803d', background: 'rgba(22,163,74,0.09)', borderRadius: 999, padding: '2px 9px' }}>
+                              <div style={{ display: 'inline-block', marginTop: 4, fontSize: 11, fontWeight: 700, color: 'var(--lbf-ok-text-2)', background: 'rgba(22,163,74,0.09)', borderRadius: 999, padding: '2px 9px' }}>
                                 Bestellt am {new Date(ord.created).toLocaleDateString('de-DE')}
                               </div>
                             )}
                           </div>
-                          <div style={{ fontWeight: 800, fontSize: 18, color: '#600812', whiteSpace: 'nowrap' as const }}>+{e.need}</div>
+                          <div style={{ fontWeight: 800, fontSize: 18, color: 'var(--lbf-akzent)', whiteSpace: 'nowrap' as const }}>+{e.need}</div>
                           {!ord && e.raw && (e.raw.order_url || e.raw.supplier_email) && (
                             <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => orderItem(e.raw!, e.need)}>Bestellen</button>
                           )}
@@ -4030,7 +4031,7 @@ export default function Lager() {
                 const excluded = allItems.filter(i => i.nicht_bestellen)
                 if (excluded.length === 0) return null
                 return (
-                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: '0.5px solid rgba(96,8,18,0.12)' }}>
+                  <div style={{ marginTop: 16, paddingTop: 12, borderTop: '0.5px solid var(--lbf-border)' }}>
                     <button onClick={() => setShowExcluded(v => !v)}
                       style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: 6 }}>
                       Nicht bestellen ({excluded.length})
@@ -4039,7 +4040,7 @@ export default function Lager() {
                     {showExcluded && (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
                         {excluded.map(item => (
-                          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'rgba(250,249,247,0.8)', borderRadius: 8 }}>
+                          <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: 'var(--lbf-fuss)', borderRadius: 8 }}>
                             <div style={{ flex: 1, minWidth: 0, fontSize: 13, color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.name}</div>
                             <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', flexShrink: 0 }} onClick={() => setNichtBestellen(item.id, false)}>Wieder bestellen</button>
                           </div>
@@ -4062,9 +4063,9 @@ export default function Lager() {
       {qrLabel && (
         <div className="lager-modal-overlay" onClick={() => setQrLabel(null)}>
           <div className="lager-modal" style={{ maxWidth: 380 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>QR-Etikett</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>QR-Etikett</div>
             <div style={{ textAlign: 'center' }}>
-              <img src={qrLabel.dataUrl} alt="QR-Code" style={{ width: 240, height: 240, borderRadius: 12, border: '1px solid rgba(96,8,18,0.1)', background: '#fff' }} />
+              <img src={qrLabel.dataUrl} alt="QR-Code" style={{ width: 240, height: 240, borderRadius: 12, border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', background: '#fff' }} />
               <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', marginTop: 10 }}>{qrLabel.item.name}</div>
               <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>Ausdrucken und auf Lagerplatz oder Karton kleben</div>
             </div>
@@ -4080,7 +4081,7 @@ export default function Lager() {
       {showKitsModal && (
         <div className="lager-modal-overlay" onClick={() => setShowKitsModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Fahrzeug- & Rucksack-Checks</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Fahrzeug- & Rucksack-Checks</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Sollausstattung anlegen und auf Vollständigkeit prüfen</div>
             <button className="lager-btn primary" style={{ width: '100%', marginBottom: 16 }} onClick={() => setKitEditor({ id: null, name: '', positionen: [] })}>
               Neue Sollausstattung anlegen
@@ -4092,7 +4093,7 @@ export default function Lager() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto' }}>
                 {kits.map(kit => (
-                  <div key={kit.id} style={{ border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, padding: '12px 14px' }}>
+                  <div key={kit.id} style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 10, padding: '12px 14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)' }}>{kit.name}</div>
@@ -4103,7 +4104,7 @@ export default function Lager() {
                       <button className="lager-btn primary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => startKitCheck(kit)} disabled={kit.positionen.length === 0}>Prüfen</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => openKitHistory(kit)}>Verlauf</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => setKitEditor({ id: kit.id, name: kit.name, positionen: [...kit.positionen] })}>Bearbeiten</button>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px', color: '#600812' }} onClick={() => deleteKit(kit.id)}>Löschen</button>
+                      <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px', color: 'var(--lbf-akzent)' }} onClick={() => deleteKit(kit.id)}>Löschen</button>
                     </div>
                   </div>
                 ))}
@@ -4120,23 +4121,23 @@ export default function Lager() {
       {kitEditor && (
         <div className="lager-modal-overlay" onClick={() => setKitEditor(null)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
               {kitEditor.id ? 'Sollausstattung bearbeiten' : 'Neue Sollausstattung'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Name *</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Name *</label>
               <input className="lager-input" type="text" value={kitEditor.name} onChange={(e) => setKitEditor({ ...kitEditor, name: e.target.value })} placeholder="z.B. RTW 1 – Notfallrucksack" />
             </div>
 
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Positionen ({kitEditor.positionen.length})</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Positionen ({kitEditor.positionen.length})</div>
             {kitEditor.positionen.length > 0 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10, maxHeight: 220, overflowY: 'auto' }}>
                 {kitEditor.positionen.map(pos => (
-                  <div key={pos.item_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'rgba(250,249,247,0.8)', borderRadius: 8 }}>
+                  <div key={pos.item_id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: 'var(--lbf-fuss)', borderRadius: 8 }}>
                     <div style={{ flex: 1, fontSize: 14, color: 'var(--lbf-text)' }}>{pos.name}</div>
                     <span style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Soll</span>
                     <input className="lager-input" type="number" min="0" value={pos.soll} onChange={(e) => setKitEditor({ ...kitEditor, positionen: kitEditor.positionen.map(p => p.item_id === pos.item_id ? { ...p, soll: parseInt(e.target.value) || 0 } : p) })} style={{ width: 64, padding: '6px 8px' }} />
-                    <button className="lager-btn" style={{ fontSize: 12, padding: '5px 9px', color: '#600812' }} onClick={() => setKitEditor({ ...kitEditor, positionen: kitEditor.positionen.filter(p => p.item_id !== pos.item_id) })}>✕</button>
+                    <button className="lager-btn" style={{ fontSize: 12, padding: '5px 9px', color: 'var(--lbf-akzent)' }} onClick={() => setKitEditor({ ...kitEditor, positionen: kitEditor.positionen.filter(p => p.item_id !== pos.item_id) })}>✕</button>
                   </div>
                 ))}
               </div>
@@ -4144,10 +4145,10 @@ export default function Lager() {
 
             <input className="lager-input" type="text" placeholder="Artikel zur Liste hinzufügen…" value={kitItemSearch} onChange={(e) => setKitItemSearch(e.target.value)} style={{ marginBottom: 6 }} />
             {kitItemSearch && (
-              <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, marginBottom: 12 }}>
+              <div style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--lbf-border)', borderRadius: 8, marginBottom: 12 }}>
                 {allItems.filter(i => i.name.toLowerCase().includes(kitItemSearch.toLowerCase()) && !kitEditor.positionen.some(p => p.item_id === i.id)).slice(0, 30).map(item => (
                   <div key={item.id} onClick={() => { setKitEditor({ ...kitEditor, positionen: [...kitEditor.positionen, { item_id: item.id, name: item.name, soll: 1, unit: item.unit }] }); setKitItemSearch('') }}
-                    style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid rgba(96,8,18,0.06)', color: 'var(--lbf-text)' }}>
+                    style={{ padding: '9px 12px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', color: 'var(--lbf-text)' }}>
                     {item.name}
                   </div>
                 ))}
@@ -4166,14 +4167,14 @@ export default function Lager() {
       {runningKit && (
         <div className="lager-modal-overlay" onClick={() => setRunningKit(null)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Check durchführen</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Check durchführen</div>
             <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>{runningKit.name}</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
               Vorbelegt aus dem aktuellen Bestand ({locations.find(l => l.id === currentLocationId)?.name || 'Lager'}). Status pro Position prüfen.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto', marginBottom: 14 }}>
               {checkResults.map(r => (
-                <div key={r.item_id} style={{ padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, borderLeft: `3px solid ${r.status === 'ok' ? '#16a34a' : r.status === 'abgelaufen' ? '#d97706' : '#dc2626'}` }}>
+                <div key={r.item_id} style={{ padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 10, borderLeft: `3px solid ${r.status === 'ok' ? '#16a34a' : r.status === 'abgelaufen' ? '#d97706' : '#dc2626'}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{r.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', whiteSpace: 'nowrap' as const }}>IST {r.ist} / SOLL {r.soll}</div>
@@ -4181,7 +4182,7 @@ export default function Lager() {
                   <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
                     {([['ok', 'Vollständig', '#16a34a'], ['fehlt', 'Fehlt', '#dc2626'], ['abgelaufen', 'Abgelaufen', '#d97706']] as const).map(([val, label, col]) => (
                       <button key={val} onClick={() => setCheckStatus(r.item_id, val)}
-                        style={{ flex: 1, padding: '7px 4px', borderRadius: 8, border: `1.5px solid ${r.status === val ? col : 'rgba(96,8,18,0.15)'}`, background: r.status === val ? col : 'transparent', color: r.status === val ? '#fff' : 'var(--warm-gray)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
+                        style={{ flex: 1, padding: '7px 4px', borderRadius: 8, border: `1.5px solid ${r.status === val ? col : 'rgba(var(--lbf-rot-rgb),0.15)'}`, background: r.status === val ? col : 'transparent', color: r.status === val ? '#fff' : 'var(--warm-gray)', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer' }}>
                         {label}
                       </button>
                     ))}
@@ -4190,7 +4191,7 @@ export default function Lager() {
               ))}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung (optional)</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung (optional)</label>
               <input className="lager-input" type="text" value={checkNote} onChange={(e) => setCheckNote(e.target.value)} placeholder="z.B. Defibrillator-Elektroden nachbestellt" />
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
@@ -4205,7 +4206,7 @@ export default function Lager() {
       {historyKit && (
         <div className="lager-modal-overlay" onClick={() => setHistoryKit(null)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Prüf-Verlauf</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 2 }}>Prüf-Verlauf</div>
             <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 17, color: 'var(--lbf-text)', marginBottom: 14 }}>{historyKit.name}</div>
             {kitHistory.length === 0 ? (
               <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Prüfungen.</div>
@@ -4214,9 +4215,9 @@ export default function Lager() {
                 {kitHistory.map(check => {
                   const maengel = check.results?.filter(r => r.status !== 'ok') || []
                   return (
-                    <div key={check.id} style={{ padding: '10px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 10, borderLeft: `3px solid ${check.status === 'ok' ? '#16a34a' : '#dc2626'}` }}>
+                    <div key={check.id} style={{ padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 10, borderLeft: `3px solid ${check.status === 'ok' ? '#16a34a' : '#dc2626'}` }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontWeight: 700, fontSize: 13, color: check.status === 'ok' ? '#15803d' : '#b91c1c' }}>
+                        <span style={{ fontWeight: 700, fontSize: 13, color: check.status === 'ok' ? 'var(--lbf-ok-text-2)' : 'var(--lbf-fehler-text-2)' }}>
                           {check.status === 'ok' ? 'Vollständig' : `${maengel.length} Mängel`}
                         </span>
                         <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
@@ -4245,7 +4246,7 @@ export default function Lager() {
       {showStatsModal && (
         <div className="lager-modal-overlay" onClick={() => setShowStatsModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Statistik</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Statistik</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Verbrauch und Buchungen über alle Standorte (ohne Umlagerungen)</div>
             <Suspense fallback={<div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Statistik…</div>}>
               {user?.organization_id && <LagerStats orgId={user.organization_id} items={allItems} onChanged={() => loadStock()} />}
@@ -4268,13 +4269,13 @@ export default function Lager() {
       {showTransferModal && (
         <div className="lager-modal-overlay" onClick={() => setShowTransferModal(false)}>
           <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Umlagerung</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Umlagerung</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
               Von „{locations.find(l => l.id === currentLocationId)?.name || 'aktuellem Standort'}" an einen anderen Standort — Charge und MHD wandern mit.
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14, position: 'relative' }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel *</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Artikel *</label>
               <input
                 className="lager-input"
                 type="text"
@@ -4283,12 +4284,12 @@ export default function Lager() {
                 onChange={e => { setTransferSearch(e.target.value); setTransferItemId('') }}
               />
               {transferSearch && !transferItemId && (
-                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, marginTop: 4, background: 'var(--lbf-card)', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                   {displayItems.filter(i => i.qty > 0 && i.name.toLowerCase().includes(transferSearch.toLowerCase())).map(item => (
                     <div
                       key={item.id}
                       onClick={() => { setTransferItemId(item.id); setTransferSearch(item.name) }}
-                      style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid rgba(96,8,18,0.06)', color: 'var(--lbf-text)' }}
+                      style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', color: 'var(--lbf-text)' }}
                     >
                       {item.name}
                       <span style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginLeft: 6 }}>({item.qty} {item.unit || 'Stk.'} verfügbar)</span>
@@ -4308,11 +4309,11 @@ export default function Lager() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 10, marginBottom: 14 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
                 <input className="lager-input" type="number" min="1" value={transferQty || ''} onChange={(e) => setTransferQty(Number(e.target.value))} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ziel-Standort *</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ziel-Standort *</label>
                 <select className="lager-input" value={transferTargetId} onChange={(e) => setTransferTargetId(e.target.value)} style={{ fontFamily: 'inherit' }}>
                   <option value="">Bitte wählen…</option>
                   {locations.filter(l => l.id !== currentLocationId).map(l => (
@@ -4323,7 +4324,7 @@ export default function Lager() {
             </div>
 
             {locations.length <= 1 && (
-              <div style={{ padding: '10px 14px', background: 'rgba(217,119,6,0.08)', borderRadius: 8, fontSize: 13, color: '#92400e', marginBottom: 12 }}>
+              <div style={{ padding: '10px 14px', background: 'rgba(217,119,6,0.08)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-warn-text)', marginBottom: 12 }}>
                 Es gibt nur einen Standort — lege in den Einstellungen weitere an, um umzulagern.
               </div>
             )}
@@ -4342,7 +4343,7 @@ export default function Lager() {
       {showRecallModal && (
         <div className="lager-modal-overlay" onClick={() => setShowRecallModal(false)}>
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Rückruf — Chargen-Suche</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Rückruf — Chargen-Suche</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
               Findet eine Charge über alle Standorte der Organisation — z.B. bei einem Hersteller-Rückruf.
             </div>
@@ -4366,7 +4367,7 @@ export default function Lager() {
                 </div>
               ) : (
                 <>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#b91c1c', marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-fehler-text-2)', marginBottom: 8 }}>
                     {recallResults.length} betroffene(r) Bestand/Bestände gefunden:
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto' }}>
@@ -4396,7 +4397,7 @@ export default function Lager() {
             {/* Bereits ausgegeben — der eigentliche Zweck der Chargenführung */}
             {recallResults !== null && (
               <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>
                   Bereits ausgegeben
                 </div>
                 {recallAusgaben.length === 0 ? (
@@ -4443,8 +4444,8 @@ export default function Lager() {
         }
 
         .lager-actionbar {
-          background: #fff;
-          border-bottom: 0.5px solid rgba(96,8,18,0.12);
+          background: var(--lbf-card);
+          border-bottom: 0.5px solid var(--lbf-border);
           position: sticky;
           top: 60px;
           z-index: 99;
@@ -4468,18 +4469,18 @@ export default function Lager() {
           background: none;
           border: none;
           cursor: pointer;
-          color: #600812;
+          color: var(--lbf-akzent);
           font-family: inherit;
           position: relative;
         }
-        .lager-action-btn:hover { background: rgba(96,8,18,0.05); }
+        .lager-action-btn:hover { background: var(--lbf-akzent-weich); }
 
         .lager-action-label {
           font-size: 9px;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          color: #600812;
+          color: var(--lbf-akzent);
           white-space: nowrap;
         }
 
@@ -4490,7 +4491,7 @@ export default function Lager() {
           min-width: 16px;
           height: 16px;
           border-radius: 8px;
-          background: #600812;
+          background: var(--lbf-akzent-grund);
           color: #fff;
           font-size: 10px;
           font-weight: 700;
@@ -4514,21 +4515,21 @@ export default function Lager() {
           animation: lagerToastIn 0.2s ease both;
           white-space: nowrap;
         }
-        .lager-toast-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
-        .lager-toast-error   { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; }
+        .lager-toast-success { background: var(--lbf-ok-grund); border: 1px solid #bbf7d0; color: var(--lbf-ok-text); }
+        .lager-toast-error   { background: var(--lbf-fehler-grund); border: 1px solid #fecaca; color: var(--lbf-fehler-text-2); }
 
         .lager-search {
           width: 100%;
           box-sizing: border-box;
           padding: 10px 14px;
-          border: 1px solid rgba(96,8,18,0.15);
+          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
           border-radius: 10px;
-          background: #fff;
+          background: var(--lbf-input-bg);
           font-size: 14px;
           font-family: inherit;
-          color: #1a0e08;
+          color: var(--lbf-text);
         }
-        .lager-search:focus { outline: none; border-color: #600812; box-shadow: 0 0 0 3px rgba(96,8,18,0.08); }
+        .lager-search:focus { outline: none; border-color: var(--lbf-akzent); box-shadow: 0 0 0 3px var(--lbf-border-light); }
 
         .lager-chips {
           display: flex;
@@ -4540,9 +4541,9 @@ export default function Lager() {
 
         .lager-chip {
           flex-shrink: 0;
-          border: 1px solid rgba(96,8,18,0.15);
-          background: #fff;
-          color: #1a0e08;
+          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
+          background: var(--lbf-card);
+          color: var(--lbf-text);
           padding: 6px 12px;
           border-radius: 999px;
           font-size: 12px;
@@ -4551,7 +4552,7 @@ export default function Lager() {
           font-family: inherit;
           white-space: nowrap;
         }
-        .lager-chip.active { background: rgba(96,8,18,0.08); border-color: #600812; color: #600812; }
+        .lager-chip.active { background: var(--lbf-border-light); border-color: var(--lbf-akzent); color: var(--lbf-akzent); }
 
         .lager-modal-overlay {
           position: fixed;
@@ -4566,7 +4567,7 @@ export default function Lager() {
         }
 
         .lager-modal {
-          background: #fff;
+          background: var(--lbf-card);
           border-radius: 16px;
           max-width: 640px;
           width: 100%;
@@ -4577,9 +4578,9 @@ export default function Lager() {
         }
 
         .lager-btn {
-          background: #fff;
-          color: #1a0e08;
-          border: 1px solid rgba(96,8,18,0.15);
+          background: var(--lbf-card);
+          color: var(--lbf-text);
+          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
           padding: 9px 18px;
           border-radius: 8px;
           cursor: pointer;
@@ -4588,21 +4589,21 @@ export default function Lager() {
           font-family: inherit;
         }
         .lager-btn:disabled { opacity: 0.45; cursor: not-allowed; }
-        .lager-btn.primary { background: #600812; color: #fff; border-color: #600812; }
+        .lager-btn.primary { background: var(--lbf-akzent-grund); color: #fff; border-color: var(--lbf-akzent); }
         .lager-btn.primary:hover { opacity: 0.88; }
 
         .lager-input {
           padding: 9px 12px;
-          border: 1px solid rgba(96,8,18,0.15);
+          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
           border-radius: 8px;
-          background: #faf9f7;
-          color: #1a0e08;
+          background: var(--warm-bg);
+          color: var(--lbf-text);
           font-size: 14px;
           font-family: inherit;
           width: 100%;
           box-sizing: border-box;
         }
-        .lager-input:focus { outline: none; border-color: #600812; box-shadow: 0 0 0 3px rgba(96,8,18,0.08); }
+        .lager-input:focus { outline: none; border-color: var(--lbf-akzent); box-shadow: 0 0 0 3px var(--lbf-border-light); }
 
         @media (max-width: 768px) {
           .lager-modal-overlay { align-items: flex-end; padding: 0; }
@@ -4615,7 +4616,7 @@ export default function Lager() {
         <div className="lager-modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowAusgabenModal(false) }}>
           <div className="lager-modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Offene Produktausgaben</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Offene Produktausgaben</div>
               <button className="lager-btn" style={{ padding: '5px 12px', fontSize: 13 }} onClick={() => setShowAusgabenModal(false)}>Schließen</button>
             </div>
 
@@ -4639,7 +4640,7 @@ export default function Lager() {
                   const selectedLocId = outputLagerIds[output.id] || currentLocationId || ''
 
                   return (
-                    <div key={output.id} style={{ background: 'rgba(250,249,247,0.8)', border: '0.5px solid rgba(96,8,18,0.1)', borderRadius: 14, padding: 16 }}>
+                    <div key={output.id} style={{ background: 'var(--lbf-fuss)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 14, padding: 16 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Einsatz {p.einsatz}</div>
@@ -4647,11 +4648,12 @@ export default function Lager() {
                             {deDate} · {p.user_name ?? `${p.vorname ?? ''} ${p.nachname ?? ''}`.trim()}
                           </div>
                         </div>
+                        {/* Abzeichen bleibt fest: Schriftfarbe #854d0e hat kein Thema-Gegenstueck, Grund und Schrift nur gemeinsam tauschbar */}
                         <span style={{ fontSize: 10, fontWeight: 700, background: '#fef9c3', color: '#854d0e', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offen</span>
                       </div>
 
                       <div style={{ marginBottom: 12 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lager</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lager</div>
                         {p.lager_name && selectedLocId === p.lager_id && (
                           <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 4 }}>
                             Angefordert: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{p.lager_name}</strong>
@@ -4661,7 +4663,7 @@ export default function Lager() {
                           className="lager-input"
                           value={selectedLocId}
                           onChange={e => setOutputLagerIds(prev => ({ ...prev, [output.id]: e.target.value }))}
-                          style={{ border: selectedLocId !== p.lager_id && p.lager_id ? '1.5px solid #d97706' : '1px solid rgba(96,8,18,0.15)' }}
+                          style={{ border: selectedLocId !== p.lager_id && p.lager_id ? '1.5px solid #d97706' : '1px solid rgba(var(--lbf-rot-rgb),0.15)' }}
                         >
                           <option value="">— Lager wählen —</option>
                           {locations.map(loc => (
@@ -4669,14 +4671,14 @@ export default function Lager() {
                           ))}
                         </select>
                         {selectedLocId !== p.lager_id && p.lager_id && (
-                          <div style={{ fontStyle: 'italic', fontSize: 11, color: '#b45309', marginTop: 4 }}>
+                          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--lbf-warn-text-2)', marginTop: 4 }}>
                             Abweichend vom angeforderten Lager ({p.lager_name})
                           </div>
                         )}
                       </div>
 
                       <div style={{ marginBottom: 10 }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                           Positionen
                           {!isEditing && (
                             <button className="lager-btn" style={{ fontSize: 11, padding: '3px 10px' }} onClick={() => { setEditingOutputId(output.id); setEditedPositionen(prev => ({ ...prev, [output.id]: p.positionen.map(pos => ({ ...pos })) })) }}>
@@ -4691,7 +4693,7 @@ export default function Lager() {
                           )}
                         </div>
                         {activePosionen.map((pos, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'var(--lbf-card)', borderRadius: 8, marginBottom: 4, border: `0.5px solid ${pos.item_id ? 'rgba(34,197,94,0.3)' : 'rgba(96,8,18,0.1)'}` }}>
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 10px', background: 'var(--lbf-card)', borderRadius: 8, marginBottom: 4, border: `0.5px solid ${pos.item_id ? 'rgba(34,197,94,0.3)' : 'rgba(var(--lbf-rot-rgb),0.1)'}` }}>
                             <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--lbf-text)', flex: 1, marginRight: 8 }}>{pos.name}</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                               {isEditing ? (
@@ -4702,7 +4704,7 @@ export default function Lager() {
                                     const copy = (prev[output.id] ?? p.positionen.map(p2 => ({ ...p2 }))).map((p2, i2) => i2 === idx ? { ...p2, qty: Number(e.target.value) } : p2)
                                     return { ...prev, [output.id]: copy }
                                   })}
-                                  style={{ width: 60, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', color: 'var(--lbf-text)', fontSize: 13, textAlign: 'center' }}
+                                  style={{ width: 60, padding: '4px 6px', borderRadius: 6, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', color: 'var(--lbf-text)', fontSize: 13, textAlign: 'center' }}
                                 />
                               ) : (
                                 <span style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>{pos.qty}× {pos.unit || ''}</span>
@@ -4717,7 +4719,7 @@ export default function Lager() {
                                     const copy = (prev[output.id] ?? p.positionen.map(p2 => ({ ...p2 }))).filter((_, i2) => i2 !== idx)
                                     return { ...prev, [output.id]: copy }
                                   })}
-                                  style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 14, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+                                  style={{ width: 22, height: 22, borderRadius: '50%', border: '1px solid #fca5a5', background: 'var(--lbf-fehler-grund)', color: '#dc2626', fontSize: 14, lineHeight: 1, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
                                 >×</button>
                               )}
                             </div>
@@ -4725,8 +4727,8 @@ export default function Lager() {
                         ))}
 
                         {isEditing && (
-                          <div style={{ marginTop: 8, padding: 12, background: 'var(--lbf-card)', borderRadius: 8, border: '1px dashed rgba(96,8,18,0.2)' }}>
-                            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Artikel hinzufügen</div>
+                          <div style={{ marginTop: 8, padding: 12, background: 'var(--lbf-card)', borderRadius: 8, border: '1px dashed rgba(var(--lbf-rot-rgb),0.2)' }}>
+                            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Artikel hinzufügen</div>
                             <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                               <select
                                 className="lager-input"
@@ -4750,7 +4752,7 @@ export default function Lager() {
                       </div>
 
                       {withoutItemId.length > 0 && (
-                        <div style={{ fontStyle: 'italic', fontSize: 12, color: '#b45309', background: '#fef9c3', borderRadius: 8, padding: '6px 10px', marginBottom: 10 }}>
+                        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--lbf-warn-text-2)', background: 'var(--lbf-warn-grund-4)', borderRadius: 8, padding: '6px 10px', marginBottom: 10 }}>
                           {withoutItemId.length} Position(en) ohne Lager-Verknüpfung — werden nicht ausgebucht
                         </div>
                       )}
@@ -4778,7 +4780,7 @@ export default function Lager() {
       {showImportModal && (
         <div className="lager-modal-overlay" onClick={() => setShowImportModal(false)}>
           <div className="lager-modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>CSV-Import</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>CSV-Import</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
               {importItems.filter(r => r.matchType === 'exact').length} exakt · {importItems.filter(r => r.matchType === 'similar').length} ähnlich · {importItems.filter(r => r.matchType === 'none').length} unbekannt
             </div>
@@ -4789,7 +4791,7 @@ export default function Lager() {
                 return (
                   <div key={i} style={{ padding: '10px 12px', background: bg, borderRadius: 10, borderLeft: `3px solid ${borderColor}`, opacity: row.included || row.createNew ? 1 : 0.5 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                      <input type="checkbox" checked={row.included || row.createNew} onChange={e => setImportItems(prev => prev.map((r, j) => j !== i ? r : { ...r, included: row.matchType !== 'none' ? e.target.checked : r.included, createNew: row.matchType === 'none' ? e.target.checked : r.createNew }))} style={{ marginTop: 3, accentColor: '#600812', flexShrink: 0 }} />
+                      <input type="checkbox" checked={row.included || row.createNew} onChange={e => setImportItems(prev => prev.map((r, j) => j !== i ? r : { ...r, included: row.matchType !== 'none' ? e.target.checked : r.included, createNew: row.matchType === 'none' ? e.target.checked : r.createNew }))} style={{ marginTop: 3, accentColor: 'var(--lbf-akzent)', flexShrink: 0 }} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -4808,14 +4810,14 @@ export default function Lager() {
                             <select
                               value={row.selectedItem?.id || ''}
                               onChange={e => setImportItems(prev => prev.map((r, j) => j !== i ? r : { ...r, selectedItem: allItems.find(a => a.id === e.target.value) || null }))}
-                              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(96,8,18,0.2)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', width: '100%', fontFamily: 'inherit' }}
+                              style={{ fontSize: 13, padding: '4px 8px', borderRadius: 6, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', width: '100%', fontFamily: 'inherit' }}
                             >
                               {row.similar.map(s => <option key={s.id} value={s.id}>{s.name} ({s.unit})</option>)}
                             </select>
                           </div>
                         )}
                         {row.matchType === 'none' && row.createNew && (
-                          <div style={{ fontSize: 11, fontStyle: 'italic', color: '#600812', marginTop: 4 }}>Wird als neuer Artikel angelegt</div>
+                          <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 4 }}>Wird als neuer Artikel angelegt</div>
                         )}
                       </div>
                     </div>
@@ -4840,7 +4842,7 @@ export default function Lager() {
 // ── Hilfsbausteine für die Inventur-Bearbeitung ──────────────────────────────
 
 const lbl: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, color: '#600812',
+  fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)',
   textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4,
 }
 
@@ -4899,12 +4901,12 @@ function ChargeAbzug({ stocks, menge, einheit, onBuchen, onAbbrechen }: {
         {stocks.map(st => (
           <label key={st.id} style={{
             display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderRadius: 8, cursor: 'pointer',
-            background: gewaehlt === st.id ? 'rgba(96,8,18,0.06)' : 'rgba(250,249,247,0.8)',
-            border: `1px solid ${gewaehlt === st.id ? '#600812' : 'transparent'}`,
+            background: gewaehlt === st.id ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'var(--lbf-fuss)',
+            border: `1px solid ${gewaehlt === st.id ? 'var(--lbf-akzent)' : 'transparent'}`,
           }}>
-            <input type="radio" checked={gewaehlt === st.id} onChange={() => setGewaehlt(st.id)} style={{ accentColor: '#600812' }} />
+            <input type="radio" checked={gewaehlt === st.id} onChange={() => setGewaehlt(st.id)} style={{ accentColor: 'var(--lbf-akzent)' }} />
             <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)', minWidth: 52 }}>{st.quantity} {einheit}</span>
-            <span style={{ fontStyle: 'italic', fontSize: 12.5, color: st.batch ? '#600812' : 'var(--warm-gray)', fontWeight: st.batch ? 700 : 400 }}>
+            <span style={{ fontStyle: 'italic', fontSize: 12.5, color: st.batch ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontWeight: st.batch ? 700 : 400 }}>
               {st.batch ? `Charge ${st.batch}` : 'ohne Charge'}
             </span>
             <span style={{ marginLeft: 'auto', fontStyle: 'italic', fontSize: 11.5, color: 'var(--warm-gray)' }}>
@@ -4943,17 +4945,17 @@ function AuditAddModal({ vorhandene, onClose, onWaehlen, onNeu }: {
   return (
     <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="lager-modal" style={{ maxWidth: 520 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Artikel zur Inventur hinzufügen</div>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>Artikel zur Inventur hinzufügen</div>
         <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
           Für Ware, die im Regal steht, aber nicht in der Zählliste auftaucht.
         </div>
 
-        <div style={{ display: 'flex', gap: 0, marginBottom: 14, background: 'rgba(96,8,18,0.06)', borderRadius: 8, padding: 3 }}>
+        <div style={{ display: 'flex', gap: 0, marginBottom: 14, background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 8, padding: 3 }}>
           {([['suchen', 'Vorhandener Artikel'], ['neu', 'Neu anlegen']] as const).map(([k, l]) => (
             <button key={k} onClick={() => setModus(k)} style={{
               flex: 1, padding: '7px 0', border: 'none', borderRadius: 6, cursor: 'pointer', fontFamily: 'inherit',
-              fontWeight: 700, fontSize: 12, background: modus === k ? '#fff' : 'transparent',
-              color: modus === k ? '#600812' : 'var(--warm-gray)',
+              fontWeight: 700, fontSize: 12, background: modus === k ? 'var(--lbf-card)' : 'transparent',
+              color: modus === k ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
               boxShadow: modus === k ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
             }}>{l}</button>
           ))}
@@ -4969,7 +4971,7 @@ function AuditAddModal({ vorhandene, onClose, onWaehlen, onNeu }: {
                 </div>
               ) : treffer.map(i => (
                 <div key={i.id} onClick={() => onWaehlen(i.id)} style={{
-                  padding: '9px 12px', border: '1px solid rgba(96,8,18,0.1)', borderRadius: 8, cursor: 'pointer',
+                  padding: '9px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 8, cursor: 'pointer',
                   fontSize: 13.5, fontWeight: 600, color: 'var(--lbf-text)',
                 }}>
                   {i.name}

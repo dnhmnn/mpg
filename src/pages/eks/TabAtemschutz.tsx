@@ -7,7 +7,9 @@ import { alarmStarten, alarmStoppen, audioEntsperrt, audioFreischalten, startHea
 import { newId } from '../../lib/eks/ids'
 import type { AtemschutzTrupp, EksEventType, EksState, Flasche } from '../../lib/eks/types'
 
-const RED = '#600812', GREEN = '#16a34a', AMBER = '#d97706', CRIT = '#dc2626'
+// RED_HEX nur fuer btn(): der Rahmen wird mit Alpha-Anhang zusammengesetzt (`${farbe}44`)
+const RED_HEX = '#600812'
+const RED = 'var(--lbf-akzent)', RED_GRUND = 'var(--lbf-akzent-grund)', GREEN = '#16a34a', AMBER = '#d97706', CRIT = '#dc2626'
 
 interface Props {
   state: EksState
@@ -126,7 +128,7 @@ export default function TabAtemschutz({ state, dispatch }: Props) {
         <Box farbe={CRIT} text={'Der Alarmton ist noch nicht freigegeben. Auf dem Tablet zuerst „Ton bereit“ antippen — sonst warnt die App nur optisch.'} />
       )}
       {luecke !== null && (
-        <div style={{ background: '#fef2f2', border: `1px solid ${CRIT}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
+        <div style={{ background: 'var(--lbf-fehler-grund)', border: `1px solid ${CRIT}`, borderRadius: 10, padding: 12, marginBottom: 12 }}>
           <div style={{ fontWeight: 800, color: CRIT, fontSize: 14 }}>Überwachung war {Math.round(luecke / 1000)} s unterbrochen</div>
           <div style={{ fontSize: 13, color: 'var(--lbf-text)', margin: '4px 0 8px' }}>Bitte alle Trupps prüfen und Drücke neu abfragen.</div>
           <button onClick={() => setLuecke(null)} style={btn(CRIT, true)}>Geprüft</button>
@@ -140,7 +142,7 @@ export default function TabAtemschutz({ state, dispatch }: Props) {
         </div>
       )}
 
-      <button onClick={() => setAnmelden(true)} style={{ ...btn(RED, true), width: '100%', padding: 13, marginBottom: 14 }}>
+      <button onClick={() => setAnmelden(true)} style={{ ...btn(RED_GRUND, true), width: '100%', padding: 13, marginBottom: 14 }}>
         Trupp anmelden
       </button>
 
@@ -252,13 +254,13 @@ function TruppKarte({ t, b, alarme, farbe, onAbfrage, onEreignis, config }: {
       </div>
 
       {!beendet && (
-        <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '8px 12px', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {t.status === 'angemeldet' && (
-            <button onClick={() => onEreignis('as.trupp.einsatzbeginn', { trupp_id: t.id })} style={btn(RED, true)}>Einsatzbeginn (unter PA)</button>
+            <button onClick={() => onEreignis('as.trupp.einsatzbeginn', { trupp_id: t.id })} style={btn(RED_GRUND, true)}>Einsatzbeginn (unter PA)</button>
           )}
-          {t.status !== 'angemeldet' && <button onClick={onAbfrage} style={btn(RED, true)}>Druckabfrage</button>}
+          {t.status !== 'angemeldet' && <button onClick={onAbfrage} style={btn(RED_GRUND, true)}>Druckabfrage</button>}
           {t.status === 'unter_pa' && (
-            <button onClick={onAbfrage} style={btn(RED)}>Ziel erreicht</button>
+            <button onClick={onAbfrage} style={{ ...btn(RED_HEX), color: RED }}>Ziel erreicht</button>
           )}
           {(t.status === 'unter_pa' || t.status === 'am_ziel') && (
             <button onClick={() => { const g = prompt('Grund des Rückzugs?') ?? ''; onEreignis('as.trupp.rueckzug_angeordnet', { trupp_id: t.id, grund: g }) }} style={btn(AMBER)}>Rückzug anordnen</button>
@@ -270,7 +272,7 @@ function TruppKarte({ t, b, alarme, farbe, onAbfrage, onEreignis, config }: {
       )}
 
       {offen && (
-        <div style={{ padding: '10px 14px', borderTop: '0.5px solid rgba(96,8,18,0.08)', fontSize: 12, color: 'var(--lbf-text)', lineHeight: 1.7 }}>
+        <div style={{ padding: '10px 14px', borderTop: '0.5px solid var(--lbf-border-light)', fontSize: 12, color: 'var(--lbf-text)', lineHeight: 1.7 }}>
           <div style={{ fontSize: 9, fontWeight: 800, color: RED, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Rechenweg</div>
           <div>Modell: <b>{config.rueckzug_modell}</b> · Reserve {Math.max(config.restdruckwarner_bar, config.hard_floor_bar) + config.sicherheitszuschlag_bar} bar</div>
           {b.personen.map(p => (
@@ -343,12 +345,12 @@ function AnmeldenModal({ state, onClose, onSave }: { state: EksState; onClose: (
         </div>
       ))}
       {mitglieder.length < 3 && (
-        <button onClick={() => setMitglieder(p => [...p, { person_id: newId(), name: '', flasche: f, anfangsdruck: f.nenndruck }])} style={btn(RED)}>+ Person</button>
+        <button onClick={() => setMitglieder(p => [...p, { person_id: newId(), name: '', flasche: f, anfangsdruck: f.nenndruck }])} style={{ ...btn(RED_HEX), color: RED }}>+ Person</button>
       )}
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
         <button onClick={onClose} style={btn('var(--warm-gray)')}>Abbrechen</button>
-        <button style={btn(RED, true)} onClick={() => {
+        <button style={btn(RED_GRUND, true)} onClick={() => {
           if (mitglieder.some(m => !m.name.trim())) { alert('Bitte alle Namen eintragen.'); return }
           onSave({ trupp_id: newId(), name, typ, funkrufname: funk, auftrag, abschnitt_id: abschnitt || undefined, mitglieder })
         }}>Anmelden</button>
@@ -376,10 +378,10 @@ function AbfrageModal({ trupp, onClose, onSave }: {
         <div key={m.person_id} style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 5 }}>{m.name}</div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button onClick={() => setWerte(w => ({ ...w, [m.person_id]: Math.max(0, w[m.person_id] - 10) }))} style={{ ...btn(RED), padding: '12px 18px', fontSize: 18 }}>−10</button>
+            <button onClick={() => setWerte(w => ({ ...w, [m.person_id]: Math.max(0, w[m.person_id] - 10) }))} style={{ ...btn(RED_HEX), color: RED, padding: '12px 18px', fontSize: 18 }}>−10</button>
             <input type="number" value={werte[m.person_id]} onChange={e => setWerte(w => ({ ...w, [m.person_id]: Number(e.target.value) }))}
               className="eks-input" style={{ flex: 1, textAlign: 'center', fontSize: 24, fontWeight: 800, padding: '12px 8px' }} />
-            <button onClick={() => setWerte(w => ({ ...w, [m.person_id]: w[m.person_id] + 10 }))} style={{ ...btn(RED), padding: '12px 18px', fontSize: 18 }}>+10</button>
+            <button onClick={() => setWerte(w => ({ ...w, [m.person_id]: w[m.person_id] + 10 }))} style={{ ...btn(RED_HEX), color: RED, padding: '12px 18px', fontSize: 18 }}>+10</button>
           </div>
         </div>
       ))}
@@ -391,7 +393,7 @@ function AbfrageModal({ trupp, onClose, onSave }: {
       )}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
         <button onClick={onClose} style={btn('var(--warm-gray)')}>Abbrechen</button>
-        <button style={btn(RED, true)} onClick={() => onSave(trupp.mitglieder.map(m => ({ person_id: m.person_id, druck: werte[m.person_id] })), ziel)}>Übernehmen</button>
+        <button style={btn(RED_GRUND, true)} onClick={() => onSave(trupp.mitglieder.map(m => ({ person_id: m.person_id, druck: werte[m.person_id] })), ziel)}>Übernehmen</button>
       </div>
     </Overlay>
   )

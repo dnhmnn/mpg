@@ -30,6 +30,7 @@ function getDocType(ext: string): DocCategory {
   return 'word'
 }
 
+// Hex bleibt: wird mit Alpha-Anhang zusammengesetzt (`${color}18`)
 function getDocColor(type: DocCategory | string): string {
   if (type === 'cell') return '#166534'
   if (type === 'slide') return '#9a3412'
@@ -37,8 +38,13 @@ function getDocColor(type: DocCategory | string): string {
   return '#1e40af'
 }
 
+// Fuer Schrift, Linien und Symbole: PDF-Akzent folgt dem Thema
+function getDocAkzent(type: DocCategory | string): string {
+  return type === 'pdf' ? 'var(--lbf-akzent)' : getDocColor(type)
+}
+
 function getBorderColor(ext: string): string {
-  return getDocColor(getDocType(ext))
+  return getDocAkzent(getDocType(ext))
 }
 
 function getOfficeUiTheme(): string {
@@ -69,12 +75,12 @@ function DocTypeIcon({ type, size = 36 }: { type: DocCategory; size?: number }) 
   return (
     <div style={{
       width: size, height: size, borderRadius: size * 0.22,
-      background: `${color}18`,
+      background: `${color}18`, color: getDocAkzent(type),
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexShrink: 0,
     }}>
       {type === 'word' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="8" y1="13" x2="16" y2="13"/>
@@ -82,7 +88,7 @@ function DocTypeIcon({ type, size = 36 }: { type: DocCategory; size?: number }) 
         </svg>
       )}
       {type === 'cell' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <line x1="3" y1="9" x2="21" y2="9"/>
           <line x1="3" y1="15" x2="21" y2="15"/>
@@ -91,14 +97,14 @@ function DocTypeIcon({ type, size = 36 }: { type: DocCategory; size?: number }) 
         </svg>
       )}
       {type === 'slide' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="3" width="20" height="14" rx="2"/>
           <line x1="8" y1="21" x2="16" y2="21"/>
           <line x1="12" y1="17" x2="12" y2="21"/>
         </svg>
       )}
       {type === 'pdf' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
           <polyline points="14 2 14 8 20 8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
@@ -116,7 +122,7 @@ function FileCard({ f, onClick }: { f: OfficeFile; onClick: () => void }) {
   const borderColor = getBorderColor(ext)
   return (
     <div onClick={onClick} style={{
-      background: '#fff', borderRadius: 12,
+      background: 'var(--lbf-card)', borderRadius: 12,
       boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
       borderLeft: `3px solid ${borderColor}`,
       padding: '12px 14px', cursor: 'pointer',
@@ -126,7 +132,7 @@ function FileCard({ f, onClick }: { f: OfficeFile; onClick: () => void }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{
           fontWeight: 700, fontStyle: 'italic', fontSize: 15,
-          color: '#1a0e08', overflow: 'hidden',
+          color: 'var(--lbf-text)', overflow: 'hidden',
           textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         }}>{f.name}</div>
         <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
@@ -135,7 +141,7 @@ function FileCard({ f, onClick }: { f: OfficeFile; onClick: () => void }) {
       </div>
       <div style={{
         fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
-        letterSpacing: '0.08em', color: getDocColor(type),
+        letterSpacing: '0.08em', color: getDocAkzent(type),
         background: `${getDocColor(type)}14`,
         padding: '3px 7px', borderRadius: 5, flexShrink: 0,
       }}>
@@ -386,8 +392,8 @@ export default function Office() {
 
       {/* MASTHEAD */}
       <div style={{
-        background: '#fff',
-        borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+        background: 'var(--lbf-card)',
+        borderBottom: '0.5px solid var(--lbf-border)',
         position: 'sticky', top: 0, zIndex: 100,
         paddingTop: 'env(safe-area-inset-top)',
         paddingLeft: 'max(20px, env(safe-area-inset-left))',
@@ -397,14 +403,14 @@ export default function Office() {
           <button onClick={() => navigate(-1)} style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             background: 'none', border: 'none', cursor: 'pointer',
-            color: '#600812', padding: 4, flexShrink: 0,
+            color: 'var(--lbf-akzent)', padding: 4, flexShrink: 0,
           }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6"/>
             </svg>
           </button>
           <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Schreibstube</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Schreibstube</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{today}</div>
           </div>
         </div>
@@ -421,8 +427,8 @@ export default function Office() {
           boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
           whiteSpace: 'nowrap', maxWidth: 'calc(100vw - 40px)',
           ...(msg.type === 'error'
-            ? { background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }
-            : { background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534' }),
+            ? { background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: '#dc2626' }
+            : { background: 'var(--lbf-ok-grund)', border: '1px solid #bbf7d0', color: 'var(--lbf-ok-text)' }),
         }}>
           {msg.text}
         </div>
@@ -432,7 +438,7 @@ export default function Office() {
       <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px 16px 120px', boxSizing: 'border-box' as const }}>
 
         {/* NEU ERSTELLEN */}
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
           NEU ERSTELLEN
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 28 }}>
@@ -443,7 +449,7 @@ export default function Office() {
                 key={type}
                 onClick={() => setCreateType(type)}
                 style={{
-                  background: '#fff', border: 'none', borderRadius: 12,
+                  background: 'var(--lbf-card)', border: 'none', borderRadius: 12,
                   boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
                   borderTop: `3px solid ${color}`,
                   padding: '14px 10px 12px',
@@ -456,7 +462,7 @@ export default function Office() {
               >
                 <DocTypeIcon type={type} size={40} />
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#1a0e08' }}>{label}</div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>{label}</div>
                   <div style={{ fontSize: 10, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{sub}</div>
                 </div>
               </button>
@@ -467,7 +473,7 @@ export default function Office() {
         {/* ZULETZT VERWENDET */}
         {recentFiles.length > 0 && (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
               ZULETZT VERWENDET
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
@@ -479,21 +485,21 @@ export default function Office() {
         )}
 
         {/* ALLE DOKUMENTE */}
-        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
           ALLE DOKUMENTE
         </div>
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: '#fff', borderRadius: 12, fontStyle: 'italic' }}>
+          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12, fontStyle: 'italic' }}>
             Lade Dokumente…
           </div>
         ) : allFiles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: '#fff', borderRadius: 12 }}>
+          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12 }}>
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
               style={{ opacity: 0.25, marginBottom: 12 }} strokeLinecap="round" strokeLinejoin="round">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
               <polyline points="14 2 14 8 20 8"/>
             </svg>
-            <div style={{ fontWeight: 700, marginBottom: 6, color: '#1a0e08' }}>Keine Dokumente</div>
+            <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--lbf-text)' }}>Keine Dokumente</div>
             <div style={{ fontStyle: 'italic', fontSize: 13 }}>Erstelle ein neues Dokument oder lade eines in der Dateien-App hoch.</div>
           </div>
         ) : (
@@ -511,15 +517,15 @@ export default function Office() {
           <div onClick={() => setCreateType(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 400 }} />
           <div style={{
             position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 401,
-            background: '#fff', borderRadius: '20px 20px 0 0',
+            background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0',
             padding: '24px 20px',
             paddingBottom: 'calc(24px + env(safe-area-inset-bottom))',
           }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.15)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(var(--lbf-rot-rgb),0.15)', margin: '0 auto 20px' }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <DocTypeIcon type={createType} size={44} />
               <div>
-                <div style={{ fontWeight: 700, fontSize: 17, color: '#1a0e08' }}>
+                <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>
                   {createType === 'word' ? 'Neues Dokument' : createType === 'cell' ? 'Neue Tabelle' : 'Neue Präsentation'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
@@ -527,7 +533,7 @@ export default function Office() {
                 </div>
               </div>
             </div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', display: 'block', marginBottom: 8 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', display: 'block', marginBottom: 8 }}>
               NAME
             </label>
             <input
@@ -537,10 +543,10 @@ export default function Office() {
               onKeyDown={e => e.key === 'Enter' && createNewDoc()}
               style={{
                 width: '100%', boxSizing: 'border-box' as const,
-                border: '1.5px solid rgba(96,8,18,0.2)', borderRadius: 10,
+                border: '1.5px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 10,
                 padding: '12px 14px', fontSize: 15, fontFamily: 'inherit',
                 fontStyle: 'italic', outline: 'none',
-                background: 'var(--warm-bg)', color: '#1a0e08',
+                background: 'var(--warm-bg)', color: 'var(--lbf-text)',
                 marginBottom: 16,
               }}
             />
@@ -548,7 +554,7 @@ export default function Office() {
               onClick={createNewDoc}
               disabled={creating || !newDocName.trim()}
               style={{
-                width: '100%', background: creating || !newDocName.trim() ? 'rgba(96,8,18,0.3)' : '#600812',
+                width: '100%', background: creating || !newDocName.trim() ? 'rgba(var(--lbf-rot-rgb),0.3)' : 'var(--lbf-akzent-grund)',
                 color: '#fff', border: 'none', borderRadius: 12,
                 padding: '14px', fontSize: 15, fontWeight: 700,
                 fontFamily: 'inherit', cursor: creating || !newDocName.trim() ? 'default' : 'pointer',
@@ -564,7 +570,7 @@ export default function Office() {
       {editingFile && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#1a1a1a', display: 'flex', flexDirection: 'column' }}>
           <div style={{
-            height: 50, background: '#1a0e08',
+            height: 50, background: '#1a0e08', // bleibt dunkel: Editor-Leiste mit weisser Schrift in beiden Modi
             display: 'flex', alignItems: 'center',
             paddingLeft: 'max(16px, env(safe-area-inset-left))',
             paddingRight: 'max(16px, env(safe-area-inset-right))',

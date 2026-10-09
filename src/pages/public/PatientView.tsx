@@ -97,6 +97,8 @@ export default function PatientView() {
     }
   }
 
+  // Die Zugangskarte bleibt hell: ihr Grund und ihre Schrift (#f3f4f6,
+  // #111827, #6b7280) haben keine Tokens — eine dunkle Karte darin wäre unlesbar.
   const centerCard = (children: React.ReactNode) => (
     <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
       <div style={{ background: '#fff', borderRadius: 16, padding: 40, maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>{children}</div>
@@ -166,9 +168,9 @@ export default function PatientView() {
       <PubWrap>
         <ProtokollView payload={p} changedFields={changedFields} tfChangedFields={tfChangedFields} />
 
-        <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: 12, padding: 16, margin: '1.5rem 0', textAlign: 'center' }}>
-          <div style={{ fontWeight: 700, color: '#92400e', marginBottom: 4 }}>Zugang endet {expiry?.toLocaleString('de-DE')}</div>
-          <div style={{ fontSize: 13, color: '#92400e' }}>Nach Ablauf ist dieses Protokoll nicht mehr einsehbar.</div>
+        <div style={{ background: 'var(--lbf-warn-grund-2)', border: '1px solid #fbbf24', borderRadius: 12, padding: 16, margin: '1.5rem 0', textAlign: 'center' }}>
+          <div style={{ fontWeight: 700, color: 'var(--lbf-warn-text)', marginBottom: 4 }}>Zugang endet {expiry?.toLocaleString('de-DE')}</div>
+          <div style={{ fontSize: 13, color: 'var(--lbf-warn-text)' }}>Nach Ablauf ist dieses Protokoll nicht mehr einsehbar.</div>
         </div>
       </PubWrap>
     </div>

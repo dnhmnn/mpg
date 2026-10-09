@@ -110,6 +110,11 @@
   --lbf-akzent-grund: #600812;
   /* Der Grund der ganzen Seite (html, #root). */
   --lbf-seite: #ffffff;
+  /* Die Grundfarbe der zarten Linien und Tönungen, als RGB-Tripel. Im Code
+     steht sie als rgba(var(--lbf-rot-rgb), 0.15) — die Deckkraft bleibt dort,
+     wo sie gewählt wurde. Dunkel wird daraus warmer Sand statt eines Rots,
+     das auf dunklem Grund verschwindet. */
+  --lbf-rot-rgb: 96, 8, 18;
   /* Rückmeldungen — Fläche und Schrift. Hell die bisherigen Werte, dunkel
      getönte Flächen mit heller Schrift statt greller weißer Kästen. Die
      Flächen sind deckend: ein Toast über Inhalt ließe sonst durchscheinen. */
@@ -119,6 +124,19 @@
   --lbf-warn-text: #92400e;
   --lbf-fehler-grund: #fef2f2;
   --lbf-fehler-text: #991b1b;
+  /* Varianten: sie halten die bisherigen hellen Töne genau, dunkel gehören
+     sie zur selben Familie wie der Haupttoken. */
+  --lbf-fehler-text-2: #b91c1c;
+  --lbf-fehler-grund-2: #fee2e2;
+  --lbf-fehler-grund-3: #fff0f0;
+  --lbf-fehler-grund-4: #fde8e8;
+  --lbf-warn-text-2: #b45309;
+  --lbf-warn-text-3: #78350f;
+  --lbf-warn-grund-2: #fef3c7;
+  --lbf-warn-grund-3: #fff8ed;
+  --lbf-warn-grund-4: #fef9c3;
+  --lbf-ok-text-2: #15803d;
+  --lbf-ok-grund-2: #dcfce7;
   /* Eingebaute Bedienelemente (Datum, Auswahl, Rollbalken) passend färben. */
   color-scheme: light;
 
@@ -173,12 +191,24 @@
   --lbf-fuss: rgba(253,200,160,0.04);
   --lbf-akzent-grund: #8a1c28;
   --lbf-seite: #0f0a07;
+  --lbf-rot-rgb: 253, 200, 160;
   --lbf-ok-grund: #1b2511;
   --lbf-ok-text: #86efac;
   --lbf-warn-grund: #3a2008;
   --lbf-warn-text: #fcd34d;
   --lbf-fehler-grund: #3b140d;
   --lbf-fehler-text: #fca5a5;
+  --lbf-fehler-text-2: #fca5a5;
+  --lbf-fehler-grund-2: #3b140d;
+  --lbf-fehler-grund-3: #3b140d;
+  --lbf-fehler-grund-4: #3b140d;
+  --lbf-warn-text-2: #fcd34d;
+  --lbf-warn-text-3: #fcd34d;
+  --lbf-warn-grund-2: #3a2008;
+  --lbf-warn-grund-3: #3a2008;
+  --lbf-warn-grund-4: #3a2008;
+  --lbf-ok-text-2: #86efac;
+  --lbf-ok-grund-2: #1b2511;
   color-scheme: dark;
 
   --bg: #000000;
@@ -226,12 +256,24 @@
   --lbf-fuss: rgba(0,255,65,0.04);
   --lbf-akzent-grund: #00661a;
   --lbf-seite: #080c08;
+  --lbf-rot-rgb: 0, 255, 65;
   --lbf-ok-grund: #002c07;
   --lbf-ok-text: #00ff41;
   --lbf-warn-grund: #1f2b00;
   --lbf-warn-text: #ffd400;
   --lbf-fehler-grund: #241c0b;
   --lbf-fehler-text: #ff6b6b;
+  --lbf-fehler-text-2: #ff6b6b;
+  --lbf-fehler-grund-2: #241c0b;
+  --lbf-fehler-grund-3: #241c0b;
+  --lbf-fehler-grund-4: #241c0b;
+  --lbf-warn-text-2: #ffd400;
+  --lbf-warn-text-3: #ffd400;
+  --lbf-warn-grund-2: #1f2b00;
+  --lbf-warn-grund-3: #1f2b00;
+  --lbf-warn-grund-4: #1f2b00;
+  --lbf-ok-text-2: #00ff41;
+  --lbf-ok-grund-2: #002c07;
   color-scheme: dark;
 
   --bg: #080c08;
@@ -306,12 +348,24 @@
   --lbf-fuss: rgba(253,200,160,0.04);
   --lbf-akzent-grund: #8a1c28;
   --lbf-seite: #0f0a07;
+  --lbf-rot-rgb: 253, 200, 160;
   --lbf-ok-grund: #1b2511;
   --lbf-ok-text: #86efac;
   --lbf-warn-grund: #3a2008;
   --lbf-warn-text: #fcd34d;
   --lbf-fehler-grund: #3b140d;
   --lbf-fehler-text: #fca5a5;
+  --lbf-fehler-text-2: #fca5a5;
+  --lbf-fehler-grund-2: #3b140d;
+  --lbf-fehler-grund-3: #3b140d;
+  --lbf-fehler-grund-4: #3b140d;
+  --lbf-warn-text-2: #fcd34d;
+  --lbf-warn-text-3: #fcd34d;
+  --lbf-warn-grund-2: #3a2008;
+  --lbf-warn-grund-3: #3a2008;
+  --lbf-warn-grund-4: #3a2008;
+  --lbf-ok-text-2: #86efac;
+  --lbf-ok-grund-2: #1b2511;
   color-scheme: dark;
 
     --bg: #000000;

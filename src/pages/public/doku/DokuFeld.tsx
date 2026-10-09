@@ -20,10 +20,12 @@ import { istSpiegelOption } from '../../../katalog/aelrdSpiegel'
 
 export type Werte = Record<string, unknown>
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 /**
  * Grenzwerte für die farbige Rückmeldung. Sie ersetzen keine Beurteilung —
@@ -46,9 +48,9 @@ const GRENZEN: Record<string, { gut: [number, number]; warn: [number, number] }>
 for (const [id, g] of Object.entries(GRENZEN)) GRENZEN[`ub_${id}`] = g
 
 const AMPEL = {
-  gut: { rand: '#86efac', grund: '#f0fdf4' },
-  warn: { rand: '#fde047', grund: '#fffbeb' },
-  kritisch: { rand: '#fca5a5', grund: '#fef2f2' },
+  gut: { rand: '#86efac', grund: 'var(--lbf-ok-grund)' },
+  warn: { rand: '#fde047', grund: 'var(--lbf-warn-grund)' },
+  kritisch: { rand: '#fca5a5', grund: 'var(--lbf-fehler-grund)' },
 }
 
 export function bewerten(id: string, roh: unknown): 'gut' | 'warn' | 'kritisch' | null {
@@ -87,14 +89,21 @@ function umschalten(wert: unknown, option: string, mehrfach: boolean): unknown {
 }
 
 const eingabe: React.CSSProperties = {
-  width: '100%', padding: '9px 10px', background: '#fff',
+  width: '100%', padding: '9px 10px', background: 'var(--lbf-input-bg)',
   border: `0.5px solid ${LINIE}`, borderRadius: 8,
   fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box',
 }
 
 /** Rot, solange eine Pflichtangabe fehlt; Bernstein, wenn sie erwartet wird. */
+// Bleiben Hex: sie dienen auch als Rahmenfarbe und als Schlüssel für die
+// Vergleiche unten. Als Schrift gilt STAND_SCHRIFT.
 const OFFEN = '#b91c1c'
 const ERWARTET = '#b45309'
+/** Dieselbe Stufe als Schriftfarbe — im Dunkeln aufgehellt, damit sie lesbar bleibt. */
+const STAND_SCHRIFT: Record<string, string> = {
+  [OFFEN]: 'var(--lbf-fehler-text-2)',
+  [ERWARTET]: 'var(--lbf-warn-text-2)',
+}
 
 /** Welche Farbe eine Angabe trägt, die noch aussteht. */
 export function standFarbe(stand?: Stand): string | null {
@@ -108,7 +117,7 @@ function Marke({ text, hinweis, stand }: {
   const farbe = standFarbe(stand)
   const pflicht = Boolean(stand)
   return (
-    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: farbe ?? GRAU, marginBottom: 4 }}>
+    <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: farbe ? STAND_SCHRIFT[farbe] : GRAU, marginBottom: 4 }}>
       {text}
       {/*
        * Der Stern steht am Feld, nicht in einer Legende: wer dokumentiert,
@@ -116,7 +125,7 @@ function Marke({ text, hinweis, stand }: {
        * verschwindet nicht, sonst wüsste man hinterher nicht mehr, dass es
        * eine Pflichtangabe war.
        */}
-      {pflicht ? <span style={{ color: farbe ?? GRAU, marginLeft: 3 }}>*</span> : null}
+      {pflicht ? <span style={{ color: farbe ? STAND_SCHRIFT[farbe] : GRAU, marginLeft: 3 }}>*</span> : null}
       {/* Der Grund der Regel steht nicht am Feld — er macht die Zeile lang
           und sagt dem, der den Bogen kennt, nichts Neues. Gebraucht wird er
           beim Absenden, wenn eine Angabe wirklich fehlt. */}
@@ -144,15 +153,15 @@ export function Knopf({ text, an, onClick, klein, offen }: {
       style={{
         padding: klein ? '7px 10px' : '8px 12px', margin: '0 5px 5px 0',
         minHeight: klein ? 32 : 36,
-        background: an ? ROT : offen ? '#fef2f2' : '#fff', color: an ? '#fff' : TEXT,
-        border: `${offen && !an ? 1 : 0.5}px solid ${an ? ROT : offen ? '#b91c1c' : LINIE}`,
+        background: an ? ROT_GRUND : offen ? 'var(--lbf-fehler-grund)' : 'var(--lbf-card)', color: an ? '#fff' : TEXT,
+        border: `${offen && !an ? 1 : 0.5}px solid ${an ? ROT_GRUND : offen ? '#b91c1c' : LINIE}`,
         borderRadius: 999,
         fontFamily: 'inherit', fontSize: klein ? 13 : 14, fontWeight: an || offen ? 700 : 400,
         cursor: 'pointer', lineHeight: 1.2,
       }}
     >
       {text}
-      {offen && !an ? <span style={{ color: '#b91c1c', marginLeft: 3 }}>*</span> : null}
+      {offen && !an ? <span style={{ color: 'var(--lbf-fehler-text-2)', marginLeft: 3 }}>*</span> : null}
     </button>
   )
 }
@@ -167,7 +176,7 @@ export function Rasterzelle({ feld, werte, setzen, stand }: {
   const farbe = standFarbe(stand)
   return (
     <label style={{ display: 'block' }}>
-      <span style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: farbe ?? GRAU, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <span style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: farbe ? STAND_SCHRIFT[farbe] : GRAU, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {feld.label}
         {stand ? <span style={{ marginLeft: 3 }}>*</span> : null}
       </span>
@@ -181,7 +190,7 @@ export function Rasterzelle({ feld, werte, setzen, stand }: {
             ...eingabe, padding: '8px 30px 8px 9px', fontSize: 19, fontWeight: 600,
             textAlign: 'left',
             border: `1px solid ${ampel ? ampel.rand : farbe ?? LINIE}`,
-            background: ampel ? ampel.grund : farbe === OFFEN ? '#fef2f2' : farbe === ERWARTET ? '#fffbeb' : '#fff',
+            background: ampel ? ampel.grund : farbe === OFFEN ? 'var(--lbf-fehler-grund)' : farbe === ERWARTET ? 'var(--lbf-warn-grund)' : 'var(--lbf-input-bg)',
           }}
         />
         {feld.einheit ? (
@@ -310,7 +319,7 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung, stand 
         <Langtext
           feld={feld} wert={wert} setzen={setzen}
           rand={farbe ?? LINIE}
-          grund={farbe === OFFEN ? '#fef2f2' : farbe === ERWARTET ? '#fffbeb' : '#fff'}
+          grund={farbe === OFFEN ? 'var(--lbf-fehler-grund)' : farbe === ERWARTET ? 'var(--lbf-warn-grund)' : 'var(--lbf-input-bg)'}
         />
       </div>
     )
@@ -323,7 +332,7 @@ export default function DokuFeld({ feld, werte, setzen, ohneBeschriftung, stand 
       <input name={feld.id} type={typ}
         inputMode={feld.typ === 'zahl' ? 'decimal' : undefined}
         value={String(wert ?? '')} onChange={(e) => setzen(feld.id, e.target.value)}
-        style={{ ...eingabe, border: `0.5px solid ${farbe ?? LINIE}`, background: farbe === OFFEN ? '#fef2f2' : farbe === ERWARTET ? '#fffbeb' : '#fff' }} />
+        style={{ ...eingabe, border: `0.5px solid ${farbe ?? LINIE}`, background: farbe === OFFEN ? 'var(--lbf-fehler-grund)' : farbe === ERWARTET ? 'var(--lbf-warn-grund)' : 'var(--lbf-input-bg)' }} />
     </div>
   )
 }

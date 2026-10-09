@@ -65,7 +65,7 @@ function CalendarButtons({ record }: { record: TokenRecord }) {
 
   return (
     <div>
-      <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
         Zum Kalender hinzufügen
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
@@ -90,7 +90,7 @@ function CalendarButtons({ record }: { record: TokenRecord }) {
 function Logo() {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 28 }}>
-      <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+      <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
         <img src="/logo.svg" alt="Responda" style={{ width: 26, height: 26, objectFit: 'contain' }} />
       </div>
       <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--lbf-text)', letterSpacing: '-0.01em' }}>Responda</span>
@@ -214,7 +214,7 @@ export default function Einladung() {
     return (
       <div style={page}>
         <Logo />
-        <div style={{ background: 'var(--lbf-card)', borderRadius: 16, padding: '32px 28px', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid rgba(96,8,18,0.25)' }}>
+        <div style={{ background: 'var(--lbf-card)', borderRadius: 16, padding: '32px 28px', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid rgba(var(--lbf-rot-rgb),0.25)' }}>
           <div style={{ fontWeight: 700, fontSize: 17, marginBottom: 8, color: 'var(--lbf-text)' }}>Link nicht gefunden</div>
           <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)', fontSize: 14 }}>{error}</div>
         </div>
@@ -301,13 +301,13 @@ export default function Einladung() {
         <div style={{ padding: '28px', display: 'flex', flexDirection: 'column', gap: 20 }}>
           {record?.termin_beschreibung && (
             <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', paddingTop: 18 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Details</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Details</div>
               <p style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.65, margin: 0, opacity: 0.85 }}>{record.termin_beschreibung}</p>
             </div>
           )}
 
           <div>
-            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Dein Name</label>
+            <label style={{ display: 'block', fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Dein Name</label>
             <input
               type="text"
               value={name}
@@ -329,7 +329,7 @@ export default function Einladung() {
               disabled={submitting || !name.trim()}
               style={{
                 flex: 1, padding: '13px', borderRadius: 12, border: 'none',
-                background: submitting || !name.trim() ? 'rgba(96,8,18,0.4)' : '#600812',
+                background: submitting || !name.trim() ? 'rgba(var(--lbf-rot-rgb),0.4)' : 'var(--lbf-akzent-grund)',
                 color: '#fff', fontWeight: 700, fontSize: 15,
                 cursor: submitting || !name.trim() ? 'not-allowed' : 'pointer',
                 fontFamily: 'inherit', fontStyle: 'italic',

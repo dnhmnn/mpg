@@ -107,7 +107,7 @@ export default function ResetPassword() {
               </div>
 
               {msg && (
-                <div style={{ padding: '11px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 14, color: '#b91c1c', textAlign: 'center' }}>
+                <div style={{ padding: '11px 14px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, fontSize: 14, color: 'var(--lbf-fehler-text-2)', textAlign: 'center' }}>
                   {msg}
                 </div>
               )}

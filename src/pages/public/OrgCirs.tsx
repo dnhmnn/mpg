@@ -29,7 +29,7 @@ export default function OrgCirs() {
   if (success) return (
     <PubWrap>
       <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: 32, textAlign: 'center', maxWidth: 480, margin: '2rem auto', boxShadow: 'var(--shadow-md)' }}>
-        <div style={{ width: 56, height: 56, background: '#dcfce7', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
+        <div style={{ width: 56, height: 56, background: 'var(--lbf-ok-grund-2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
         <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Erfolgreich gemeldet!</h2>
         <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.5rem', fontSize: 15 }}>Danke für deinen Beitrag zur Sicherheit.</p>
         <button style={btn} onClick={() => { setF({ datum: today(), ort: '', kategorie: '', schwere: '', was: '', warum: '', folgen: '', vorschlag: '', melder_name: '', melder_kontakt: '' }); setSuccess(false) }}>+ Neue Meldung</button>

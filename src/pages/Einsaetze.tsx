@@ -60,9 +60,9 @@ function safeJson(v: any): any {
 
 // ── Status Config ─────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; strip: string }> = {
-  aktiv:         { label: 'Aktiv',         color: '#600812',              bg: 'var(--lbf-border-light)',   strip: '#600812' },
-  abgeschlossen: { label: 'Abgeschlossen', color: '#16a34a',              bg: '#dcfce7',              strip: '#16a34a' },
-  abgebrochen:   { label: 'Abgebrochen',   color: '#8a7a68',              bg: 'rgba(139,113,90,0.1)', strip: 'rgba(139,113,90,0.4)' },
+  aktiv:         { label: 'Aktiv',         color: 'var(--lbf-akzent)',              bg: 'var(--lbf-border-light)',   strip: 'var(--lbf-akzent)' },
+  abgeschlossen: { label: 'Abgeschlossen', color: '#16a34a',              bg: 'var(--lbf-ok-grund-2)',              strip: '#16a34a' },
+  abgebrochen:   { label: 'Abgebrochen',   color: 'var(--warm-gray)',              bg: 'rgba(139,113,90,0.1)', strip: 'rgba(139,113,90,0.4)' },
 }
 
 const ROLLEN = [
@@ -81,23 +81,23 @@ const DETAIL_TABS: { id: DetailTab; label: string }[] = [
 // ── Style constants ───────────────────────────────────────────────────────────
 const INPUT: React.CSSProperties = {
   width: '100%', padding: '10px 12px', borderRadius: 10,
-  border: '1px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)',
+  border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)',
   fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit',
   outline: 'none', boxSizing: 'border-box',
 }
 const LABEL: React.CSSProperties = {
-  fontSize: 10, fontWeight: 700, color: '#600812',
+  fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)',
   textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6,
 }
 const BTN_PRIMARY: React.CSSProperties = {
   padding: '10px 18px', borderRadius: 8, border: 'none',
-  background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13,
+  background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 13,
   cursor: 'pointer', fontFamily: 'inherit',
 }
 const BTN_SECONDARY: React.CSSProperties = {
   padding: '10px 18px', borderRadius: 8,
-  border: '1px solid rgba(96,8,18,0.2)', background: 'transparent',
-  color: '#8a7a68', fontWeight: 600, fontSize: 13,
+  border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent',
+  color: 'var(--warm-gray)', fontWeight: 600, fontSize: 13,
   cursor: 'pointer', fontFamily: 'inherit',
 }
 
@@ -415,9 +415,9 @@ export default function Einsaetze() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
 
       {/* ── Masthead ── */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', paddingTop: 'env(safe-area-inset-top)' }}>
+      <div style={{ position: 'sticky', top: 0, zIndex: 100, background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', paddingTop: 'env(safe-area-inset-top)' }}>
         <div style={{ maxWidth: 640, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 60, padding: '0 20px' }}>
-          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', fontFamily: 'inherit', flexShrink: 0 }}>
+          <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--lbf-akzent)', display: 'flex', alignItems: 'center', fontFamily: 'inherit', flexShrink: 0 }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
@@ -427,10 +427,10 @@ export default function Einsaetze() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={openSetup} title="Alamos Webhook-Konfiguration" style={{ background: 'var(--lbf-border-light)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#600812' }}>
+            <button onClick={openSetup} title="Alamos Webhook-Konfiguration" style={{ background: 'var(--lbf-border-light)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--lbf-akzent)' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
             </button>
-            <button onClick={() => setNewModal(true)} style={{ background: '#600812', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
+            <button onClick={() => setNewModal(true)} style={{ background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: 8, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#fff' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
           </div>
@@ -442,14 +442,14 @@ export default function Einsaetze() {
 
         {einsaetze.length === 0 && (
           <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '80px 16px', fontStyle: 'italic', fontSize: 15 }}>
-            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 16px' }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.87 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.06a16 16 0 0 0 6 6z"/></svg>
+            <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--lbf-rot-rgb),0.2)" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 16px' }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13.5 19.79 19.79 0 0 1 1.61 4.87 2 2 0 0 1 3.6 2.69h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 10.06a16 16 0 0 0 6 6z"/></svg>
             Noch keine Einsätze vorhanden
           </div>
         )}
 
         {aktive.length > 0 && (
           <div style={{ marginBottom: 24 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10, paddingLeft: 2 }}>Aktive Einsätze</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10, paddingLeft: 2 }}>Aktive Einsätze</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {aktive.map(e => <EinsatzCard key={e.id} einsatz={e} onClick={() => openDetail(e)} />)}
             </div>
@@ -472,9 +472,9 @@ export default function Einsaetze() {
           position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
           zIndex: 9999, padding: '12px 20px', borderRadius: 12, fontSize: 14,
           fontWeight: 600, whiteSpace: 'nowrap',
-          background: message.type === 'info' ? '#3d0408' : message.type === 'success' ? '#f0fdf4' : '#fef2f2',
+          background: message.type === 'info' ? '#3d0408' : message.type === 'success' ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)',
           border: message.type === 'info' ? 'none' : message.type === 'success' ? '1px solid #bbf7d0' : '1px solid #fecaca',
-          color: message.type === 'info' ? '#fde8d8' : message.type === 'success' ? '#166534' : '#b91c1c',
+          color: message.type === 'info' ? '#fde8d8' : message.type === 'success' ? 'var(--lbf-ok-text)' : 'var(--lbf-fehler-text-2)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
         }}>
           {message.text}
@@ -489,7 +489,7 @@ export default function Einsaetze() {
             <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>Neuer Einsatz</div>
 
             {/* Alamos Webhook Info */}
-            <div style={{ background: 'rgba(96,8,18,0.04)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
+            <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '1px solid var(--lbf-border)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
               <div style={{ ...LABEL, marginBottom: 6 }}>Alamos Webhook</div>
               <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', lineHeight: 1.7, fontFamily: 'monospace', wordBreak: 'break-all' }}>
                 POST https://api.responda.systems/api/collections/einsaetze/records<br />
@@ -535,11 +535,11 @@ export default function Einsaetze() {
 
             {/* Drag handle */}
             <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(var(--lbf-rot-rgb),0.2)' }} />
             </div>
 
             {/* Sheet header */}
-            <div style={{ padding: '4px 20px 12px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
+            <div style={{ padding: '4px 20px 12px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', alignItems: 'flex-start', gap: 12, flexShrink: 0 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', lineHeight: 1.25 }}>
                   {selected.keyword || selected.unit || 'Einsatz'}
@@ -557,21 +557,21 @@ export default function Einsaetze() {
                     </span>
                   )
                 })()}
-                <button onClick={() => { setSelected(null); if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
+                <button onClick={() => { setSelected(null); if (mapRef.current) { mapRef.current.remove(); mapRef.current = null } }} style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
             </div>
 
             {/* Tab bar */}
-            <div style={{ display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.08)', flexShrink: 0 }}>
+            <div style={{ display: 'flex', borderBottom: '0.5px solid var(--lbf-border-light)', flexShrink: 0 }}>
               {DETAIL_TABS.map(({ id, label }) => (
                 <button key={id} onClick={() => setDetailTab(id)} style={{
                   flex: 1, padding: '10px 4px', border: 'none', background: 'none',
                   cursor: 'pointer', fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
                   letterSpacing: '0.07em', fontFamily: 'inherit',
-                  color: detailTab === id ? '#600812' : 'var(--warm-gray)',
-                  borderBottom: detailTab === id ? '2px solid #600812' : '2px solid transparent',
+                  color: detailTab === id ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
+                  borderBottom: detailTab === id ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
                 }}>
                   {label}
                 </button>
@@ -619,7 +619,7 @@ export default function Einsaetze() {
                       {selected.interne_vermerke && (
                         <div>
                           <div style={LABEL}>Interne Vermerke</div>
-                          <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid rgba(96,8,18,0.08)' }}>
+                          <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.7, whiteSpace: 'pre-wrap', background: 'var(--lbf-fuss)', borderRadius: 10, padding: '12px 14px', border: '0.5px solid var(--lbf-border-light)' }}>
                             {selected.interne_vermerke}
                           </div>
                         </div>
@@ -646,7 +646,7 @@ export default function Einsaetze() {
               {detailTab === 'personal' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingBottom: 12 }}>
                   {/* Add person */}
-                  <div style={{ background: 'rgba(250,249,247,0.8)', border: '0.5px solid rgba(96,8,18,0.08)', borderRadius: 12, padding: '14px 16px' }}>
+                  <div style={{ background: 'var(--lbf-fuss)', border: '0.5px solid var(--lbf-border-light)', borderRadius: 12, padding: '14px 16px' }}>
                     <div style={{ ...LABEL, marginBottom: 12 }}>Person hinzufügen</div>
                     <div style={{ position: 'relative', marginBottom: 10 }}>
                       <input
@@ -656,9 +656,9 @@ export default function Einsaetze() {
                         style={INPUT}
                       />
                       {filteredUsers.length > 0 && (
-                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 180, overflowY: 'auto' }}>
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid var(--lbf-border)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 180, overflowY: 'auto' }}>
                           {filteredUsers.map(u => (
-                            <button key={u.id} onClick={() => { setSelectedUser(u); setUserSearch(u.name) }} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.06)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: 'var(--lbf-text)' }}>
+                            <button key={u.id} onClick={() => { setSelectedUser(u); setUserSearch(u.name) }} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: 'var(--lbf-text)' }}>
                               {u.name} <span style={{ color: 'var(--warm-gray)', fontSize: 12 }}>{u.email}</span>
                             </button>
                           ))}
@@ -687,8 +687,8 @@ export default function Einsaetze() {
                         const person = (p.expand?.user_id as any) || allUsers.find(u => u.id === p.user_id)
                         const initials = ((person as any)?.name || '?').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
                         return (
-                          <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, borderLeft: '3px solid #600812', padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                          <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, borderLeft: '3px solid var(--lbf-akzent)', padding: '12px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
                               {initials}
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
@@ -713,7 +713,7 @@ export default function Einsaetze() {
                     <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', padding: '24px 0' }}>Lade…</div>
                   ) : linkedPatients.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', padding: '40px 0 16px', fontSize: 14 }}>
-                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--lbf-rot-rgb),0.2)" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                       Keine verknüpften Protokolle
                       <div style={{ fontSize: 12, marginTop: 4 }}>Einsatz-Nr. muss im Protokoll eingetragen sein</div>
                     </div>
@@ -722,16 +722,18 @@ export default function Einsaetze() {
                       {linkedPatients.map(p => {
                         const payload = safeJson(p.payload)
                         const name = [payload.name, payload.vorname].filter(Boolean).join(', ') || 'Unbekannt'
+                        // Hex bleibt fuer den Alpha-Anhang (`…1a`) im Abzeichen-Grund
                         const sc: Record<string, string> = { offen: '#600812', freigegeben: '#16a34a', archiviert: '#8a7a68' }
+                        const scFarbe: Record<string, string> = { offen: 'var(--lbf-akzent)', freigegeben: '#16a34a', archiviert: 'var(--warm-gray)' }
                         return (
-                          <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${sc[p.status] || '#600812'}`, boxShadow: 'var(--lbf-shadow)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${scFarbe[p.status] || 'var(--lbf-akzent)'}`, boxShadow: 'var(--lbf-shadow)', padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
                             <div style={{ flex: 1 }}>
                               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>{name}</div>
                               <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
                                 {new Date(p.created).toLocaleDateString('de-DE')}
                               </div>
                             </div>
-                            <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: `${sc[p.status] || '#600812'}1a`, color: sc[p.status] || '#600812' }}>
+                            <span style={{ padding: '3px 10px', borderRadius: 99, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', background: `${sc[p.status] || '#600812'}1a`, color: scFarbe[p.status] || 'var(--lbf-akzent)' }}>
                               {p.status}
                             </span>
                           </div>
@@ -749,7 +751,7 @@ export default function Einsaetze() {
                     <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', padding: '24px 0' }}>Lade…</div>
                   ) : linkedOutputs.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', padding: '40px 0 16px', fontSize: 14 }}>
-                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.2)" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--lbf-rot-rgb),0.2)" strokeWidth="1.5" style={{ display: 'block', margin: '0 auto 12px' }}><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
                       Keine Produktausgaben für diesen Einsatz
                       <div style={{ fontSize: 12, marginTop: 4 }}>Einsatz-Nr. muss in der Produktausgabe eingetragen sein</div>
                     </div>
@@ -759,7 +761,7 @@ export default function Einsaetze() {
                         const payload = safeJson(o.payload)
                         const positionen: any[] = payload.positionen || []
                         return (
-                          <div key={o.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid #600812', boxShadow: 'var(--lbf-shadow)', overflow: 'hidden' }}>
+                          <div key={o.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, borderLeft: '3px solid var(--lbf-akzent)', boxShadow: 'var(--lbf-shadow)', overflow: 'hidden' }}>
                             <div style={{ padding: '12px 14px 10px' }}>
                               <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)', marginBottom: 3 }}>
                                 {payload.user_name || o.title || 'Ausgabe'}
@@ -772,7 +774,7 @@ export default function Einsaetze() {
                                 <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 4 }}>
                                   {positionen.map((pos: any, idx: number) => (
                                     <div key={idx} style={{ fontSize: 13, color: 'var(--lbf-text)', display: 'flex', gap: 8 }}>
-                                      <span style={{ fontWeight: 700, color: '#600812', minWidth: 28 }}>{pos.qty}×</span>
+                                      <span style={{ fontWeight: 700, color: 'var(--lbf-akzent)', minWidth: 28 }}>{pos.qty}×</span>
                                       <span>{pos.name}</span>
                                     </div>
                                   ))}
@@ -791,7 +793,7 @@ export default function Einsaetze() {
               {detailTab === 'karte' && (
                 <div style={{ position: 'relative', height: 'calc(92dvh - 220px)', minHeight: 300 }}>
                   <div ref={mapDivRef} style={{ width: '100%', height: '100%' }} />
-                  <button onClick={saveMap} style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 1000, padding: '10px 16px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+                  <button onClick={saveMap} style={{ position: 'absolute', bottom: 16, right: 16, zIndex: 1000, padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
                     Karte speichern
                   </button>
                 </div>
@@ -814,15 +816,15 @@ export default function Einsaetze() {
             <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 301, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', maxHeight: '94dvh', display: 'flex', flexDirection: 'column', paddingBottom: 'env(safe-area-inset-bottom)' }}>
 
               <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 6px', flexShrink: 0 }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(96,8,18,0.2)' }} />
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(var(--lbf-rot-rgb),0.2)' }} />
               </div>
 
-              <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(96,8,18,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+              <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>Alamos-Konfiguration</div>
                   <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Diese URL in Alamos eintragen</div>
                 </div>
-                <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
+                <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -830,7 +832,7 @@ export default function Einsaetze() {
               <div style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 8px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
                 {/* Alamos settings checklist */}
-                <div style={{ background: 'rgba(96,8,18,0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.8 }}>
+                <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.8 }}>
                   <div style={{ fontWeight: 700, marginBottom: 6 }}>In Alamos einstellen:</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
                     <span>✓ Einheitenkennung übertragen: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
@@ -893,7 +895,7 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
           </span>
         </div>
       </div>
-      <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '7px 14px', display: 'flex', justifyContent: 'flex-end' }}>
+      <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '7px 14px', display: 'flex', justifyContent: 'flex-end' }}>
         <span style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 3 }}>
           Details
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
@@ -905,11 +907,11 @@ function EinsatzCard({ einsatz, onClick }: { einsatz: Einsatz; onClick: () => vo
 
 function WebhookBox({ text, label, onCopy, mono, highlight }: { text: string; label: string; onCopy: (t: string, l: string) => void; mono?: boolean; highlight?: boolean }) {
   return (
-    <div style={{ position: 'relative', background: highlight ? 'rgba(96,8,18,0.04)' : 'rgba(250,249,247,0.9)', border: `1px solid ${highlight ? 'rgba(96,8,18,0.25)' : 'rgba(96,8,18,0.1)'}`, borderRadius: 10, padding: '10px 44px 10px 12px', minHeight: 40 }}>
-      <pre style={{ margin: 0, fontSize: 12, color: highlight ? '#600812' : 'var(--lbf-text)', fontFamily: mono ? 'monospace' : 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>
+    <div style={{ position: 'relative', background: highlight ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'var(--lbf-card)', border: `1px solid ${highlight ? 'rgba(var(--lbf-rot-rgb),0.25)' : 'rgba(var(--lbf-rot-rgb),0.1)'}`, borderRadius: 10, padding: '10px 44px 10px 12px', minHeight: 40 }}>
+      <pre style={{ margin: 0, fontSize: 12, color: highlight ? 'var(--lbf-akzent)' : 'var(--lbf-text)', fontFamily: mono ? 'monospace' : 'inherit', whiteSpace: 'pre-wrap', wordBreak: 'break-all', lineHeight: 1.6 }}>
         {text}
       </pre>
-      <button onClick={() => onCopy(text, label)} style={{ position: 'absolute', top: 8, right: 8, background: '#600812', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
+      <button onClick={() => onCopy(text, label)} style={{ position: 'absolute', top: 8, right: 8, background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', color: '#fff', display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0 }}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
         Kopieren
       </button>
@@ -920,7 +922,7 @@ function WebhookBox({ text, label, onCopy, mono, highlight }: { text: string; la
 function InfoField({ label, value, italic, span }: { label: string; value?: string; italic?: boolean; span?: boolean }) {
   return (
     <div style={span ? { gridColumn: '1 / -1' } : {}}>
-      <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>{label}</div>
+      <div style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 3 }}>{label}</div>
       <div style={{ fontSize: 14, color: value ? 'var(--lbf-text)' : 'var(--warm-gray)', fontStyle: italic && value ? 'italic' : 'normal' }}>
         {value || '–'}
       </div>

@@ -3,7 +3,7 @@ import { newId } from '../../lib/eks/ids'
 import { FMS, type EksEventType, type EksState } from '../../lib/eks/types'
 import { Feld, Overlay } from './TabAtemschutz'
 
-const RED = '#600812'
+const RED_GRUND = 'var(--lbf-akzent-grund)'
 
 export default function TabKraefte({ state, dispatch }: {
   state: EksState; dispatch: (t: EksEventType, p: any) => Promise<void>
@@ -14,7 +14,7 @@ export default function TabKraefte({ state, dispatch }: {
 
   return (
     <div style={{ paddingBottom: 20 }}>
-      <button onClick={() => setNeu(true)} style={{ ...b(RED, true), width: '100%', padding: 12, marginBottom: 14 }}>
+      <button onClick={() => setNeu(true)} style={{ ...b(RED_GRUND, true), width: '100%', padding: 12, marginBottom: 14 }}>
         Einsatzmittel aufnehmen
       </button>
 
@@ -52,8 +52,8 @@ export default function TabKraefte({ state, dispatch }: {
                   <button key={s} onClick={() => dispatch('kraft.status', { id: k.id, fms_status: s })} title={FMS[s].lang}
                     style={{
                       width: 34, height: 32, borderRadius: 8, cursor: 'pointer', fontFamily: 'inherit', fontWeight: 800, fontSize: 13,
-                      border: k.fms_status === s ? 'none' : '1px solid rgba(96,8,18,0.15)',
-                      background: k.fms_status === s ? FMS[s].farbe : 'transparent',
+                      border: k.fms_status === s ? 'none' : '1px solid rgba(var(--lbf-rot-rgb),0.15)',
+                      background: k.fms_status === s ? (FMS[s].grund ?? FMS[s].farbe) : 'transparent',
                       color: k.fms_status === s ? '#fff' : 'var(--warm-gray)',
                     }}>{s}</button>
                 ))}
@@ -91,7 +91,7 @@ function NeuModal({ abschnitte, onClose, onSave }: { abschnitte: any[]; onClose:
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
         <button onClick={onClose} style={b('var(--warm-gray)')}>Abbrechen</button>
         <button disabled={!funkrufname.trim()} onClick={() => onSave({ funkrufname: funkrufname.trim(), typ, besatzung, abschnitt_id: abschnitt_id || undefined })}
-          style={{ ...b(RED, true), opacity: funkrufname.trim() ? 1 : 0.5 }}>Aufnehmen</button>
+          style={{ ...b(RED_GRUND, true), opacity: funkrufname.trim() ? 1 : 0.5 }}>Aufnehmen</button>
       </div>
     </Overlay>
   )

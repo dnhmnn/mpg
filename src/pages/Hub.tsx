@@ -31,7 +31,7 @@ const PREDEFINED_SHORTCUTS = [
 type ShortcutId = typeof PREDEFINED_SHORTCUTS[number]['id']
 
 function ShortcutIcon({ id, color = 'currentColor' }: { id: ShortcutId; color?: string }) {
-  const s = { stroke: color, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
+  const s = { style: { stroke: color }, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
   if (id === 'protokoll') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
   if (id === 'mpg') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
   if (id === 'ausbildung') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -290,7 +290,7 @@ export default function Hub() {
       {/* Masthead header — sticky, handles safe area */}
       <div style={{
         background: 'var(--lbf-card)',
-        borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+        borderBottom: '0.5px solid var(--lbf-border)',
         position: 'sticky',
         top: 0,
         zIndex: 100,
@@ -312,7 +312,7 @@ export default function Hub() {
           </div>
           <button
             onClick={() => setProfileSheetOpen(true)}
-            style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: '#600812', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
+            style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid var(--lbf-akzent)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
           >
             {initials(user?.name || user?.email)}
           </button>
@@ -330,10 +330,10 @@ export default function Hub() {
           {/* Left / main column: Module grid */}
           <div className="hub-module-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
               <button
                 onClick={() => setEditMode(prev => !prev)}
-                style={{ fontSize: 11, fontWeight: 600, color: editMode ? '#600812' : 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}
+                style={{ fontSize: 11, fontWeight: 600, color: editMode ? 'var(--lbf-akzent)' : 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}
               >
                 {editMode ? 'Fertig' : 'Bearbeiten'}
               </button>
@@ -347,7 +347,7 @@ export default function Hub() {
             {editMode && (
               <button
                 onClick={() => { setEditMode(false); setShowAppsModal(true) }}
-                style={{ width: '100%', padding: '12px', background: 'var(--lbf-card)', border: '1px dashed rgba(96,8,18,0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ width: '100%', padding: '12px', background: 'var(--lbf-card)', border: '1px dashed rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 + App hinzufügen
               </button>
@@ -358,7 +358,7 @@ export default function Hub() {
           <div className="hub-side-col" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             <div>
               <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--lbf-text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+                Servus, <span style={{ color: 'var(--lbf-akzent)', fontStyle: 'italic' }}>{firstName}</span>
               </div>
             </div>
             <Widgets user={user} />
@@ -377,9 +377,9 @@ export default function Hub() {
         onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
         onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
       >
-        <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.3)' }} />
-        <div style={{ width: 24, height: 2, borderRadius: 99, background: 'rgba(96,8,18,0.18)' }} />
-        <span style={{ fontSize: 9, fontWeight: 700, color: '#600812', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 1 }}>Control</span>
+        <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.3)' }} />
+        <div style={{ width: 24, height: 2, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.18)' }} />
+        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 1 }}>Control</span>
       </div>
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
@@ -419,11 +419,11 @@ export default function Hub() {
           onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setEditingShortcuts(false) } }}
         >
           <div style={{ width: 36, height: 3, borderRadius: 99, background: 'var(--lbf-input-border)', margin: '0 auto 20px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Kurzbefehle</span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '0.5px solid var(--lbf-border-light)' }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Kurzbefehle</span>
             <button
               onClick={() => setEditingShortcuts(prev => !prev)}
-              style={{ background: 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 11, color: '#600812', cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 11, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }}
             >
               {editingShortcuts ? 'Fertig' : 'Bearbeiten'}
             </button>
@@ -436,14 +436,14 @@ export default function Hub() {
                   <div style={{ position: 'relative' }}>
                     <button
                       onClick={() => editingShortcuts ? toggleShortcut(s.id) : runShortcut(s.id, s.url)}
-                      style={{ width: 60, height: 60, borderRadius: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? '#600812' : 'rgba(96,8,18,0.07)', transition: 'background .2s, transform .1s' }}
+                      style={{ width: 60, height: 60, borderRadius: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.07)', transition: 'background .2s, transform .1s' }}
                       onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)' }}
                       onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
                     >
-                      <ShortcutIcon id={s.id} color={on ? '#fff' : '#600812'} />
+                      <ShortcutIcon id={s.id} color={on ? '#fff' : 'var(--lbf-akzent)'} />
                     </button>
                     {editingShortcuts && (
-                      <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: on ? '#600812' : 'rgba(96,8,18,0.2)', border: '2px solid var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: on ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.2)', border: '2px solid var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {on
                           ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                           : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -504,19 +504,19 @@ export default function Hub() {
 
                 {/* User info */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--warm-bg)', borderRadius: 12, marginBottom: 20 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid #600812', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: '#600812', flexShrink: 0 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid var(--lbf-akzent)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: 'var(--lbf-akzent)', flexShrink: 0 }}>
                     {initials(user?.name || user?.email)}
                   </div>
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || user?.email?.split('@')[0]}</div>
                     <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 5, background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '2px 8px', display: 'inline-block' }}>{roleLabel}</div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 5, background: 'rgba(var(--lbf-rot-rgb),0.07)', borderRadius: 99, padding: '2px 8px', display: 'inline-block' }}>{roleLabel}</div>
                   </div>
                 </div>
 
                 {/* Ausweis */}
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Ausweis</div>
-                <div style={{ background: '#600812', borderRadius: 16, padding: '22px 20px 20px', position: 'relative', overflow: 'hidden', marginBottom: 12 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Ausweis</div>
+                <div style={{ background: 'var(--lbf-akzent-grund)', borderRadius: 16, padding: '22px 20px 20px', position: 'relative', overflow: 'hidden', marginBottom: 12 }}>
                   <div style={{ position: 'absolute', top: -24, right: -24, width: 130, height: 130, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
                   <div style={{ position: 'absolute', bottom: -30, left: -10, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
@@ -537,9 +537,9 @@ export default function Hub() {
                 {/* Add to home screen */}
                 <button
                   onClick={handleInstall}
-                  style={{ width: '100%', background: 'var(--warm-bg)', border: '0.5px solid rgba(96,8,18,0.15)', borderRadius: 12, padding: '13px 16px', color: 'var(--lbf-text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
+                  style={{ width: '100%', background: 'var(--warm-bg)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 12, padding: '13px 16px', color: 'var(--lbf-text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 5v14M5 12l7-7 7 7"/>
                   </svg>
                   Zum Homebildschirm hinzufügen

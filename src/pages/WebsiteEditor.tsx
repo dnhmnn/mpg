@@ -8,11 +8,12 @@ import {
   type Btn, type Design, type GlobalSettings, type PageRec, type Section, type SectionType, type Tier,
 } from '../lib/landingSchema'
 
-const RED = '#600812'
+const RED = 'var(--lbf-akzent)'
+const RED_GRUND = 'var(--lbf-akzent-grund)'
 const lbl: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: RED, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'block', marginBottom: 4 }
-const inp: React.CSSProperties = { width: '100%', padding: '9px 11px', borderRadius: 9, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
-const btn: React.CSSProperties = { border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: RED, borderRadius: 9, padding: '7px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }
-const btnP: React.CSSProperties = { ...btn, background: RED, color: '#fff', border: 'none' }
+const inp: React.CSSProperties = { width: '100%', padding: '9px 11px', borderRadius: 9, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }
+const btn: React.CSSProperties = { border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: RED, borderRadius: 9, padding: '7px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }
+const btnP: React.CSSProperties = { ...btn, background: RED_GRUND, color: '#fff', border: 'none' }
 const card: React.CSSProperties = { background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', padding: 14, marginBottom: 10 }
 
 function Field({ label, value, onChange, textarea, placeholder, hint }: { label: string; value: string; onChange: (v: string) => void; textarea?: boolean; placeholder?: string; hint?: string }) {
@@ -169,10 +170,10 @@ export default function WebsiteEditor() {
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       {/* Header */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 200, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 200, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
         <div style={{ height: 58, display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={() => navigate('/supervisor')} style={{ border: 'none', background: 'none', color: RED, cursor: 'pointer', padding: 0, display: 'flex' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={RED} strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Website-Editor</div>
@@ -183,7 +184,7 @@ export default function WebsiteEditor() {
             {saving ? 'Speichert…' : 'Speichern'}
           </button>
         </div>
-        <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+        <div style={{ display: 'flex', gap: 0, borderTop: '0.5px solid var(--lbf-border-light)' }}>
           {([['seiten', 'Seiten'], ['design', 'Design'], ['global', 'Navigation & Recht'], ['medien', 'Medien']] as const).map(([k, l]) => (
             <button key={k} onClick={() => setTab(k)} style={{ padding: '10px 14px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 12.5, fontWeight: 700, color: tab === k ? RED : 'var(--warm-gray)', borderBottom: tab === k ? `2px solid ${RED}` : '2px solid transparent' }}>{l}</button>
           ))}
@@ -241,7 +242,7 @@ export default function WebsiteEditor() {
                   </div>
 
                   {openSec === s.id && (
-                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid rgba(96,8,18,0.1)' }}>
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                       <div style={{ display: 'flex', gap: 10, marginBottom: 10 }}>
                         <div style={{ flex: 1 }}>
                           <label style={lbl}>Hintergrund</label>
@@ -310,7 +311,7 @@ export default function WebsiteEditor() {
                             <option value="audience">Schlichte Karten mit rotem Balken</option>
                           </select>
                           {(s.items || []).map((it, ii) => (
-                            <div key={ii} style={{ background: 'rgba(96,8,18,0.03)', borderRadius: 9, padding: 10, marginBottom: 8 }}>
+                            <div key={ii} style={{ background: 'rgba(var(--lbf-rot-rgb),0.03)', borderRadius: 9, padding: 10, marginBottom: 8 }}>
                               <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                                 <input value={it.title} onChange={e => patchSection(s.id, { items: s.items!.map((x, k) => k === ii ? { ...x, title: e.target.value } : x) })} placeholder="Titel" style={{ ...inp, flex: 1, fontWeight: 700 }} />
                                 <button onClick={() => patchSection(s.id, { items: s.items!.filter((_, k) => k !== ii) })} style={{ ...btn, color: '#dc2626', padding: '5px 9px' }}>×</button>
@@ -327,7 +328,7 @@ export default function WebsiteEditor() {
                           {(s.tiers || []).map((t, ti) => {
                             const up = (patch: Partial<Tier>) => patchSection(s.id, { tiers: s.tiers!.map((x, k) => k === ti ? { ...x, ...patch } : x) })
                             return (
-                              <div key={ti} style={{ background: 'rgba(96,8,18,0.03)', borderRadius: 9, padding: 10, marginBottom: 8 }}>
+                              <div key={ti} style={{ background: 'rgba(var(--lbf-rot-rgb),0.03)', borderRadius: 9, padding: 10, marginBottom: 8 }}>
                                 <div style={{ display: 'flex', gap: 6, marginBottom: 6 }}>
                                   <input value={t.name} onChange={e => up({ name: e.target.value })} placeholder="Name" style={{ ...inp, flex: 1, fontWeight: 700 }} />
                                   <input value={t.price} onChange={e => up({ price: e.target.value })} placeholder="49" style={{ ...inp, width: 90 }} />
@@ -416,7 +417,7 @@ export default function WebsiteEditor() {
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 10 }}>
                   {media.map(m => (
-                    <div key={m.id} onClick={() => { if (picker) { picker(m.url); setPicker(null); setTab('seiten') } }} style={{ cursor: picker ? 'pointer' : 'default', border: '1px solid rgba(96,8,18,0.12)', borderRadius: 9, overflow: 'hidden', background: '#fff' }}>
+                    <div key={m.id} onClick={() => { if (picker) { picker(m.url); setPicker(null); setTab('seiten') } }} style={{ cursor: picker ? 'pointer' : 'default', border: '1px solid var(--lbf-border)', borderRadius: 9, overflow: 'hidden', background: 'var(--lbf-card)' }}>
                       <img src={m.url} alt="" style={{ width: '100%', height: 80, objectFit: 'cover', display: 'block' }} />
                       <div style={{ fontSize: 10, padding: '5px 6px', color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
                     </div>
@@ -431,7 +432,8 @@ export default function WebsiteEditor() {
         {showPreview && active && (
           <div style={{ flex: 1, minWidth: 0, position: 'sticky', top: 110 }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: RED, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Live-Vorschau</div>
-            <div style={{ border: '1px solid rgba(96,8,18,0.15)', borderRadius: 14, overflow: 'hidden', height: 'calc(100dvh - 150px)', overflowY: 'auto', background: '#fff' }}>
+            {/* Bleibt weiß: Vorschau der Website, deren Farben das Design festlegt, nicht das Thema. */}
+            <div style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 14, overflow: 'hidden', height: 'calc(100dvh - 150px)', overflowY: 'auto', background: '#fff' }}>
               <LandingRenderer page={active} global={global} preview />
             </div>
           </div>

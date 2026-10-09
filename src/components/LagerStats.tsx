@@ -104,7 +104,7 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
   }, [txns, items, months])
 
   const tooltipStyle = {
-    background: 'var(--lbf-card)', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 8,
+    background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8,
     fontSize: 12, fontFamily: 'inherit', color: 'var(--lbf-text)',
   }
 
@@ -113,14 +113,14 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
       {/* Zeitraum-Filter */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
         {([[3, '3 Monate'], [6, '6 Monate'], [12, '12 Monate']] as const).map(([m, label]) => (
-          <button key={m} onClick={() => setMonths(m)} style={{ padding: '6px 14px', borderRadius: 999, border: months === m ? '1.5px solid #600812' : '1px solid rgba(96,8,18,0.15)', background: months === m ? '#600812' : 'transparent', color: months === m ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button key={m} onClick={() => setMonths(m)} style={{ padding: '6px 14px', borderRadius: 999, border: months === m ? '1.5px solid var(--lbf-akzent)' : '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: months === m ? 'var(--lbf-akzent-grund)' : 'transparent', color: months === m ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
             {label}
           </button>
         ))}
       </div>
 
       {error ? (
-        <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 14, borderRadius: 10, fontSize: 13 }}>{error}</div>
+        <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 14, borderRadius: 10, fontSize: 13 }}>{error}</div>
       ) : txns === null ? (
         <div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Statistik…</div>
       ) : totalIn + totalOut === 0 ? (
@@ -129,18 +129,18 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
         <>
           {/* Kennzahlen */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
-            <div style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ background: 'var(--lbf-fuss)', borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: GREEN, textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Eingebucht</div>
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--lbf-text)', lineHeight: 1.15 }}>{totalIn}</div>
             </div>
-            <div style={{ background: 'rgba(250,249,247,0.8)', borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ background: 'var(--lbf-fuss)', borderRadius: 10, padding: '12px 14px' }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: RED, textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Verbraucht</div>
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--lbf-text)', lineHeight: 1.15 }}>{totalOut}</div>
             </div>
           </div>
 
           {/* Monatsverlauf Ein/Aus */}
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Buchungen pro Monat</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Buchungen pro Monat</div>
           <div style={{ display: 'flex', gap: 14, alignItems: 'center', marginBottom: 8 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--warm-gray)' }}><span style={{ width: 9, height: 9, borderRadius: '50%', background: GREEN }} /> Einbuchungen</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--warm-gray)' }}><span style={{ width: 9, height: 9, borderRadius: '50%', background: RED }} /> Ausbuchungen</span>
@@ -148,10 +148,10 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
           <div style={{ width: '100%', height: 190, marginBottom: 22 }}>
             <ResponsiveContainer>
               <BarChart data={monthly} barCategoryGap="25%" barGap={2} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
-                <CartesianGrid vertical={false} stroke="var(--lbf-border-light, rgba(96,8,18,0.08))" />
+                <CartesianGrid vertical={false} stroke="var(--lbf-border-light, rgba(var(--lbf-rot-rgb),0.08))" />
                 <XAxis dataKey="monat" tick={AXIS} axisLine={false} tickLine={false} />
                 <YAxis tick={AXIS} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(96,8,18,0.05)' }}
+                <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(var(--lbf-rot-rgb),0.05)' }}
                   formatter={(v: number, key: string) => [v, key === 'ein' ? 'Einbuchungen' : 'Ausbuchungen']} />
                 <Bar dataKey="ein" fill={GREEN} radius={[4, 4, 0, 0]} maxBarSize={26} />
                 <Bar dataKey="aus" fill={RED} radius={[4, 4, 0, 0]} maxBarSize={26} />
@@ -160,7 +160,7 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
           </div>
 
           {/* Top-Artikel nach Verbrauch */}
-          <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8 }}>Top-Artikel nach Verbrauch</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8 }}>Top-Artikel nach Verbrauch</div>
           {top.length === 0 ? (
             <div style={{ textAlign: 'center', padding: 20, color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 13 }}>Noch kein Verbrauch im Zeitraum.</div>
           ) : (
@@ -169,7 +169,7 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
                 <BarChart data={top} layout="vertical" barCategoryGap="28%" margin={{ top: 0, right: 34, left: 0, bottom: 0 }}>
                   <XAxis type="number" hide />
                   <YAxis type="category" dataKey="name" width={150} tick={{ ...AXIS, fill: 'var(--lbf-text)' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(96,8,18,0.05)' }} formatter={(v: number) => [v, 'Verbrauch']} />
+                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: 'rgba(var(--lbf-rot-rgb),0.05)' }} formatter={(v: number) => [v, 'Verbrauch']} />
                   <Bar dataKey="qty" fill={RED} radius={[0, 4, 4, 0]} maxBarSize={16}>
                     <LabelList dataKey="qty" position="right" style={{ fontSize: 11, fill: 'var(--lbf-text)', fontWeight: 700 }} />
                   </Bar>
@@ -182,7 +182,7 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
 
       {/* Zurücksetzen */}
       {txns !== null && txns.length > 0 && (
-        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid rgba(96,8,18,0.12)' }}>
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--lbf-border)' }}>
           <button onClick={resetBuchungen} disabled={resetting}
             style={{ width: '100%', padding: '11px', borderRadius: 10, border: '1px solid rgba(220,38,38,0.35)', background: 'transparent', color: '#dc2626', fontWeight: 700, fontSize: 13, cursor: resetting ? 'default' : 'pointer', fontFamily: 'inherit', opacity: resetting ? 0.6 : 1 }}>
             {resetting ? 'Wird zurückgesetzt…' : 'Buchungen zurücksetzen'}

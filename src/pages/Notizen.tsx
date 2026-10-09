@@ -187,16 +187,16 @@ export default function Notizen() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* MASTHEAD HEADER */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: '#600812', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </a>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Notizen</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
           </div>
-          <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: '#600812', color: '#fff', padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+          <button onClick={openNew} style={{ display: 'flex', alignItems: 'center', gap: 6, border: 'none', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Neu
           </button>
@@ -219,26 +219,26 @@ export default function Notizen() {
           placeholder="Notizen durchsuchen..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const, marginBottom: 10 }}
+          style={{ width: '100%', padding: '11px 14px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', color: 'var(--lbf-text)', fontSize: 15, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const, marginBottom: 10 }}
         />
 
         {/* FILTER CHIPS */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 16 }}>
           {([['alle', 'Alle'], ['meine', 'Meine'], ['geteilt', 'Geteilt']] as const).map(([key, label]) => (
-            <button key={key} onClick={() => setScope(key)} style={{ padding: '6px 14px', borderRadius: 999, border: scope === key ? '1.5px solid #600812' : '1px solid rgba(96,8,18,0.15)', background: scope === key ? '#600812' : 'transparent', color: scope === key ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button key={key} onClick={() => setScope(key)} style={{ padding: '6px 14px', borderRadius: 999, border: scope === key ? '1.5px solid var(--lbf-akzent)' : '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: scope === key ? 'var(--lbf-akzent-grund)' : 'transparent', color: scope === key ? '#fff' : 'var(--warm-gray)', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               {label}
             </button>
           ))}
-          {allTags.length > 0 && <div style={{ width: 1, background: 'rgba(96,8,18,0.12)', margin: '2px 4px' }} />}
+          {allTags.length > 0 && <div style={{ width: 1, background: 'var(--lbf-border)', margin: '2px 4px' }} />}
           {allTags.map(tag => (
-            <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)} style={{ padding: '6px 12px', borderRadius: 999, border: tagFilter === tag ? '1.5px solid #600812' : '1px solid rgba(96,8,18,0.15)', background: tagFilter === tag ? 'rgba(96,8,18,0.08)' : 'transparent', color: '#600812', fontWeight: 700, fontStyle: 'italic', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)} style={{ padding: '6px 12px', borderRadius: 999, border: tagFilter === tag ? '1.5px solid var(--lbf-akzent)' : '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: tagFilter === tag ? 'var(--lbf-border-light)' : 'transparent', color: 'var(--lbf-akzent)', fontWeight: 700, fontStyle: 'italic', fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}>
               #{tag}
             </button>
           ))}
         </div>
 
         {error && (
-          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 16, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>{error}</div>
+          <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 16, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>{error}</div>
         )}
 
         {/* NOTES */}
@@ -259,14 +259,14 @@ export default function Notizen() {
                   breakInside: 'avoid' as const, marginBottom: 12, cursor: 'pointer',
                   background: 'var(--lbf-card)', borderRadius: 12,
                   boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-                  borderLeft: `3px solid ${n.color || '#600812'}`,
+                  borderLeft: `3px solid ${n.color || 'var(--lbf-akzent)'}`,
                   overflow: 'hidden',
                 }}
               >
                 <div style={{ padding: '14px 14px 10px' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
                     {n.title && <div style={{ flex: 1, fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', lineHeight: 1.3 }}>{n.title}</div>}
-                    <button onClick={(e) => togglePin(n, e)} title={n.pinned ? 'Lösen' : 'Anpinnen'} style={{ marginLeft: 'auto', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: n.pinned ? '#600812' : 'rgba(138,122,104,0.4)', padding: 2 }}>
+                    <button onClick={(e) => togglePin(n, e)} title={n.pinned ? 'Lösen' : 'Anpinnen'} style={{ marginLeft: 'auto', flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer', color: n.pinned ? 'var(--lbf-akzent)' : 'rgba(138,122,104,0.4)', padding: 2 }}>
                       <svg width="15" height="15" viewBox="0 0 24 24" fill={n.pinned ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 17v5"/><path d="M9 3h6l1 7 3 2v2H5v-2l3-2 1-7z"/></svg>
                     </button>
                   </div>
@@ -277,11 +277,11 @@ export default function Notizen() {
                   )}
                   {(n.tags || []).length > 0 && (
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginTop: 10 }}>
-                      {n.tags.map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: '#600812', fontSize: 12 }}>#{t}</span>)}
+                      {n.tags.map(t => <span key={t} style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-akzent)', fontSize: 12 }}>#{t}</span>)}
                     </div>
                   )}
                 </div>
-                <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '7px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{relTime(n.updated)}</span>
                   <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
                     {n.shared ? (
@@ -308,7 +308,7 @@ export default function Notizen() {
         <div onClick={() => setEditorOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(26,14,8,0.5)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: 'var(--lbf-card)', borderRadius: 16, width: '100%', maxWidth: 560, maxHeight: '90dvh', display: 'flex', flexDirection: 'column' as const, boxShadow: '0 8px 40px rgba(0,0,0,0.25)', overflow: 'hidden' }}>
             <div style={{ padding: '18px 20px 0', overflowY: 'auto' as const, flex: 1 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 14 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 14 }}>
                 {editingId ? 'Notiz bearbeiten' : 'Neue Notiz'}
               </div>
               <input
@@ -326,13 +326,13 @@ export default function Notizen() {
                 style={{ width: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 15, lineHeight: 1.6, color: 'var(--lbf-text)', fontFamily: 'inherit', resize: 'vertical' as const, minHeight: 180, boxSizing: 'border-box' as const }}
               />
               <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6, margin: '10px 0 14px' }}>
-                <label style={{ fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Tags (mit Komma trennen)</label>
+                <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Tags (mit Komma trennen)</label>
                 <input
                   type="text"
                   placeholder="z.B. RTW, Wartung, Ideen"
                   value={form.tags}
                   onChange={e => setForm({ ...form, tags: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'var(--lbf-input-bg, transparent)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-input-bg, transparent)', color: 'var(--lbf-text)', fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' as const }}
                 />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' as const, marginBottom: 16 }}>
@@ -342,22 +342,22 @@ export default function Notizen() {
                   ))}
                 </div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>
-                  <input type="checkbox" checked={form.pinned} onChange={e => setForm({ ...form, pinned: e.target.checked })} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                  <input type="checkbox" checked={form.pinned} onChange={e => setForm({ ...form, pinned: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                   Anpinnen
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>
-                  <input type="checkbox" checked={form.shared} onChange={e => setForm({ ...form, shared: e.target.checked })} style={{ width: 16, height: 16, accentColor: '#600812' }} />
+                  <input type="checkbox" checked={form.shared} onChange={e => setForm({ ...form, shared: e.target.checked })} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                   Mit Organisation teilen
                 </label>
               </div>
             </div>
-            <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', background: 'rgba(250,249,247,0.8)', padding: '12px 20px', display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', background: 'var(--lbf-fuss)', padding: '12px 20px', display: 'flex', gap: 8, alignItems: 'center' }}>
               {editingId && (user?.id === notes.find(n => n.id === editingId)?.user_id || user?.supervisor) && (
                 <button onClick={deleteNote} style={{ border: '1px solid rgba(220,38,38,0.3)', background: 'transparent', color: '#dc2626', borderRadius: 10, padding: '9px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Löschen</button>
               )}
               <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-                <button onClick={() => setEditorOpen(false)} style={{ border: '1px solid rgba(96,8,18,0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-                <button onClick={saveNote} disabled={saving} style={{ border: 'none', background: '#600812', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>
+                <button onClick={() => setEditorOpen(false)} style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: 'var(--warm-gray)', borderRadius: 10, padding: '9px 16px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+                <button onClick={saveNote} disabled={saving} style={{ border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', borderRadius: 10, padding: '9px 18px', fontWeight: 700, fontSize: 13, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1, fontFamily: 'inherit' }}>
                   {saving ? 'Speichern…' : 'Speichern'}
                 </button>
               </div>

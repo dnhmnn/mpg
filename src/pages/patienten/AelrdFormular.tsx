@@ -21,10 +21,11 @@ type Props = {
   gesperrt?: boolean
 }
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.12)'
+const LINIE = 'var(--lbf-border)'
 
 function istGewaehlt(wert: unknown, option: string): boolean {
   if (Array.isArray(wert)) return wert.map(String).includes(option)
@@ -59,15 +60,15 @@ function Kaestchen({ text, an, rund, onClick, gesperrt }: {
       style={{
         display: 'inline-flex', alignItems: 'center', gap: 5,
         padding: '3px 8px 3px 5px', margin: '0 4px 4px 0',
-        background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
-        border: `0.5px solid ${an ? ROT : LINIE}`, borderRadius: rund ? 14 : 6,
+        background: an ? ROT_GRUND : 'var(--lbf-card)', color: an ? '#fff' : TEXT,
+        border: `0.5px solid ${an ? ROT_GRUND : LINIE}`, borderRadius: rund ? 14 : 6,
         fontFamily: 'inherit', fontSize: 12, fontWeight: an ? 700 : 400,
         cursor: gesperrt ? 'default' : 'pointer', textAlign: 'left', lineHeight: 1.25,
       }}
     >
       <span aria-hidden style={{
         width: 11, height: 11, flexShrink: 0, borderRadius: rund ? 6 : 2,
-        border: `1.5px solid ${an ? '#fff' : 'rgba(96,8,18,0.35)'}`,
+        border: `1.5px solid ${an ? '#fff' : 'rgba(var(--lbf-rot-rgb),0.35)'}`,
         background: an ? '#fff' : 'transparent',
       }} />
       {text}
@@ -126,8 +127,8 @@ function FeldEingabe({ feld, werte, setzen, gesperrt }: {
                 onClick={() => setzen(feld.id, an ? '' : n)}
                 style={{
                   minWidth: 30, padding: '5px 0',
-                  background: an ? ROT : '#fff', color: an ? '#fff' : TEXT,
-                  border: `0.5px solid ${an ? ROT : LINIE}`, borderRadius: 6,
+                  background: an ? ROT_GRUND : 'var(--lbf-card)', color: an ? '#fff' : TEXT,
+                  border: `0.5px solid ${an ? ROT_GRUND : LINIE}`, borderRadius: 6,
                   fontFamily: 'inherit', fontSize: 13, fontWeight: an ? 800 : 400,
                   cursor: gesperrt ? 'default' : 'pointer',
                 }}>
@@ -142,7 +143,7 @@ function FeldEingabe({ feld, werte, setzen, gesperrt }: {
 
   const typ = feld.typ === 'zahl' ? 'number' : feld.typ === 'datum' ? 'date' : feld.typ === 'zeit' ? 'time' : 'text'
   const stil = {
-    width: '100%', padding: '6px 8px', background: '#fff',
+    width: '100%', padding: '6px 8px', background: 'var(--lbf-input-bg)',
     border: `0.5px solid ${LINIE}`, borderRadius: 6,
     fontFamily: 'inherit', fontSize: 14, color: TEXT, boxSizing: 'border-box' as const,
   }
@@ -196,7 +197,7 @@ function MedikationTabelle({ werte, setzen, gesperrt }: {
             {zeilen.map((z, i) => (
               <tr key={i}>
                 {MED_SPALTEN.map((s) => (
-                  <td key={s.id} style={{ padding: '2px 3px', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+                  <td key={s.id} style={{ padding: '2px 3px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
                     <input type={s.typ === 'zeit' ? 'time' : 'text'} disabled={gesperrt}
                       value={z[s.id] === undefined || z[s.id] === null ? '' : String(z[s.id])}
                       onChange={(e) => setzen('medikation', zeilen.map((r, k) => (k === i ? { ...r, [s.id]: e.target.value } : r)))}
@@ -219,7 +220,7 @@ function MedikationTabelle({ werte, setzen, gesperrt }: {
       </div>
       {gesperrt ? null : (
         <button type="button" onClick={() => setzen('medikation', [...zeilen, {}])}
-          style={{ marginTop: 6, padding: '5px 12px', background: '#fff', border: `0.5px solid ${ROT}`, borderRadius: 6, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
+          style={{ marginTop: 6, padding: '5px 12px', background: 'var(--lbf-card)', border: `0.5px solid ${ROT}`, borderRadius: 6, color: ROT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
           Medikament ergänzen
         </button>
       )}
@@ -240,7 +241,7 @@ function AbschnittBlock({ abschnitt, werte, setzen, gesperrt }: {
   return (
     <section
       id={`aelrd-${abschnitt.id}`}
-      style={{ background: '#fff', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'hidden', marginBottom: 10 }}
+      style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ROT}`, overflow: 'hidden', marginBottom: 10 }}
     >
       <h2 style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: ROT, padding: '9px 12px 7px', margin: 0, borderBottom: `0.5px solid ${LINIE}` }}>
         {abschnitt.titel}

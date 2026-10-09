@@ -18,8 +18,8 @@ interface Props {
   onRefresh: () => void
 }
 
-const CH: React.CSSProperties = { background: '#fef3c7', borderColor: '#d97706', borderWidth: 2 }
-const CH_TF: React.CSSProperties = { background: '#f0fdf4', borderColor: '#16a34a', borderWidth: 2 }
+const CH: React.CSSProperties = { background: 'var(--lbf-warn-grund-2)', borderColor: '#d97706', borderWidth: 2 }
+const CH_TF: React.CSSProperties = { background: 'var(--lbf-ok-grund)', borderColor: '#16a34a', borderWidth: 2 }
 const pil: React.CSSProperties = {
   display: 'inline-flex', alignItems: 'center', border: '0.5px solid var(--border-medium)',
   borderRadius: 999, padding: '.15rem .6rem', background: 'var(--bg-subtle)',
@@ -213,14 +213,14 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
           </button>
           <h1 style={{ flex: 1, textAlign: 'center', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', margin: 0 }}>Protokoll</h1>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0, minWidth: 32 }}>
-            {openRQ > 0 && <span style={{ background: '#fcd34d', borderRadius: 999, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#92400e' }}>!</span>}
+            {openRQ > 0 && <span style={{ background: '#fcd34d', borderRadius: 999, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#92400e' /* bleibt hart: steht auf festem Gelb */ }}>!</span>}
           </div>
         </div>
       </header>
 
       {/* Answered RQ banner */}
       {stellungnahmen.length > 0 && (
-        <div style={{ background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', padding: '10px 16px', textAlign: 'center', fontSize: 14, color: '#166534', fontWeight: 600 }}>
+        <div style={{ background: 'var(--lbf-ok-grund)', borderBottom: '1px solid #bbf7d0', padding: '10px 16px', textAlign: 'center', fontSize: 14, color: 'var(--lbf-ok-text)', fontWeight: 600 }}>
           {stellungnahmen.length} Stellungnahme{stellungnahmen.length !== 1 ? 'n' : ''} vom Teamleader eingegangen ↓
         </div>
       )}
@@ -230,12 +230,12 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         {/* Change legend */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginBottom: '0.75rem', fontSize: 13, color: 'var(--text-secondary)' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span style={{ display: 'inline-block', width: 16, height: 16, background: '#fffbeb', border: '1px solid #f59e0b', borderRadius: 4, flexShrink: 0 }} />
+            <span style={{ display: 'inline-block', width: 16, height: 16, background: 'var(--lbf-warn-grund)', border: '1px solid #f59e0b', borderRadius: 4, flexShrink: 0 }} />
             Geändert durch Admin
           </span>
           {persistentTFChanged.size > 0 && (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ display: 'inline-block', width: 16, height: 16, background: '#f0fdf4', border: '1px solid #16a34a', borderRadius: 4, flexShrink: 0 }} />
+              <span style={{ display: 'inline-block', width: 16, height: 16, background: 'var(--lbf-ok-grund)', border: '1px solid #16a34a', borderRadius: 4, flexShrink: 0 }} />
               Nachbearbeitung durch Teamführer
             </span>
           )}
@@ -810,7 +810,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
           )}
           {realRQs.map((rq, i) => (
             <div key={rq.id} style={{
-              background: rq.status === 'beantwortet' ? '#f0fdf4' : '#fffbeb',
+              background: rq.status === 'beantwortet' ? 'var(--lbf-ok-grund)' : 'var(--lbf-warn-grund)',
               border: `1px solid ${rq.status === 'beantwortet' ? '#bbf7d0' : '#fcd34d'}`,
               borderRadius: 10, padding: 12, marginBottom: 12,
             }}>
@@ -819,8 +819,8 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
                 <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{new Date(rq.created).toLocaleString('de-DE')}</span>
                 <span style={{
                   fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 999,
-                  background: rq.status === 'beantwortet' ? '#dcfce7' : '#fef9c3',
-                  color: rq.status === 'beantwortet' ? '#166534' : '#92400e',
+                  background: rq.status === 'beantwortet' ? 'var(--lbf-ok-grund-2)' : 'var(--lbf-warn-grund-4)',
+                  color: rq.status === 'beantwortet' ? 'var(--lbf-ok-text)' : 'var(--lbf-warn-text)',
                 }}>
                   {rq.status === 'beantwortet' ? 'Beantwortet' : 'Offen'}
                 </span>
@@ -832,10 +832,10 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
               {(() => {
                 const sn = stellungnahmen.find(s => s.rueckfrage_id === rq.id)
                 return sn ? (
-                  <div style={{ fontSize: 14, background: '#dcfce7', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
+                  <div style={{ fontSize: 14, background: 'var(--lbf-ok-grund-2)', borderRadius: 6, padding: 8, border: '1px solid #bbf7d0' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: '#166534' }}>Stellungnahme des Teamleiters:</span>
-                      <span style={{ fontSize: 11, color: '#166534' }}>{new Date(sn.created).toLocaleString('de-DE')}</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-ok-text)' }}>Stellungnahme des Teamleiters:</span>
+                      <span style={{ fontSize: 11, color: 'var(--lbf-ok-text)' }}>{new Date(sn.created).toLocaleString('de-DE')}</span>
                     </div>
                     {sn.text}
                   </div>

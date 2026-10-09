@@ -306,7 +306,7 @@ export default function Unitas() {
       {/* ── Header — masthead ── */}
       <div style={{
         background: 'var(--lbf-card)',
-        borderBottom: '0.5px solid rgba(96,8,18,0.15)',
+        borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)',
         position: 'sticky', top: 0, zIndex: 100,
         paddingTop: 'env(safe-area-inset-top)',
         paddingLeft: 'max(20px, env(safe-area-inset-left))',
@@ -328,11 +328,11 @@ export default function Unitas() {
           </div>
           {/* Right: avatar */}
           <button onClick={() => setTab('konto')} title={user?.name || ''} style={{
-            width: 34, height: 34, borderRadius: '50%', border: '1.5px solid #600812', cursor: 'pointer',
+            width: 34, height: 34, borderRadius: '50%', border: '1.5px solid var(--lbf-akzent)', cursor: 'pointer',
             background: 'var(--lbf-card)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-            fontWeight: 700, fontSize: 12, color: '#600812', letterSpacing: '0.03em', flexShrink: 0,
+            fontWeight: 700, fontSize: 12, color: 'var(--lbf-akzent)', letterSpacing: '0.03em', flexShrink: 0,
           }}>{initials(user?.name)}</button>
         </div>
       </div>
@@ -349,7 +349,7 @@ export default function Unitas() {
                 {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
               <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                Servus, <span style={{ color: '#600812', fontStyle: 'italic' }}>{firstName}</span>
+                Servus, <span style={{ color: 'var(--lbf-akzent)', fontStyle: 'italic' }}>{firstName}</span>
               </div>
             </div>
 
@@ -362,8 +362,8 @@ export default function Unitas() {
                     border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                     boxShadow: 'var(--lbf-shadow)',
                   }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Protokolle</div>
-                    <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Protokolle</div>
+                    <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>
                       {myPatients.length + myFreigegebenPatients.length}
                     </div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>
@@ -377,8 +377,8 @@ export default function Unitas() {
                     border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                     boxShadow: 'var(--lbf-shadow)',
                   }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Vorgänge</div>
-                    <div style={{ fontSize: 48, fontWeight: 800, color: '#600812', lineHeight: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Vorgänge</div>
+                    <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>
                       {openOutputs}
                     </div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>offen</div>
@@ -394,14 +394,14 @@ export default function Unitas() {
               </div>
             ) : (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2 }}>Neuigkeiten</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2 }}>Neuigkeiten</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: -12 }}>
                   {neuigkeiten.map(n => {
                     const anhangUrl = n.anhang ? `https://api.responda.systems/api/files/${n.collectionId}/${n.id}/${n.anhang}` : null
                     return (
-                      <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                      <div key={n.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-akzent)' }}>
                         {n.gepinnt && (
-                          <div style={{ background: '#600812', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <div style={{ background: 'var(--lbf-akzent-grund)', padding: '4px 14px', display: 'flex', alignItems: 'center', gap: 6 }}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>
                             <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Angepinnt</span>
                           </div>
@@ -440,7 +440,7 @@ export default function Unitas() {
             {/* In Bearbeitung */}
             {myPatients.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>In Bearbeitung</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>In Bearbeitung</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {[...myPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                     const m = p.payload?.mannschaft || {}
@@ -455,12 +455,12 @@ export default function Unitas() {
                     const canEdit = isTF && restMs > 0
                     const openRQs = offeneRueckfragen(p.payload)
                     return (
-                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid #600812' }}>
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid var(--lbf-akzent)' }}>
                         <div style={{ padding: '13px 16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
                             {openRQs.length > 0 && (
-                              <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
+                              <span style={{ background: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
                                 {openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}
                               </span>
                             )}
@@ -472,15 +472,15 @@ export default function Unitas() {
                           {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
                         </div>
                         {openRQs.length > 0 && (
-                          <div style={{ background: '#fffbeb', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
+                          <div style={{ background: 'var(--lbf-warn-grund)', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
                             {openRQs.map((rq: any) => (
-                              <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                              <div key={rq.id} style={{ fontSize: 13, color: 'var(--lbf-warn-text-3)', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>Rückfrage: </span>{rq.frage}
                               </div>
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'rgba(250,249,247,0.8)', borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid var(--lbf-border-light)' }}>
                           {openRQs.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
@@ -491,12 +491,12 @@ export default function Unitas() {
                               <button onClick={async () => { await pb.collection('patients').update(p.id, { status: 'freigegeben' }); showMsg('Protokoll freigegeben', 'success'); loadPatients() }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                                 Freigeben
                               </button>
-                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
+                              <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
                             </>
                           )}
-                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Protokoll</button>
+                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Protokoll</button>
                           {!canEdit && (
-                            <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                            <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                           )}
                         </div>
                       </div>
@@ -509,7 +509,7 @@ export default function Unitas() {
             {/* Freigegeben */}
             {myFreigegebenPatients.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Freigegeben</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Freigegeben</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {[...myFreigegebenPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                     const m = p.payload?.mannschaft || {}
@@ -525,9 +525,9 @@ export default function Unitas() {
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
                             <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                              {openRQs.length > 0 && <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
-                              {changedCount > 0 && <span style={{ background: '#fef9eb', color: '#b45309', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCount} Änd.</span>}
-                              {!openRQs.length && !changedCount && <span style={{ background: '#f0fdf4', color: '#166534', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Freigegeben</span>}
+                              {openRQs.length > 0 && <span style={{ background: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
+                              {changedCount > 0 && <span style={{ background: '#fef9eb', color: '#b45309' /* Paar bleibt hart: #fef9eb hat kein Token */, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCount} Änd.</span>}
+                              {!openRQs.length && !changedCount && <span style={{ background: 'var(--lbf-ok-grund)', color: 'var(--lbf-ok-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Freigegeben</span>}
                             </div>
                           </div>
                           <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: crew ? 2 : 0 }}>
@@ -536,31 +536,31 @@ export default function Unitas() {
                           {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
                         </div>
                         {openRQs.length > 0 && (
-                          <div style={{ background: '#fffbeb', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
+                          <div style={{ background: 'var(--lbf-warn-grund)', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
                             {openRQs.map((rq: any) => (
-                              <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                              <div key={rq.id} style={{ fontSize: 13, color: 'var(--lbf-warn-text-3)', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>Rückfrage: </span>{rq.frage}
                               </div>
                             ))}
                           </div>
                         )}
                         {sns.filter((s: any) => allRQs.some((rq: any) => rq.id === s.rueckfrage_id)).length > 0 && (
-                          <div style={{ background: '#f0fdf4', borderTop: '0.5px solid #bbf7d0', borderBottom: '0.5px solid #bbf7d0', padding: '9px 16px' }}>
+                          <div style={{ background: 'var(--lbf-ok-grund)', borderTop: '0.5px solid #bbf7d0', borderBottom: '0.5px solid #bbf7d0', padding: '9px 16px' }}>
                             {sns.map((s: any) => (
-                              <div key={s.id} style={{ fontSize: 13, color: '#15803d', lineHeight: 1.45 }}>
+                              <div key={s.id} style={{ fontSize: 13, color: 'var(--lbf-ok-text-2)', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>Stellungnahme: </span>
                                 <span style={{ color: 'var(--text)' }}>{s.text.length > 80 ? s.text.slice(0, 80) + '…' : s.text}</span>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'rgba(250,249,247,0.8)', borderTop: '0.5px solid rgba(22,163,74,0.15)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid rgba(22,163,74,0.15)' }}>
                           {openRQs.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
                             </button>
                           )}
-                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                         </div>
                       </div>
                     )
@@ -572,7 +572,7 @@ export default function Unitas() {
             {/* Archiviert */}
             {myArchivedPatients.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Archiviert</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Archiviert</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[...myArchivedPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                     const m = p.payload?.mannschaft || {}
@@ -588,8 +588,8 @@ export default function Unitas() {
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
                             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-                              {openRQsA.length > 0 && <span style={{ background: '#fef3c7', color: '#92400e', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
-                              {changedCountA > 0 && <span style={{ background: '#fef9eb', color: '#b45309', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCountA} Änd.</span>}
+                              {openRQsA.length > 0 && <span style={{ background: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
+                              {changedCountA > 0 && <span style={{ background: '#fef9eb', color: '#b45309' /* Paar bleibt hart: #fef9eb hat kein Token */, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCountA} Änd.</span>}
                               {!openRQsA.length && !changedCountA && <span style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Archiviert</span>}
                             </div>
                           </div>
@@ -599,31 +599,31 @@ export default function Unitas() {
                           {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
                         </div>
                         {openRQsA.length > 0 && (
-                          <div style={{ background: '#fffbeb', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
+                          <div style={{ background: 'var(--lbf-warn-grund)', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
                             {openRQsA.map((rq: any) => (
-                              <div key={rq.id} style={{ fontSize: 13, color: '#78350f', lineHeight: 1.45 }}>
+                              <div key={rq.id} style={{ fontSize: 13, color: 'var(--lbf-warn-text-3)', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>Rückfrage: </span>{rq.frage}
                               </div>
                             ))}
                           </div>
                         )}
                         {snsA.length > 0 && (
-                          <div style={{ background: '#f0fdf4', borderTop: '0.5px solid #bbf7d0', borderBottom: '0.5px solid #bbf7d0', padding: '9px 16px' }}>
+                          <div style={{ background: 'var(--lbf-ok-grund)', borderTop: '0.5px solid #bbf7d0', borderBottom: '0.5px solid #bbf7d0', padding: '9px 16px' }}>
                             {snsA.map((s: any) => (
-                              <div key={s.id} style={{ fontSize: 13, color: '#15803d', lineHeight: 1.45 }}>
+                              <div key={s.id} style={{ fontSize: 13, color: 'var(--lbf-ok-text-2)', lineHeight: 1.45 }}>
                                 <span style={{ fontWeight: 600 }}>Stellungnahme: </span>
                                 <span style={{ color: 'var(--text)' }}>{s.text.length > 80 ? s.text.slice(0, 80) + '…' : s.text}</span>
                               </div>
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'rgba(250,249,247,0.8)', borderTop: '0.5px solid rgba(139,113,90,0.15)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid rgba(139,113,90,0.15)' }}>
                           {openRQsA.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
                             </button>
                           )}
-                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: '#600812', border: '1px solid rgba(96,8,18,0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
+                          <button onClick={() => setProtokollModal(p)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Ansehen</button>
                         </div>
                       </div>
                     )
@@ -638,7 +638,7 @@ export default function Unitas() {
         {tab === 'vorgaenge' && (
           <div>
             {/* Produktausgaben */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 16 }}>Produktausgaben</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 16 }}>Produktausgaben</div>
             {myOutputs.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Produktausgaben vorhanden</div>
             ) : (
@@ -647,13 +647,13 @@ export default function Unitas() {
                   const p = output.payload
                   const deDate = p.datum ? p.datum.split('-').reverse().join('.') : '–'
                   const statusCfg: Record<string, { label: string; bg: string; color: string; border: string }> = {
-                    offen:     { label: 'Offen',     bg: '#fffbeb', color: '#92400e', border: '#fde68a' },
-                    erledigt:  { label: 'Erledigt',  bg: '#f0fdf4', color: '#166534', border: '#bbf7d0' },
+                    offen:     { label: 'Offen',     bg: 'var(--lbf-warn-grund)', color: 'var(--lbf-warn-text)', border: '#fde68a' },
+                    erledigt:  { label: 'Erledigt',  bg: 'var(--lbf-ok-grund)', color: 'var(--lbf-ok-text)', border: '#bbf7d0' },
                     ignoriert: { label: 'Ignoriert', bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)' },
                   }
                   const cfg = statusCfg[output.status] ?? statusCfg['ignoriert']
                   return (
-                    <div key={output.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid #600812' }}>
+                    <div key={output.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-akzent)' }}>
                       <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
@@ -678,15 +678,15 @@ export default function Unitas() {
             )}
 
             {/* Defektmeldungen */}
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: 28, marginBottom: 16 }}>Defektmeldungen</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: 28, marginBottom: 16 }}>Defektmeldungen</div>
             {myReports.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Defektmeldungen vorhanden</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {myReports.map(report => {
                   const statusCfg: Record<string, { label: string; bg: string; color: string; border: string; borderLeft: string }> = {
-                    pending:   { label: 'Ausstehend', bg: '#fffbeb', color: '#92400e', border: '#fde68a', borderLeft: '#d97706' },
-                    confirmed: { label: 'Bestätigt',  bg: '#fef2f2', color: '#991b1b', border: '#fecaca', borderLeft: '#dc2626' },
+                    pending:   { label: 'Ausstehend', bg: 'var(--lbf-warn-grund)', color: 'var(--lbf-warn-text)', border: '#fde68a', borderLeft: '#d97706' },
+                    confirmed: { label: 'Bestätigt',  bg: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text)', border: '#fecaca', borderLeft: '#dc2626' },
                     rejected:  { label: 'Abgelehnt',  bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)', borderLeft: 'rgba(139,113,90,0.35)' },
                   }
                   const cfg = statusCfg[report.status] ?? statusCfg['rejected']
@@ -722,10 +722,10 @@ export default function Unitas() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {/* Profile */}
             <div style={{ background: 'var(--lbf-card)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)' }}>
-              <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Profil</div>
+              <div style={{ padding: '22px 20px 18px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Profil</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid #600812', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: '#600812', flexShrink: 0, background: 'rgba(96,8,18,0.04)' }}>
+                  <div style={{ width: 52, height: 52, borderRadius: '50%', border: '2px solid var(--lbf-akzent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 20, color: 'var(--lbf-akzent)', flexShrink: 0, background: 'rgba(var(--lbf-rot-rgb),0.04)' }}>
                     {initials(user?.name)}
                   </div>
                   <div>
@@ -736,25 +736,25 @@ export default function Unitas() {
               </div>
               <div style={{ padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Kontakt-Email</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Kontakt-Email</label>
                   <div style={{ display: 'flex', gap: 8 }}>
                     <input type="email" value={kontaktEmail} onChange={e => setKontaktEmail(e.target.value)} placeholder="deine@email.de"
                       style={{ flex: 1, padding: '10px 14px', border: '1px solid rgba(0,0,0,0.1)', borderRadius: 8, fontSize: 14, fontFamily: 'inherit', outline: 'none', background: 'var(--bg-input)', color: 'var(--text)' }} />
                     <button onClick={saveKontaktEmail} disabled={savingEmail}
-                      style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: savingEmail ? 0.6 : 1 }}>
+                      style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: savingEmail ? 0.6 : 1 }}>
                       Speichern
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Passwort</label>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 8 }}>Passwort</label>
                   <button onClick={sendPasswordReset} disabled={sendingReset}
                     style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid rgba(0,0,0,0.1)', background: 'var(--lbf-card)', color: 'var(--text)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', opacity: sendingReset ? 0.6 : 1 }}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     Passwort-Reset Email senden
                   </button>
                 </div>
-                <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', color: '#b91c1c', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>
+                <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', borderRadius: 8, border: '1px solid #fecaca', background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text-2)', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit', marginTop: 4 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
                   Abmelden
                 </button>
@@ -763,8 +763,8 @@ export default function Unitas() {
 
             {/* Theme */}
             <div style={{ background: 'var(--lbf-card)', borderRadius: 12, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)' }}>
-              <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(96,8,18,0.1)' }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Darstellung</div>
+              <div style={{ padding: '16px 20px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Darstellung</div>
               </div>
               <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {([
@@ -779,16 +779,16 @@ export default function Unitas() {
                 ] as { value: ThemeMode; label: string; icon: React.ReactNode; desc: string }[]).map(opt => (
                   <button key={opt.value} onClick={() => { setTheme(opt.value); setThemeMode(opt.value) }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 12px', borderRadius: 10,
-                      border: themeMode === opt.value ? '1.5px solid #600812' : '1px solid rgba(0,0,0,0.08)',
-                      background: themeMode === opt.value ? 'rgba(96,8,18,0.04)' : 'transparent',
+                      border: themeMode === opt.value ? '1.5px solid var(--lbf-akzent)' : '1px solid rgba(0,0,0,0.08)',
+                      background: themeMode === opt.value ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'transparent',
                       cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit', width: '100%' }}>
-                    <span style={{ lineHeight: 1, color: themeMode === opt.value ? '#600812' : 'var(--warm-gray)', flexShrink: 0 }}>{opt.icon}</span>
+                    <span style={{ lineHeight: 1, color: themeMode === opt.value ? 'var(--lbf-akzent)' : 'var(--warm-gray)', flexShrink: 0 }}>{opt.icon}</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{opt.label}</div>
                       <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>{opt.desc}</div>
                     </div>
                     {themeMode === opt.value && (
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                     )}
                   </button>
                 ))}
@@ -802,24 +802,24 @@ export default function Unitas() {
       <div style={{
         position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100,
         background: 'var(--lbf-card)',
-        borderTop: '0.5px solid rgba(96,8,18,0.12)',
+        borderTop: '0.5px solid var(--lbf-border)',
         display: 'flex', alignItems: 'stretch',
         paddingBottom: 'env(safe-area-inset-bottom)',
       }}>
         {([
           { id: 'uebersicht', label: 'Übersicht', badge: 0,
-            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg> },
           { id: 'protokolle', label: 'Protokolle', badge: protokolleBadge,
-            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
           ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge,
-            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
           { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs + pendingReportsCount,
-            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" fill={a ? '#600812' : 'none'} stroke={a ? '#600812' : 'var(--warm-gray)'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
+            icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
           ...(hasMPG ? [{ id: 'hub', label: 'Hub', badge: 0,
             icon: (a: boolean) => (
               <div style={{
                 width: 22, height: 22, borderRadius: '50%',
-                background: a ? '#600812' : 'transparent',
+                background: a ? 'var(--lbf-akzent-grund)' : 'transparent',
                 border: a ? 'none' : '1.5px solid var(--warm-gray)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 8, fontWeight: 700, color: a ? '#fff' : 'var(--warm-gray)', letterSpacing: '0.03em',
@@ -836,8 +836,8 @@ export default function Unitas() {
                 flex: 1, padding: '0 4px 8px', border: 'none', background: 'none',
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
                 cursor: 'pointer', fontFamily: 'inherit', position: 'relative',
-                color: active ? '#600812' : 'var(--warm-gray)',
-                borderTop: active ? '2px solid #600812' : '2px solid transparent',
+                color: active ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
+                borderTop: active ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
                 paddingTop: 10,
               }}
             >
@@ -845,11 +845,11 @@ export default function Unitas() {
               {t.badge > 0 && (
                 <span style={{
                   position: 'absolute', top: 6, right: 'calc(50% - 16px)',
-                  background: '#600812', color: '#fff',
+                  background: 'var(--lbf-akzent-grund)', color: '#fff',
                   borderRadius: 999, padding: '0 5px', fontSize: 9, fontWeight: 700, minWidth: 14, textAlign: 'center', lineHeight: '15px',
                 }}>{t.badge}</span>
               )}
-              <span style={{ fontSize: 9, fontWeight: 700, lineHeight: 1, color: active ? '#600812' : 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.label}</span>
+              <span style={{ fontSize: 9, fontWeight: 700, lineHeight: 1, color: active ? 'var(--lbf-akzent)' : 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.label}</span>
             </button>
           )
         })}
@@ -860,9 +860,9 @@ export default function Unitas() {
         <div style={{
           position: 'fixed', bottom: 'calc(80px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999,
           padding: '12px 18px', borderRadius: '10px', fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap',
-          background: message.type === 'success' ? '#f0fdf4' : '#fef2f2',
+          background: message.type === 'success' ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)',
           border: `1px solid ${message.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
-          color: message.type === 'success' ? '#166534' : '#b91c1c',
+          color: message.type === 'success' ? 'var(--lbf-ok-text)' : 'var(--lbf-fehler-text-2)',
           animation: 'slideInUp 0.25s cubic-bezier(0.34,1.56,0.64,1) both',
           boxShadow: '0 4px 16px rgba(0,0,0,0.12)'
         }}>

@@ -27,7 +27,7 @@ const C = {
   cr:"#7B0D1E", crDk:"#520910", crMd:"#9E1426",
   crPale:"#FEF1F4", crBdr:"#F0D0D6",
   gold:"#B8895A", goldPale:"#F5ECE0",
-  bg:"#F2EFE9", surf:"#FFFFFF", surfAlt:"#FAF8F4",
+  bg:"#F2EFE9", surf:"#FFFFFF", surfAlt:"#FAF8F4", // bleibt hart: geschlossene Hell-Palette dieser (nicht gerouteten) Konzeptseite, Schrift tx ist ebenso hart
   tx:"#1B1714", txM:"#7A726A", txL:"#B5AFA8",
   bdr:"#E6E0D8", bdrL:"#EEE9E1",
   ok:"#2A7A50", okBg:"#EEF8F3",

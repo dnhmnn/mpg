@@ -8,7 +8,7 @@ interface NewsItem {
   label: string
   sub: string
   url: string
-  color: string
+  color: string // bleibt Hex: wird mit Alpha-Anhang zusammengesetzt (item.color + '16')
 }
 
 interface WidgetsProps {
@@ -154,7 +154,7 @@ export default function Widgets({ user }: WidgetsProps) {
   return (
     <div>
       <div style={{
-        fontSize: 10, fontWeight: 700, color: '#600812',
+        fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)',
         textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12,
       }}>
         Neuigkeiten
@@ -190,7 +190,7 @@ export default function Widgets({ user }: WidgetsProps) {
                 {item.sub}
               </div>
             </div>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--lbf-rot-rgb),0.25)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
               <path d="M9 18l6-6-6-6"/>
             </svg>
           </div>

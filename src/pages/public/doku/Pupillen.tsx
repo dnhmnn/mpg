@@ -15,10 +15,12 @@ import {
 } from '../../../katalog/pupillen'
 import type { Werte } from './DokuFeld'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
   werte: Werte
@@ -73,7 +75,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
 
   return (
     <div style={{ marginBottom: 10 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: fehlt ? '#b91c1c' : GRAU, marginBottom: 4 }}>
+      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: fehlt ? 'var(--lbf-fehler-text-2)' : GRAU, marginBottom: 4 }}>
         Pupillen
         {stand ? <span style={{ marginLeft: 3 }}>*</span> : null}
       </div>
@@ -81,7 +83,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
         type="button" onClick={oeffnen}
         style={{
           display: 'flex', alignItems: 'center', gap: 10, width: '100%',
-          padding: '10px 12px', background: fehlt ? '#fef2f2' : '#fff',
+          padding: '10px 12px', background: fehlt ? 'var(--lbf-fehler-grund)' : 'var(--lbf-card)',
           border: `0.5px solid ${fehlt ? '#b91c1c' : LINIE}`,
           borderRadius: 10, fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
         }}
@@ -122,7 +124,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
           role="dialog" aria-label="Pupillenstatus"
           style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column' }}
         >
-          <header style={{ flexShrink: 0, background: '#fff', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <header style={{ flexShrink: 0, background: 'var(--lbf-card)', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Pupillenstatus</div>
               <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>
@@ -142,7 +144,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
               type="button" onClick={() => setGekoppelt((g) => !g)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 9, width: '100%', marginBottom: 12,
-                padding: '9px 11px', background: gekoppelt ? 'rgba(96,8,18,0.05)' : '#fff',
+                padding: '9px 11px', background: gekoppelt ? 'var(--lbf-akzent-weich)' : 'var(--lbf-card)',
                 border: `0.5px solid ${gekoppelt ? ROT : LINIE}`, borderRadius: 9,
                 fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer',
               }}
@@ -150,7 +152,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
               <span style={{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                 width: 20, height: 20, borderRadius: 4, flexShrink: 0,
-                background: gekoppelt ? ROT : 'transparent', border: `1px solid ${gekoppelt ? ROT : LINIE}`,
+                background: gekoppelt ? ROT_GRUND : 'transparent', border: `1px solid ${gekoppelt ? ROT_GRUND : LINIE}`,
                 color: '#fff', fontSize: 13, fontWeight: 800, lineHeight: 1,
               }}>
                 {gekoppelt ? '✓' : ''}
@@ -184,8 +186,8 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
                             onClick={() => waehlen(frage, seite, a.wert)}
                             style={{
                               display: 'block', width: '100%', padding: '9px 11px', marginBottom: 4,
-                              background: an ? ROT : '#fff',
-                              border: `0.5px solid ${an ? ROT : LINIE}`, borderRadius: 9,
+                              background: an ? ROT_GRUND : 'var(--lbf-card)',
+                              border: `0.5px solid ${an ? ROT_GRUND : LINIE}`, borderRadius: 9,
                               fontFamily: 'inherit', fontSize: 15, fontWeight: an ? 700 : 400,
                               color: an ? '#fff' : TEXT, textAlign: 'left', cursor: 'pointer',
                             }}
@@ -201,7 +203,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
             ))}
           </div>
 
-          <div style={{ flexShrink: 0, background: '#fff', borderTop: `0.5px solid ${LINIE}`, padding: '10px 12px', display: 'flex', gap: 8 }}>
+          <div style={{ flexShrink: 0, background: 'var(--lbf-card)', borderTop: `0.5px solid ${LINIE}`, padding: '10px 12px', display: 'flex', gap: 8 }}>
             <button
               type="button" onClick={() => setOffen(false)}
               style={{ flex: 1, padding: '11px 12px', background: 'transparent', border: `0.5px solid ${LINIE}`, borderRadius: 12, color: GRAU, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
@@ -212,7 +214,7 @@ export default function Pupillen({ werte, setWerte, vorsatz = '' }: {
               type="button" onClick={uebernehmen}
               style={{
                 flex: 2, padding: '11px 12px', border: 'none', borderRadius: 12,
-                background: ROT, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700,
+                background: ROT_GRUND, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700,
                 textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer',
               }}
             >

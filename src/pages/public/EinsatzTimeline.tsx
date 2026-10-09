@@ -246,7 +246,7 @@ export default function EinsatzTimeline({ alarmzeit, defaultStandort, defaultEin
       </div>
 
       {err && (
-        <div style={{ padding: '6px 14px', background: '#fef2f2', color: '#dc2626', fontSize: '.82rem', borderBottom: '0.5px solid #fecaca' }}>
+        <div style={{ padding: '6px 14px', background: 'var(--lbf-fehler-grund)', color: '#dc2626', fontSize: '.82rem', borderBottom: '0.5px solid #fecaca' }}>
           {err}
         </div>
       )}

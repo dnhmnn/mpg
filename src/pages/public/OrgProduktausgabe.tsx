@@ -13,8 +13,8 @@ type Pos = { qty: number; name: string; item_id: string; unit: string }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: '#fff', borderLeft: '3px solid #600812', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
-      <div style={{ padding: '.85rem 1rem', fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.12em', borderBottom: '0.5px solid rgba(96,8,18,0.08)' }}>
+    <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
+      <div style={{ padding: '.85rem 1rem', fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
         {title}
       </div>
       <div style={{ padding: '1rem' }}>{children}</div>
@@ -65,26 +65,26 @@ function UserSearch({ orgId, value, onChange }: {
   return (
     <div ref={ref} style={{ position: 'relative', marginTop: 8 }}>
       {value ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(96,8,18,0.04)', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, padding: '8px 12px' }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '8px 12px' }}>
+          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
             {value.name.charAt(0).toUpperCase()}
           </div>
-          <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', color: '#1a0e08', fontSize: 14 }}>{value.name}</span>
+          <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', fontSize: 14 }}>{value.name}</span>
           <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
         </div>
       ) : (
         <input style={inp} type="text" value={query} onChange={e => onInput(e.target.value)} placeholder="Name suchen…" />
       )}
       {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
           {results.map(u => (
             <button key={u.id} type="button" onMouseDown={() => select(u)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid rgba(96,8,18,0.08)', fontFamily: 'inherit' }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
+              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--lbf-border-light)', fontFamily: 'inherit' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
                 {u.name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#1a0e08' }}>{u.name}</div>
+                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{u.name}</div>
                 <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{u.email}</div>
               </div>
             </button>
@@ -92,7 +92,7 @@ function UserSearch({ orgId, value, onChange }: {
         </div>
       )}
       {open && results.length === 0 && query.trim() && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', zIndex: 50, marginTop: 2 }}>
+        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', zIndex: 50, marginTop: 2 }}>
           Kein Benutzer gefunden
         </div>
       )}
@@ -135,10 +135,10 @@ function ArticleSearch({ inventoryItems, onSelect }: {
         onFocus={() => setOpen(true)}
       />
       {open && suggestions.length > 0 && (
-        <div style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
+        <div style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, marginTop: 4, overflow: 'hidden', maxHeight: 280, overflowY: 'auto', boxShadow: '0 4px 16px rgba(0,0,0,0.1)' }}>
           {suggestions.map((item, idx) => (
             <button key={item.id} type="button" onMouseDown={() => select(item)}
-              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid rgba(96,8,18,0.08)' : 'none', color: '#1a0e08' }}>
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%', padding: '11px 14px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', borderBottom: idx < suggestions.length - 1 ? '0.5px solid var(--lbf-border-light)' : 'none', color: 'var(--lbf-text)' }}>
               <span style={{ fontWeight: 700, fontSize: 14 }}>{item.name}</span>
               <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', flexShrink: 0, marginLeft: 8 }}>{item.unit}</span>
             </button>
@@ -146,12 +146,12 @@ function ArticleSearch({ inventoryItems, onSelect }: {
         </div>
       )}
       {open && inventoryItems.length === 0 && (
-        <div style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, marginTop: 4, padding: '12px 14px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+        <div style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, marginTop: 4, padding: '12px 14px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
           Keine Artikel in der Datenbank
         </div>
       )}
       {open && suggestions.length === 0 && inventoryItems.length > 0 && query.trim() && (
-        <div style={{ background: '#fff', border: '1px solid rgba(96,8,18,0.15)', borderRadius: 10, marginTop: 4, padding: '12px 14px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+        <div style={{ background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, marginTop: 4, padding: '12px 14px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
           Kein Artikel gefunden
         </div>
       )}
@@ -246,15 +246,15 @@ export default function OrgProduktausgabe() {
 
   if (success) return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: '#fff', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+      <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
         <div style={{ width: 52, height: 52, background: 'rgba(22,163,74,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12"/>
           </svg>
         </div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: '#1a0e08', marginBottom: 8 }}>Erfolgreich gespeichert</div>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>Erfolgreich gespeichert</div>
         <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24 }}>Die Ausgabe wurde an die Lagerverwaltung weitergeleitet.</div>
-        <button style={{ background: '#600812', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={reset}>
+        <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={reset}>
           Neue Ausgabe
         </button>
       </div>
@@ -263,13 +263,13 @@ export default function OrgProduktausgabe() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)' }}>
-      <header style={{ position: 'sticky', top: 0, background: '#fff', borderBottom: '0.5px solid rgba(96,8,18,0.12)', zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <header style={{ position: 'sticky', top: 0, background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: '#600812', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#600812" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          <button onClick={() => navigate(`/${orgCode}`)} style={{ display: 'flex', alignItems: 'center', background: 'none', border: 'none', color: 'var(--lbf-akzent)', cursor: 'pointer', padding: 0, flexShrink: 0 }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: '#1a0e08' }}>Produktausgabe</div>
+            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Produktausgabe</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{org.org_name}</div>
           </div>
         </div>
@@ -293,21 +293,21 @@ export default function OrgProduktausgabe() {
 
         <Card title="Positionen">
           {positions.map((pos, i) => (
-            <div key={i} style={{ padding: '.75rem', background: pos.item_id ? 'rgba(96,8,18,0.03)' : 'var(--warm-bg)', border: `1.5px solid ${pos.item_id ? 'rgba(96,8,18,0.2)' : 'rgba(96,8,18,0.1)'}`, borderRadius: 10, marginBottom: '.6rem' }}>
+            <div key={i} style={{ padding: '.75rem', background: pos.item_id ? 'rgba(var(--lbf-rot-rgb),0.03)' : 'var(--warm-bg)', border: `1.5px solid ${pos.item_id ? 'rgba(var(--lbf-rot-rgb),0.2)' : 'rgba(var(--lbf-rot-rgb),0.1)'}`, borderRadius: 10, marginBottom: '.6rem' }}>
               <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start' }}>
                 <div style={{ flexShrink: 0, width: 72 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Anz.</div>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Anz.</div>
                   <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
                     type="number" min={1} value={pos.qty ?? 1}
                     onChange={e => updQty(i, Number(e.target.value))} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: pos.item_id ? '#16a34a' : '#600812', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: pos.item_id ? '#16a34a' : 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
                     {pos.item_id ? 'Artikel ausgewählt' : 'Artikel auswählen *'}
                   </div>
                   {pos.item_id ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#fff', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, padding: '10px 12px' }}>
-                      <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#1a0e08', wordBreak: 'break-word' }}>{pos.name}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--lbf-card)', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '10px 12px' }}>
+                      <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', wordBreak: 'break-word' }}>{pos.name}</span>
                       <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', flexShrink: 0 }}>{pos.unit}</span>
                       <button type="button" onClick={() => clearPos(i)}
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
@@ -315,7 +315,7 @@ export default function OrgProduktausgabe() {
                   ) : null}
                 </div>
                 <button type="button" onClick={() => delPos(i)}
-                  style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.05)', color: '#600812', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-akzent-weich)', color: 'var(--lbf-akzent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   ×
                 </button>
               </div>
@@ -327,7 +327,7 @@ export default function OrgProduktausgabe() {
             </div>
           ))}
           <button type="button" onClick={addPos}
-            style={{ border: '1px solid rgba(96,8,18,0.15)', background: 'rgba(96,8,18,0.05)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, color: '#600812', fontSize: 13, fontFamily: 'inherit', letterSpacing: '0.02em' }}>
+            style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-akzent-weich)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, color: 'var(--lbf-akzent)', fontSize: 13, fontFamily: 'inherit', letterSpacing: '0.02em' }}>
             + Position hinzufügen
           </button>
         </Card>
@@ -339,11 +339,11 @@ export default function OrgProduktausgabe() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {locations.map(loc => (
                 <button key={loc.id} type="button" onClick={() => setSelectedLagerId(loc.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: selectedLagerId === loc.id ? '1.5px solid #600812' : '1.5px solid rgba(96,8,18,0.12)', background: selectedLagerId === loc.id ? 'rgba(96,8,18,0.05)' : '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: selectedLagerId === loc.id ? '2px solid #600812' : '2px solid rgba(96,8,18,0.2)', background: selectedLagerId === loc.id ? '#600812' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: selectedLagerId === loc.id ? '1.5px solid var(--lbf-akzent)' : '1.5px solid var(--lbf-border)', background: selectedLagerId === loc.id ? 'var(--lbf-akzent-weich)' : 'var(--lbf-card)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: selectedLagerId === loc.id ? '2px solid var(--lbf-akzent)' : '2px solid rgba(var(--lbf-rot-rgb),0.2)', background: selectedLagerId === loc.id ? 'var(--lbf-akzent-grund)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     {selectedLagerId === loc.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
                   </div>
-                  <span style={{ fontWeight: selectedLagerId === loc.id ? 700 : 400, fontStyle: selectedLagerId === loc.id ? 'italic' : 'normal', fontSize: 15, color: '#1a0e08' }}>{loc.name}</span>
+                  <span style={{ fontWeight: selectedLagerId === loc.id ? 700 : 400, fontStyle: selectedLagerId === loc.id ? 'italic' : 'normal', fontSize: 15, color: 'var(--lbf-text)' }}>{loc.name}</span>
                 </button>
               ))}
             </div>

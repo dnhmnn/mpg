@@ -509,8 +509,8 @@ export default function MPG() {
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--warm-bg)', overflowY: 'auto', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif", zIndex: 500 }}>
         {/* Header */}
-        <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
-          <button onClick={() => setInspState(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#600812', display: 'flex' }}>
+        <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
+          <button onClick={() => setInspState(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex' }}>
             {pik(<><polyline points="15 18 9 12 15 6"/></>)}
           </button>
           <div style={{ flex: 1 }}>
@@ -518,7 +518,7 @@ export default function MPG() {
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{device.name}</div>
           </div>
           {!isLastStep && (
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.07)', borderRadius: 99, padding: '3px 10px' }}>
               {step + 1} / {results.length}
             </div>
           )}
@@ -528,13 +528,13 @@ export default function MPG() {
           {!isLastStep ? (
             <>
               {/* Progress bar */}
-              <div style={{ height: 4, background: 'rgba(96,8,18,0.1)', borderRadius: 99, marginBottom: 28, overflow: 'hidden' }}>
-                <div style={{ height: '100%', background: '#600812', borderRadius: 99, width: `${(step / results.length) * 100}%`, transition: 'width .3s' }} />
+              <div style={{ height: 4, background: 'rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 99, marginBottom: 28, overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: 'var(--lbf-akzent)', borderRadius: 99, width: `${(step / results.length) * 100}%`, transition: 'width .3s' }} />
               </div>
 
               {/* Checklist item */}
-              <div style={{ background: 'var(--lbf-card)', borderRadius: 14, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #600812', marginBottom: 20 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 14, padding: 24, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid var(--lbf-akzent)', marginBottom: 20 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>
                   Prüfpunkt {step + 1}
                 </div>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 16, cursor: 'pointer' }}>
@@ -546,7 +546,7 @@ export default function MPG() {
                       r[step] = { ...r[step], checked: !r[step].checked }
                       setInspState({ ...inspState, results: r })
                     }}
-                    style={{ width: 22, height: 22, accentColor: '#600812', cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
+                    style={{ width: 22, height: 22, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0, marginTop: 2 }}
                   />
                   <span style={{ fontSize: 17, fontWeight: 600, color: 'var(--lbf-text)', lineHeight: 1.5 }}>{results[step].item}</span>
                 </label>
@@ -554,7 +554,7 @@ export default function MPG() {
 
               {/* Note for this item */}
               <div style={{ marginBottom: 24 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 8 }}>Bemerkung (optional)</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 8 }}>Bemerkung (optional)</div>
                 <textarea
                   value={results[step].note}
                   onChange={e => {
@@ -564,17 +564,17 @@ export default function MPG() {
                   }}
                   placeholder="z.B. Kleine Beschädigung, Batterie bei 80%, ..."
                   rows={3}
-                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const }}
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: 10 }}>
                 <button onClick={() => setInspState({ ...inspState, step: Math.max(0, step - 1) })} disabled={step === 0}
-                  style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: step === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: step === 0 ? 0.4 : 1 }}>
+                  style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: step === 0 ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: step === 0 ? 0.4 : 1 }}>
                   Zurück
                 </button>
                 <button onClick={() => setInspState({ ...inspState, step: step + 1 })}
-                  style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#600812', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
                   {step === results.length - 1 ? 'Zur Zusammenfassung' : 'Weiter'}
                 </button>
               </div>
@@ -582,10 +582,10 @@ export default function MPG() {
           ) : (
             <>
               {/* Summary */}
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>Zusammenfassung</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>Zusammenfassung</div>
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', marginBottom: 20 }}>
                 {results.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderBottom: i < results.length - 1 ? '0.5px solid rgba(96,8,18,0.06)' : 'none' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderBottom: i < results.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' : 'none' }}>
                     <span style={{ color: r.checked ? '#16a34a' : '#dc2626', flexShrink: 0, marginTop: 1 }}>
                       {pik(r.checked ? <><polyline points="20 6 9 17 4 12"/></> : <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>, 16)}
                     </span>
@@ -598,19 +598,19 @@ export default function MPG() {
               </div>
 
               <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 8 }}>Anmerkungen / Mängel</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 8 }}>Anmerkungen / Mängel</div>
                 <textarea
                   value={notes}
                   onChange={e => setInspState({ ...inspState, notes: e.target.value })}
                   placeholder="Besondere Vorkommnisse, festgestellte Mängel..."
                   rows={4}
-                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const }}
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const }}
                 />
               </div>
 
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
                 <button onClick={() => setInspState({ ...inspState, step: results.length - 1 })}
-                  style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 14, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 14, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>
                   Zurück
                 </button>
                 <button onClick={() => saveInspection(false)}
@@ -639,8 +639,8 @@ export default function MPG() {
     <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
       {/* ── Header ── */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
-        <button onClick={() => navigate('/hub')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#600812', display: 'flex' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
+        <button onClick={() => navigate('/hub')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex' }}>
           {pik(<><polyline points="15 18 9 12 15 6"/></>)}
         </button>
         <div style={{ flex: 1 }}>
@@ -649,21 +649,21 @@ export default function MPG() {
         </div>
         {activeTab === 'geraete' && (
           <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', operational: true, has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
-            style={{ background: '#600812', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
+            style={{ background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
             {pik(<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>, 14)}
             Gerät
           </button>
         )}
         {activeTab === 'vorlagen' && (
           <button onClick={() => openVorlagen()}
-            style={{ background: '#600812', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>
+            style={{ background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>
             Bearbeiten
           </button>
         )}
       </div>
 
       {/* ── Tab bar ── */}
-      <div style={{ display: 'flex', background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.08)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99 }}>
+      <div style={{ display: 'flex', background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border-light)', position: 'sticky', top: 'calc(env(safe-area-inset-top) + 60px)', zIndex: 99 }}>
         {([
           ['geraete', 'Geräte'],
           ['defekte', (() => { const n = openDefects.length + pendingReports.length; return n > 0 ? `Defekte (${n})` : 'Defekte' })()],
@@ -673,8 +673,8 @@ export default function MPG() {
           <button key={t} onClick={() => setActiveTab(t)} style={{
             flex: 1, padding: '11px 4px 9px', border: 'none', background: 'none', cursor: 'pointer',
             fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em',
-            color: activeTab === t ? '#600812' : 'var(--warm-gray)', fontFamily: 'inherit',
-            borderTop: activeTab === t ? '2px solid #600812' : '2px solid transparent',
+            color: activeTab === t ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontFamily: 'inherit',
+            borderTop: activeTab === t ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
             whiteSpace: 'nowrap',
           }}>{label}</button>
         ))}
@@ -704,7 +704,7 @@ export default function MPG() {
             {/* Search + filter */}
             <div style={{ marginBottom: 10 }}>
               <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Geräte durchsuchen…"
-                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid rgba(96,8,18,0.15)', borderRadius: 10, background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', outline: 'none', boxSizing: 'border-box' as const }} />
+                style={{ width: '100%', padding: '10px 14px', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', outline: 'none', boxSizing: 'border-box' as const }} />
             </div>
 
             {/* Device cards */}
@@ -715,7 +715,7 @@ export default function MPG() {
                 <div style={{ fontStyle: 'italic', marginBottom: 8 }}>Keine Geräte gefunden</div>
                 {devices.length === 0 && (
                   <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', operational: true, has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
-                    style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Erstes Gerät anlegen
                   </button>
                 )}
@@ -731,7 +731,7 @@ export default function MPG() {
                     <div key={device.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${STATUS_BORDER[status]}`, overflow: 'hidden', position: 'relative' }}>
                       {/* Card body */}
                       <div style={{ padding: '14px 46px 14px 16px' }}>
-                        <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>{device.type}</div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>{device.type}</div>
                         <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', marginBottom: 4 }}>{device.name}</div>
                         {(device.location || device.serial_number) && (
                           <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 8 }}>
@@ -776,9 +776,9 @@ export default function MPG() {
                       </div>
 
                       {/* Action strip */}
-                      <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '8px 14px', display: 'flex', gap: 8, alignItems: 'center' }}>
                         <button onClick={() => startInspection(device)}
-                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Prüfung starten
                         </button>
                         <button onClick={() => { setDefectDevice(device); setDefectForm({ description: '', severity: 'medium' }) }}
@@ -786,7 +786,7 @@ export default function MPG() {
                           Defekt melden
                         </button>
                         <button onClick={() => { setHistoryDevice(device); setHistoryTab('pruefungen') }}
-                          style={{ padding: '8px 10px', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.15)', background: 'none', color: 'var(--warm-gray)', cursor: 'pointer', display: 'flex' }}>
+                          style={{ padding: '8px 10px', borderRadius: 8, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', color: 'var(--warm-gray)', cursor: 'pointer', display: 'flex' }}>
                           {pik(<><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></>, 14)}
                         </button>
                       </div>
@@ -794,11 +794,11 @@ export default function MPG() {
                       {/* ··· menu */}
                       <div style={{ position: 'absolute', top: 12, right: 12 }}>
                         <button onClick={e => { e.stopPropagation(); setOpenMenu(openMenu === device.id ? null : device.id) }}
-                          style={{ background: 'var(--lbf-card)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
+                          style={{ background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 6, width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                           {pik(<><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></>, 14)}
                         </button>
                         {openMenu === device.id && (
-                          <div style={{ position: 'absolute', top: 30, right: 0, background: 'var(--lbf-card)', border: '0.5px solid rgba(96,8,18,0.12)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, zIndex: 200 }}>
+                          <div style={{ position: 'absolute', top: 30, right: 0, background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, zIndex: 200 }}>
                             {[
                               { label: 'Bearbeiten', action: () => { setDeviceSheet({ id: device.id, name: device.name, type: device.type, serial_number: device.serial_number, location: device.location, interval: device.interval, operational: device.operational !== false, has_stk: !!device.has_stk, last_stk: device.last_stk || '', stk_interval_months: device.stk_interval_months || 24, has_mtk: !!device.has_mtk, last_mtk: device.last_mtk || '', mtk_interval_months: device.mtk_interval_months || 24 }); setOpenMenu(null) } },
                               { label: device.operational === false ? 'Als einsatzbereit markieren' : 'Als nicht einsatzbereit markieren', action: () => { toggleOperational(device); setOpenMenu(null) }, danger: device.operational !== false },
@@ -844,13 +844,13 @@ export default function MPG() {
                           {relativeDate(r.created)} · {r.reporter_name || 'Anonym'}
                         </div>
                       </div>
-                      <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 8 }}>
+                      <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '8px 14px', display: 'flex', gap: 8 }}>
                         <button onClick={() => { setConfirmTarget(r); setConfirmNotes('') }}
-                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#600812', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Bestätigen
                         </button>
                         <button onClick={() => { setRejectTarget(r); setRejectReason('') }}
-                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '0.5px solid rgba(96,8,18,0.2)', background: 'none', color: 'var(--warm-gray)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                          style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'none', color: 'var(--warm-gray)', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Ablehnen
                         </button>
                       </div>
@@ -887,7 +887,7 @@ export default function MPG() {
                               {relativeDate(def.created)} · {def.reported_by}
                             </div>
                           </div>
-                          <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', background: 'rgba(250,249,247,0.8)', padding: '8px 14px', display: 'flex', gap: 8 }}>
+                          <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '8px 14px', display: 'flex', gap: 8 }}>
                             <button onClick={() => { setResolveTarget(def); setResolveNotes('') }}
                               style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Als behoben markieren
@@ -933,7 +933,7 @@ export default function MPG() {
         {/* ═══ LOGBUCH TAB ═══ */}
         {activeTab === 'logbuch' && (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>
               Prüfungsprotokoll ({inspections.length})
             </div>
             {inspections.length === 0 ? (
@@ -955,9 +955,9 @@ export default function MPG() {
                       </span>
                     </summary>
                     {insp.checklist_results?.length > 0 && (
-                      <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.08)', padding: '12px 16px' }}>
+                      <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', padding: '12px 16px' }}>
                         {insp.checklist_results.map((r, i) => (
-                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 0', borderBottom: i < insp.checklist_results.length - 1 ? '0.5px solid rgba(96,8,18,0.05)' : 'none' }}>
+                          <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 0', borderBottom: i < insp.checklist_results.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.05)' : 'none' }}>
                             <span style={{ color: r.checked ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
                               {pik(r.checked ? <><polyline points="20 6 9 17 4 12"/></> : <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>, 14)}
                             </span>
@@ -979,14 +979,14 @@ export default function MPG() {
         {/* ═══ VORLAGEN TAB ═══ */}
         {activeTab === 'vorlagen' && (
           <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>Prüfvorlagen pro Gerätetyp</div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>Prüfvorlagen pro Gerätetyp</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {DEVICE_TYPES.map(type => {
                 const t = checklists.find(c => c.device_type === type)
                 const count = t?.items.length || (DEFAULT_CHECKLISTS[type] || DEFAULT_CHECKLISTS['Sonstiges']).length
                 return (
                   <button key={type} onClick={() => openVorlagen(type)}
-                    style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #600812', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: 'inherit', border: 'none', textAlign: 'left' as const }}>
+                    style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid var(--lbf-akzent)', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer', fontFamily: 'inherit', border: 'none', textAlign: 'left' as const }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{type}</div>
                       <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{count} Prüfpunkte</div>
@@ -1002,7 +1002,7 @@ export default function MPG() {
 
       {/* ── Toast ── */}
       {msg && (
-        <div style={{ position: 'fixed', bottom: 'calc(24px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '10px 20px', borderRadius: 20, fontWeight: 600, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', whiteSpace: 'nowrap' as const, background: msg.type === 'success' ? '#f0fdf4' : '#fef2f2', border: `1px solid ${msg.type === 'success' ? '#bbf7d0' : '#fecaca'}`, color: msg.type === 'success' ? '#166534' : '#dc2626' }}>
+        <div style={{ position: 'fixed', bottom: 'calc(24px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '10px 20px', borderRadius: 20, fontWeight: 600, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', whiteSpace: 'nowrap' as const, background: msg.type === 'success' ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)', border: `1px solid ${msg.type === 'success' ? '#bbf7d0' : '#fecaca'}`, color: msg.type === 'success' ? 'var(--lbf-ok-text)' : '#dc2626' }}>
           {msg.text}
         </div>
       )}
@@ -1012,7 +1012,7 @@ export default function MPG() {
         <>
           <div onClick={() => setDeviceSheet(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '90vh', overflowY: 'auto', fontFamily: 'inherit' }}>
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 20 }}>
               {deviceSheet.id ? 'Gerät bearbeiten' : 'Neues Gerät'}
             </div>
@@ -1020,31 +1020,31 @@ export default function MPG() {
               {[
                 { label: 'Gerätetyp *', el: (
                   <select value={deviceSheet.type} onChange={e => setDeviceSheet({ ...deviceSheet, type: e.target.value })}
-                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }}>
+                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }}>
                     {DEVICE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 )},
                 { label: 'Bezeichnung *', el: (
                   <input autoFocus type="text" value={deviceSheet.name} onChange={e => setDeviceSheet({ ...deviceSheet, name: e.target.value })} placeholder="z.B. AED Eingangsbereich"
-                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
+                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
                 )},
                 { label: 'Seriennummer', el: (
                   <input type="text" value={deviceSheet.serial_number} onChange={e => setDeviceSheet({ ...deviceSheet, serial_number: e.target.value })} placeholder="Optional"
-                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
+                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
                 )},
                 { label: 'Standort', el: (
                   <input type="text" value={deviceSheet.location} onChange={e => setDeviceSheet({ ...deviceSheet, location: e.target.value })} placeholder="z.B. Fahrzeug 1, Büro, Eingang"
-                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
+                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }} />
                 )},
                 { label: 'Prüfintervall *', el: (
                   <select value={deviceSheet.interval} onChange={e => setDeviceSheet({ ...deviceSheet, interval: e.target.value as DeviceInterval })}
-                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }}>
+                    style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', width: '100%', boxSizing: 'border-box' as const }}>
                     {Object.entries(INTERVAL_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
                   </select>
                 )},
               ].map(({ label, el }) => (
                 <label key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>{label}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>{label}</span>
                   {el}
                 </label>
               ))}
@@ -1052,7 +1052,7 @@ export default function MPG() {
               {/* Einsatzbereit */}
               <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer' }}>
                 <input type="checkbox" checked={deviceSheet.operational} onChange={e => setDeviceSheet({ ...deviceSheet, operational: e.target.checked })}
-                  style={{ width: 20, height: 20, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }} />
+                  style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>Einsatzbereit</div>
                   <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Deaktivieren = Gerät vorübergehend außer Betrieb</div>
@@ -1063,20 +1063,20 @@ export default function MPG() {
               <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                   <input type="checkbox" checked={deviceSheet.has_stk} onChange={e => setDeviceSheet({ ...deviceSheet, has_stk: e.target.checked })}
-                    style={{ width: 18, height: 18, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }} />
+                    style={{ width: 18, height: 18, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>STK (Sicherheitstechn. Kontrolle) erforderlich</span>
                 </label>
                 {deviceSheet.has_stk && (
                   <div style={{ display: 'flex', gap: 10, paddingLeft: 28 }}>
                     <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Letzte STK</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Letzte STK</span>
                       <input type="date" value={deviceSheet.last_stk} onChange={e => setDeviceSheet({ ...deviceSheet, last_stk: e.target.value })}
-                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
                     </label>
                     <label style={{ width: 80, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Intervall (Mon.)</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Intervall (Mon.)</span>
                       <input type="number" min="1" max="120" value={deviceSheet.stk_interval_months} onChange={e => setDeviceSheet({ ...deviceSheet, stk_interval_months: Number(e.target.value) })}
-                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
                     </label>
                   </div>
                 )}
@@ -1086,28 +1086,28 @@ export default function MPG() {
               <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
                   <input type="checkbox" checked={deviceSheet.has_mtk} onChange={e => setDeviceSheet({ ...deviceSheet, has_mtk: e.target.checked })}
-                    style={{ width: 18, height: 18, accentColor: '#600812', cursor: 'pointer', flexShrink: 0 }} />
+                    style={{ width: 18, height: 18, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
                   <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>MTK (Messtechn. Kontrolle) erforderlich</span>
                 </label>
                 {deviceSheet.has_mtk && (
                   <div style={{ display: 'flex', gap: 10, paddingLeft: 28 }}>
                     <label style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Letzte MTK</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Letzte MTK</span>
                       <input type="date" value={deviceSheet.last_mtk} onChange={e => setDeviceSheet({ ...deviceSheet, last_mtk: e.target.value })}
-                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
                     </label>
                     <label style={{ width: 80, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Intervall (Mon.)</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Intervall (Mon.)</span>
                       <input type="number" min="1" max="120" value={deviceSheet.mtk_interval_months} onChange={e => setDeviceSheet({ ...deviceSheet, mtk_interval_months: Number(e.target.value) })}
-                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                        style={{ padding: '9px 10px', borderRadius: 8, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
                     </label>
                   </div>
                 )}
               </div>
 
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button onClick={() => setDeviceSheet(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-                <button onClick={saveDevice} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#600812', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={() => setDeviceSheet(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+                <button onClick={saveDevice} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
                   {deviceSheet.id ? 'Speichern' : 'Hinzufügen'}
                 </button>
               </div>
@@ -1122,14 +1122,14 @@ export default function MPG() {
           <div onClick={() => setHistoryDevice(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 0 calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', fontFamily: 'inherit' }}>
             <div style={{ padding: '0 20px', marginBottom: 4 }}>
-              <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 16px' }} />
+              <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 16px' }} />
               <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)' }}>{historyDevice.name}</div>
               <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{historyDevice.type} · {historyDevice.location}</div>
             </div>
             {/* Sub-tabs */}
-            <div style={{ display: 'flex', borderBottom: '0.5px solid rgba(96,8,18,0.08)', margin: '12px 0 0' }}>
+            <div style={{ display: 'flex', borderBottom: '0.5px solid var(--lbf-border-light)', margin: '12px 0 0' }}>
               {([['pruefungen', 'Prüfungen'], ['defekte', 'Defekte']] as ['pruefungen'|'defekte', string][]).map(([t, l]) => (
-                <button key={t} onClick={() => setHistoryTab(t)} style={{ flex: 1, padding: '10px 8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: historyTab === t ? '#600812' : 'var(--warm-gray)', fontFamily: 'inherit', borderTop: historyTab === t ? '2px solid #600812' : '2px solid transparent' }}>{l}</button>
+                <button key={t} onClick={() => setHistoryTab(t)} style={{ flex: 1, padding: '10px 8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: historyTab === t ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontFamily: 'inherit', borderTop: historyTab === t ? '2px solid var(--lbf-akzent)' : '2px solid transparent' }}>{l}</button>
               ))}
             </div>
             <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
@@ -1182,7 +1182,7 @@ export default function MPG() {
         <>
           <div onClick={() => setDefectDevice(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '80vh', overflowY: 'auto', fontFamily: 'inherit' }}>
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>{defectDevice.type}</div>
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 20 }}>Defekt melden</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -1196,14 +1196,14 @@ export default function MPG() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {(Object.entries(SEVERITY_CFG) as [Severity, typeof SEVERITY_CFG[Severity]][]).map(([key, cfg]) => (
                     <button key={key} onClick={() => setDefectForm({ ...defectForm, severity: key })} type="button"
-                      style={{ padding: '10px', borderRadius: 10, border: `1.5px solid ${defectForm.severity === key ? cfg.color : 'rgba(96,8,18,0.1)'}`, background: defectForm.severity === key ? cfg.bg : 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: cfg.color }}>
+                      style={{ padding: '10px', borderRadius: 10, border: `1.5px solid ${defectForm.severity === key ? cfg.color : 'rgba(var(--lbf-rot-rgb),0.1)'}`, background: defectForm.severity === key ? cfg.bg : 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: cfg.color }}>
                       {cfg.label}
                     </button>
                   ))}
                 </div>
               </label>
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button onClick={() => setDefectDevice(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+                <button onClick={() => setDefectDevice(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
                 <button onClick={reportDefect} disabled={!defectForm.description.trim()}
                   style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: !defectForm.description.trim() ? 'rgba(220,38,38,0.3)' : '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: !defectForm.description.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                   Defekt melden
@@ -1219,16 +1219,16 @@ export default function MPG() {
         <>
           <div onClick={() => setResolveTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '70vh', overflowY: 'auto', fontFamily: 'inherit' }}>
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 6 }}>Defekt beheben</div>
             <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 20 }}>{resolveTarget.device_name} · {resolveTarget.description}</div>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Lösungshinweis (optional)</span>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Lösungshinweis (optional)</span>
               <textarea value={resolveNotes} onChange={e => setResolveNotes(e.target.value)} placeholder="Was wurde gemacht? Ersatzteil, Reparatur, ..." rows={3}
-                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
             </label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setResolveTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={() => setResolveTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
               <button onClick={resolveDefect} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#16a34a', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Als behoben markieren</button>
             </div>
           </div>
@@ -1240,7 +1240,7 @@ export default function MPG() {
         <>
           <div onClick={() => setConfirmTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '75vh', overflowY: 'auto', fontFamily: 'inherit' }}>
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meldung bestätigen</div>
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 8 }}>{confirmTarget.device_name}</div>
             <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 4, lineHeight: 1.5 }}>{confirmTarget.description}</div>
@@ -1251,8 +1251,8 @@ export default function MPG() {
               Gerät wird als <strong style={{ fontStyle: 'normal' }}>nicht einsatzbereit</strong> markiert und ein Defekt-Eintrag angelegt.
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setConfirmTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-              <button onClick={confirmExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#600812', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Bestätigen & Defekt anlegen</button>
+              <button onClick={() => setConfirmTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={confirmExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Bestätigen & Defekt anlegen</button>
             </div>
           </div>
         </>
@@ -1263,16 +1263,16 @@ export default function MPG() {
         <>
           <div onClick={() => setRejectTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '70vh', overflowY: 'auto', fontFamily: 'inherit' }}>
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 6 }}>Meldung ablehnen</div>
             <div style={{ fontSize: 13, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 20 }}>{rejectTarget.device_name} · {rejectTarget.description}</div>
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Ablehnungsgrund (optional)</span>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Ablehnungsgrund (optional)</span>
               <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} placeholder="z.B. Falsches Gerät angegeben, kein tatsächlicher Defekt, …" rows={3}
-                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
             </label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setRejectTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={() => setRejectTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
               <button onClick={rejectExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Ablehnen</button>
             </div>
           </div>
@@ -1284,18 +1284,18 @@ export default function MPG() {
         <>
           <div onClick={() => setShowVorlagen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '90vh', overflowY: 'auto', fontFamily: 'inherit' }}>
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(96,8,18,0.2)', margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 16 }}>Prüfvorlage bearbeiten</div>
 
             <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#600812' }}>Gerätetyp</span>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Gerätetyp</span>
               <select value={vtType} onChange={e => vtSwitchType(e.target.value)}
-                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }}>
+                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }}>
                 {DEVICE_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </label>
 
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Prüfpunkte ({vtItems.length})</span>
               <button onClick={() => { if (!confirm('Auf Standard zurücksetzen?')) return; setVtItems([...(DEFAULT_CHECKLISTS[vtType] || DEFAULT_CHECKLISTS['Sonstiges'])]) }}
                 style={{ fontSize: 11, color: 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit' }}>Zurücksetzen</button>
@@ -1326,16 +1326,16 @@ export default function MPG() {
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
               <input value={vtNewItem} onChange={e => setVtNewItem(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && vtNewItem.trim()) { setVtItems([...vtItems, vtNewItem.trim()]); setVtNewItem('') } }}
                 placeholder="Neuen Prüfpunkt eingeben…"
-                style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(96,8,18,0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
+                style={{ flex: 1, padding: '10px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none' }} />
               <button onClick={() => { if (!vtNewItem.trim()) return; setVtItems([...vtItems, vtNewItem.trim()]); setVtNewItem('') }}
-                style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#600812', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                 {pik(<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>, 16)}
               </button>
             </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setShowVorlagen(false)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(96,8,18,0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-              <button onClick={saveVorlage} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#600812', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Speichern</button>
+              <button onClick={() => setShowVorlagen(false)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={saveVorlage} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Speichern</button>
             </div>
           </div>
         </>

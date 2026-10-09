@@ -11,12 +11,14 @@ import TabETB from './TabETB'
 import TabKraefte from './TabKraefte'
 import type { EksEventType, EksState } from '../../lib/eks/types'
 
-const RED = '#600812', CRIT = '#dc2626'
+// RED_HEX nur fuer bt(): der Rahmen wird mit Alpha-Anhang zusammengesetzt (`${farbe}44`)
+const RED_HEX = '#600812'
+const RED = 'var(--lbf-akzent)', RED_GRUND = 'var(--lbf-akzent-grund)', CRIT = '#dc2626'
 type Tab = 'lage' | 'atemschutz' | 'etb' | 'kraefte' | 'abschnitte'
 
 const CSS = `
 .eks-input{padding:9px 12px;border:1px solid var(--lbf-input-border);border-radius:8px;background:var(--lbf-input-bg);color:var(--lbf-text);font-size:14px;font-family:inherit;width:100%;box-sizing:border-box;outline:none}
-.eks-input:focus{border-color:#600812;box-shadow:0 0 0 3px rgba(96,8,18,0.08)}
+.eks-input:focus{border-color:var(--lbf-akzent);box-shadow:0 0 0 3px var(--lbf-border-light)}
 .eks-modal-overlay{position:fixed;inset:0;background:rgba(26,14,8,0.55);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
 .eks-modal{background:var(--lbf-card);border-radius:16px;max-width:560px;width:100%;max-height:88dvh;overflow-y:auto;padding:22px;box-shadow:0 12px 32px rgba(0,0,0,0.18)}
 @media(max-width:768px){.eks-modal-overlay{align-items:flex-end;padding:0}.eks-modal{border-radius:16px 16px 0 0;max-height:88dvh;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}}
@@ -66,10 +68,10 @@ export default function EKS() {
       <style>{CSS}</style>
 
       {/* Masthead */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid rgba(96,8,18,0.12)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
+      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(16px, env(safe-area-inset-left))', paddingRight: 'max(16px, env(safe-area-inset-right))' }}>
         <div style={{ height: 58, display: 'flex', alignItems: 'center', gap: 10 }}>
           <button onClick={() => navigate('/einsaetze')} style={{ border: 'none', background: 'none', color: RED, cursor: 'pointer', padding: 0, display: 'flex' }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={RED} strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6"/></svg>
           </button>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -84,7 +86,7 @@ export default function EKS() {
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
           </button>
         </div>
-        <div style={{ display: 'flex', overflowX: 'auto', borderTop: '0.5px solid rgba(96,8,18,0.08)' }}>
+        <div style={{ display: 'flex', overflowX: 'auto', borderTop: '0.5px solid var(--lbf-border-light)' }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{
               padding: '10px 15px', border: 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit',
@@ -154,7 +156,7 @@ function DisclaimerGate({ onOk }: { onOk: () => void }) {
         <span style={{ fontSize: 13.5, color: 'var(--lbf-text)' }}>Verstanden — ich übernehme die Verantwortung für die Überwachung.</span>
       </label>
       <button disabled={!ok} onClick={onOk} style={{
-        width: '100%', border: 'none', background: RED, color: '#fff', borderRadius: 10, padding: 13,
+        width: '100%', border: 'none', background: RED_GRUND, color: '#fff', borderRadius: 10, padding: 13,
         fontWeight: 800, fontSize: 14, cursor: ok ? 'pointer' : 'not-allowed', opacity: ok ? 1 : 0.5, fontFamily: 'inherit',
       }}>Einsatzführung starten</button>
     </div>
@@ -198,7 +200,7 @@ function TabLage({ st, dispatch, persistent, offen }: { st: EksState; dispatch: 
             Belegt: {(speicher.usage / 1048576).toFixed(1)} MB von {(speicher.quota / 1048576).toFixed(0)} MB
           </div>
         )}
-        <button onClick={() => dispatch('system.papier', {})} style={{ ...bt(RED), marginTop: 10 }}>Papier-Rückfallebene aktiviert vermerken</button>
+        <button onClick={() => dispatch('system.papier', {})} style={{ ...bt(RED_HEX), color: RED, marginTop: 10 }}>Papier-Rückfallebene aktiviert vermerken</button>
       </Karte>
     </div>
   )
@@ -207,11 +209,12 @@ function TabLage({ st, dispatch, persistent, offen }: { st: EksState; dispatch: 
 function TabAbschnitte({ st, dispatch }: { st: EksState; dispatch: (t: EksEventType, p: any) => Promise<void> }) {
   const [neu, setNeu] = useState(false)
   const abschnitte = Object.values(st.abschnitte).filter(a => !a.entfernt)
+  // Abschnittsfarben werden im Ereignislog gespeichert — bleiben Hex
   const FARBEN = ['#600812', '#1e3a8a', '#065f46', '#7c2d12', '#4c1d95']
 
   return (
     <div style={{ paddingBottom: 20 }}>
-      <button onClick={() => setNeu(true)} style={{ ...bt(RED, true), width: '100%', padding: 12, marginBottom: 14 }}>Einsatzabschnitt bilden</button>
+      <button onClick={() => setNeu(true)} style={{ ...bt(RED_GRUND, true), width: '100%', padding: 12, marginBottom: 14 }}>Einsatzabschnitt bilden</button>
       {abschnitte.length === 0 && <div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Abschnitte gebildet.</div>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {abschnitte.map(a => {
@@ -254,7 +257,7 @@ function AbschnittModal({ farben, anzahl, onClose, onSave }: { farben: string[];
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 14 }}>
         <button onClick={onClose} style={bt('var(--warm-gray)')}>Abbrechen</button>
         <button disabled={!name.trim()} onClick={() => onSave({ name: name.trim(), leiter, funkkanal, farbe })}
-          style={{ ...bt(RED, true), opacity: name.trim() ? 1 : 0.5 }}>Bilden</button>
+          style={{ ...bt(RED_GRUND, true), opacity: name.trim() ? 1 : 0.5 }}>Bilden</button>
       </div>
     </Overlay>
   )
@@ -283,7 +286,7 @@ function EinstellungenModal({ st, dispatch, onClose }: { st: EksState; dispatch:
       </div>
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
         <button onClick={onClose} style={bt('var(--warm-gray)')}>Abbrechen</button>
-        <button onClick={async () => { await dispatch('as.config', { fields: c }); onClose() }} style={bt(RED, true)}>Übernehmen</button>
+        <button onClick={async () => { await dispatch('as.config', { fields: c }); onClose() }} style={bt(RED_GRUND, true)}>Übernehmen</button>
       </div>
     </Overlay>
   )
@@ -294,7 +297,7 @@ function KeinZugriff({ onBack }: { onBack: () => void }) {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24, fontFamily: "'Atkinson Hyperlegible', sans-serif" }}>
       <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>Kein Zugriff</div>
       <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', textAlign: 'center' }}>Für die Einsatzführung fehlt dir die Berechtigung.</div>
-      <button onClick={onBack} style={bt(RED, true)}>Zurück</button>
+      <button onClick={onBack} style={bt(RED_GRUND, true)}>Zurück</button>
     </div>
   )
 }

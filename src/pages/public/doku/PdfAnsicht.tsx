@@ -11,10 +11,12 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.14)'
+const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
 /** Breite des gesetzten Bogens in Pixeln — A4 bei 96 dpi. */
 const BOGEN_BREITE = 794
@@ -88,7 +90,7 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
       role="dialog" aria-label="Protokoll ansehen"
       style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column' }}
     >
-      <header style={{ flexShrink: 0, background: '#fff', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <header style={{ flexShrink: 0, background: 'var(--lbf-card)', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 700, color: TEXT }}>Protokoll</div>
           {/* Umbrechen statt abschneiden: auf dem Telefon fiele sonst gerade
@@ -103,7 +105,7 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
 
         <button
           type="button" onClick={() => setEingepasst((v) => !v)}
-          style={{ padding: '7px 11px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 8, color: TEXT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
+          style={{ padding: '7px 11px', background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 8, color: TEXT, fontFamily: 'inherit', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}
         >
           {eingepasst ? 'Originalgröße' : 'Einpassen'}
         </button>
@@ -112,7 +114,7 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
           type="button"
           onClick={() => { if (vorlage) setBlockiert(!vorlage.aelrdDrucken(werte, kopf)) }}
           disabled={!vorlage}
-          style={{ padding: '7px 13px', background: vorlage ? ROT : 'rgba(96,8,18,0.25)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: vorlage ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
+          style={{ padding: '7px 13px', background: vorlage ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.25)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: vorlage ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
         >
           PDF
         </button>
@@ -124,7 +126,7 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
             style={{
               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
               width: 38, height: 38, flexShrink: 0, borderRadius: 19,
-              background: '#fff', border: `0.5px solid ${LINIE}`, color: ROT,
+              background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, color: ROT,
               cursor: 'pointer', fontFamily: 'inherit', padding: 0,
             }}
           >
@@ -139,13 +141,13 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
       </header>
 
       {blockiert ? (
-        <div style={{ flexShrink: 0, margin: '10px 12px 0', padding: '9px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT }}>
+        <div style={{ flexShrink: 0, margin: '10px 12px 0', padding: '9px 12px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT }}>
           Der Browser hat das Druckfenster blockiert. Pop-ups für diese Seite erlauben, dann erneut auf PDF tippen.
         </div>
       ) : null}
 
       {fehler ? (
-        <div style={{ margin: 12, padding: '14px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5 }}>
+        <div style={{ margin: 12, padding: '14px 12px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 13, color: TEXT, lineHeight: 1.5 }}>
           {fehler}
         </div>
       ) : null}
@@ -174,6 +176,7 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
                 width: BOGEN_BREITE,
                 height: hoehe,
                 border: `0.5px solid ${LINIE}`,
+                // Das Blatt selbst bleibt Papier — weiß, auch im Dunkelmodus.
                 background: '#fff',
                 transform: `scale(${faktor})`,
                 transformOrigin: 'top left',

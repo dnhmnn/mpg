@@ -17,7 +17,7 @@ import ProtokollView from './ProtokollView'
 const Doku = lazy(() => import('../pages/public/doku/Doku'))
 
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.12)'
+const LINIE = 'var(--lbf-border)'
 
 /**
  * Die Maske allein, ohne Rahmen.
@@ -117,7 +117,7 @@ export default function ProtokollFenster({ patientId, payload, titel, onSchliess
        */
       style={{ position: 'fixed', inset: 0, zIndex: 4000, background: 'var(--warm-bg)', display: 'flex', flexDirection: 'column' }}
     >
-      <header style={{ flexShrink: 0, background: '#fff', borderBottom: `0.5px solid ${LINIE}`, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+      <header style={{ flexShrink: 0, background: 'var(--lbf-card)', borderBottom: `0.5px solid ${LINIE}`, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, fontStyle: 'italic', color: 'var(--text)' }}>
             {titel || 'Protokoll'}

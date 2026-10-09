@@ -18,10 +18,11 @@ import {
   naepAbschnitteFlach,
 } from '../../katalog/naep'
 
-const ROT = '#600812'
-const TEXT = '#1a0e08'
+const ROT = 'var(--lbf-akzent)'
+const ROT_GRUND = 'var(--lbf-akzent-grund)'
+const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(96,8,18,0.12)'
+const LINIE = 'var(--lbf-border)'
 
 /** Wie viele Angaben der Zustand trägt — für die Anzeige, nicht für die Logik. */
 export function erfassteAngaben(z: NaepZustand): number {
@@ -55,7 +56,7 @@ export default function NaepErfassung() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--warm-bg)' }}>
       <header style={{
-        position: 'sticky', top: 0, zIndex: 10, background: '#fff',
+        position: 'sticky', top: 0, zIndex: 10, background: 'var(--lbf-card)',
         borderBottom: `0.5px solid ${LINIE}`, padding: '10px 16px',
         display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap',
       }}>
@@ -74,18 +75,18 @@ export default function NaepErfassung() {
             value={protokollNr}
             onChange={(e) => setProtokollNr(e.target.value)}
             placeholder="für den Dateinamen"
-            style={{ padding: '6px 10px', background: '#fff', border: `0.5px solid ${LINIE}`, borderRadius: 6, fontFamily: 'inherit', fontSize: 13, color: TEXT, minWidth: 150 }}
+            style={{ padding: '6px 10px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 6, fontFamily: 'inherit', fontSize: 13, color: TEXT, minWidth: 150 }}
           />
         </label>
 
         <button type="button" onClick={herunterladen}
-          style={{ padding: '8px 16px', background: ROT, border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
+          style={{ padding: '8px 16px', background: ROT_GRUND, border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}>
           Datensatz erzeugen
         </button>
       </header>
 
       {hinweise.length > 0 ? (
-        <div style={{ margin: '12px 16px 0', padding: '9px 12px', background: '#fff', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT }}>
+        <div style={{ margin: '12px 16px 0', padding: '9px 12px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT }}>
           <div style={{ fontWeight: 700, marginBottom: 3 }}>
             {hinweise.length === 1 ? 'Ein Block geht nicht mit' : `${hinweise.length} Blöcke gehen nicht mit`}
           </div>
@@ -100,13 +101,13 @@ export default function NaepErfassung() {
           <NaepFormular zustand={zustand} onChange={setZustand} />
         </div>
 
-        <nav style={{ position: 'sticky', top: 74, background: '#fff', borderRadius: 12, borderLeft: `3px solid ${ROT}`, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '12px 14px' }}>
+        <nav style={{ position: 'sticky', top: 74, background: 'var(--lbf-card)', borderRadius: 12, borderLeft: `3px solid ${ROT}`, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '12px 14px' }}>
           <div style={{ fontSize: 10, fontWeight: 700, color: ROT, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>
             Abschnitte
           </div>
           {NAEP_ABSCHNITTE.map((a) => (
             <a key={a.code} href={`#naep-${a.code}`}
-              style={{ display: 'block', fontSize: 12, color: TEXT, textDecoration: 'none', padding: '3px 0', borderBottom: '0.5px solid rgba(96,8,18,0.06)' }}>
+              style={{ display: 'block', fontSize: 12, color: TEXT, textDecoration: 'none', padding: '3px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' }}>
               {a.titel}
             </a>
           ))}

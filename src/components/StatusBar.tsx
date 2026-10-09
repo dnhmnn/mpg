@@ -24,8 +24,8 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
       zIndex: 1000,
       height: 'calc(60px + env(safe-area-inset-top))',
       paddingTop: 'env(safe-area-inset-top)',
-      background: '#fff',
-      borderBottom: '0.5px solid rgba(96,8,18,0.12)',
+      background: 'var(--lbf-card)',
+      borderBottom: '0.5px solid var(--lbf-border)',
       display: 'flex',
       alignItems: 'center',
       paddingLeft: 'max(16px, env(safe-area-inset-left))',
@@ -40,11 +40,11 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', gap: 4,
-              color: '#600812', fontWeight: 700, fontSize: 14,
+              color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: 14,
               padding: '6px 0',
             }}
           >
-            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="#600812" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="8" height="14" viewBox="0 0 8 14" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="7 1 1 7 7 13"/>
             </svg>
             Zurück
@@ -53,7 +53,7 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             <div style={{
               width: 32, height: 32, borderRadius: '50%',
-              background: '#600812',
+              background: 'var(--lbf-akzent-grund)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}>
@@ -69,7 +69,7 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
       {/* Center */}
       <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
         {pageName && (
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#1a0e08', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', letterSpacing: '-0.01em', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {pageName}
           </div>
         )}
@@ -79,7 +79,7 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
           </div>
         )}
         {!pageName && !orgName && (
-          <div style={{ fontWeight: 700, fontSize: 15, color: '#1a0e08', letterSpacing: '-0.01em' }}>
+          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', letterSpacing: '-0.01em' }}>
             Responda
           </div>
         )}
@@ -92,11 +92,11 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
             to="/hub"
             style={{
               width: 34, height: 34, borderRadius: '50%',
-              border: '1.5px solid #600812',
+              border: '1.5px solid var(--lbf-akzent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#600812', fontStyle: 'italic', fontWeight: 700, fontSize: 15,
+              color: 'var(--lbf-akzent)', fontStyle: 'italic', fontWeight: 700, fontSize: 15,
               textDecoration: 'none',
-              background: 'rgba(96,8,18,0.04)',
+              background: 'rgba(var(--lbf-rot-rgb),0.04)',
             }}
             title="Hub"
           >
@@ -107,10 +107,10 @@ export default function StatusBar({ user, onLogout, showBackButton, onBackClick,
             onClick={onLogout}
             style={{
               width: 34, height: 34, borderRadius: '50%',
-              border: '1.5px solid #600812',
+              border: '1.5px solid var(--lbf-akzent)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: '#600812', fontStyle: 'italic', fontWeight: 700, fontSize: 15,
-              background: 'rgba(96,8,18,0.04)',
+              color: 'var(--lbf-akzent)', fontStyle: 'italic', fontWeight: 700, fontSize: 15,
+              background: 'rgba(var(--lbf-rot-rgb),0.04)',
               cursor: 'pointer',
             }}
             title="Abmelden"
