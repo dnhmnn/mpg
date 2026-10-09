@@ -44,16 +44,16 @@ const hasBarcodeDetector = () =>
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const inp: React.CSSProperties = {
-  width: '100%', padding: '.5rem .6rem', border: '1px solid #e2e8f0',
+  width: '100%', padding: '.5rem .6rem', border: '1px solid var(--lbf-input-border)',
   borderRadius: 8, fontSize: 15, boxSizing: 'border-box', fontFamily: 'inherit',
 }
 const fieldLbl: React.CSSProperties = {
   display: 'block', fontWeight: 700, fontSize: '.88rem',
-  color: '#111827', marginBottom: 3,
+  color: 'var(--lbf-text)', marginBottom: 3,
 }
 const btn = (bg: string, disabled = false): React.CSSProperties => ({
-  background: disabled ? '#e5e7eb' : bg,
-  color: disabled ? '#9ca3af' : '#fff',
+  background: disabled ? 'rgba(var(--lbf-rot-rgb),0.08)' : bg,
+  color: disabled ? 'var(--warm-gray)' : '#fff',
   border: 'none', borderRadius: 8, padding: '8px 14px',
   fontWeight: 700, cursor: disabled ? 'not-allowed' : 'pointer',
   fontSize: 14, fontFamily: 'inherit',
@@ -236,19 +236,17 @@ export default function DauermedikationPicker({
       {value.length > 0 && (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: '.75rem' }}>
           {value.map((m, i) => (
-            // Bleibt hell: der Name steht hart in #111827 und wäre auf der
-            // dunklen Warnfläche unlesbar.
             <div key={i} style={{
               display: 'inline-flex', alignItems: 'flex-start', gap: 6,
-              background: '#fef9c3', border: '1px solid #fde047',
+              background: 'var(--lbf-warn-grund-4)', border: '1px solid rgba(234,179,8,0.45)',
               borderRadius: 10, padding: '6px 10px', fontSize: 13,
             }}>
               <div>
-                <span style={{ fontWeight: 700, color: '#111827' }}>{m.name}</span>
-                <span style={{ color: '#78350f', marginLeft: 5 }}>({m.wirkstoff})</span>
-                {m.dosis && <span style={{ color: '#92400e', marginLeft: 5 }}>{m.dosis}</span>}
+                <span style={{ fontWeight: 700, color: 'var(--lbf-text)' }}>{m.name}</span>
+                <span style={{ color: 'var(--lbf-warn-text-3)', marginLeft: 5 }}>({m.wirkstoff})</span>
+                {m.dosis && <span style={{ color: 'var(--lbf-warn-text)', marginLeft: 5 }}>{m.dosis}</span>}
                 {m.pzn && (
-                  <span style={{ color: '#b45309', marginLeft: 5, fontSize: 11 }}>
+                  <span style={{ color: 'var(--lbf-warn-text-2)', marginLeft: 5, fontSize: 11 }}>
                     PZN {m.pzn}
                   </span>
                 )}
@@ -256,7 +254,7 @@ export default function DauermedikationPicker({
               <button
                 type="button"
                 onClick={() => onChange(value.filter((_, j) => j !== i))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#b45309', fontSize: 16, lineHeight: 1, padding: 0, marginLeft: 2, fontFamily: 'inherit' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--lbf-warn-text-2)', fontSize: 16, lineHeight: 1, padding: 0, marginLeft: 2, fontFamily: 'inherit' }}
               >×</button>
             </div>
           ))}
@@ -265,7 +263,7 @@ export default function DauermedikationPicker({
 
       {/* Entry form */}
       {open ? (
-        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '1rem' }}>
+        <div style={{ background: 'var(--warm-bg)', border: '1px solid var(--lbf-input-border)', borderRadius: 12, padding: '1rem' }}>
 
           {/* Search + barcode row */}
           <div style={{ marginBottom: '.75rem', position: 'relative' }} ref={hitsRef}>
@@ -282,7 +280,7 @@ export default function DauermedikationPicker({
                   autoComplete="off"
                 />
                 {searching && (
-                  <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: '#6b7280' }}>
+                  <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11, color: 'var(--warm-gray)' }}>
                     sucht…
                   </div>
                 )}
@@ -323,7 +321,7 @@ export default function DauermedikationPicker({
             </div>
 
             {!hasBarcodeDetector() && !photoPreview && !scanMsg && (
-              <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 4 }}>
                 Foto der Verpackung aufnehmen — PZN vom Bild ablesen und unten eintragen.
               </div>
             )}
@@ -333,11 +331,11 @@ export default function DauermedikationPicker({
             {showHits && hits.length > 0 && (
               <div style={{
                 position: 'absolute', top: '100%', left: 0, right: 0,
-                background: '#fff', border: '1px solid #e2e8f0',
+                background: 'var(--lbf-card)', border: '1px solid var(--lbf-input-border)',
                 borderRadius: 10, boxShadow: '0 6px 20px rgba(0,0,0,.1)',
                 zIndex: 100, overflow: 'hidden', marginTop: 2,
               }}>
-                <div style={{ padding: '6px 12px 4px', fontSize: 11, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: '.04em', background: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                <div style={{ padding: '6px 12px 4px', fontSize: 11, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '.04em', background: 'var(--warm-bg)', borderBottom: '1px solid var(--lbf-border-light)' }}>
                   Wirkstoff übernehmen
                 </div>
                 {hits.map((h, i) => (
@@ -345,13 +343,13 @@ export default function DauermedikationPicker({
                     key={i}
                     type="button"
                     onMouseDown={() => pickHit(h)}
-                    style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '9px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: i < hits.length - 1 ? '0.5px solid #f1f5f9' : 'none', fontFamily: 'inherit' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#eff6ff')}
+                    style={{ display: 'block', width: '100%', background: 'none', border: 'none', padding: '9px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: i < hits.length - 1 ? '0.5px solid var(--lbf-border-light)' : 'none', fontFamily: 'inherit' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--lbf-rot-rgb),0.05)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'none')}
                   >
-                    <div style={{ fontWeight: 700, fontSize: 14, color: '#111827' }}>{h.name}</div>
-                    <div style={{ fontSize: 12, color: '#6b7280', marginTop: 1 }}>
-                      Wirkstoff: <strong style={{ color: '#374151' }}>{h.wirkstoff}</strong>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{h.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 1 }}>
+                      Wirkstoff: <strong style={{ color: 'var(--lbf-text)' }}>{h.wirkstoff}</strong>
                     </div>
                   </button>
                 ))}
@@ -367,7 +365,7 @@ export default function DauermedikationPicker({
                 style={{ width: '100%', maxHeight: 220, borderRadius: 10, background: '#000', display: 'block' }}
                 playsInline muted
               />
-              <div style={{ fontSize: 13, color: '#374151', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: 13, color: 'var(--lbf-text)', marginTop: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#ef4444', display: 'inline-block', animation: 'blink 1s infinite' }} />
                 Kamera aktiv — Barcode-Aufkleber vor die Kamera halten
               </div>
@@ -381,12 +379,12 @@ export default function DauermedikationPicker({
               <img
                 src={photoPreview}
                 alt="Aufgenommenes Foto"
-                style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc' }}
+                style={{ width: '100%', maxHeight: 220, objectFit: 'contain', borderRadius: 10, border: '1px solid var(--lbf-input-border)', background: 'var(--warm-bg)' }}
               />
               <button
                 type="button"
                 onClick={() => { setPhotoPreview(null); setScanMsg('') }}
-                style={{ marginTop: 4, background: 'none', border: 'none', fontSize: 12, color: '#6b7280', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
+                style={{ marginTop: 4, background: 'none', border: 'none', fontSize: 12, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit', padding: 0 }}
               >
                 Foto entfernen
               </button>
@@ -394,12 +392,12 @@ export default function DauermedikationPicker({
           )}
 
           {scanMsg && (
-            <div style={{ background: 'var(--lbf-ok-grund)', border: '1px solid #86efac', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--lbf-ok-text)', marginBottom: '.75rem' }}>
+            <div style={{ background: 'var(--lbf-ok-grund)', border: '1px solid rgba(34,197,94,0.35)', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--lbf-ok-text)', marginBottom: '.75rem' }}>
               {scanMsg}
             </div>
           )}
           {scanError && (
-            <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--lbf-fehler-text)', marginBottom: '.75rem' }}>
+            <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid rgba(239,68,68,0.35)', borderRadius: 8, padding: '8px 12px', fontSize: 13, color: 'var(--lbf-fehler-text)', marginBottom: '.75rem' }}>
               {scanError}
             </div>
           )}
@@ -461,7 +459,7 @@ export default function DauermedikationPicker({
             >
               Hinzufügen
             </button>
-            <button type="button" onClick={closeForm} style={btn('#6b7280')}>
+            <button type="button" onClick={closeForm} style={btn('#8a7a68')}>
               Fertig
             </button>
           </div>
@@ -471,9 +469,9 @@ export default function DauermedikationPicker({
           type="button"
           onClick={() => { setOpen(true); focusName() }}
           style={{
-            background: '#f8fafc', border: '1.5px dashed #94a3b8',
+            background: 'var(--warm-bg)', border: '1.5px dashed rgba(var(--lbf-rot-rgb),0.25)',
             borderRadius: 8, padding: '8px 16px',
-            cursor: 'pointer', color: '#374151', fontWeight: 600,
+            cursor: 'pointer', color: 'var(--lbf-text)', fontWeight: 600,
             fontSize: '.9rem', fontFamily: 'inherit',
           }}
         >

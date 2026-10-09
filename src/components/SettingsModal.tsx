@@ -250,7 +250,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}>
               <thead>
-                <tr style={{ background: '#f8f8f8' }}>
+                <tr style={{ background: 'var(--warm-bg)' }}>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: 'var(--text)', borderBottom: '2px solid var(--border)' }}>Name</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: 'var(--text)', borderBottom: '2px solid var(--border)' }}>E-Mail</th>
                   <th style={{ padding: '12px', textAlign: 'left', fontWeight: 600, color: 'var(--text)', borderBottom: '2px solid var(--border)' }}>Rolle</th>
@@ -281,7 +281,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
                     const roleLabel = roleLabels[u.role] || '👤 Benutzer'
                     
                     return (
-                      <tr key={u.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
+                      <tr key={u.id} style={{ borderBottom: '1px solid var(--lbf-border)' }}>
                         <td style={{ padding: '12px' }}>{u.name || '—'}</td>
                         <td style={{ padding: '12px' }}>{u.email}</td>
                         <td style={{ padding: '12px' }}>{roleLabel}</td>
@@ -335,9 +335,9 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
             </div>
           </div>
           
-          <div style={{ background: '#f8f8f8', borderRadius: '12px', padding: '20px' }}>
+          <div style={{ background: 'var(--warm-bg)', borderRadius: '12px', padding: '20px' }}>
             <strong style={{ color: 'var(--text)' }}>📞 Support kontaktieren</strong><br/>
-            <span style={{ color: '#666', fontSize: '14px' }}>
+            <span style={{ color: 'var(--warm-gray)', fontSize: '14px' }}>
               Bei Fragen zur Lizenz kontaktieren Sie uns unter:<br/>
               <strong>support@responda.systems</strong>
             </span>

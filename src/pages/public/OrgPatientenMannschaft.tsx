@@ -270,9 +270,8 @@ export default function OrgPatientenMannschaft({
               <UserSearch key={f.key} label={f.label} orgId={orgId} value={sel[f.key]} onChange={u => set(f.key, u)} />
             ))}
           </div>
-          {/* Bleibt hell: die Schrift #854d0e ist kein Token und wäre auf der dunklen Warnfläche unlesbar. */}
           {mannschaftOffline && (
-            <div style={{ background: '#fef9c3', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: '#854d0e', marginBottom: '.75rem' }}>
+            <div style={{ background: 'var(--lbf-warn-grund-4)', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: 'var(--lbf-warn-text-4)', marginBottom: '.75rem' }}>
               {mannschaftOffline}
             </div>
           )}
@@ -310,9 +309,8 @@ export default function OrgPatientenMannschaft({
               Rettungsdienst kann das Protokoll 24 h einsehen.
             </span>
           </div>
-          {/* Bleibt hell: die Schrift #854d0e ist kein Token und wäre auf der dunklen Warnfläche unlesbar. */}
           {qrOffline && (
-            <div style={{ background: '#fef9c3', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: '#854d0e', marginBottom: '.75rem' }}>
+            <div style={{ background: 'var(--lbf-warn-grund-4)', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: 'var(--lbf-warn-text-4)', marginBottom: '.75rem' }}>
               {qrOffline}
             </div>
           )}

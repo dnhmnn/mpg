@@ -8,12 +8,16 @@ interface NewsItem {
   label: string
   sub: string
   url: string
-  color: string // bleibt Hex: wird mit Alpha-Anhang zusammengesetzt (item.color + '16')
+  rgb: string // Kennfarbe als CSS-Variable mit RGB-Tripel, damit sie im Dunkelmodus heller wird
 }
 
 interface WidgetsProps {
   user: User | null
 }
+
+// Volle Kennfarbe für Randstrich und Punkt. Das Rot nimmt den Akzent: dessen
+// RGB-Tripel ist dunkel Sand (für Tönungen gedacht), der Akzent dagegen Rosé.
+const linie = (rgb: string) => rgb === 'var(--lbf-rot-rgb)' ? 'var(--lbf-akzent)' : `rgb(${rgb})`
 
 export default function Widgets({ user }: WidgetsProps) {
   const navigate = useNavigate()
@@ -52,7 +56,7 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} offene${r.totalItems === 1 ? 's' : ''} Protokoll${r.totalItems === 1 ? '' : 'e'}`,
           sub: 'Zum Gegenzeichnen oder Bearbeiten',
           url: '/patienten',
-          color: '#600812',
+          rgb: 'var(--lbf-rot-rgb)',
         })
       })
     )
@@ -68,7 +72,7 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} Artikel laufen ab`,
           sub: 'Im Lager in den nächsten 30 Tagen',
           url: '/lager',
-          color: '#8c5e00',
+          rgb: 'var(--lbf-gold-rgb)',
         })
       })
     )
@@ -90,7 +94,7 @@ export default function Widgets({ user }: WidgetsProps) {
             label: parts.join(', '),
             sub: 'Rückmeldungen in den letzten 7 Tagen',
             url: '/ausbildungen',
-            color: '#3d5a6e',
+            rgb: 'var(--lbf-schiefer-rgb)',
           })
         }
       })
@@ -118,7 +122,7 @@ export default function Widgets({ user }: WidgetsProps) {
               label: `MPG: ${parts.join(', ')}`,
               sub: 'Geräteprüfung',
               url: '/mpg',
-              color: '#600812',
+              rgb: 'var(--lbf-rot-rgb)',
             })
           })
         }
@@ -136,7 +140,7 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} offene Produktausgabe${r.totalItems === 1 ? '' : 'n'}`,
           sub: 'Noch nicht ins Lager gebucht',
           url: '/lager',
-          color: '#600812',
+          rgb: 'var(--lbf-rot-rgb)',
         })
       })
     )
@@ -169,17 +173,17 @@ export default function Widgets({ user }: WidgetsProps) {
               padding: '14px 16px',
               background: 'var(--lbf-card)', borderRadius: 12,
               boxShadow: '0 1px 6px rgba(0,0,0,0.06)',
-              borderLeft: `3px solid ${item.color}`,
+              borderLeft: `3px solid ${linie(item.rgb)}`,
               cursor: 'pointer',
             }}
           >
             {/* Editorial icon square */}
             <div style={{
               width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-              background: item.color + '16',
+              background: `rgba(${item.rgb},0.086)`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <div style={{ width: 9, height: 9, borderRadius: 2, background: item.color }} />
+              <div style={{ width: 9, height: 9, borderRadius: 2, background: linie(item.rgb) }} />
             </div>
             {/* Text */}
             <div style={{ flex: 1, minWidth: 0 }}>

@@ -17,6 +17,18 @@ export const ALL_APPS: Record<string, App> = {
   settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: '#8a7a68', isInternal: true },
 }
 
+// Icon-Fläche eines Moduls: die tiefen Rot- und Brauntöne laufen über Tokens,
+// damit sie im Dunkelmodus heller werden (globals.css, --lbf-kachel-*).
+const KACHEL_TOKEN: Record<string, string> = {
+  '#600812': 'var(--lbf-kachel-rot)',
+  '#3d0408': 'var(--lbf-kachel-tief)',
+  '#7a1020': 'var(--lbf-kachel-wein)',
+  '#5c3800': 'var(--lbf-kachel-braun)',
+}
+export function kachelFarbe(farbe: string): string {
+  return KACHEL_TOKEN[farbe.toLowerCase()] ?? farbe
+}
+
 // Vorlagen zur Vorbefüllung der individuellen Rechte beim Anlegen/Ändern eines Benutzers.
 // Werden NICHT mehr für Laufzeit-Zugriffsprüfungen verwendet — einzig user.permissions
 // (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).

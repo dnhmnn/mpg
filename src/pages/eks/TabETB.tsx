@@ -113,7 +113,7 @@ export default function TabETB({ state, dispatch, offen }: {
           {eintraege.map(e => (
             <div key={e.id} style={{
               background: 'var(--lbf-card)', borderRadius: 10, padding: '10px 12px', boxShadow: 'var(--lbf-shadow)',
-              borderLeft: `3px solid ${e.typ === 'manuell' ? RED : e.typ === 'korrektur' ? '#d97706' : 'rgba(139,113,90,0.4)'}`,
+              borderLeft: `3px solid ${e.typ === 'manuell' ? RED : e.typ === 'korrektur' ? '#d97706' : 'rgba(var(--lbf-grau-rgb),0.4)'}`,
               opacity: e.korrigiert_durch ? 0.55 : 1,
             }}>
               <div style={{ display: 'flex', gap: 8, alignItems: 'baseline' }}>

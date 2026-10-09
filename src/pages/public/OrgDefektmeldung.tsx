@@ -13,7 +13,7 @@ const SEVERITY_CFG: Record<Severity, { label: string; desc: string; color: strin
   low:      { label: 'Gering',   desc: 'Gerät noch nutzbar',          color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
   medium:   { label: 'Mittel',   desc: 'Eingeschränkte Funktion',      color: '#ea580c', bg: 'rgba(234,88,12,0.08)'  },
   high:     { label: 'Hoch',     desc: 'Nicht mehr einsatzbereit',     color: '#dc2626', bg: 'rgba(220,38,38,0.08)'  },
-  critical: { label: 'Kritisch', desc: 'Sicherheitsrelevanter Defekt', color: '#7f1d1d', bg: 'rgba(127,29,29,0.12)'  },
+  critical: { label: 'Kritisch', desc: 'Sicherheitsrelevanter Defekt', color: 'rgb(var(--lbf-defekt-rgb))', bg: 'rgba(var(--lbf-defekt-rgb),0.12)'  },
 }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {

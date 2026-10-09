@@ -787,7 +787,7 @@ export default function Unitarii() {
 function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSelf: boolean }) {
   const expSoon = u.expires_at && new Date(u.expires_at).getTime() > Date.now()
   const expired = u.expires_at && new Date(u.expires_at).getTime() <= Date.now()
-  const stripColor = u.disabled || expired ? 'rgba(139,113,90,0.5)' : (expSoon ? '#d97706' : 'var(--lbf-akzent)')
+  const stripColor = u.disabled || expired ? 'rgba(var(--lbf-grau-rgb),0.5)' : (expSoon ? '#d97706' : 'var(--lbf-akzent)')
   const statusLabel = u.disabled
     ? 'DEAKTIVIERT'
     : expired ? 'ABGELAUFEN'
@@ -844,7 +844,7 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
     <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', cursor: 'pointer' }}>
       <span style={{ fontSize: 13, color: 'var(--lbf-text)', fontWeight: 600 }}>{label}</span>
       <div onClick={() => onChange(!value)} style={{
-        width: 42, height: 24, borderRadius: 12, background: value ? 'var(--lbf-akzent-grund)' : 'rgba(139,113,90,0.3)',
+        width: 42, height: 24, borderRadius: 12, background: value ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-grau-rgb),0.3)',
         position: 'relative', transition: 'background 0.15s',
       }}>
         <div style={{

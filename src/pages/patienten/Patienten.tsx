@@ -552,7 +552,7 @@ export default function Patienten() {
         /* Eine offene Rueckfrage haelt das Protokoll auf — der Balken sagt es. */
         .pat-card.rueckfrage    { border-left-color: #d97706; }
         .pat-card.nach          { border-left-color: var(--lbf-akzent); }
-        .pat-card.archiviert    { border-left-color: rgba(139,113,90,0.4); }
+        .pat-card.archiviert    { border-left-color: rgba(var(--lbf-grau-rgb),0.4); }
         .pat-card.old           { border-left-color: #d97706; }
 
         .pat-card-type {
@@ -619,7 +619,7 @@ export default function Patienten() {
           font-style: italic;
         }
         .pat-badge.nach          { background: rgba(var(--lbf-rot-rgb),0.07); color: var(--lbf-akzent); }
-        .pat-badge.archiviert    { background: rgba(139,113,90,0.1); color: var(--warm-gray); }
+        .pat-badge.archiviert    { background: rgba(var(--lbf-grau-rgb),0.1); color: var(--warm-gray); }
         .pat-badge.old-warn      { background: rgba(217,119,6,0.1); color: #d97706; }
 
         .pat-btn {
@@ -691,7 +691,7 @@ export default function Patienten() {
           background: var(--lbf-card);
           border-radius: 10px;
           margin-bottom: 6px;
-          border-left: 3px solid rgba(139,113,90,0.3);
+          border-left: 3px solid rgba(var(--lbf-grau-rgb),0.3);
           box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         .pat-audit-action {
@@ -1251,7 +1251,7 @@ export default function Patienten() {
                         <button onClick={() => setMannPicked(prev => { const n = { ...prev }; delete n[key]; return n })} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
                       </div>
                     ) : existing?.id ? (
-                      <div style={{ padding: '8px 12px', background: 'rgba(139,113,90,0.06)', border: '0.5px solid rgba(139,113,90,0.2)', borderRadius: 8, fontStyle: 'italic', fontSize: 14, color: 'var(--warm-gray)' }}>
+                      <div style={{ padding: '8px 12px', background: 'rgba(var(--lbf-grau-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-grau-rgb),0.2)', borderRadius: 8, fontStyle: 'italic', fontSize: 14, color: 'var(--warm-gray)' }}>
                         {existing.name} <span style={{ fontSize: 11, opacity: 0.7 }}>(bereits eingetragen)</span>
                       </div>
                     ) : (

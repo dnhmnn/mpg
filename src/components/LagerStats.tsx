@@ -134,7 +134,7 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--lbf-text)', lineHeight: 1.15 }}>{totalIn}</div>
             </div>
             <div style={{ background: 'var(--lbf-fuss)', borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: RED, textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Verbraucht</div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-fehler-text-2)', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Verbraucht</div>
               <div style={{ fontSize: 30, fontWeight: 800, color: 'var(--lbf-text)', lineHeight: 1.15 }}>{totalOut}</div>
             </div>
           </div>

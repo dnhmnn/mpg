@@ -137,6 +137,48 @@
   --lbf-warn-grund-4: #fef9c3;
   --lbf-ok-text-2: #15803d;
   --lbf-ok-grund-2: #dcfce7;
+  /* Weitere Kennfarben neben dem Rot (Lager/Ablauf, Ausbildung), als
+     RGB-Tripel wie --lbf-rot-rgb: rgb(var(...)) für Linien und Punkte,
+     rgba(var(...), 0.09) für Tönungen. Dunkel aufgehellt. */
+  --lbf-gold-rgb: 140, 94, 0;
+  --lbf-schiefer-rgb: 61, 90, 110;
+  /* Defekt/kritisch (MPG, Defektmeldung): tiefes Rot, dunkel ein helles. */
+  --lbf-defekt-rgb: 127, 29, 29;
+  /* Das Graubraun für Vergangenes/Abgesagtes (Ränder, gedämpfte Schrift) als
+     RGB-Tripel, dazu die gefüllte Fläche mit heller Schrift darauf. */
+  --lbf-grau-rgb: 139, 113, 90;
+  --lbf-grau-grund: #8a7a68;
+  /* Hinweisflächen in Blau/Indigo/Violett, dazu Smaragd, Rosa und weitere
+     Gelbtöne. Hell genau die bisherigen Töne, dunkel getönte Flächen mit
+     heller Schrift — wie bei ok/warn/fehler. */
+  --lbf-info-grund: #eff6ff;
+  --lbf-info-grund-2: #dbeafe;
+  --lbf-info-grund-3: #f0f9ff;
+  --lbf-info-grund-4: #f0f4ff;
+  --lbf-info-grund-5: #e0e7ff;
+  --lbf-info-grund-6: #f5f3ff;
+  --lbf-info-text: #1d4ed8;
+  --lbf-info-text-2: #1e40af;
+  --lbf-info-text-3: #1e3a8a;
+  --lbf-info-text-4: #0369a1;
+  --lbf-info-text-5: #3730a3;
+  --lbf-info-rand: #bfdbfe;
+  --lbf-info-rand-2: #93c5fd;
+  --lbf-info-rand-3: #bae6fd;
+  --lbf-info-rand-4: #c7d2fe;
+  --lbf-info-rand-5: #e9d5ff;
+  --lbf-ok-grund-3: #d1fae5;
+  --lbf-ok-text-3: #065f46;
+  --lbf-rosa-grund: #fce7f3;
+  --lbf-rosa-text: #9d174d;
+  --lbf-warn-grund-5: #fef9eb;
+  --lbf-warn-text-4: #854d0e;
+  /* Icon-Flächen der Module (weißes Symbol darauf). Die tiefen Rot- und
+     Brauntöne gehen auf der dunklen Karte unter — dunkel sind sie heller. */
+  --lbf-kachel-rot: #600812;
+  --lbf-kachel-tief: #3d0408;
+  --lbf-kachel-wein: #7a1020;
+  --lbf-kachel-braun: #5c3800;
   /* Eingebaute Bedienelemente (Datum, Auswahl, Rollbalken) passend färben. */
   color-scheme: light;
 
@@ -209,6 +251,37 @@
   --lbf-warn-grund-4: #3a2008;
   --lbf-ok-text-2: #86efac;
   --lbf-ok-grund-2: #1b2511;
+  --lbf-gold-rgb: 229, 180, 90;
+  --lbf-schiefer-rgb: 143, 180, 204;
+  --lbf-defekt-rgb: 248, 113, 113;
+  --lbf-grau-rgb: 200, 184, 166;
+  --lbf-grau-grund: #6b5d4f;
+  --lbf-info-grund: #14203a;
+  --lbf-info-grund-2: #14203a;
+  --lbf-info-grund-3: #14203a;
+  --lbf-info-grund-4: #1b1d3a;
+  --lbf-info-grund-5: #1b1d3a;
+  --lbf-info-grund-6: #211a36;
+  --lbf-info-text: #93c5fd;
+  --lbf-info-text-2: #93c5fd;
+  --lbf-info-text-3: #bfdbfe;
+  --lbf-info-text-4: #7dd3fc;
+  --lbf-info-text-5: #c7d2fe;
+  --lbf-info-rand: rgba(147,197,253,0.3);
+  --lbf-info-rand-2: rgba(147,197,253,0.45);
+  --lbf-info-rand-3: rgba(125,211,252,0.3);
+  --lbf-info-rand-4: rgba(199,210,254,0.3);
+  --lbf-info-rand-5: rgba(216,180,254,0.3);
+  --lbf-ok-grund-3: #1b2511;
+  --lbf-ok-text-3: #6ee7b7;
+  --lbf-rosa-grund: #3a1428;
+  --lbf-rosa-text: #f9a8d4;
+  --lbf-warn-grund-5: #3a2008;
+  --lbf-warn-text-4: #fcd34d;
+  --lbf-kachel-rot: #8a1c28;
+  --lbf-kachel-tief: #6b1420;
+  --lbf-kachel-wein: #a02434;
+  --lbf-kachel-braun: #7a4c08;
   color-scheme: dark;
 
   --bg: #000000;
@@ -274,6 +347,33 @@
   --lbf-warn-grund-4: #1f2b00;
   --lbf-ok-text-2: #00ff41;
   --lbf-ok-grund-2: #002c07;
+  --lbf-gold-rgb: 255, 212, 0;
+  --lbf-schiefer-rgb: 0, 204, 51;
+  --lbf-defekt-rgb: 255, 107, 107;
+  --lbf-grau-rgb: 0, 204, 51;
+  --lbf-grau-grund: #00661a;
+  --lbf-info-grund: #002c07;
+  --lbf-info-grund-2: #002c07;
+  --lbf-info-grund-3: #002c07;
+  --lbf-info-grund-4: #002c07;
+  --lbf-info-grund-5: #002c07;
+  --lbf-info-grund-6: #002c07;
+  --lbf-info-text: #00ff41;
+  --lbf-info-text-2: #00ff41;
+  --lbf-info-text-3: #00ff41;
+  --lbf-info-text-4: #00ff41;
+  --lbf-info-text-5: #00ff41;
+  --lbf-info-rand: rgba(0,255,65,0.25);
+  --lbf-info-rand-2: rgba(0,255,65,0.35);
+  --lbf-info-rand-3: rgba(0,255,65,0.25);
+  --lbf-info-rand-4: rgba(0,255,65,0.25);
+  --lbf-info-rand-5: rgba(0,255,65,0.25);
+  --lbf-ok-grund-3: #002c07;
+  --lbf-ok-text-3: #00ff41;
+  --lbf-rosa-grund: #241c0b;
+  --lbf-rosa-text: #ff6b6b;
+  --lbf-warn-grund-5: #1f2b00;
+  --lbf-warn-text-4: #ffd400;
   color-scheme: dark;
 
   --bg: #080c08;
@@ -366,6 +466,37 @@
   --lbf-warn-grund-4: #3a2008;
   --lbf-ok-text-2: #86efac;
   --lbf-ok-grund-2: #1b2511;
+  --lbf-gold-rgb: 229, 180, 90;
+  --lbf-schiefer-rgb: 143, 180, 204;
+  --lbf-defekt-rgb: 248, 113, 113;
+  --lbf-grau-rgb: 200, 184, 166;
+  --lbf-grau-grund: #6b5d4f;
+  --lbf-info-grund: #14203a;
+  --lbf-info-grund-2: #14203a;
+  --lbf-info-grund-3: #14203a;
+  --lbf-info-grund-4: #1b1d3a;
+  --lbf-info-grund-5: #1b1d3a;
+  --lbf-info-grund-6: #211a36;
+  --lbf-info-text: #93c5fd;
+  --lbf-info-text-2: #93c5fd;
+  --lbf-info-text-3: #bfdbfe;
+  --lbf-info-text-4: #7dd3fc;
+  --lbf-info-text-5: #c7d2fe;
+  --lbf-info-rand: rgba(147,197,253,0.3);
+  --lbf-info-rand-2: rgba(147,197,253,0.45);
+  --lbf-info-rand-3: rgba(125,211,252,0.3);
+  --lbf-info-rand-4: rgba(199,210,254,0.3);
+  --lbf-info-rand-5: rgba(216,180,254,0.3);
+  --lbf-ok-grund-3: #1b2511;
+  --lbf-ok-text-3: #6ee7b7;
+  --lbf-rosa-grund: #3a1428;
+  --lbf-rosa-text: #f9a8d4;
+  --lbf-warn-grund-5: #3a2008;
+  --lbf-warn-text-4: #fcd34d;
+  --lbf-kachel-rot: #8a1c28;
+  --lbf-kachel-tief: #6b1420;
+  --lbf-kachel-wein: #a02434;
+  --lbf-kachel-braun: #7a4c08;
   color-scheme: dark;
 
     --bg: #000000;

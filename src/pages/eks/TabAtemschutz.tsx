@@ -157,7 +157,7 @@ export default function TabAtemschutz({ state, dispatch }: Props) {
           const e = berechnet.get(t.id)
           if (!e) return null
           const stufe = hoechster(e.alarme.filter(a => !t.quittiert[a.key]))
-          const farbe = stufe === 'critical' ? CRIT : stufe === 'warn' ? AMBER : t.status === 'abgemeldet' ? 'rgba(139,113,90,0.4)' : GREEN
+          const farbe = stufe === 'critical' ? CRIT : stufe === 'warn' ? AMBER : t.status === 'abgemeldet' ? 'rgba(var(--lbf-grau-rgb),0.4)' : GREEN
           return (
             <TruppKarte key={t.id} t={t} b={e.b} alarme={e.alarme} farbe={farbe}
               onAbfrage={() => setAbfrage(t)}

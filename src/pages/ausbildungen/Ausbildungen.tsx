@@ -328,14 +328,14 @@ function TextBlockEditor({ initialText, onUpdate }: { initialText: string; onUpd
         <div style={{ flex: 1, fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.18em' }}>Text</div>
         {[['B','bold'],['I','italic'],['U','underline']].map(([lbl, cmd]) => (
           <button key={cmd} type="button" onMouseDown={e => { e.preventDefault(); fmt(cmd) }}
-            style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.03)', cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: lbl === 'B' ? 700 : 400, fontStyle: lbl === 'I' ? 'italic' : 'normal', textDecoration: lbl === 'U' ? 'underline' : 'none', flexShrink: 0 }}>
+            style={{ width: 22, height: 22, borderRadius: 4, border: '1px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', cursor: 'pointer', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: lbl === 'B' ? 700 : 400, fontStyle: lbl === 'I' ? 'italic' : 'normal', textDecoration: lbl === 'U' ? 'underline' : 'none', flexShrink: 0 }}>
             {lbl}
           </button>
         ))}
       </div>
       <div ref={ref} contentEditable suppressContentEditableWarning
         onInput={() => { if (ref.current) onUpdate(ref.current.innerHTML) }}
-        style={{ width: '100%', minHeight: 72, outline: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 0 6px 0', boxSizing: 'border-box' as const, wordBreak: 'break-word' } as React.CSSProperties}
+        style={{ width: '100%', minHeight: 72, outline: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.1)', background: 'transparent', fontSize: 15, color: '#1a0e08', lineHeight: 1.85, fontFamily: "Georgia, 'Times New Roman', serif", padding: '0 0 6px 0', boxSizing: 'border-box' as const, wordBreak: 'break-word' } as React.CSSProperties}
       />
     </>
   )
@@ -2488,7 +2488,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   const anwesenheitsfarben: {[k: string]: {bg: string, label: string, color: string}} = {
     da:           {bg: 'var(--lbf-ok-grund-2)', label: 'Da', color: 'var(--lbf-ok-text)'},
     krank:        {bg: 'var(--lbf-warn-grund-4)', label: 'Kr', color: 'var(--lbf-warn-text)'},
-    entschuldigt: {bg: '#dbeafe', label: 'En', color: '#1e40af'},
+    entschuldigt: {bg: 'var(--lbf-info-grund-2)', label: 'En', color: 'var(--lbf-info-text-2)'},
     fehlend:      {bg: 'var(--lbf-fehler-grund-2)', label: 'Fe', color: 'var(--lbf-fehler-text)'},
   }
 
@@ -2504,7 +2504,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (status === 'geplant') return 'var(--lbf-akzent)'
     if (status === 'laufend') return '#d97706'
     if (status === 'abgeschlossen') return '#16a34a'
-    if (status === 'abgesagt') return 'rgba(139,113,90,0.4)'
+    if (status === 'abgesagt') return 'rgba(var(--lbf-grau-rgb),0.4)'
     return 'var(--lbf-akzent)'
   }
 
@@ -2517,7 +2517,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (status === 'geplant') return 'rgba(var(--lbf-rot-rgb),0.07)'
     if (status === 'laufend') return 'rgba(217,119,6,0.12)'
     if (status === 'abgeschlossen') return 'rgba(22,163,74,0.1)'
-    if (status === 'abgesagt') return 'rgba(139,113,90,0.1)'
+    if (status === 'abgesagt') return 'rgba(var(--lbf-grau-rgb),0.1)'
     return 'rgba(var(--lbf-rot-rgb),0.07)'
   }
 
@@ -2669,7 +2669,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 const isNext = termin.id === nextTerminId
                 const fillRatio = termin.max_teilnehmer > 0 ? teilnehmerCount / termin.max_teilnehmer : 0
                 const tnColor = fillRatio >= 1 ? '#16a34a' : fillRatio >= 0.5 ? '#d97706' : 'var(--warm-gray)'
-                const circleColor = termin.status === 'abgesagt' ? 'var(--warm-gray)' : terminStatusGrund(termin.status)
+                const circleColor = termin.status === 'abgesagt' ? 'var(--lbf-grau-grund)' : terminStatusGrund(termin.status)
                 return (
                   <div
                     key={termin.id}
@@ -3052,13 +3052,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               onClick={() => viewTerminDetail(termin)}
                               style={{
                                 background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)',
-                                borderLeft: '3px solid rgba(139,113,90,0.4)', overflow: 'hidden',
+                                borderLeft: '3px solid rgba(var(--lbf-grau-rgb),0.4)', overflow: 'hidden',
                                 cursor: 'pointer', display: 'flex', alignItems: 'stretch'
                               }}
                             >
                               <div style={{ minWidth: 56, padding: '12px 8px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', gap: 2 }}>
                                 <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{weekday}</div>
-                                <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 24, lineHeight: 1, color: 'rgba(139,113,90,0.6)' }}>{dayNum}</div>
+                                <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 24, lineHeight: 1, color: 'rgba(var(--lbf-grau-rgb),0.6)' }}>{dayNum}</div>
                                 <div style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--warm-gray)' }}>{month}</div>
                               </div>
                               <div style={{ flex: 1, padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -3267,7 +3267,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
         const detailStatusColor = terminStatusColor(t.status)
         const detailStatusBg = terminStatusBg(t.status)
         const detailStatusLabel = t.status === 'geplant' ? 'Geplant' : t.status === 'laufend' ? 'Laufend' : t.status === 'abgeschlossen' ? 'Abgeschlossen' : 'Abgesagt'
-        const detailCircleColor = t.status === 'abgesagt' ? 'var(--warm-gray)' : terminStatusGrund(t.status)
+        const detailCircleColor = t.status === 'abgesagt' ? 'var(--lbf-grau-grund)' : terminStatusGrund(t.status)
 
         const TABS = [
           { key: 'info', label: 'Info', icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> },
@@ -3425,7 +3425,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--warm-gray)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Ausstehend ({ausstehend.length})</div>
                                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                     {ausstehend.map((name, i) => (
-                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: 'rgba(139,113,90,0.08)', color: 'var(--warm-gray)', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
+                                      <span key={i} style={{ padding: '4px 10px', borderRadius: 20, background: 'rgba(var(--lbf-grau-rgb),0.08)', color: 'var(--warm-gray)', fontSize: 13, fontWeight: 500, fontStyle: 'italic' }}>{name}</span>
                                     ))}
                                   </div>
                                 </div>
@@ -3558,7 +3558,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       const anwOptions: { value: 'da' | 'krank' | 'entschuldigt' | 'fehlend', label: string, color: string, bg: string }[] = [
                         { value: 'da', label: 'Da', color: '#16a34a', bg: 'rgba(22,163,74,0.1)' },
                         { value: 'krank', label: 'Krank', color: '#d97706', bg: 'rgba(217,119,6,0.1)' },
-                        { value: 'entschuldigt', label: 'Entschuldigt', color: 'var(--warm-gray)', bg: 'rgba(139,113,90,0.1)' },
+                        { value: 'entschuldigt', label: 'Entschuldigt', color: 'var(--warm-gray)', bg: 'rgba(var(--lbf-grau-rgb),0.1)' },
                         { value: 'fehlend', label: 'Fehlend', color: '#dc2626', bg: 'rgba(220,38,38,0.1)' },
                       ]
                       return (<>
@@ -3711,7 +3711,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                           />
                         )
                       })}
-                      <AddFileCard accent="var(--lbf-akzent)" accentGrund="var(--lbf-akzent-grund)" accentRgb="96,8,18" uploading={uploadingDozentFile}
+                      <AddFileCard accent="var(--lbf-akzent)" accentGrund="var(--lbf-akzent-grund)" accentRgb="var(--lbf-rot-rgb)" uploading={uploadingDozentFile}
                         accept=".pdf,.ppt,.pptx,.doc,.docx,.key,.pages"
                         onUpload={uploadDozentFile} onLibrary={() => { setShowFilePicker('dozent'); loadFilePicker() }} />
                     </div>
@@ -3728,7 +3728,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
                       {dozentTeam.map((d, i) => (
                         <div key={d.user_id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, background: 'var(--lbf-card)', borderRadius: 10, padding: '11px 14px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', borderLeft: `3px solid ${d.isHaupt ? 'var(--lbf-akzent)' : 'rgba(var(--lbf-rot-rgb),0.2)'}` }}>
-                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: d.isHaupt ? 'rgba(var(--lbf-rot-rgb),0.1)' : 'rgba(139,113,90,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: 34, height: 34, borderRadius: '50%', background: d.isHaupt ? 'rgba(var(--lbf-rot-rgb),0.1)' : 'rgba(var(--lbf-grau-rgb),0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <span style={{ fontSize: 13, fontWeight: 700, color: d.isHaupt ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontStyle: 'italic' }}>{d.name?.charAt(0) || '?'}</span>
                           </div>
                           <div style={{ flex: 1 }}>
@@ -3905,7 +3905,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           return (
             <div key={block.id} style={{ marginBottom: 14, position: 'relative' }}>
               <button onClick={() => removeBlock(block.id)}
-                style={{ position: 'absolute', top: 0, right: 0, zIndex: 5, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.08)', color: '#8a7a68', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
+                style={{ position: 'absolute', top: 0, right: 0, zIndex: 5, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.08)', color: '#8a7a68', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, lineHeight: 1 }}>×</button>
 
               {block.type === 'text' && (
                 <TextBlockEditor key={block.id} initialText={block.text} onUpdate={html => updateBlock(block.id, { text: html })} />
@@ -3916,7 +3916,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{ fontSize: 9, fontWeight: 700, color: '#7c2d12', textTransform: 'uppercase' as const, letterSpacing: '0.18em' }}>Bild</div>
                   {block.imagePreview && (
                     <button onClick={() => setBeitragForm(prev => ({ ...prev, coverBlockId: prev.coverBlockId === block.id ? null : block.id }))}
-                      style={{ marginLeft: 'auto', marginRight: 26, display: 'flex', alignItems: 'center', gap: 4, background: beitragForm.coverBlockId === block.id ? beitragForm.color : 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      style={{ marginLeft: 'auto', marginRight: 26, display: 'flex', alignItems: 'center', gap: 4, background: beitragForm.coverBlockId === block.id ? beitragForm.color : 'rgba(96,8,18,0.06)', border: 'none', borderRadius: 99, padding: '3px 9px', cursor: 'pointer', fontFamily: 'inherit' }}>
                       <svg width="11" height="11" viewBox="0 0 24 24" fill={beitragForm.coverBlockId === block.id ? '#fff' : '#600812'} stroke="none"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                       <span style={{ fontSize: 10, fontWeight: 700, color: beitragForm.coverBlockId === block.id ? '#fff' : '#600812' }}>Titelbild</span>
                     </button>
@@ -3930,13 +3930,13 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   </div>
                 ) : (
                   <div style={{ marginRight: 26 }}>
-                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 72, border: '1.5px dashed rgba(var(--lbf-rot-rgb),0.18)', borderRadius: 8, cursor: 'pointer', gap: 5, background: 'rgba(var(--lbf-rot-rgb),0.02)' }}>
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(var(--lbf-rot-rgb),0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                    <label style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 72, border: '1.5px dashed rgba(96,8,18,0.18)', borderRadius: 8, cursor: 'pointer', gap: 5, background: 'rgba(96,8,18,0.02)' }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="rgba(96,8,18,0.3)" strokeWidth="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                       <span style={{ fontSize: 11, color: '#8a7a68', fontStyle: 'italic' }}>Bild hochladen</span>
                       <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) updateBlock(block.id, { imageFile: f, imagePreview: URL.createObjectURL(f) }) }} />
                     </label>
                     <button type="button" onClick={() => generateAIImage(block.id)} disabled={isGenThis || !beitragForm.titel.trim()}
-                      style={{ width: '100%', marginTop: 5, padding: '6px', borderRadius: 7, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.03)', color: '#600812', fontSize: 11, fontWeight: 600, cursor: isGenThis || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      style={{ width: '100%', marginTop: 5, padding: '6px', borderRadius: 7, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', color: '#600812', fontSize: 11, fontWeight: 600, cursor: isGenThis || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
                       {isGenThis ? '✦ Generiere…' : '✦ KI-Bild'}
                     </button>
                   </div>
@@ -3946,7 +3946,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {block.type === 'video' && <div style={{ marginRight: 26 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#065f46', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Video</div>
                 <input value={block.videoUrl} onChange={e => updateBlock(block.id, { videoUrl: e.target.value })} placeholder="YouTube-URL…"
-                  style={{ width: '100%', border: 'none', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0', marginBottom: 8, boxSizing: 'border-box' as const }} />
+                  style={{ width: '100%', border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0', marginBottom: 8, boxSizing: 'border-box' as const }} />
                 {block.videoUrl.trim() && (
                   <div style={{ position: 'relative', paddingBottom: '50%', background: '#000', borderRadius: 6, overflow: 'hidden' }}>
                     <iframe src={(() => { const yt = block.videoUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\n?#]+)/); return yt ? `https://www.youtube.com/embed/${yt[1]}?rel=0` : block.videoUrl })()} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }} allowFullScreen />
@@ -3957,16 +3957,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {block.type === 'quiz' && <div style={{ marginRight: 26 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#1e3a8a', textTransform: 'uppercase' as const, letterSpacing: '0.18em', marginBottom: 6 }}>Quiz</div>
                 <textarea value={block.quizFrage} onChange={e => updateBlock(block.id, { quizFrage: e.target.value })} placeholder="Frage…" rows={2}
-                  style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.12)', outline: 'none', background: 'transparent', fontSize: 15, fontWeight: 600, color: '#1a0e08', lineHeight: 1.4, fontFamily: 'inherit', padding: '0 0 5px', boxSizing: 'border-box' as const, marginBottom: 8 }} />
+                  style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontSize: 15, fontWeight: 600, color: '#1a0e08', lineHeight: 1.4, fontFamily: 'inherit', padding: '0 0 5px', boxSizing: 'border-box' as const, marginBottom: 8 }} />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   {block.quizAntworten.map((a, idx) => (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                       <button onClick={() => updateBlock(block.id, { quizRichtige: idx })}
-                        style={{ width: 17, height: 17, borderRadius: '50%', border: `2px solid ${block.quizRichtige === idx ? '#16a34a' : 'rgba(var(--lbf-rot-rgb),0.2)'}`, background: block.quizRichtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        style={{ width: 17, height: 17, borderRadius: '50%', border: `2px solid ${block.quizRichtige === idx ? '#16a34a' : 'rgba(96,8,18,0.2)'}`, background: block.quizRichtige === idx ? '#16a34a' : 'transparent', flexShrink: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {block.quizRichtige === idx && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
                       </button>
                       <input value={a} onChange={e => { const arr = [...block.quizAntworten] as [string,string,string,string]; arr[idx] = e.target.value; updateBlock(block.id, { quizAntworten: arr }) }} placeholder={`Antwort ${idx + 1}…`}
-                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', outline: 'none', background: 'transparent', fontSize: 13, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0' }} />
+                        style={{ flex: 1, border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.08)', outline: 'none', background: 'transparent', fontSize: 13, color: '#1a0e08', fontFamily: 'inherit', padding: '3px 0' }} />
                     </div>
                   ))}
                 </div>
@@ -3982,16 +3982,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 Tags <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(kommagetrennt)</span>
               </div>
               <input value={beitragForm.tags} onChange={e => setBeitragForm(prev => ({ ...prev, tags: e.target.value }))} placeholder="Reanimation, XABCDE, Beatmung…"
-                style={{ border: 'none', borderBottom: '1px solid rgba(var(--lbf-rot-rgb),0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
+                style={{ border: 'none', borderBottom: '1px solid rgba(96,8,18,0.15)', outline: 'none', background: 'transparent', fontSize: 14, color: '#1a0e08', fontFamily: 'inherit', padding: '4px 0', width: '100%', marginBottom: 14 }} />
               {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).length > 0 && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
                   {beitragForm.tags.split(',').map(t => t.trim()).filter(Boolean).map(t => (
-                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', background: 'rgba(var(--lbf-rot-rgb),0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
+                    <span key={t} style={{ fontSize: 12, fontStyle: 'italic', fontWeight: 700, color: '#600812', background: 'rgba(96,8,18,0.07)', borderRadius: 99, padding: '3px 10px' }}>#{t}</span>
                   ))}
                 </div>
               )}
               {/* File attachments */}
-              <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', paddingTop: 14 }}>
+              <div style={{ borderTop: '0.5px solid rgba(96,8,18,0.1)', paddingTop: 14 }}>
                 <div style={{ fontSize: 9, fontWeight: 700, color: '#600812', textTransform: 'uppercase' as const, letterSpacing: '0.2em', marginBottom: 10 }}>
                   Dateien <span style={{ fontWeight: 400, color: '#8a7a68', textTransform: 'none' as const, letterSpacing: 0, fontSize: 10 }}>(PDF, Dokumente)</span>
                 </div>
@@ -4032,18 +4032,18 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               {isFirstPage && (
                 <div style={{ padding: '10px 20px 0 26px', flexShrink: 0 }}>
                   <textarea autoFocus value={beitragForm.titel} onChange={e => setBeitragForm(prev => ({ ...prev, titel: e.target.value }))} placeholder="Titel des Beitrags…" rows={2}
-                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.12)', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: '0 0 8px', boxSizing: 'border-box' as const }} />
+                    style={{ width: '100%', resize: 'none', border: 'none', borderBottom: '0.5px solid rgba(96,8,18,0.12)', outline: 'none', background: 'transparent', fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: '#1a0e08', lineHeight: 1.3, fontFamily: "'Atkinson Hyperlegible', Inter, sans-serif", padding: '0 0 8px', boxSizing: 'border-box' as const }} />
                   <div style={{ paddingBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <button onClick={() => setBeitragForm(prev => ({ ...prev, gepinnt: !prev.gepinnt }))}
                       style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>
-                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? beitragForm.color : 'rgba(var(--lbf-rot-rgb),0.2)'}`, background: beitragForm.gepinnt ? beitragForm.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <div style={{ width: 15, height: 15, borderRadius: 3, border: `1.5px solid ${beitragForm.gepinnt ? beitragForm.color : 'rgba(96,8,18,0.2)'}`, background: beitragForm.gepinnt ? beitragForm.color : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                         {beitragForm.gepinnt && <svg width="8" height="8" viewBox="0 0 24 24" fill="white"><path d="M16 12V4h1V2H7v2h1v8l-2 2v2h5v6h2v-6h5v-2l-2-2z"/></svg>}
                       </div>
                       <span style={{ fontSize: 11, color: beitragForm.gepinnt ? '#1a0e08' : '#8a7a68' }}>{beitragForm.gepinnt ? 'Angepinnt' : 'Anpinnen'}</span>
                     </button>
                     <button onClick={generateBookViaAi} disabled={generatingBook || !beitragForm.titel.trim()}
                       title="Erstellt aus dem Titel einen kompletten Buch-Entwurf (Seiten + Quiz) — danach fachlich prüfen"
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.03)', color: '#600812', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: generatingBook || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.03)', color: '#600812', borderRadius: 8, padding: '6px 10px', fontSize: 11, fontWeight: 700, cursor: generatingBook || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.5 : 1 }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/></svg>
                       {generatingBook ? 'KI schreibt…' : 'Buch mit KI erstellen'}
                     </button>
@@ -4084,12 +4084,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{ display: 'flex', gap: 5, paddingBottom: 10, flexWrap: 'wrap' as const }}>
                     {(['text', 'bild', 'video', 'quiz'] as const).map(t => (
                       <button key={t} onClick={() => addBlock(t)}
-                        style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.18)', background: 'rgba(var(--lbf-rot-rgb),0.04)', color: '#600812', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                        style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(96,8,18,0.18)', background: 'rgba(96,8,18,0.04)', color: '#600812', fontSize: 11, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
                         {t === 'bild' ? 'Bild' : t === 'quiz' ? 'Quiz' : t === 'video' ? 'Video' : 'Text'}
                       </button>
                     ))}
                     <button onClick={() => setShowBlockPicker(false)}
-                      style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.1)', background: 'transparent', color: '#8a7a68', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
+                      style={{ padding: '5px 11px', borderRadius: 20, border: '1.5px solid rgba(96,8,18,0.1)', background: 'transparent', color: '#8a7a68', fontSize: 11, cursor: 'pointer', fontFamily: 'inherit' }}>✕</button>
                   </div>
                 )}
               </div>
@@ -4106,7 +4106,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div style={{ position: 'absolute', left: 9, top: 0, bottom: 0, width: 22, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to right, rgba(0,0,0,0.09), transparent)' }} />
               <div style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: 12, zIndex: 10, pointerEvents: 'none', background: 'linear-gradient(to left, rgba(0,0,0,0.06), transparent)' }} />
               <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 20 }}>
-                <button onClick={resetBeitragForm} style={{ background: 'rgba(var(--lbf-rot-rgb),0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
+                <button onClick={resetBeitragForm} style={{ background: 'rgba(96,8,18,0.07)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#8a7a68' }}>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
               </div>
@@ -4114,7 +4114,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 <div style={{ fontSize: 9, color: '#8a7a68', fontStyle: 'italic' }}>{pageLabel}</div>
                 {!isFirstPage && !isTagsPage && bookPages.length > 1 && (
                   <button onClick={() => removePage(bookPageIdx)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 20px 0 0', color: 'rgba(var(--lbf-rot-rgb),0.3)', display: 'flex', alignItems: 'center' }}>
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 20px 0 0', color: 'rgba(96,8,18,0.3)', display: 'flex', alignItems: 'center' }}>
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                   </button>
                 )}
@@ -4122,31 +4122,31 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
               <div key={`ep-${bookPageIdx}`} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', animation: `pageIn${bookDir >= 0 ? 'R' : 'L'} 0.2s ease-out` }}>
                 {renderPageContent()}
               </div>
-              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', background: '#fffef9', zIndex: 5 }}>
+              <div style={{ flexShrink: 0, height: 52, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 10px', borderTop: '0.5px solid rgba(96,8,18,0.08)', background: '#fffef9', zIndex: 5 }}>
                 <button onClick={() => goPage(-1)} disabled={!canPrev}
-                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(var(--lbf-rot-rgb),0.07)' : 'transparent', color: canPrev ? '#600812' : 'rgba(var(--lbf-rot-rgb),0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
+                  style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: canPrev ? 'rgba(96,8,18,0.07)' : 'transparent', color: canPrev ? '#600812' : 'rgba(96,8,18,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: canPrev ? 'pointer' : 'default' }}>
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
                 </button>
                 <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
                   {Array.from({ length: TOTAL_PAGES }).map((_, i) => (
                     <div key={i} onClick={() => { setBookDir(i > bookPageIdx ? 1 : -1); setBookPageIdx(i); setShowBlockPicker(false) }}
-                      style={{ width: i === bookPageIdx ? 20 : 6, height: 6, borderRadius: 3, background: i === bookPageIdx ? '#600812' : 'rgba(var(--lbf-rot-rgb),0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
+                      style={{ width: i === bookPageIdx ? 20 : 6, height: 6, borderRadius: 3, background: i === bookPageIdx ? '#600812' : 'rgba(96,8,18,0.14)', cursor: 'pointer', transition: 'width 0.22s, background 0.22s' }} />
                   ))}
                   {!isTagsPage && (
                     <button onClick={addPage}
-                      style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'transparent', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginLeft: 2 }}>
+                      style={{ width: 22, height: 22, borderRadius: '50%', border: '1.5px solid rgba(96,8,18,0.2)', background: 'transparent', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', marginLeft: 2 }}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     </button>
                   )}
                 </div>
                 {canNext ? (
                   <button onClick={() => goPage(1)}
-                    style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                    style={{ width: 32, height: 32, borderRadius: '50%', border: 'none', background: 'rgba(96,8,18,0.07)', color: '#600812', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6"/></svg>
                   </button>
                 ) : (
                   <button onClick={saveBeitrag} disabled={savingBeitrag || !beitragForm.titel.trim()}
-                    style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(var(--lbf-rot-rgb),0.12)' : '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
+                    style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: savingBeitrag || !beitragForm.titel.trim() ? 'rgba(96,8,18,0.12)' : '#600812', color: '#fff', fontWeight: 700, fontSize: 13, cursor: savingBeitrag || !beitragForm.titel.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: !beitragForm.titel.trim() ? 0.6 : 1 }}>
                     {savingBeitrag ? 'Speichert…' : editingBeitragId ? 'Speichern' : 'Veröffentlichen'}
                   </button>
                 )}
@@ -4173,8 +4173,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                 autoFocus
               />
               {konzeptSuggestions.length > 0 && (
-                <div style={{marginTop: '6px', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', padding: '8px'}}>
-                  <div style={{fontSize: '12px', color: '#0369a1', fontWeight: 600, marginBottom: '6px'}}>
+                <div style={{marginTop: '6px', background: 'var(--lbf-info-grund-3)', border: '1px solid var(--lbf-info-rand-3)', borderRadius: '8px', padding: '8px'}}>
+                  <div style={{fontSize: '12px', color: 'var(--lbf-info-text-4)', fontWeight: 600, marginBottom: '6px'}}>
                     💡 Passende Konzepte gefunden:
                   </div>
                   {konzeptSuggestions.map(k => (
@@ -4314,10 +4314,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
           const statusConfig: {[k:string]: {label:string, bg:string, color:string}} = {
             da:           {label: 'Da',           bg: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)'},
             krank:        {label: 'Krank',         bg: 'var(--lbf-warn-grund-4)', color: 'var(--lbf-warn-text)'},
-            entschuldigt: {label: 'Entschuldigt',  bg: '#dbeafe', color: '#1e40af'},
+            entschuldigt: {label: 'Entschuldigt',  bg: 'var(--lbf-info-grund-2)', color: 'var(--lbf-info-text-2)'},
             fehlend:      {label: 'Fehlend',       bg: 'var(--lbf-fehler-grund-2)', color: 'var(--lbf-fehler-text)'},
-            zugesagt:     {label: 'Zugesagt',      bg: '#d1fae5', color: '#065f46'},
-            abgesagt:     {label: 'Abgesagt',      bg: '#fce7f3', color: '#9d174d'},
+            zugesagt:     {label: 'Zugesagt',      bg: 'var(--lbf-ok-grund-3)', color: 'var(--lbf-ok-text-3)'},
+            abgesagt:     {label: 'Abgesagt',      bg: 'var(--lbf-rosa-grund)', color: 'var(--lbf-rosa-text)'},
             eingeladen:   {label: 'Eingeladen',    bg: 'var(--bg-subtle)', color: 'var(--text-secondary)'},
           }
 
@@ -4468,8 +4468,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                   <div style={{fontSize: '11px', color: '#059669', marginTop: '1px'}}>Abgeschlossen am {fmtDate(p.abgeschlossen_am)}</div>
                                 )}
                               </div>
-                              {/* bleibt hell: Schrift #065f46 gehoert nicht zum Token-Satz */}
-                              <span style={{fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: isDone ? '#dcfce7' : '#f1f5f9', color: isDone ? '#065f46' : '#94a3b8'}}>
+                              <span style={{fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '4px', background: isDone ? 'var(--lbf-ok-grund-2)' : 'rgba(var(--lbf-rot-rgb),0.06)', color: isDone ? 'var(--lbf-ok-text-3)' : 'var(--warm-gray)'}}>
                                 {isDone ? 'Fertig' : 'Offen'}
                               </span>
                             </div>
@@ -4899,7 +4898,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               </div>
                               <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
                                 {linkedKonzept.lernziele.map((lz, i) => (
-                                  <div key={i} style={{display: 'flex', gap: '10px', padding: '8px 12px', background: '#eff6ff', borderRadius: '8px', borderLeft: '3px solid #3b82f6', fontSize: '13px', color: 'var(--text)'}}>
+                                  <div key={i} style={{display: 'flex', gap: '10px', padding: '8px 12px', background: 'var(--lbf-info-grund)', borderRadius: '8px', borderLeft: '3px solid #3b82f6', fontSize: '13px', color: 'var(--text)'}}>
                                     <span style={{color: '#3b82f6', fontWeight: 700, fontSize: '11px', minWidth: '16px'}}>{i + 1}</span>
                                     {lz}
                                   </div>
@@ -4933,7 +4932,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               </div>
                               <div style={{display: 'flex', flexWrap: 'wrap', gap: '6px'}}>
                                 {linkedKonzept.koennen.map((k, i) => (
-                                  <span key={i} style={{padding: '4px 12px', background: '#f0f4ff', border: '1px solid #c7d2fe', borderRadius: '20px', fontSize: '12px', color: '#3730a3', fontWeight: 500}}>
+                                  <span key={i} style={{padding: '4px 12px', background: 'var(--lbf-info-grund-4)', border: '1px solid var(--lbf-info-rand-4)', borderRadius: '20px', fontSize: '12px', color: 'var(--lbf-info-text-5)', fontWeight: 500}}>
                                     {k}
                                   </span>
                                 ))}
@@ -4950,7 +4949,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                               <div style={{display: 'flex', flexDirection: 'column', gap: '6px'}}>
                                 {linkedKonzept.wissensanhang_links.map((link, i) => (
                                   <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" style={{display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: 'var(--bg-subtle)', borderRadius: '8px', border: '1px solid var(--border)', textDecoration: 'none'}}>
-                                    <div style={{width: '28px', height: '28px', borderRadius: '6px', background: '#e0e7ff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
+                                    <div style={{width: '28px', height: '28px', borderRadius: '6px', background: 'var(--lbf-info-grund-5)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0}}>
                                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
                                     </div>
                                     <div style={{flex: 1, minWidth: 0}}>
@@ -5426,7 +5425,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                         ))}
 
                         {editingQuizBlock === idx ? (
-                          <div style={{background: 'var(--bg-card)', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '12px', marginTop: '8px'}}>
+                          <div style={{background: 'var(--bg-card)', border: '1px solid var(--lbf-info-rand-4)', borderRadius: '8px', padding: '12px', marginTop: '8px'}}>
                             <div className="field" style={{marginBottom: '8px'}}>
                               <label style={{fontSize: '12px'}}>Frage</label>
                               <input type="text" value={newQuizFrage}
@@ -5565,17 +5564,16 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 <div style={{color: 'var(--text-secondary)', fontSize: '13px'}}>Noch keine Fragen.</div>
                               )}
                               {quizData.fragen.map((f, fi) => (
-                                <div key={fi} style={{background: '#f5f3ff', borderRadius: '10px', padding: '14px', border: '1px solid #e9d5ff'}}>
+                                <div key={fi} style={{background: 'var(--lbf-info-grund-6)', borderRadius: '10px', padding: '14px', border: '1px solid var(--lbf-info-rand-5)'}}>
                                   <div style={{fontWeight: 600, fontSize: '14px', marginBottom: '8px'}}>{fi + 1}. {f.frage}</div>
                                   <div style={{display: 'flex', flexDirection: 'column', gap: '5px'}}>
                                     {f.antworten.map((a, ai) => (
                                       <div key={ai} style={{
                                         display: 'flex', alignItems: 'center', gap: '8px',
                                         padding: '6px 10px', borderRadius: '6px',
-                                        // bleibt hell: Antwortzeile im hellen Quiz-Kasten (#f5f3ff) mit fester dunkler Schrift
-                                        background: ai === f.richtige ? '#d1fae5' : '#fff',
-                                        border: `1px solid ${ai === f.richtige ? '#6ee7b7' : '#e2e8f0'}`,
-                                        fontSize: '13px', color: ai === f.richtige ? '#065f46' : '#334155'
+                                        background: ai === f.richtige ? 'var(--lbf-ok-grund-3)' : 'var(--lbf-card)',
+                                        border: `1px solid ${ai === f.richtige ? '#6ee7b7' : 'var(--lbf-border)'}`,
+                                        fontSize: '13px', color: ai === f.richtige ? 'var(--lbf-ok-text-3)' : 'var(--lbf-text)'
                                       }}>
                                         <span style={{fontWeight: ai === f.richtige ? 700 : 400, minWidth: '14px'}}>
                                           {ai === f.richtige ? '✓' : String.fromCharCode(65 + ai)}
@@ -5681,9 +5679,8 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                                 onClick={() => toggleModulAbgeschlossen(p.id, isDone)}
                                 style={{
                                   padding: '5px 12px', borderRadius: '6px', border: 'none', cursor: 'pointer', fontSize: '12px', fontWeight: 600, fontFamily: 'inherit',
-                                  // bleibt hell: Schriftfarben #065f46/#475569 gehoeren nicht zum Token-Satz
-                                  background: isDone ? '#dcfce7' : '#f1f5f9',
-                                  color: isDone ? '#065f46' : '#475569'
+                                  background: isDone ? 'var(--lbf-ok-grund-2)' : 'rgba(var(--lbf-rot-rgb),0.06)',
+                                  color: isDone ? 'var(--lbf-ok-text-3)' : 'var(--warm-gray)'
                                 }}
                               >
                                 {isDone ? 'Abgeschlossen' : 'Offen'}
@@ -6029,9 +6026,9 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                   <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
                     {selectedKonzept.koennen.map((k, idx) => (
                       <span key={idx} style={{
-                        padding: '6px 14px', background: '#f0f4ff',
-                        border: '1px solid #c7d2fe', borderRadius: '20px',
-                        fontSize: '13px', color: '#3730a3', fontWeight: 500
+                        padding: '6px 14px', background: 'var(--lbf-info-grund-4)',
+                        border: '1px solid var(--lbf-info-rand-4)', borderRadius: '20px',
+                        fontSize: '13px', color: 'var(--lbf-info-text-5)', fontWeight: 500
                       }}>
                         {k}
                       </span>
@@ -6069,7 +6066,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
                       >
                         <div style={{
                           width: '36px', height: '36px', borderRadius: '8px',
-                          background: '#e0e7ff', display: 'flex', alignItems: 'center',
+                          background: 'var(--lbf-info-grund-5)', display: 'flex', alignItems: 'center',
                           justifyContent: 'center', flexShrink: 0
                         }}>
                           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4f46e5" strokeWidth="2">

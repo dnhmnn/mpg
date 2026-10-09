@@ -96,11 +96,11 @@ const SEVERITY_CFG: Record<Severity, { label: string; color: string; bg: string 
   low:      { label: 'Gering',    color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
   medium:   { label: 'Mittel',    color: '#ea580c', bg: 'rgba(234,88,12,0.08)'  },
   high:     { label: 'Hoch',      color: '#dc2626', bg: 'rgba(220,38,38,0.08)'  },
-  critical: { label: 'Kritisch',  color: '#7f1d1d', bg: 'rgba(127,29,29,0.12)'  },
+  critical: { label: 'Kritisch',  color: 'rgb(var(--lbf-defekt-rgb))', bg: 'rgba(var(--lbf-defekt-rgb),0.12)'  },
 }
 
 const STATUS_BORDER: Record<DeviceStatus, string> = {
-  ok: '#16a34a', warning: '#d97706', overdue: '#dc2626', defect: '#7f1d1d',
+  ok: '#16a34a', warning: '#d97706', overdue: '#dc2626', defect: 'rgb(var(--lbf-defekt-rgb))',
 }
 
 const INTERVAL_LABELS: Record<DeviceInterval, string> = {
@@ -691,7 +691,7 @@ export default function MPG() {
                 { key: 'ok', label: 'OK', color: '#16a34a', count: stats.ok },
                 { key: 'warning', label: 'Bald', color: '#d97706', count: stats.warning },
                 { key: 'overdue', label: 'Fällig', color: '#dc2626', count: stats.overdue },
-                { key: 'defect', label: 'Defekt', color: '#7f1d1d', count: stats.defect },
+                { key: 'defect', label: 'Defekt', color: 'rgb(var(--lbf-defekt-rgb))', count: stats.defect },
               ].map(s => (
                 <button key={s.key} onClick={() => setStatusFilter(statusFilter === s.key as DeviceStatus ? 'all' : s.key as DeviceStatus)}
                   style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '12px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: statusFilter === s.key ? `1.5px solid ${s.color}` : '1.5px solid transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
@@ -748,7 +748,7 @@ export default function MPG() {
                           {status === 'warning' && <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>Prüfung bald fällig</span>}
                           {status === 'overdue' && device.operational !== false && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '3px 10px' }}>Prüfung überfällig</span>}
                           {openDef.length > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: '#7f1d1d', background: 'rgba(127,29,29,0.1)', borderRadius: 99, padding: '3px 10px' }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgb(var(--lbf-defekt-rgb))', background: 'rgba(var(--lbf-defekt-rgb),0.1)', borderRadius: 99, padding: '3px 10px' }}>
                               {openDef.length} Defekt{openDef.length > 1 ? 'e' : ''} offen
                             </span>
                           )}
@@ -910,7 +910,7 @@ export default function MPG() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       {resolvedDefects.map(def => (
-                        <div key={def.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', borderLeft: '3px solid rgba(139,113,90,0.35)', padding: '12px 16px', opacity: 0.75 }}>
+                        <div key={def.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.04)', borderLeft: '3px solid rgba(var(--lbf-grau-rgb),0.35)', padding: '12px 16px', opacity: 0.75 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between', marginBottom: 4 }}>
                             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{def.device_name}</div>
                             <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '2px 8px', textTransform: 'uppercase' as const }}>Behoben</span>
@@ -1158,7 +1158,7 @@ export default function MPG() {
                     {dd.length === 0 ? (
                       <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', padding: '24px 0' }}>Keine Defekte für dieses Gerät</div>
                     ) : dd.map(def => (
-                      <div key={def.id} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px', marginBottom: 10, borderLeft: `3px solid ${def.status === 'resolved' ? 'rgba(139,113,90,0.35)' : SEVERITY_CFG[def.severity].color}` }}>
+                      <div key={def.id} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px', marginBottom: 10, borderLeft: `3px solid ${def.status === 'resolved' ? 'rgba(var(--lbf-grau-rgb),0.35)' : SEVERITY_CFG[def.severity].color}` }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
                           <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>{def.description}</div>
                           <span style={{ fontSize: 10, fontWeight: 700, color: def.status === 'resolved' ? '#16a34a' : SEVERITY_CFG[def.severity].color, flexShrink: 0 }}>
@@ -1247,7 +1247,7 @@ export default function MPG() {
             <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 16 }}>
               Gemeldet von {confirmTarget.reporter_name || 'Anonym'} · {relativeDate(confirmTarget.created)}
             </div>
-            <div style={{ background: 'rgba(127,29,29,0.06)', border: '0.5px solid rgba(127,29,29,0.15)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: '#7f1d1d', fontStyle: 'italic' }}>
+            <div style={{ background: 'rgba(var(--lbf-defekt-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-defekt-rgb),0.15)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: 'rgb(var(--lbf-defekt-rgb))', fontStyle: 'italic' }}>
               Gerät wird als <strong style={{ fontStyle: 'normal' }}>nicht einsatzbereit</strong> markiert und ein Defekt-Eintrag angelegt.
             </div>
             <div style={{ display: 'flex', gap: 10 }}>

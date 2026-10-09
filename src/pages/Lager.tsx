@@ -2641,7 +2641,7 @@ export default function Lager() {
             filteredItems.map(item => {
               const isLow = item.min_stock > 0 && item.qty < item.min_stock
               const isZero = item.qty === 0
-              const borderColor = isZero ? 'rgba(139,113,90,0.4)' : item.status === 'ok' ? '#16a34a' : item.status === 'warn' ? '#d97706' : 'var(--lbf-akzent)'
+              const borderColor = isZero ? 'rgba(var(--lbf-grau-rgb),0.4)' : item.status === 'ok' ? '#16a34a' : item.status === 'warn' ? '#d97706' : 'var(--lbf-akzent)'
               const expiryColor = item.status === 'exp' ? 'var(--lbf-akzent)' : item.status === 'warn' ? '#d97706' : 'var(--warm-gray)'
 
               return (
@@ -4649,7 +4649,7 @@ export default function Lager() {
                           </div>
                         </div>
                         {/* Abzeichen bleibt fest: Schriftfarbe #854d0e hat kein Thema-Gegenstueck, Grund und Schrift nur gemeinsam tauschbar */}
-                        <span style={{ fontSize: 10, fontWeight: 700, background: '#fef9c3', color: '#854d0e', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offen</span>
+                        <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--lbf-warn-grund-4)', color: 'var(--lbf-warn-text-4)', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offen</span>
                       </div>
 
                       <div style={{ marginBottom: 12 }}>
@@ -4786,8 +4786,8 @@ export default function Lager() {
             </div>
             <div style={{ maxHeight: 400, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
               {importItems.map((row, i) => {
-                const borderColor = row.matchType === 'exact' ? '#16a34a' : row.matchType === 'similar' ? '#d97706' : 'rgba(139,113,90,0.4)'
-                const bg = row.matchType === 'exact' ? 'rgba(22,163,74,0.04)' : row.matchType === 'similar' ? 'rgba(217,119,6,0.05)' : 'rgba(139,113,90,0.06)'
+                const borderColor = row.matchType === 'exact' ? '#16a34a' : row.matchType === 'similar' ? '#d97706' : 'rgba(var(--lbf-grau-rgb),0.4)'
+                const bg = row.matchType === 'exact' ? 'rgba(22,163,74,0.04)' : row.matchType === 'similar' ? 'rgba(217,119,6,0.05)' : 'rgba(var(--lbf-grau-rgb),0.06)'
                 return (
                   <div key={i} style={{ padding: '10px 12px', background: bg, borderRadius: 10, borderLeft: `3px solid ${borderColor}`, opacity: row.included || row.createNew ? 1 : 0.5 }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>

@@ -62,7 +62,7 @@ function safeJson(v: any): any {
 const STATUS_CFG: Record<string, { label: string; color: string; bg: string; strip: string }> = {
   aktiv:         { label: 'Aktiv',         color: 'var(--lbf-akzent)',              bg: 'var(--lbf-border-light)',   strip: 'var(--lbf-akzent)' },
   abgeschlossen: { label: 'Abgeschlossen', color: '#16a34a',              bg: 'var(--lbf-ok-grund-2)',              strip: '#16a34a' },
-  abgebrochen:   { label: 'Abgebrochen',   color: 'var(--warm-gray)',              bg: 'rgba(139,113,90,0.1)', strip: 'rgba(139,113,90,0.4)' },
+  abgebrochen:   { label: 'Abgebrochen',   color: 'var(--warm-gray)',              bg: 'rgba(var(--lbf-grau-rgb),0.1)', strip: 'rgba(var(--lbf-grau-rgb),0.4)' },
 }
 
 const ROLLEN = [

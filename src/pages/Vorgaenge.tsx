@@ -440,7 +440,7 @@ export default function Vorgaenge() {
             {STATIC_FORMS.map(form => {
               const isHidden = (cfg.hidden_forms || []).includes(form.id)
               return (
-                <div key={form.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(139,113,90,0.35)' : 'var(--lbf-akzent)'}`, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div key={form.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(var(--lbf-grau-rgb),0.35)' : 'var(--lbf-akzent)'}`, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: isHidden ? 'var(--warm-gray)' : 'var(--lbf-text)', fontStyle: isHidden ? 'italic' : 'normal' }}>{form.label}</div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{form.desc}</div>
@@ -467,7 +467,7 @@ export default function Vorgaenge() {
             )}
 
             {templates.map(template => (
-              <div key={template.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${template.is_active ? 'var(--lbf-akzent)' : 'rgba(139,113,90,0.35)'}`, marginBottom: 10, overflow: 'hidden' }}>
+              <div key={template.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${template.is_active ? 'var(--lbf-akzent)' : 'rgba(var(--lbf-grau-rgb),0.35)'}`, marginBottom: 10, overflow: 'hidden' }}>
                 <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: template.is_active ? 'var(--lbf-text)' : 'var(--warm-gray)', fontStyle: !template.is_active ? 'italic' : 'normal', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{template.title}</div>
@@ -520,7 +520,7 @@ export default function Vorgaenge() {
               const totalFields = section.fields.length + customFields.length
 
               return (
-                <div key={section.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(139,113,90,0.35)' : 'var(--lbf-akzent)'}`, marginBottom: 10, overflow: 'hidden' }}>
+                <div key={section.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(var(--lbf-grau-rgb),0.35)' : 'var(--lbf-akzent)'}`, marginBottom: 10, overflow: 'hidden' }}>
                   <div style={{ display: 'flex', alignItems: 'center', padding: '12px 14px', gap: 10 }}>
                     <button type="button" onClick={() => setExpandedSection(isExpanded ? null : section.id)}
                       style={{ flex: 1, background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', padding: 0, display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'inherit' }}>

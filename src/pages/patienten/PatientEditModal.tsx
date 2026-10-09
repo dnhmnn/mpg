@@ -169,7 +169,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
         <label style={lbl}>{rl}</label>
         {linked ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 4, background: '#eff6ff', border: '0.5px solid #93c5fd', borderRadius: 8, padding: '8px 10px', fontSize: 13, color: '#1d4ed8', fontWeight: 600 }}>
+            <span style={{ flex: 1, display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--lbf-info-grund)', border: '0.5px solid var(--lbf-info-rand-2)', borderRadius: 8, padding: '8px 10px', fontSize: 13, color: 'var(--lbf-info-text)', fontWeight: 600 }}>
               {linked.name || '—'}{linked.persnr && <span style={{ opacity: .7, fontSize: 12 }}>&nbsp;· #{linked.persnr}</span>}
             </span>
             <button type="button" onClick={() => clearMannUser(role)} style={{ background: 'none', border: '0.5px solid var(--border)', borderRadius: 6, padding: '7px 10px', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 13 }}>×</button>
@@ -793,11 +793,11 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
           <PubSection title={`Rückfragen / Stellungnahmen${realRQs.length ? ` (${realRQs.length})` : ''}`} open>
 
           {systemRQs.map(rq => (
-            <div key={rq.id} style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <div key={rq.id} style={{ background: 'var(--lbf-info-grund)', border: '1px solid var(--lbf-info-rand)', borderRadius: 10, padding: '10px 12px', marginBottom: 10, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               <div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#1d4ed8', marginBottom: 2 }}>System · {new Date(rq.created).toLocaleString('de-DE')}</div>
-                <div style={{ fontSize: 13, color: '#1e3a8a', lineHeight: 1.5 }}>{rq.frage}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--lbf-info-text)', marginBottom: 2 }}>System · {new Date(rq.created).toLocaleString('de-DE')}</div>
+                <div style={{ fontSize: 13, color: 'var(--lbf-info-text-3)', lineHeight: 1.5 }}>{rq.frage}</div>
               </div>
             </div>
           ))}

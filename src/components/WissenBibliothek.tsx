@@ -78,25 +78,25 @@ export default function WissenBibliothek({ organizationId, search, activeTag }: 
               aspectRatio: '3/4', position: 'relative',
               background: 'linear-gradient(165deg, #fdf8f0 0%, #f0e3cf 100%)',
               boxShadow: '3px 5px 18px rgba(0,0,0,0.22), inset -3px 0 8px rgba(0,0,0,0.08)',
-              border: '0.5px solid var(--lbf-border)',
+              border: '0.5px solid rgba(96,8,18,0.12)',
             }}>
-              {/* Der Band ist ein heller Buchdeckel (Gestaltungsobjekt) — Rücken, Bildfenster
-                  und dunkelrote Schrift darauf bleiben hart, sonst wäre die Schrift auf Elfenbein unlesbar */}
+              {/* Der Band ist ein heller Buchdeckel (Gestaltungsobjekt) — alles darauf
+                  bleibt hart, auch die zarten Töne: ein Token würde dunkel zu Sand auf Elfenbein */}
               {/* Roter Buchrücken */}
               <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 7, background: '#600812', zIndex: 3 }} />
               {/* Kleines Abbildungs-Fenster wie bei Fachbänden */}
               {bild && (
-                <div style={{ position: 'absolute', top: 12, left: 18, right: 10, height: '34%', borderRadius: 6, overflow: 'hidden', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: '#fff' }}>
+                <div style={{ position: 'absolute', top: 12, left: 18, right: 10, height: '34%', borderRadius: 6, overflow: 'hidden', border: '0.5px solid rgba(96,8,18,0.15)', background: '#fff' }}>
                   <img src={bild} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { (e.currentTarget.parentElement as HTMLElement).style.display = 'none' }} />
                 </div>
               )}
               <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: '12px 10px 12px 18px' }}>
-                <div style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'rgba(var(--lbf-rot-rgb),0.55)', marginBottom: 5 }}>Wissen</div>
+                <div style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', color: 'rgba(96,8,18,0.55)', marginBottom: 5 }}>Wissen</div>
                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: '#600812', lineHeight: 1.3, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' as const } as React.CSSProperties}>
                   {a.titel || '(ohne Titel)'}
                 </div>
                 {tags.length > 0 && (
-                  <div style={{ fontSize: 9, color: 'rgba(var(--lbf-rot-rgb),0.5)', fontStyle: 'italic', marginTop: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 9, color: 'rgba(96,8,18,0.5)', fontStyle: 'italic', marginTop: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {tags.slice(0, 3).map(t => `#${t}`).join(' ')}
                   </div>
                 )}

@@ -97,34 +97,32 @@ export default function PatientView() {
     }
   }
 
-  // Die Zugangskarte bleibt hell: ihr Grund und ihre Schrift (#f3f4f6,
-  // #111827, #6b7280) haben keine Tokens — eine dunkle Karte darin wäre unlesbar.
   const centerCard = (children: React.ReactNode) => (
-    <div style={{ minHeight: '100vh', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: '#fff', borderRadius: 16, padding: 40, maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>{children}</div>
+    <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+      <div style={{ background: 'var(--lbf-card)', borderRadius: 16, padding: 40, maxWidth: 420, width: '100%', textAlign: 'center', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}>{children}</div>
     </div>
   )
 
-  if (status === 'loading') return centerCard(<><div style={{ width: 40, height: 40, border: '3px solid #e5e7eb', borderTopColor: '#c0392b', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 16px' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style><div style={{ color: '#6b7280' }}>Lade Patientendaten…</div></>)
+  if (status === 'loading') return centerCard(<><div style={{ width: 40, height: 40, border: '3px solid rgba(var(--lbf-rot-rgb),0.12)', borderTopColor: '#c0392b', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 16px' }} /><style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style><div style={{ color: 'var(--warm-gray)' }}>Lade Patientendaten…</div></>)
 
   if (status === 'auth') return centerCard(<>
     <div style={{ fontSize: 40, marginBottom: 12 }}>🔐</div>
-    <h2 style={{ color: '#111827', margin: '0 0 16px', fontSize: '1.2rem' }}>Zugang bestätigen</h2>
+    <h2 style={{ color: 'var(--lbf-text)', margin: '0 0 16px', fontSize: '1.2rem' }}>Zugang bestätigen</h2>
     {p && (p.vorname || p.name || p.rufname) && (
-      <div style={{ background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
-        {(p.vorname || p.name) && <div style={{ fontWeight: 700, fontSize: 17, color: '#111827', marginBottom: 4 }}>{[p.vorname, p.name].filter(Boolean).join(' ')}</div>}
-        {p.rufname && <div style={{ fontSize: 13, color: '#6b7280', display: 'flex', alignItems: 'center', gap: 5 }}>{pik(<path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>, 13)}Funkrufname: <strong style={{ color: '#374151' }}>{p.rufname}</strong></div>}
+      <div style={{ background: 'var(--warm-bg)', border: '1px solid var(--lbf-border)', borderRadius: 12, padding: '14px 16px', marginBottom: 20, textAlign: 'left' }}>
+        {(p.vorname || p.name) && <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 4 }}>{[p.vorname, p.name].filter(Boolean).join(' ')}</div>}
+        {p.rufname && <div style={{ fontSize: 13, color: 'var(--warm-gray)', display: 'flex', alignItems: 'center', gap: 5 }}>{pik(<path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6A19.79 19.79 0 012.12 4.18 2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z"/>, 13)}Funkrufname: <strong style={{ color: 'var(--lbf-text)' }}>{p.rufname}</strong></div>}
       </div>
     )}
-    <p style={{ color: '#6b7280', margin: '0 0 16px', fontSize: 14, lineHeight: 1.5 }}>Geburtsdatum des Patienten eingeben um das Protokoll einzusehen.</p>
-    <input type="date" value={dobInput} onChange={e => { setDobInput(e.target.value); setDobError('') }} onKeyDown={e => e.key === 'Enter' && verifyDob()} style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${dobError ? '#c0392b' : '#e5e7eb'}`, borderRadius: 10, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8, outline: 'none' }} autoFocus />
-    {dobError ? <div style={{ color: '#c0392b', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{dobError}</div> : <div style={{ color: '#9ca3af', fontSize: 12, marginBottom: 12 }}>{attemptsLeft} von {MAX_ATTEMPTS} Versuchen verbleibend</div>}
-    <button onClick={verifyDob} disabled={!dobInput} style={{ width: '100%', padding: '12px', background: dobInput ? '#c0392b' : '#e5e7eb', color: dobInput ? '#fff' : '#9ca3af', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: dobInput ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>Zugang öffnen</button>
+    <p style={{ color: 'var(--warm-gray)', margin: '0 0 16px', fontSize: 14, lineHeight: 1.5 }}>Geburtsdatum des Patienten eingeben um das Protokoll einzusehen.</p>
+    <input type="date" value={dobInput} onChange={e => { setDobInput(e.target.value); setDobError('') }} onKeyDown={e => e.key === 'Enter' && verifyDob()} style={{ width: '100%', padding: '12px 14px', border: `1.5px solid ${dobError ? '#c0392b' : 'var(--lbf-input-border)'}`, borderRadius: 10, fontSize: 16, fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: 8, outline: 'none' }} autoFocus />
+    {dobError ? <div style={{ color: '#c0392b', fontSize: 13, marginBottom: 12, fontWeight: 600 }}>{dobError}</div> : <div style={{ color: 'var(--warm-gray)', fontSize: 12, marginBottom: 12 }}>{attemptsLeft} von {MAX_ATTEMPTS} Versuchen verbleibend</div>}
+    <button onClick={verifyDob} disabled={!dobInput} style={{ width: '100%', padding: '12px', background: dobInput ? '#c0392b' : 'rgba(var(--lbf-rot-rgb),0.08)', color: dobInput ? '#fff' : 'var(--warm-gray)', border: 'none', borderRadius: 10, fontWeight: 700, fontSize: 15, cursor: dobInput ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>Zugang öffnen</button>
   </>)
 
-  if (status === 'locked') return centerCard(<><div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div><h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang gesperrt</h2><p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Zu viele Fehleingaben. Bitte Einsatzkräfte der Organisation kontaktieren.</p></>)
-  if (status === 'expired') return centerCard(<><div style={{ fontSize: 48, marginBottom: 16 }}>⏱</div><h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang abgelaufen</h2><p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Der 24-Stunden-Zugang für dieses Protokoll ist abgelaufen.</p></>)
-  if (status === 'notfound' || status === 'error') return centerCard(<><div style={{ fontSize: 48, marginBottom: 16 }}>❌</div><h2 style={{ color: '#111827', margin: '0 0 8px' }}>Nicht gefunden</h2><p style={{ color: '#6b7280', margin: 0, fontSize: 14 }}>Dieser Code ist ungültig oder das Protokoll existiert nicht.</p></>)
+  if (status === 'locked') return centerCard(<><div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div><h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang gesperrt</h2><p style={{ color: 'var(--warm-gray)', margin: 0, fontSize: 14 }}>Zu viele Fehleingaben. Bitte Einsatzkräfte der Organisation kontaktieren.</p></>)
+  if (status === 'expired') return centerCard(<><div style={{ fontSize: 48, marginBottom: 16 }}>⏱</div><h2 style={{ color: '#c0392b', margin: '0 0 8px' }}>Zugang abgelaufen</h2><p style={{ color: 'var(--warm-gray)', margin: 0, fontSize: 14 }}>Der 24-Stunden-Zugang für dieses Protokoll ist abgelaufen.</p></>)
+  if (status === 'notfound' || status === 'error') return centerCard(<><div style={{ fontSize: 48, marginBottom: 16 }}>❌</div><h2 style={{ color: 'var(--lbf-text)', margin: '0 0 8px' }}>Nicht gefunden</h2><p style={{ color: 'var(--warm-gray)', margin: 0, fontSize: 14 }}>Dieser Code ist ungültig oder das Protokoll existiert nicht.</p></>)
   if (!p) return null
 
   const changedFields = new Set<string>((p as any)._changed_fields || [])

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS, EMPTY_PERMS, getRoleTemplate } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS, EMPTY_PERMS, getRoleTemplate, kachelFarbe } from '../lib/apps'
 import AppIcon from '../components/AppIcon'
 
 interface SettingsPageProps {
@@ -867,7 +867,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
             >
               <div style={{
                 width: '46px', height: '46px', borderRadius: '12px',
-                background: pinned ? app.color || 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)',
+                background: pinned ? (app.color ? kachelFarbe(app.color) : 'var(--lbf-akzent-grund)') : 'rgba(var(--lbf-rot-rgb),0.06)',
                 color: pinned ? '#fff' : colorMatch,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 2px 6px rgba(0,0,0,0.1)', transition: 'all 0.15s'

@@ -98,7 +98,7 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
   zugesagt:   { label: 'Zugesagt',   bg: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)' },
   abgesagt:   { label: 'Abgesagt',   bg: 'var(--lbf-fehler-grund-2)', color: 'var(--lbf-fehler-text)' },
   eingeladen: { label: 'Eingeladen', bg: 'rgba(var(--lbf-rot-rgb),0.06)', color: 'var(--warm-gray)' },
-  da:         { label: 'Anwesend',   bg: '#dbeafe', color: '#1e40af' },
+  da:         { label: 'Anwesend',   bg: 'var(--lbf-info-grund-2)', color: 'var(--lbf-info-text-2)' },
   fehlend:    { label: 'Gefehlt',    bg: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)' },
 }
 
@@ -768,9 +768,8 @@ export default function Lernbar() {
                       {mod.beschreibung && <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 2, fontStyle: 'italic' }}>{mod.beschreibung}</div>}
                       <div style={{ fontSize: 11, color: 'var(--warm-gray)', marginTop: 4, fontStyle: 'italic' }}>{mod.dauer_minuten} Min · {mod.inhalte?.length || 0} Blöcke</div>
                     </div>
-                    {/* Fertig-Abzeichen bleibt hart: die Schrift #065f46 hat kein Token, auf getönter Dunkelfläche wäre sie unlesbar */}
                     {isDone ? (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: '#dcfce7', color: '#065f46', flexShrink: 0 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', borderRadius: 99, fontSize: 11, fontWeight: 700, background: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text-3)', flexShrink: 0 }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                         Fertig
                       </span>

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import AppIcon from './AppIcon'
+import { kachelFarbe } from '../lib/apps'
 import type { App } from '../types'
 
 const ALL_APPS: Record<string, App> = {
@@ -80,7 +81,7 @@ export default function AppGrid({ userApps, editMode = false, onRemoveApp, onApp
             >
               <div className="hub-app-icon-wrap" style={{
                 width: 52, height: 52, borderRadius: 14,
-                background: iconColor,
+                background: kachelFarbe(iconColor),
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: '#fff', flexShrink: 0,
               }}>

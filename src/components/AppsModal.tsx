@@ -1,6 +1,7 @@
 import AppIcon from './AppIcon'
 import Modal from './Modal'
 import type { App } from '../types'
+import { kachelFarbe } from '../lib/apps'
 
 interface AppsModalProps {
   isOpen: boolean
@@ -36,7 +37,7 @@ export default function AppsModal({ isOpen, onClose, availableApps, onAddApp }: 
               <div style={{
                 width: '60px',
                 height: '60px',
-                background: app.color || 'linear-gradient(145deg, #667eea, #764ba2)',
+                background: app.color ? kachelFarbe(app.color) : 'linear-gradient(145deg, #667eea, #764ba2)',
                 borderRadius: '14px',
                 display: 'flex',
                 alignItems: 'center',
@@ -53,7 +54,7 @@ export default function AppsModal({ isOpen, onClose, availableApps, onAddApp }: 
                   width: '18px',
                   height: '18px',
                   background: '#34c759',
-                  border: '2px solid #fff',
+                  border: '2px solid var(--lbf-card)',
                   borderRadius: '50%',
                   fontSize: '12px',
                   fontWeight: 700,

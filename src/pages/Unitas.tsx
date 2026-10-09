@@ -526,7 +526,7 @@ export default function Unitas() {
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
                             <div style={{ display: 'flex', gap: 4, flexShrink: 0, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                               {openRQs.length > 0 && <span style={{ background: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQs.length} Rückfrage{openRQs.length !== 1 ? 'n' : ''}</span>}
-                              {changedCount > 0 && <span style={{ background: '#fef9eb', color: '#b45309' /* Paar bleibt hart: #fef9eb hat kein Token */, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCount} Änd.</span>}
+                              {changedCount > 0 && <span style={{ background: 'var(--lbf-warn-grund-5)', color: 'var(--lbf-warn-text-2)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCount} Änd.</span>}
                               {!openRQs.length && !changedCount && <span style={{ background: 'var(--lbf-ok-grund)', color: 'var(--lbf-ok-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Freigegeben</span>}
                             </div>
                           </div>
@@ -583,13 +583,13 @@ export default function Unitas() {
                     const snsA: any[] = Array.isArray(p.payload?.stellungnahmen) ? p.payload.stellungnahmen : []
                     const changedCountA = (p.payload?._changed_fields || []).length
                     return (
-                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(139,113,90,0.4)', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.75 }}>
+                      <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid rgba(var(--lbf-grau-rgb),0.4)', opacity: openRQsA.length > 0 || changedCountA > 0 ? 1 : 0.75 }}>
                         <div style={{ padding: '13px 16px 12px' }}>
                           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 5 }}>
                             <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2 }}>{patName || p.title}</div>
                             <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
                               {openRQsA.length > 0 && <span style={{ background: 'var(--lbf-warn-grund-2)', color: 'var(--lbf-warn-text)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{openRQsA.length} Rückfrage{openRQsA.length !== 1 ? 'n' : ''}</span>}
-                              {changedCountA > 0 && <span style={{ background: '#fef9eb', color: '#b45309' /* Paar bleibt hart: #fef9eb hat kein Token */, borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCountA} Änd.</span>}
+                              {changedCountA > 0 && <span style={{ background: 'var(--lbf-warn-grund-5)', color: 'var(--lbf-warn-text-2)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>{changedCountA} Änd.</span>}
                               {!openRQsA.length && !changedCountA && <span style={{ background: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', borderRadius: 6, padding: '2px 8px', fontSize: 11, fontWeight: 600 }}>Archiviert</span>}
                             </div>
                           </div>
@@ -617,7 +617,7 @@ export default function Unitas() {
                             ))}
                           </div>
                         )}
-                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid rgba(139,113,90,0.15)' }}>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid rgba(var(--lbf-grau-rgb),0.15)' }}>
                           {openRQsA.length > 0 && (
                             <button onClick={() => setSnModal(p)} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Stellungnahme
@@ -687,7 +687,7 @@ export default function Unitas() {
                   const statusCfg: Record<string, { label: string; bg: string; color: string; border: string; borderLeft: string }> = {
                     pending:   { label: 'Ausstehend', bg: 'var(--lbf-warn-grund)', color: 'var(--lbf-warn-text)', border: '#fde68a', borderLeft: '#d97706' },
                     confirmed: { label: 'Bestätigt',  bg: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text)', border: '#fecaca', borderLeft: '#dc2626' },
-                    rejected:  { label: 'Abgelehnt',  bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)', borderLeft: 'rgba(139,113,90,0.35)' },
+                    rejected:  { label: 'Abgelehnt',  bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)', borderLeft: 'rgba(var(--lbf-grau-rgb),0.35)' },
                   }
                   const cfg = statusCfg[report.status] ?? statusCfg['rejected']
                   return (
