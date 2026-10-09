@@ -1,6 +1,6 @@
 // Welche Angaben ein Protokoll wirklich braucht.
 //
-// Der Bogen markiert vierzehn Felder als Pflicht. Das ist die Markierung des
+// Der Bogen markiert fünfzehn Felder als Pflicht. Das ist die Markierung des
 // Papiers, nicht die des Einsatzes — und im Fahrzeug führt sie in die Irre:
 //
 //   • Name und Geburtsdatum stehen als Pflicht da. Ein bewusstloser Patient
@@ -95,6 +95,12 @@ export const REGELN: Regel[] = [
   {
     feld: 'einsatz_nr', stufe: 'pflicht',
     grund: 'Ohne Einsatznummer ist das Protokoll keinem Einsatz zuzuordnen',
+  },
+  {
+    // Nur die Auftragsnummer der Leitstelle ordnet den Vorgang zu; die
+    // Einsatznummer des Protokolls allein tut das nicht.
+    feld: 'auftrag_ils', stufe: 'pflicht',
+    grund: 'Die Auftragsnummer der Leitstelle ordnet das Protokoll dem Einsatz zu',
   },
   {
     feld: 'einsatz_datum', stufe: 'pflicht',

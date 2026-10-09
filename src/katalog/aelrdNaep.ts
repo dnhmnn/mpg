@@ -120,6 +120,7 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
 
   // ── Einsatzkennung ────────────────────────────────────────────────────
   einsatz_nr: { feld: str('B08', 'EinsatzNr') },
+  auftrag_ils: { feld: anhang('Die Norm führt die Auftragsnummer der Leitstelle nicht — nur die Einsatznummer') },
   leitstelle_nr: { feld: str('B08', 'LeitstelleKFZ', 'Die Norm meint hier das KFZ-Kennzeichen der Leitstelle') },
   rufname: { feld: wert('BBW') },
   standort: { feld: str('B08', 'Standort') },
@@ -454,6 +455,8 @@ export const AELRD_NAEP: Record<string, AelrdNaepZuordnung> = {
       maskenbeatm_unmoeglich: opt('J4W', 'J5H'),
       entlastungspunktion: spiegel('sonstige_massnahme.entlastungspunktion'),
       verfahrenswechsel: anhang('Die Norm vermerkt den Verfahrenswechsel nur beim Zugang, nicht beim Atemweg'),
+      // Geschwister von Absaugen unter "Freimachen der Atemwege" (J3Q), J5O.
+      sga_supraglottisch: opt('J3Q', 'J5O'),
     },
   },
   intubation: { feld: umbau('J6N', 'Freitext wird zur Auswahl oral / nasal mit Größe und Versuchen') },

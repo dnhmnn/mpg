@@ -10,7 +10,7 @@ export const AELRD_ERGAENZUNG: Record<string, string[]> = {
   stammdaten: ['geschlecht', 'bmi', 'alter_wert', 'alter_einheit'],
 
   einsatzdaten: [
-    'einsatz_datum', 'leitstelle_nr', 'sondersignal',
+    'einsatz_datum', 'auftrag_ils', 'leitstelle_nr', 'sondersignal',
     'beteiligtes_rm', 'einsatzort_art', 'versorgung', 'voranmeldung',
   ],
 

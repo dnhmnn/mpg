@@ -47,7 +47,7 @@ describe('Feldkatalog des ÄLRD-Bogens', () => {
 
   it('kennt die Pflichtfelder', () => {
     const ids = aelrdPflichtfelder().map((f) => f.id)
-    for (const id of ['name', 'gebdatum', 'einsatz_nr', 'zeit_alarm', 'af', 'hf']) {
+    for (const id of ['name', 'gebdatum', 'einsatz_nr', 'auftrag_ils', 'zeit_alarm', 'af', 'hf']) {
       expect(ids).toContain(id)
     }
   })

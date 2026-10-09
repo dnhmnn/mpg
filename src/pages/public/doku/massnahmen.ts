@@ -18,7 +18,9 @@
 // bleibt dabei stehen, nur die eigenen Zeilen werden nachgezogen.
 
 import { aelrdFeld } from '../../../katalog/aelrd'
-import { artText, massnahmeKategorie, rechtsgrund } from '../../../katalog/massnahmenArten'
+import {
+  KANUELENGROESSEN, anlageorte, artText, brauchtAnlage, massnahmeKategorie, rechtsgrund,
+} from '../../../katalog/massnahmenArten'
 import { POSTEN, besatzungLesen } from './besatzung'
 import type { Werte } from './DokuFeld'
 
@@ -47,6 +49,14 @@ export type Massnahme = {
    * soll sagen, wer.
    */
   durch?: string
+  /**
+   * Beim peripheren Zugang: die Kanülengröße, z. B. "18 G".
+   *
+   * Der Eintrag entsteht nur mit ihr — siehe `massnahmeEintragen`.
+   */
+  groesse?: string
+  /** Beim peripheren Zugang: der Anlageort, als Wert der Norm (z. B. "ellenbeuge_l"). */
+  ort?: string
 }
 
 /** Trennzeichen der Schreiblinie auf dem Bogen. */
@@ -70,7 +80,12 @@ export function massnahmenLesen(werte: Werte): Massnahme[] {
 /** Wie ein Eintrag auf der Schreiblinie des Bogens steht. */
 export function zeile(m: Massnahme): string {
   const text = massnahmeKategorie(m.kategorie)?.frei ? m.art : artText(m.kategorie, m.art)
-  return [m.zeit, text].filter(Boolean).join(' ').trim()
+  // Art / Ort / Größe — so, wie die Norm den Zugang führt.
+  const ort = m.ort ? anlageorte().find((o) => o.wert === m.ort)?.text ?? m.ort : ''
+  const details = brauchtAnlage(m.kategorie, m.art) && m.groesse && ort
+    ? `${text} / ${ort} / ${m.groesse}`
+    : text
+  return [m.zeit, details].filter(Boolean).join(' ').trim()
 }
 
 /**
@@ -188,16 +203,28 @@ function kennung(vorhanden: Massnahme[]): string {
 /** Eine Maßnahme eintragen — in den Verlauf und in das Feld des Bogens. */
 export function massnahmeEintragen(
   werte: Werte,
-  eingabe: { zeit: string; kategorie: string; art: string; grund?: string; durch?: string },
+  eingabe: {
+    zeit: string; kategorie: string; art: string; grund?: string; durch?: string
+    groesse?: string; ort?: string
+  },
 ): Werte {
   const kat = massnahmeKategorie(eingabe.kategorie)
   const art = eingabe.art.trim()
   if (!kat || !art) return werte
+  /*
+   * Ein peripherer Zugang ohne Größe oder ohne Ort wird nicht eingetragen —
+   * auch nicht von einer anderen Stelle aus. Sonst stünde auf dem Bogen ein
+   * Zugang, dessen Angaben fehlen, und die Liste könnte es nicht mehr sagen.
+   */
+  const brauchtDetails = brauchtAnlage(eingabe.kategorie, art)
+  if (brauchtDetails && (!KANUELENGROESSEN.includes(eingabe.groesse ?? '')
+      || !anlageorte().some((o) => o.wert === eingabe.ort))) return werte
   const vorhanden = massnahmenLesen(werte)
   const neu: Massnahme = {
     id: kennung(vorhanden), zeit: eingabe.zeit, kategorie: eingabe.kategorie, art,
     ...(eingabe.grund && rechtsgrund(eingabe.grund) ? { grund: eingabe.grund } : {}),
     ...(eingabe.durch && POSTEN.some((p) => p.pos === eingabe.durch) ? { durch: eingabe.durch } : {}),
+    ...(brauchtDetails ? { groesse: eingabe.groesse, ort: eingabe.ort } : {}),
   }
   const eintraege = [...vorhanden, neu]
   return delegationenNachziehen(

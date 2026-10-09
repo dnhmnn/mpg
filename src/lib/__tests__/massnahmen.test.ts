@@ -13,6 +13,10 @@ import { aelrdHtml } from '../aelrdProtokoll'
 const ein = (w: Record<string, unknown>, kategorie: string, art: string, zeit = '08:42') =>
   massnahmeEintragen(w, { zeit, kategorie, art })
 
+/** Ein peripherer Zugang — nur vollständig, mit Kanülengröße und Anlageort. */
+const zugang = (w: Record<string, unknown>, zeit = '08:42') =>
+  massnahmeEintragen(w, { zeit, kategorie: 'zugaenge', art: 'peripherer Zugang', groesse: '18 G', ort: 'ellenbeuge_l' })
+
 describe('Die Arten der Maßnahmen', () => {
   it('nimmt ihre Listen aus dem Katalog des Bogens, nicht aus einer zweiten', () => {
     for (const k of MASSNAHMEN_KATEGORIEN) {
@@ -63,15 +67,38 @@ describe('Maßnahmen im Verlauf', () => {
   })
 
   it('schreibt auf die Linie des Bogens mit Uhrzeit — dort hat sie Platz', () => {
-    let w = ein({}, 'zugaenge', 'peripherer Zugang', '08:42')
+    let w = zugang({}, '08:42')
     w = ein(w, 'zugaenge', 'intraossäre Punktion', '08:55')
-    expect(w.zugaenge).toBe('08:42 peripherer Zugang · 08:55 intraossäre Punktion')
+    expect(w.zugaenge).toBe('08:42 peripherer Zugang / Ellenbeuge links / 18 G · 08:55 intraossäre Punktion')
   })
 
   it('hängt an einen vorhandenen Text an, statt ihn zu überschreiben', () => {
     // Aus dem alten Formular kann auf der Linie schon etwas stehen.
-    const w = ein({ zugaenge: 'Handrücken links' }, 'zugaenge', 'peripherer Zugang')
-    expect(w.zugaenge).toBe('Handrücken links · 08:42 peripherer Zugang')
+    const w = zugang({ zugaenge: 'Handrücken links' }, '08:42')
+    expect(w.zugaenge).toBe('Handrücken links · 08:42 peripherer Zugang / Ellenbeuge links / 18 G')
+  })
+
+  it('trägt einen peripheren Zugang nur mit Kanülengröße und Anlageort ein', () => {
+    // Ohne beides stünde auf dem Bogen ein Zugang, dessen Angaben fehlen —
+    // und die Liste könnte es danach nicht mehr sagen.
+    expect(ein({}, 'zugaenge', 'peripherer Zugang')).toEqual({})
+    expect(massnahmeEintragen({}, { zeit: '08:42', kategorie: 'zugaenge', art: 'peripherer Zugang', groesse: '18 G' })).toEqual({})
+    expect(massnahmeEintragen({}, { zeit: '08:42', kategorie: 'zugaenge', art: 'peripherer Zugang', ort: 'ellenbeuge_l' })).toEqual({})
+  })
+
+  it('lässt nur Größen und Orte zu, die es gibt', () => {
+    expect(massnahmeEintragen({}, { zeit: '08:42', kategorie: 'zugaenge', art: 'peripherer Zugang', groesse: '99 G', ort: 'ellenbeuge_l' })).toEqual({})
+    expect(massnahmeEintragen({}, { zeit: '08:42', kategorie: 'zugaenge', art: 'peripherer Zugang', groesse: '18 G', ort: 'irgendwo' })).toEqual({})
+  })
+
+  it('hält Größe und Ort am Eintrag, damit die Liste sie zeigen kann', () => {
+    const w = zugang({}, '08:42')
+    expect(massnahmenLesen(w)[0]).toMatchObject({ groesse: '18 G', ort: 'ellenbeuge_l' })
+  })
+
+  it('ändert eine Art ohne Größe nicht — nur der periphere Zugang verlangt sie', () => {
+    const w = ein({}, 'zugaenge', 'intraossäre Punktion', '08:42')
+    expect(massnahmenLesen(w)[0]).not.toHaveProperty('groesse')
   })
 
   it('zählt mehrere Einträge und zeigt den neuesten oben', () => {
@@ -144,11 +171,11 @@ describe('Maßnahmen im Verlauf', () => {
   })
 
   it('steht so im Ausdruck, wie der Vordruck es führt', () => {
-    let w = ein({}, 'zugaenge', 'peripherer Zugang', '08:42')
+    let w = zugang({}, '08:42')
     w = ein(w, 'medizintechnik', 'ecmo', '08:50')
     const html = aelrdHtml(w)
     // Die Linie trägt die Uhrzeit, das Kreuz steht beim richtigen Wort.
-    expect(html).toContain('08:42 peripherer Zugang')
+    expect(html).toContain('08:42 peripherer Zugang / Ellenbeuge links / 18 G')
     expect(html).toMatch(/ECMO/)
   })
 

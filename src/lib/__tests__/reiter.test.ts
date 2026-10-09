@@ -63,14 +63,14 @@ describe('Pflichtfelder im Bogen', () => {
 })
 
 describe('Pflichtfelder sind am Feld zu erkennen', () => {
-  it('markiert der Bogen selbst vierzehn', () => {
+  it('markiert der Bogen selbst fünfzehn', () => {
     // Das ist die Markierung des PAPIERS. Was die Maske verlangt, steht in
     // katalog/pflicht.ts und hängt am Einsatz — beim Fehleinsatz etwa fällt
     // die halbe Liste weg. Diese vierzehn bleiben hier stehen, damit eine
     // Änderung am Bogen auffällt.
     const pflicht = AELRD_FELDER.filter((f) => f.pflicht)
     expect(pflicht.map((f) => f.id)).toEqual([
-      'name', 'gebdatum', 'einsatz_nr', 'einsatz_datum',
+      'name', 'gebdatum', 'einsatz_nr', 'auftrag_ils', 'einsatz_datum',
       'zeit_alarm', 'zeit_ankunft_ort', 'zeit_uebergabe',
       'notfallgeschehen', 'af', 'spo2', 'hf', 'nibp_sys', 'gcs_summe', 'schmerz',
     ])

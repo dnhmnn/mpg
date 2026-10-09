@@ -91,6 +91,9 @@ export const AELRD_FELDER: AelrdFeld[] = [
 
   // ── Einsatzkennung ────────────────────────────────────────────────────
   { id: 'einsatz_nr', label: 'Einsatz Nr.', typ: 'text', divi: 'einsatz_nr', pflicht: true },
+  // Die Auftragsnummer der Leitstelle. Sie ist nicht dasselbe wie die
+  // Einsatznummer des Protokolls, und nur sie ordnet den Vorgang der Leitstelle zu.
+  { id: 'auftrag_ils', label: 'Auftragsnummer ILS', typ: 'text', pflicht: true },
   { id: 'leitstelle_nr', label: 'Leitst. Nr.', typ: 'text', divi: 'leitstelle' },
   { id: 'rufname', label: 'Rufname', typ: 'text', divi: 'fahrzeug' },
   { id: 'standort', label: 'Standort', typ: 'text', divi: 'standort' },
@@ -312,6 +315,7 @@ export const AELRD_FELDER2: AelrdFeld[] = [
     'Absaugen', '> 2 Intub.-Versuche',
     'Atemwege freimachen', 'Maskenbeatm. unmöglich',
     'Entlastungspunktion', 'Verfahrenswechsel',
+    'SGA (supraglottisch)',
   ], 'atemweg_massnahmen'),
   { id: 'intubation', label: 'Intubation', typ: 'text' },
   { id: 'tubus_groesse', label: 'Größe', typ: 'text', divi: 'tubus_groesse' },
@@ -448,7 +452,7 @@ export const AELRD_ABSCHNITTE: AelrdAbschnitt[] = [
     kurz: 'NR',
     titel: 'Einsatzkennung',
     seite: 1,
-    felder: ['einsatz_nr', 'leitstelle_nr', 'rufname', 'standort'],
+    felder: ['einsatz_nr', 'auftrag_ils', 'leitstelle_nr', 'rufname', 'standort'],
   },
   {
     id: 'einsatzdaten',

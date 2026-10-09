@@ -10,9 +10,10 @@
 // Wer sie im Moment nicht treffen kann, trägt mit "später" ein — die Liste
 // sagt dann, dass sie fehlt. Blockiert wird am Patienten nichts.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  MASSNAHMEN_KATEGORIEN, RECHTSGRUENDE, artText, massnahmeKategorie, rechtsgrund,
+  KANUELENGROESSEN, MASSNAHMEN_KATEGORIEN, RECHTSGRUENDE, anlageorte, artText, brauchtAnlage,
+  massnahmeKategorie, rechtsgrund,
 } from '../../../katalog/massnahmenArten'
 import { Knopf, type Werte } from './DokuFeld'
 import { pflichtKarte } from '../../../katalog/pflicht'
@@ -45,6 +46,11 @@ export default function Massnahmen({ werte, setWerte }: {
    * getroffen hat.
    */
   const [offenerGrund, setOffenerGrund] = useState('')
+  /** Beim peripheren Zugang: Kanülengröße und Anlageort, vor der Begründung gewählt. */
+  const [groesse, setGroesse] = useState('')
+  const [ort, setOrt] = useState('')
+  // Was zu einer anderen Kategorie oder Art gehört, passt nicht mehr — also leer.
+  useEffect(() => { setGroesse(''); setOrt('') }, [kategorie, art])
   const kat = massnahmeKategorie(kategorie)
   const eintraege = massnahmenAbsteigend(werte)
   const offen = ohneGrund(werte)
@@ -61,7 +67,7 @@ export default function Massnahmen({ werte, setWerte }: {
   /** Die Begründung schließt den Eintrag ab — leer heißt "später". */
   function eintragen(grund: string, durch = '') {
     if (!kategorie || !art.trim()) return
-    setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund, durch }))
+    setWerte((v) => massnahmeEintragen(v, { zeit: gezeigteZeit, kategorie, art, grund, durch, groesse, ort }))
     setZeit('')
     setFrei('')
     setArt('')
@@ -199,8 +205,37 @@ export default function Massnahmen({ werte, setWerte }: {
           )
         ) : null}
 
+        {/* 3b. Beim peripheren Zugang: Kanülengröße und Anlageort. Die Norm
+            führt beides als Art / Ort / Größe — ohne sie gibt es keinen
+            vollständigen Eintrag. */}
+        {kat && gewaehlteArt && brauchtAnlage(kategorie, art) ? (
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
+              Kanülengröße
+            </div>
+            <div>
+              {KANUELENGROESSEN.map((g) => (
+                <Knopf key={g} text={g} klein an={g === groesse} onClick={() => setGroesse(g === groesse ? '' : g)} />
+              ))}
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, margin: '8px 0 4px' }}>
+              Anlageort
+            </div>
+            <div>
+              {anlageorte().map((o) => (
+                <Knopf key={o.wert} text={o.text} klein an={o.wert === ort} onClick={() => setOrt(o.wert === ort ? '' : o.wert)} />
+              ))}
+            </div>
+            {!(groesse && ort) ? (
+              <div style={{ marginTop: 6, fontSize: 12, fontStyle: 'italic', color: GRAU }}>
+                Erst Größe und Anlageort wählen — dann folgt die Begründung.
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+
         {/* 4. Die rechtliche Begründung — der abschließende Griff. */}
-        {kat && gewaehlteArt ? (
+        {kat && gewaehlteArt && (!brauchtAnlage(kategorie, art) || (groesse && ort)) ? (
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: ROT, marginBottom: 4 }}>
               Rechtliche Begründung
@@ -288,6 +323,19 @@ export default function Massnahmen({ werte, setWerte }: {
                     {massnahmeKategorie(m.kategorie)?.titel ?? m.kategorie}
                     {durchName(werte, m) ? ` · durch ${durchName(werte, m)}` : ''}
                   </span>
+                  {brauchtAnlage(m.kategorie, m.art) ? (
+                    m.groesse && m.ort ? (
+                      <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
+                        {anlageorte().find((o) => o.wert === m.ort)?.text} · {m.groesse}
+                      </span>
+                    ) : (
+                      // Ältere Einträge ohne Größe und Ort fallen hier auf —
+                      // wie die fehlende Begründung darunter.
+                      <span style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#b45309' }}>
+                        Kanülengröße und Anlageort fehlen
+                      </span>
+                    )
+                  ) : null}
                   {/* Die Begründung — angetippt lässt sie sich ändern, und
                       fehlt sie, sagt die Zeile das statt zu schweigen. */}
                   {nachtragen === m.id ? (

@@ -320,6 +320,7 @@ function massnahmen(p: Payload): string {
          ['Absaugen', '> 2 Intub.-Versuche'],
          ['Atemwege freimachen', 'Maskenbeatm. unmöglich'],
          ['Entlastungspunktion', 'Verfahrenswechsel'],
+         ['SGA (supraglottisch)'],
        ])}
        <div class="ma-z">
          <span><span class="kl">Intubation</span> <b>${escapeHtml(w(p, 'intubation'))}</b></span>

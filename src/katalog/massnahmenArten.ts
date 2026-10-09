@@ -14,6 +14,7 @@
 // sondern hat ihren eigenen Abschnitt mit Zeiten, Defibrillation und ROSC.
 
 import { aelrdFeld } from './aelrd'
+import { feldFinden } from './divi'
 import { normOptionen } from './aelrdOptionen'
 import { istSpiegelOption } from './aelrdSpiegel'
 
@@ -60,6 +61,32 @@ export const MASSNAHMEN_KATEGORIEN: MassnahmeKategorie[] = KATEGORIEN.map((k) =>
 
 /** Die Felder des Bogens, die über diese Erfassung laufen. */
 export const MASSNAHMEN_FELDER: string[] = MASSNAHMEN_KATEGORIEN.map((k) => k.id)
+
+/**
+ * Der Begriff der Norm für den peripheren Zugang (NAEP J0M).
+ *
+ * Nur dieser verlangt eine Kanülengröße und einen Anlageort. Die Norm führt
+ * beides in einem Freitext "Art / Ort / Größe"; hier wird es als zwei Wahlen
+ * erfasst und in dieser Reihenfolge wieder zusammengesetzt.
+ */
+export const PERIPHERER_ZUGANG = 'peripherer Zugang'
+
+/**
+ * Die gängigen Venenverweilkanülen. Die Norm kennt keine Liste dafür — der
+ * Vordruck auch nicht. Angeboten werden sie als Kurzwahl, nicht als Pflicht
+ * zu genau dieser Größe.
+ */
+export const KANUELENGROESSEN = ['14 G', '16 G', '18 G', '20 G', '22 G', '24 G']
+
+/** Die Anlageorte des peripheren Zugangs, aus der Liste der Norm (DIVI). */
+export function anlageorte(): MassnahmeArt[] {
+  return (feldFinden('zugang_peripher_ort')?.optionen ?? []).map((o) => ({ wert: o.wert, text: o.text }))
+}
+
+/** Verlangt diese Art Kanülengröße und Anlageort? */
+export function brauchtAnlage(kategorie: string, art: string): boolean {
+  return kategorie === 'zugaenge' && art === PERIPHERER_ZUGANG
+}
 
 export function massnahmeKategorie(id: string): MassnahmeKategorie | undefined {
   return MASSNAHMEN_KATEGORIEN.find((k) => k.id === id)
