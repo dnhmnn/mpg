@@ -10,6 +10,7 @@ import AppsModal from '../components/AppsModal'
 import EditModal from '../components/EditModal'
 import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
+import { EinfuehrungAutomatisch } from '../components/Einfuehrung'
 import { ALL_APPS, hatRecht } from '../lib/apps'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
@@ -378,6 +379,8 @@ export default function Hub() {
       </div>
 
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
+      {/* Einführung für neue Benutzer und Organisationen — nach der Begrüßung */}
+      <EinfuehrungAutomatisch user={user} verzoegerung={showGreeting ? 2600 : 500} />
       <AppsModal
         isOpen={showAppsModal}
         onClose={() => { setShowAppsModal(false); setEditMode(false) }}

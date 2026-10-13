@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { EinfuehrungAutomatisch } from '../components/Einfuehrung'
 import { pb } from '../lib/pocketbase'
 import LernAssistent from '../components/LernAssistent'
 import EkgTrainer from '../components/EkgTrainer'
@@ -484,6 +485,8 @@ export default function Lernbar() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
+      {/* Wer nur die Lernbar hat, landet nach dem Login hier — die Einführung kommt dann hier */}
+      <EinfuehrungAutomatisch user={user} verzoegerung={600} />
       {/* Header — masthead */}
       <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' } as React.CSSProperties}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>

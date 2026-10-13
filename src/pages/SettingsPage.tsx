@@ -5,12 +5,16 @@ import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS, EMPTY_PERMS, getRoleTemplate, kachelFarbe } from '../lib/apps'
 import AppIcon from '../components/AppIcon'
+import { useAuth } from '../hooks/useAuth'
+import Einfuehrung, { useEinfuehrungStand } from '../components/Einfuehrung'
+import OrgCheckliste from '../components/OrgCheckliste'
+import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
 
 interface SettingsPageProps {
   user?: User | null
 }
 
-type View = 'main' | 'profile' | 'password' | 'appearance' | 'notifications' | 'users' | 'license'
+type View = 'main' | 'profile' | 'password' | 'appearance' | 'notifications' | 'users' | 'license' | 'einfuehrung'
 
 interface NotifPrefs {
   patienten: boolean
@@ -282,6 +286,15 @@ function IconLock() {
     </svg>
   )
 }
+function IconHilfe() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  )
+}
 function IconBell() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
@@ -331,14 +344,22 @@ function IconBack() {
 }
 
 // ─── Main component ─────────────────────────────────────────────────────────
-export default function SettingsPage({ user }: SettingsPageProps) {
+export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
+  // Die Route übergibt keinen Benutzer — dann gilt der angemeldete. Ohne ihn
+  // blieben Profil, Passwort und der Bereich für Verantwortliche leer.
+  const { user: angemeldet } = useAuth()
+  const user = vorgegeben ?? angemeldet
   const navigate = useNavigate()
   const [view, setView] = useState<View>('main')
+  const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
+  const { stand: einfuehrungStand, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
   const [dockPins, setDockPinsState] = useState<string[]>(() =>
     user ? getDockPins(user.id) : []
   )
   const [notifPrefs, setNotifPrefs] = useState<NotifPrefs>(loadNotifPrefs)
+  // Der Benutzer kommt erst nach dem Laden — dann seine Schnellzugriffe holen
+  useEffect(() => { if (user) setDockPinsState(getDockPins(user.id)) }, [user?.id])
 
   function toggleDockPin(id: string) {
     if (!user) return
@@ -582,7 +603,8 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     appearance: 'Darstellung',
     notifications: 'Benachrichtigungen',
     users: 'Benutzer',
-    license: 'Lizenz'
+    license: 'Lizenz',
+    einfuehrung: 'Einführung'
   }
 
   // ─── Render helpers ────────────────────────────────────────────────────────
@@ -640,6 +662,12 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       {/* Group 3 – Darstellung */}
       <div style={S.group}>
         <MainListItem icon={<IconSun />} label="Darstellung" target="appearance" isLast />
+      </div>
+
+      {/* Hilfe */}
+      <div style={S.groupHeader}>Hilfe</div>
+      <div style={S.group}>
+        <MainListItem icon={<IconHilfe />} label="Einführung" target="einfuehrung" isLast />
       </div>
 
       {/* Group 4 – admin only */}
@@ -998,6 +1026,38 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     </div>
   )
 
+  // Einführung — jederzeit noch einmal ansehen; für Verantwortliche mit Checkliste
+  const gesehenAm = (iso?: string) => iso ? new Date(iso).toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }) : ''
+  const einfuehrungPanel = (
+    <div style={S.detailPanel}>
+      <div style={S.sectionHeader}>GRUNDLAGEN</div>
+      <div style={{ ...S.card, padding: '16px' }}>
+        <div style={{ fontSize: 17, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)' }}>Willkommen bei Responda</div>
+        <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.5 }}>
+          Was Responda ist, wie das Hub funktioniert und was deine Module können — passend zu deinen Rechten.
+        </div>
+        {einfuehrungStand.basis && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Angesehen am {gesehenAm(einfuehrungStand.basis)}</div>}
+        <button onClick={() => setEinfuehrungTeile(['basis'])} style={{ marginTop: 12, padding: '10px 16px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+          Einführung ansehen
+        </button>
+      </div>
+      {user && istVerantwortlich(user) && (
+        <>
+          <div style={S.sectionHeader}>ORGANISATION EINRICHTEN</div>
+          <div style={{ ...S.card, padding: '16px' }}>
+            <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginBottom: 12, lineHeight: 1.5 }}>
+              Was eine Organisation am Anfang einrichten sollte. Erledigtes wird erkannt oder lässt sich abhaken.
+            </div>
+            <OrgCheckliste user={user} onGehe={(pfad) => navigate(pfad)} />
+            <button onClick={() => setEinfuehrungTeile(['organisation'])} style={{ marginTop: 14, padding: '9px 14px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'none', color: 'var(--lbf-akzent)', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              Erklärung ansehen
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
+
   // Which detail panel to render
   const detailContent = (() => {
     switch (view) {
@@ -1007,6 +1067,7 @@ export default function SettingsPage({ user }: SettingsPageProps) {
       case 'appearance':    return appearancePanel
       case 'users':         return usersPanel
       case 'license':       return licensePanel
+      case 'einfuehrung':   return einfuehrungPanel
       default:              return null
     }
   })()
@@ -1053,6 +1114,11 @@ export default function SettingsPage({ user }: SettingsPageProps) {
           {detailContent}
         </div>
       </div>
+
+      {einfuehrungTeile && user && (
+        <Einfuehrung user={user} teile={einfuehrungTeile}
+          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStand, einfuehrungTeile, new Date())); setEinfuehrungTeile(null) }} />
+      )}
 
       {/* User Modal */}
       {showUserModal && (

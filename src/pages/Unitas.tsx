@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import PocketBase from 'pocketbase'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import Einfuehrung, { useEinfuehrungStand } from '../components/Einfuehrung'
+import { vermerken } from '../lib/einfuehrung'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 import { fristEnde, fristRestText } from './public/doku/absenden'
 import { offeneRueckfragen } from './public/doku/rueckfrage'
@@ -125,6 +127,9 @@ export default function Unitas() {
   /** Das ganze Protokoll ansehen — in der Gliederung der Maske. */
   const [protokollModal, setProtokollModal] = useState<PatientRecord | null>(null)
 
+  // Einführung erneut ansehen (Konto)
+  const [einfuehrungOffen, setEinfuehrungOffen] = useState(false)
+  const { stand: einfuehrungStand, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
   // Konto-Form
   const [kontaktEmail, setKontaktEmail] = useState('')
   const [savingEmail, setSavingEmail] = useState(false)
@@ -292,6 +297,10 @@ export default function Unitas() {
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+      {einfuehrungOffen && user && (
+        <Einfuehrung user={user} teile={['basis']}
+          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStand, ['basis'], new Date())); setEinfuehrungOffen(false) }} />
+      )}
 
       {/* ── Greeting overlay — dark red curtain ── */}
       {showGreeting && !greetingGone && (
@@ -759,6 +768,15 @@ export default function Unitas() {
                   Abmelden
                 </button>
               </div>
+            </div>
+
+            {/* Einführung — auch für alle, die die Einstellungen nicht erreichen */}
+            <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '16px 20px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>Einführung</div>
+              <div style={{ fontSize: 13, color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 12 }}>Die Grundlagen von Responda noch einmal ansehen — passend zu deinen Rechten.</div>
+              <button onClick={() => setEinfuehrungOffen(true)} style={{ padding: '10px 16px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Einführung ansehen
+              </button>
             </div>
 
             {/* Theme */}
