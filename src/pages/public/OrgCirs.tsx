@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubHeader, PubWrap, PubSendBar, PubSection, field, inp, sel, ta, lbl } from './pubStyles'
+import { meldungsNummer } from '../../lib/cirs'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -12,6 +13,8 @@ export default function OrgCirs() {
   const [f, setF] = useState({ datum: today(), ort: '', kategorie: '', schwere: '', was: '', warum: '', folgen: '', vorschlag: '', melder_name: '', melder_kontakt: '' })
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
+  // Die Nummer, unter der die Meldung in der Bearbeitung steht — zum Nachfragen
+  const [nummer, setNummer] = useState('')
 
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setF(p => ({ ...p, [k]: e.target.value }))
 
@@ -20,7 +23,8 @@ export default function OrgCirs() {
     setSending(true)
     try {
       const deDate = f.datum.split('-').reverse().join('.')
-      await pb.collection('cirs_reports').create({ title: `CIRS: ${f.kategorie} (${deDate})`, payload: f, status: 'offen', organization_id: org.id })
+      const rec = await pb.collection('cirs_reports').create({ title: `CIRS: ${f.kategorie} (${deDate})`, payload: f, status: 'offen', organization_id: org.id })
+      setNummer(rec?.id ? meldungsNummer(rec.id, rec.created || new Date().toISOString()) : '')
       setSuccess(true)
     } catch (e: any) { alert('Fehler: ' + e.message) }
     finally { setSending(false) }
@@ -31,8 +35,13 @@ export default function OrgCirs() {
       <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: 32, textAlign: 'center', maxWidth: 480, margin: '2rem auto', boxShadow: 'var(--shadow-md)' }}>
         <div style={{ width: 56, height: 56, background: 'var(--lbf-ok-grund-2)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: '1.75rem' }}>✅</div>
         <h2 style={{ color: 'var(--text)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Erfolgreich gemeldet!</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: '0 0 1.5rem', fontSize: 15 }}>Danke für deinen Beitrag zur Sicherheit.</p>
-        <button style={btn} onClick={() => { setF({ datum: today(), ort: '', kategorie: '', schwere: '', was: '', warum: '', folgen: '', vorschlag: '', melder_name: '', melder_kontakt: '' }); setSuccess(false) }}>+ Neue Meldung</button>
+        <p style={{ color: 'var(--text-secondary)', margin: nummer ? '0 0 1rem' : '0 0 1.5rem', fontSize: 15 }}>Danke für deinen Beitrag zur Sicherheit.</p>
+        {nummer && (
+          <p style={{ color: 'var(--warm-gray)', fontStyle: 'italic', margin: '0 0 1.5rem', fontSize: 13 }}>
+            Meldungsnummer <strong style={{ color: 'var(--lbf-text)', fontStyle: 'normal', letterSpacing: '0.02em' }}>{nummer}</strong><br />Bei Rückfragen zur Meldung bitte angeben.
+          </p>
+        )}
+        <button style={btn} onClick={() => { setF({ datum: today(), ort: '', kategorie: '', schwere: '', was: '', warum: '', folgen: '', vorschlag: '', melder_name: '', melder_kontakt: '' }); setNummer(''); setSuccess(false) }}>+ Neue Meldung</button>
       </div>
     </PubWrap>
   )

@@ -1,4 +1,4 @@
-import type { App } from '../types'
+import type { App, User } from '../types'
 
 export const ALL_APPS: Record<string, App> = {
   einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze',                permission: 'einsaetze',           color: '#600812' },
@@ -27,6 +27,18 @@ const KACHEL_TOKEN: Record<string, string> = {
 }
 export function kachelFarbe(farbe: string): string {
   return KACHEL_TOKEN[farbe.toLowerCase()] ?? farbe
+}
+
+/**
+ * Darf der Nutzer ein Modul nutzen? Supervisor immer; sonst das Recht selbst
+ * oder ein befristetes, das noch läuft. Dieselbe Regel wie die Kacheln im Hub.
+ */
+export function hatRecht(user: User | null | undefined, recht: string, jetzt = Date.now()): boolean {
+  if (!user) return false
+  if (user.supervisor) return true
+  if (user.permissions?.[recht]) return true
+  const bis = user.temp_permissions?.[recht]?.until
+  return !!bis && new Date(bis).getTime() > jetzt
 }
 
 // Vorlagen zur Vorbefüllung der individuellen Rechte beim Anlegen/Ändern eines Benutzers.

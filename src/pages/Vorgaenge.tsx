@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import {
@@ -7,8 +7,9 @@ import {
   type FormConfig, type CustomFieldDef, type SectionDef,
   type TemplateFieldDef, type FormTemplate,
 } from './public/formSchema'
+import CirsVerwaltung from './vorgaenge/CirsVerwaltung'
 
-type Tab = 'formulare' | 'editor'
+type Tab = 'formulare' | 'editor' | 'cirs'
 type FType = 'text' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'textarea'
 
 const FIELD_TYPE_LABELS: Record<string, string> = {
@@ -45,6 +46,10 @@ function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void 
 export default function Vorgaenge() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  // Verweise aus dem Hub: /vorgaenge?bereich=cirs&meldung=<id>
+  const [suchParameter] = useSearchParams()
+  const startMeldung = suchParameter.get('meldung')
+  const [cirsZahlen, setCirsZahlen] = useState({ neu: 0, ueberfaellig: 0 })
 
   // Org info
   const [orgId, setOrgId] = useState<string | null>(null)
@@ -57,7 +62,7 @@ export default function Vorgaenge() {
   const [msg, setMsg] = useState('')
 
   // Nav
-  const [tab, setTab] = useState<Tab>('formulare')
+  const [tab, setTab] = useState<Tab>(() => suchParameter.get('bereich') === 'cirs' || startMeldung ? 'cirs' : 'formulare')
 
   // Notaufnahme editor state
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
@@ -420,17 +425,28 @@ export default function Vorgaenge() {
 
       {/* Tab bar */}
       <div style={{ display: 'flex', background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
-        {([['formulare', 'Formulare'], ['editor', 'Protokoll-Felder']] as [Tab, string][]).map(([t, label]) => (
+        {([['formulare', 'Formulare'], ['editor', 'Protokoll-Felder'], ['cirs', 'CIRS']] as [Tab, string][]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} style={{
-            flex: 1, padding: '12px 8px 10px', border: 'none', background: 'none', cursor: 'pointer',
-            fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em',
+            flex: 1, padding: '12px 4px 10px', border: 'none', background: 'none', cursor: 'pointer',
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', whiteSpace: 'nowrap',
             color: tab === t ? 'var(--lbf-akzent)' : 'var(--warm-gray)', fontFamily: 'inherit',
             borderTop: tab === t ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
-          }}>{label}</button>
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+          }}>
+            {label}
+            {t === 'cirs' && cirsZahlen.neu > 0 && (
+              <span aria-label={`${cirsZahlen.neu} neue Meldungen`} style={{ fontSize: 10, fontWeight: 800, letterSpacing: 0, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 99, background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{cirsZahlen.neu}</span>
+            )}
+          </button>
         ))}
       </div>
 
-      <div style={{ padding: '20px 16px', maxWidth: 640, margin: '0 auto' }}>
+      {/* ── CIRS ── immer geladen: der Reiter zeigt die Zahl der neuen Meldungen */}
+      <div style={{ display: tab === 'cirs' ? 'block' : 'none', padding: '20px 16px calc(32px + env(safe-area-inset-bottom))', maxWidth: 760, margin: '0 auto' }}>
+        <CirsVerwaltung user={user} orgId={orgId || user?.organization_id || null} orgName={orgName} startMeldung={startMeldung} onZahlen={setCirsZahlen} />
+      </div>
+
+      <div style={{ padding: '20px 16px', maxWidth: 640, margin: '0 auto', display: tab === 'cirs' ? 'none' : 'block' }}>
 
         {/* ── Formulare tab ── */}
         {tab === 'formulare' && (

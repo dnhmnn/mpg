@@ -37,6 +37,13 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/api\/collections\/inventory_/i,
             handler: 'NetworkOnly',
           },
+          // CIRS wird vor jedem Schreiben frisch gelesen, damit kein Bearbeiter
+          // den anderen überschreibt. Eine Antwort aus dem Zwischenspeicher wäre
+          // ein alter Stand, der beim Speichern das Neuere überschriebe.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/collections\/cirs_/i,
+            handler: 'NetworkOnly',
+          },
           // Die Texterkennung der Gesundheitskarte wird beim ersten Mal aus
           // dem Netz geholt. Danach liegt sie im Zwischenspeicher, damit sie
           // im Funkloch nicht fehlt. Sie ist unveraenderlich versioniert,

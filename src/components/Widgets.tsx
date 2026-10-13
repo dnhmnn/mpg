@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
+import { hatRecht } from '../lib/apps'
+import { fallAus, istUeberfaellig, type CirsDatensatz } from '../lib/cirs'
 import type { User } from '../types'
 
 interface NewsItem {
@@ -140,6 +142,31 @@ export default function Widgets({ user }: WidgetsProps) {
           label: `${r.totalItems} offene Produktausgabe${r.totalItems === 1 ? '' : 'n'}`,
           sub: 'Noch nicht ins Lager gebucht',
           url: '/lager',
+          rgb: 'var(--lbf-rot-rgb)',
+        })
+      })
+    )
+
+    // CIRS nur für die, die Vorgänge bearbeiten dürfen — eine Meldung ist vertraulich
+    if (enabled('cirs') && hatRecht(user, 'dokumente')) queries.push(
+      pb.collection('cirs_reports').getFullList<CirsDatensatz>({
+        filter: pb.filter('organization_id = {:org} && status != "erledigt"', { org }),
+        fields: 'id,created,updated,status,payload',
+        requestKey: 'widget-cirs',
+      }).then(liste => {
+        const heute = new Date()
+        const faelle = liste.map(fallAus)
+        const neu = faelle.filter(f => f.bearbeitung.phase === 'neu').length
+        const ueber = faelle.filter(f => istUeberfaellig(f, heute)).length
+        if (!neu && !ueber) return
+        const teile: string[] = []
+        if (neu) teile.push(`${neu} neue CIRS-Meldung${neu === 1 ? '' : 'en'}`)
+        if (ueber) teile.push(`${ueber} CIRS-Vorg${ueber === 1 ? 'ang' : 'änge'} überfällig`)
+        items.push({
+          id: 'cirs',
+          label: teile.join(', '),
+          sub: neu ? 'Zur Bewertung unter Vorgänge' : 'Frist oder Maßnahme überschritten',
+          url: '/vorgaenge?bereich=cirs',
           rgb: 'var(--lbf-rot-rgb)',
         })
       })

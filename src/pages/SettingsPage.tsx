@@ -18,6 +18,7 @@ interface NotifPrefs {
   mpg: boolean
   ausbildungen: boolean
   produktausgabe: boolean
+  cirs: boolean
   email: boolean
 }
 
@@ -27,6 +28,7 @@ const DEFAULT_NOTIF_PREFS: NotifPrefs = {
   mpg: true,
   ausbildungen: true,
   produktausgabe: true,
+  cirs: true,
   email: true
 }
 
@@ -757,7 +759,8 @@ export default function SettingsPage({ user }: SettingsPageProps) {
     { key: 'lager', label: 'Ablaufende Lagerartikel' },
     { key: 'mpg', label: 'MPG-Geräteprüfungen' },
     { key: 'ausbildungen', label: 'Ausbildungs-Rückmeldungen' },
-    { key: 'produktausgabe', label: 'Offene Produktausgaben' }
+    { key: 'produktausgabe', label: 'Offene Produktausgaben' },
+    { key: 'cirs', label: 'Neue und überfällige CIRS-Meldungen' }
   ]
 
   const notificationsPanel = (
