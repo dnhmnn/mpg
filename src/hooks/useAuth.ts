@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
 import { ROLES } from '../lib/apps'
-import { ergaenzen, verknuepfungen } from '../lib/verknuepfung'
+import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import type { User } from '../types'
 
 export function useAuth() {
@@ -43,9 +43,11 @@ export function useAuth() {
         return
       }
 
+      let orgFrisch = false
       if (userData && userData.organization_id) {
         try {
           const org = await pb.collection('organizations').getOne(userData.organization_id)
+          orgFrisch = true
           userData.organization_name = org.org_name
           userData.organization_logo = org.logo || '🏢'
           userData.organization = org as any
@@ -57,15 +59,17 @@ export function useAuth() {
       }
 
       // Nach dem Laden der Organisation: Die Rollen-Vorlage bringt ihre verknüpften
-      // Rechte mit (Benutzer, die der Supervisor nur mit einer Rolle angelegt hat).
-      // Was am Benutzer schon ausdrücklich steht — auch ein abgewähltes Häkchen —, gilt weiter.
+      // Rechte mit (Benutzer, die der Supervisor nur mit einer Rolle angelegt hat) —
+      // aber nur mit frisch geladener Organisation, sonst stünden Voreinstellung und
+      // gesperrte Module für immer am Benutzer. Was am Benutzer schon ausdrücklich
+      // steht — auch ein abgewähltes Häkchen —, gilt weiter.
       if (userData && userData.permissions_migrated !== true && navigator.onLine) {
-        const template = ROLES[userData.role || 'benutzer']?.permissions || {}
+        const vorlage = {
+          ...(ROLES[userData.role || 'benutzer']?.permissions || {}),
+          ...(userData.lernbar_access ? { lernbar: true } : {}),
+        }
         const merged = {
-          ...ergaenzen({
-            ...template,
-            ...(userData.lernbar_access ? { lernbar: true } : {}),
-          }, verknuepfungen(userData.organization), userData.organization).rechte,
+          ...(orgFrisch ? vorlageMitVerknuepfungen(vorlage, verknuepfungen(userData.organization), userData.organization) : vorlage),
           ...(userData.permissions || {}),
         }
         try {

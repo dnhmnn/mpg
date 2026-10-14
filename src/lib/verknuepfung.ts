@@ -79,6 +79,20 @@ export function haken(rechte: Record<string, boolean>, recht: string, an: boolea
 }
 
 /**
+ * Eine Rollen-Vorlage anwenden: Was sie anhakt, bringt seine verknüpften
+ * Rechte mit — außer die Vorlage legt sie selbst fest, auch als abgewählt.
+ * Rechte, die der Benutzer schon hat, zieht das nicht nach.
+ */
+export function vorlageMitVerknuepfungen(vorlage: Record<string, boolean>, v: Verknuepfungen, org?: unknown): Record<string, boolean> {
+  const neu = { ...vorlage }
+  for (const r of Object.keys(vorlage)) {
+    if (vorlage[r] !== true) continue
+    for (const z of mitgebracht(r, v, org)) if (!(z in vorlage)) neu[z] = true
+  }
+  return neu
+}
+
+/**
  * Fehlende verknüpfte Rechte ergänzen — für Rollen-Vorlagen und zum
  * Nachziehen bestehender Benutzer. Weggenommen wird nichts.
  */

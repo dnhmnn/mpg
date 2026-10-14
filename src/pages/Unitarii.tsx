@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte } from '../lib/apps'
-import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
+import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
 
 interface UUser {
@@ -86,9 +86,11 @@ function fmtCountdown(iso?: string): string {
 
 export default function Unitarii() {
   const { user, loading: authLoading } = useAuth()
+  // Die Organisation frisch geladen (loadOrgRolePerms) — bis dahin die vom Login
+  const [orgFrisch, setOrgFrisch] = useState<Record<string, unknown> | null>(null)
+  const org: unknown = orgFrisch ?? user?.organization
   // Nur Rechte für Module, die der Organisation freigeschaltet sind (Supervisor).
   // Schon vergebene Rechte gesperrter Module bleiben am Benutzer stehen.
-  const org = user?.organization
   const PERM_LABELS = vergebbareRechte(org)
   const rechtName = (k: string) => PERM_LABELS.find(p => p.key === k)?.label ?? k
   const navigate = useNavigate()
@@ -129,9 +131,10 @@ export default function Unitarii() {
   const [templateDraft, setTemplateDraft] = useState<Record<string, boolean>>({ ...EMPTY_PERMS })
   const [savingTemplate, setSavingTemplate] = useState(false)
 
-  // Verknüpfte Rechte (lib/verknuepfung.ts): bis die Organisation geladen ist, die vom Login
-  const [orgVerkn, setOrgVerkn] = useState<Verknuepfungen>(() => verknuepfungen(org))
-  const [verknFeldDa, setVerknFeldDa] = useState(true)
+  // Verknüpfte Rechte (lib/verknuepfung.ts). Ist die Organisation gar nicht
+  // bekannt, wird nichts mitgebracht — nie stillschweigend die Voreinstellung.
+  const orgVerkn: Verknuepfungen = org ? verknuepfungen(org) : {}
+  const verknFeldDa = !orgFrisch || 'verknuepfungen' in orgFrisch
   const [verknOpen, setVerknOpen] = useState(false)
   const [verknDraft, setVerknDraft] = useState<Verknuepfungen>({})
   const [verknRecht, setVerknRecht] = useState('lager')
@@ -156,8 +159,7 @@ export default function Unitarii() {
     try {
       const o = await pb.collection('organizations').getOne(user.organization_id)
       setOrgRolePerms((o.role_permissions as any) || {})
-      setOrgVerkn(verknuepfungen(o))
-      setVerknFeldDa('verknuepfungen' in o)
+      setOrgFrisch(o)
     } catch { /* field may not exist yet */ }
   }
 
@@ -421,13 +423,11 @@ export default function Unitarii() {
     setSavingVerkn(true)
     try {
       const o = await pb.collection('organizations').update(user.organization_id, { verknuepfungen: verknDraft })
+      setOrgFrisch(o)
       if (!('verknuepfungen' in o)) {
-        setVerknFeldDa(false)
         showMsg('Nicht gespeichert — das Feld „verknuepfungen“ fehlt in PocketBase', 'error')
         return
       }
-      setVerknFeldDa(true)
-      setOrgVerkn(verknuepfungen(o))
       showMsg('Verknüpfungen gespeichert')
     } catch (e: any) { showMsg('Fehler: ' + (e?.message || e), 'error') }
     finally { setSavingVerkn(false) }
@@ -435,7 +435,8 @@ export default function Unitarii() {
 
   // Bestehende Benutzer nachziehen: fehlende verknüpfte Rechte ergänzen, nichts wegnehmen
   async function verknuepfungenAnwenden() {
-    if (!user?.organization_id) return
+    // Nur mit frisch geladener Organisation: ihre Verknüpfungen und gesperrten Module
+    if (!user?.organization_id || !orgFrisch) return
     setAnwenden(true)
     try {
       const liste = await pb.collection('users').getFullList<UUser>({
@@ -559,7 +560,8 @@ export default function Unitarii() {
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Verknüpfte Rechte</div>
                 <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 3, lineHeight: 1.45 }}>
-                  {verknuepfungZeilen(PERM_LABELS, orgVerkn, org).join(' · ') || 'Keine — jedes Recht wird einzeln vergeben'}
+                  {!org ? 'Organisation nicht geladen — es wird nichts mitgebracht'
+                    : verknuepfungZeilen(PERM_LABELS, orgVerkn, org).join(' · ') || 'Keine — jedes Recht wird einzeln vergeben'}
                 </div>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--warm-gray)', flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
@@ -663,7 +665,7 @@ export default function Unitarii() {
               <select value={userForm.role} onChange={e => {
                 const role = e.target.value
                 const template = getRoleTemplate(role, { role_permissions: orgRolePerms })
-                setUserForm(p => ({ ...p, role, permissions: ergaenzen({ ...p.permissions, ...template }, orgVerkn, org).rechte }))
+                setUserForm(p => ({ ...p, role, permissions: { ...p.permissions, ...vorlageMitVerknuepfungen(template, orgVerkn, org) } }))
               }} style={INPUT}>
                 {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
@@ -857,10 +859,12 @@ export default function Unitarii() {
               <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 10 }}>
                 Ergänzt bei allen Benutzern die verknüpften Rechte, die ihnen noch fehlen — etwa bei allen mit Lager. Es zählen die dauerhaften Rechte; weggenommen wird nichts. Vorher siehst du, wer was bekommt.
               </div>
-              <button onClick={verknuepfungenAnwenden} disabled={anwenden || geaendert} style={{ ...BTN_SECONDARY, width: '100%', opacity: (anwenden || geaendert) ? 0.5 : 1, cursor: (anwenden || geaendert) ? 'not-allowed' : 'pointer' }}>
+              <button onClick={verknuepfungenAnwenden} disabled={anwenden || geaendert || !orgFrisch} style={{ ...BTN_SECONDARY, width: '100%', opacity: (anwenden || geaendert || !orgFrisch) ? 0.5 : 1, cursor: (anwenden || geaendert || !orgFrisch) ? 'not-allowed' : 'pointer' }}>
                 {anwenden ? 'Wird angewendet…' : 'Verknüpfungen anwenden'}
               </button>
-              {geaendert && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Erst speichern, dann anwenden.</div>}
+              {!orgFrisch
+                ? <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Die Organisation konnte nicht geladen werden — ohne Verbindung wird nichts angewendet.</div>
+                : geaendert && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Erst speichern, dann anwenden.</div>}
             </div>
           </Sheet>
         )

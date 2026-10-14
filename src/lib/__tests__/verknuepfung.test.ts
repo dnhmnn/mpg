@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen } from '../verknuepfung'
+import { STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen } from '../verknuepfung'
 import { PERM_LABELS, vergebbareRechte } from '../apps'
 
 const STANDARD = verknuepfungen({})
@@ -68,6 +68,30 @@ describe('Verknüpfte Rechte: Häkchen setzen', () => {
 
   it('ein Recht eines gesperrten Moduls bringt nichts mit', () => {
     expect(mitgebracht('lager', STANDARD, { freigeschaltet: ['dateien', 'dokumente'] })).toEqual([])
+  })
+})
+
+describe('Verknüpfte Rechte: Rollen-Vorlage anwenden', () => {
+  it('was die Vorlage anhakt, bringt seine Verknüpfungen mit', () => {
+    // Standard-Vorlage "lager" kennt Vorgänge nicht — die Verknüpfung bringt es
+    const vorlage = { dashboard: true, lager: true, produktausgabe: true, dateien: true, chat: true }
+    expect(vorlageMitVerknuepfungen(vorlage, STANDARD)).toEqual({ ...vorlage, dokumente: true })
+  })
+
+  it('was die Vorlage selbst abwählt, bleibt abgewählt', () => {
+    const vorlage = { lager: true, dateien: true, dashboard: true, dokumente: false, unitarii: false }
+    expect(vorlageMitVerknuepfungen(vorlage, STANDARD)).toEqual(vorlage)
+  })
+
+  it('zieht keine Rechte nach, die der Benutzer schon hat', () => {
+    // Benutzer hat Lager ohne Vorgänge; neue Rolle "benutzer" — Vorgänge bleibt weg
+    const benutzer = { lager: true, dokumente: false }
+    const neu = { ...benutzer, ...vorlageMitVerknuepfungen({ dashboard: true, lernbar: true, chat: true }, STANDARD) }
+    expect(neu.dokumente).toBe(false)
+  })
+
+  it('ohne Verknüpfungen ändert sich nichts', () => {
+    expect(vorlageMitVerknuepfungen({ lager: true }, {})).toEqual({ lager: true })
   })
 })
 

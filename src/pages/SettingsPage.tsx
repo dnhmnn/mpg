@@ -4,7 +4,7 @@ import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, kachelFarbe, vergebbareRechte } from '../lib/apps'
-import { ergaenzen, haken, verknuepfungen } from '../lib/verknuepfung'
+import { haken, verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis from '../components/VerknuepfungHinweis'
 import { MODULE as FREIGABE_MODULE, freigeschaltet } from '../lib/freigabe'
 import AppIcon from '../components/AppIcon'
@@ -414,6 +414,10 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
 
   // License
   const [license, setLicense] = useState<any>(null)
+  // Verknüpfte Rechte der Organisation (frisch geladen, sonst die vom Login).
+  // Ist sie gar nicht bekannt, wird nichts mitgebracht.
+  const rechteOrg: unknown = license ?? user?.organization
+  const verkn = rechteOrg ? verknuepfungen(rechteOrg) : {}
 
   // Dieselbe Regel wie die Benutzerverwaltung (Unitarii): wer Benutzer dauerhaft verwalten darf
   const canManageUsers = istVerantwortlich(user)
@@ -1180,7 +1184,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                     const role = e.target.value
                     const template = getRoleTemplate(role, license)
                     setUserFormRole(role)
-                    setUserFormPermissions(p => ergaenzen({ ...p, ...template }, verknuepfungen(license ?? user?.organization), user?.organization).rechte)
+                    setUserFormPermissions(p => ({ ...p, ...vorlageMitVerknuepfungen(template, verkn, rechteOrg) }))
                   }}
                   className="ios-field-select"
                 >
@@ -1204,14 +1208,14 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                       <input
                         type="checkbox"
                         checked={!!userFormPermissions[key]}
-                        onChange={(e) => { const an = e.target.checked; setUserFormPermissions(p => haken(p, key, an, verknuepfungen(license ?? user?.organization), user?.organization)) }}
+                        onChange={(e) => { const an = e.target.checked; setUserFormPermissions(p => haken(p, key, an, verkn, rechteOrg)) }}
                         style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }}
                       />
                       {label}
                     </label>
                   ))}
                 </div>
-                <VerknuepfungHinweis rechte={PERM_LABELS} v={verknuepfungen(license ?? user?.organization)} org={user?.organization} />
+                <VerknuepfungHinweis rechte={PERM_LABELS} v={verkn} org={rechteOrg} />
               </div>
               {userFormMsg && (
                 <div style={{ marginTop: '12px', fontSize: '14px', color: userFormMsg.includes('✅') ? '#34c759' : '#ff3b30' }}>
