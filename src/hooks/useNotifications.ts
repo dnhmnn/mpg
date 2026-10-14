@@ -14,11 +14,14 @@ interface Notification {
 export function useNotifications(user: User | null) {
   const [currentNotification, setCurrentNotification] = useState<Notification | null>(null)
 
+  // An Benutzer und Organisation gebunden, nicht an das Objekt: das Hub lädt den
+  // Benutzer bei jeder Änderung seines Datensatzes neu — eine mit "Später"
+  // zurückgestellte Mitteilung käme sonst sofort wieder
   useEffect(() => {
     if (user?.organization_id) {
       checkForNotifications()
     }
-  }, [user])
+  }, [user?.id, user?.organization_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function checkForNotifications() {
     if (!user || !user.organization_id) return

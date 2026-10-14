@@ -12,7 +12,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { ALL_APPS, hatRecht, kachelFarbe } from '../lib/apps'
 import {
-  automatisch, cookieLesen, cookieText, schritte, standLesen, standVereinen, vermerken,
+  automatisch, cookieLesen, cookieText, schritte, standLeer, standLesen, standWaehlen, vermerken,
   type Bild, type EinfSchritt, type Stand, type Teil,
 } from '../lib/einfuehrung'
 import type { User } from '../types'
@@ -33,8 +33,11 @@ const zuhoerer = new Set<() => void>()
 function standHolen(user: User): Stand {
   const da = staende.get(user.id)
   if (da) return da
-  const s = standVereinen(standLesen((user as { einfuehrung?: unknown }).einfuehrung), cookieLesen(user.id))
+  const s = standWaehlen(user, cookieLesen(user.id))
   staende.set(user.id, s)
+  // Den Cookie bei jedem Start erneuern: Safari lässt Cookies aus Skripten
+  // nach sieben Tagen ohne Nutzung verfallen
+  if (!standLeer(s)) { try { document.cookie = cookieText(user.id, s) } catch { /* gesperrt */ } }
   return s
 }
 
@@ -45,12 +48,23 @@ export function useEinfuehrungStand(user: User | null) {
     zuhoerer.add(f)
     return () => { zuhoerer.delete(f) }
   }, [])
+  // Kommt ein neuerer Stand vom Server (anderes Gerät, Neuladen des Benutzers), gilt er
+  const feld = user ? JSON.stringify((user as { einfuehrung?: unknown }).einfuehrung ?? null) : 'null'
+  useEffect(() => {
+    if (!user || feld === 'null') return
+    const vomServer = standLesen(JSON.parse(feld))
+    if (JSON.stringify(vomServer) === JSON.stringify(staende.get(user.id))) return
+    staende.set(user.id, vomServer)
+    zuhoerer.forEach((f) => f())
+  }, [user?.id, feld]) // eslint-disable-line react-hooks/exhaustive-deps
   const stand: Stand = user ? standHolen(user) : { v: 1 }
   const standRef = useRef(stand)
   standRef.current = stand
 
   const speichern = useCallback(async (neu: Stand) => {
     if (!user) return
+    // Unverändertes nicht schreiben: jedes Speichern lädt im Hub den Benutzer neu
+    if (JSON.stringify(neu) === JSON.stringify(staende.get(user.id))) return
     staende.set(user.id, neu)
     standRef.current = neu
     zuhoerer.forEach((f) => f())
@@ -106,14 +120,36 @@ interface Props {
 
 export default function Einfuehrung({ user, teile, onEnde }: Props) {
   const liste = useMemo(() => schritte(user, teile), [user, teile])
-  const [i, setI] = useState(0)
+  const [iRoh, setI] = useState(0)
+  // Ändert sich die Liste (z.B. Rechte neu geladen), bleibt der Index im Bereich
+  const i = Math.min(iRoh, Math.max(liste.length - 1, 0))
   const navigate = useNavigate()
   const fenster = useRef<HTMLDivElement>(null)
+  const inhalt = useRef<HTMLDivElement>(null)
   const weiterKnopf = useRef<HTMLButtonElement>(null)
   const s = liste[Math.min(i, liste.length - 1)]
   const letzter = i >= liste.length - 1
 
-  useEffect(() => { weiterKnopf.current?.focus() }, [i])
+  // Neuer Schritt: oben anfangen, Fokus auf "Weiter"
+  useEffect(() => {
+    if (inhalt.current) inhalt.current.scrollTop = 0
+    weiterKnopf.current?.focus()
+  }, [i])
+
+  // Nach dem Schließen den Fokus dorthin zurück, woher man kam
+  useEffect(() => {
+    const vorher = document.activeElement as HTMLElement | null
+    return () => { if (vorher && document.contains(vorher)) vorher.focus() }
+  }, [])
+
+  // Fokus, der aus dem Fenster gerät (Klick daneben, Hilfsmittel), zurückholen
+  useEffect(() => {
+    const zurueck = (e: FocusEvent) => {
+      if (fenster.current && e.target instanceof Node && !fenster.current.contains(e.target)) weiterKnopf.current?.focus()
+    }
+    document.addEventListener('focusin', zurueck)
+    return () => document.removeEventListener('focusin', zurueck)
+  }, [])
 
   // Tastatur: Pfeile blättern, Escape schließt, Tab bleibt im Fenster
   useEffect(() => {
@@ -127,7 +163,8 @@ export default function Einfuehrung({ user, teile, onEnde }: Props) {
         const ziele = [...fenster.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select')]
         if (!ziele.length) return
         const erstes = ziele[0], letztes = ziele[ziele.length - 1]
-        if (e.shiftKey && document.activeElement === erstes) { e.preventDefault(); letztes.focus() }
+        if (!fenster.current.contains(document.activeElement)) { e.preventDefault(); (e.shiftKey ? letztes : erstes).focus() }
+        else if (e.shiftKey && document.activeElement === erstes) { e.preventDefault(); letztes.focus() }
         else if (!e.shiftKey && document.activeElement === letztes) { e.preventDefault(); erstes.focus() }
       }
     }
@@ -135,8 +172,8 @@ export default function Einfuehrung({ user, teile, onEnde }: Props) {
     return () => window.removeEventListener('keydown', taste)
   }, [liste.length, onEnde])
 
-  // Wischen am Handy
-  const wischStart = useRef<number | null>(null)
+  // Wischen am Handy — nur waagerecht, damit Scrollen nicht blättert
+  const wischStart = useRef<{ x: number; y: number } | null>(null)
 
   if (!s) return null
   const teilName = s.teil === 'organisation' ? 'Organisation einrichten' : 'Willkommen'
@@ -144,15 +181,18 @@ export default function Einfuehrung({ user, teile, onEnde }: Props) {
   const anzahlImTeil = liste.filter((x) => x.teil === s.teil).length
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 900, background: 'rgba(26,14,8,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))', fontFamily: SCHRIFT }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 10001, background: 'rgba(26,14,8,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom))', fontFamily: SCHRIFT }}>
       <div ref={fenster} role="dialog" aria-modal="true" aria-labelledby="einf-titel" aria-describedby="einf-text"
-        onTouchStart={(e) => { wischStart.current = e.touches[0].clientX }}
+        onTouchStart={(e) => { wischStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY } }}
+        onTouchCancel={() => { wischStart.current = null }}
         onTouchEnd={(e) => {
-          if (wischStart.current === null) return
-          const dx = e.changedTouches[0].clientX - wischStart.current
+          if (!wischStart.current) return
+          const dx = e.changedTouches[0].clientX - wischStart.current.x
+          const dy = e.changedTouches[0].clientY - wischStart.current.y
           wischStart.current = null
-          if (dx < -60) setI((x) => Math.min(x + 1, liste.length - 1))
-          if (dx > 60) setI((x) => Math.max(x - 1, 0))
+          if (Math.abs(dx) < 60 || Math.abs(dx) < 1.5 * Math.abs(dy)) return
+          if (dx < 0) setI((x) => Math.min(x + 1, liste.length - 1))
+          else setI((x) => Math.max(x - 1, 0))
         }}
         style={{ width: 'min(560px, 100%)', maxHeight: '100%', background: 'var(--lbf-card)', borderRadius: 18, boxShadow: '0 24px 64px rgba(0,0,0,0.3)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
@@ -169,8 +209,13 @@ export default function Einfuehrung({ user, teile, onEnde }: Props) {
           )}
         </div>
 
+        {/* Schrittwechsel für Screenreader ansagen */}
+        <div aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' }}>
+          Schritt {i + 1} von {liste.length}: {s.titel}
+        </div>
+
         {/* Inhalt */}
-        <div style={{ overflowY: 'auto', padding: '18px 22px 6px' }}>
+        <div ref={inhalt} style={{ overflowY: 'auto', padding: '18px 22px 6px' }}>
           <Abbildung bild={s.bild} user={user} schritt={s} />
           <h2 id="einf-titel" style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, lineHeight: 1.25, color: 'var(--lbf-text)', margin: '18px 0 8px' }}>{s.titel}</h2>
           <p id="einf-text" style={{ fontSize: 15, lineHeight: 1.55, color: 'var(--lbf-text)', margin: 0 }}>{s.text}</p>
@@ -199,11 +244,11 @@ export default function Einfuehrung({ user, teile, onEnde }: Props) {
             <div style={{ width: `${((i + 1) / liste.length) * 100}%`, height: '100%', background: 'var(--lbf-akzent)', borderRadius: 2, transition: 'width .25s' }} />
           </div>
           {i > 0 && (
-            <button onClick={() => setI((x) => x - 1)} style={{ padding: '11px 16px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'none', color: 'var(--lbf-akzent)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => setI(i - 1)} style={{ padding: '11px 16px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', background: 'none', color: 'var(--lbf-akzent)', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               Zurück
             </button>
           )}
-          <button ref={weiterKnopf} onClick={() => (letzter ? onEnde() : setI((x) => x + 1))}
+          <button ref={weiterKnopf} onClick={() => (letzter ? onEnde() : setI(i + 1))}
             style={{ padding: '11px 20px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', minWidth: 110 }}>
             {letzter ? 'Los geht’s' : 'Weiter'}
           </button>
@@ -217,7 +262,7 @@ export default function Einfuehrung({ user, teile, onEnde }: Props) {
 
 function Flaeche({ children, hoehe = 150 }: { children: React.ReactNode; hoehe?: number }) {
   return (
-    <div aria-hidden="true" style={{ height: hoehe, borderRadius: 14, background: 'var(--warm-bg)', border: '0.5px solid var(--lbf-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
+    <div aria-hidden="true" style={{ minHeight: hoehe, borderRadius: 14, background: 'var(--warm-bg)', border: '0.5px solid var(--lbf-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', position: 'relative' }}>
       {children}
     </div>
   )
@@ -228,7 +273,7 @@ function Kachel({ id, gross = false }: { id: string; gross?: boolean }) {
   if (!app) return null
   const k = gross ? 46 : 38
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: gross ? 72 : 60 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: gross ? 72 : 68 }}>
       <div style={{ width: k, height: k, borderRadius: 11, background: kachelFarbe(app.color || '#600812'), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ width: k * 0.5, height: k * 0.5 }}><AppIcon icon={app.icon} /></div>
       </div>
@@ -261,7 +306,7 @@ function Abbildung({ bild, user, schritt }: { bild: Bild; user: User; schritt: E
     case 'module': {
       const ids = (schritt.module?.length ? schritt.module : meine).slice(0, bild === 'hub' ? 8 : 12)
       return (
-        <Flaeche hoehe={ids.length > 4 ? 170 : 110}>
+        <Flaeche hoehe={110}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 8px', justifyContent: 'center', padding: '12px 10px', maxWidth: 360 }}>
             {ids.map((id) => <Kachel key={id} id={id} />)}
           </div>

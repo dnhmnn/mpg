@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  STICHTAG, abhaken, automatisch, checklistenStand, cookieLesen, cookieText, schritte, standLesen, standVereinen, vermerken,
+  STICHTAG, abhaken, automatisch, checklistenStand, cookieLesen, cookieText, nurLernbar, schritte, standLesen, standWaehlen, vermerken,
   type Punkt,
 } from '../einfuehrung'
 import type { User } from '../../types'
@@ -65,10 +65,19 @@ describe('Einführung: der Stand', () => {
     expect(standLesen({ basis: 7, abgehakt: { a: 'x', b: 3 } })).toEqual({ v: 1, abgehakt: { a: 'x' } })
   })
 
-  it('gesehen ist gesehen — egal ob im Benutzerfeld oder im Cookie', () => {
-    const feld = { v: 1 as const, basis: 'A' }
-    const keks = { v: 1 as const, organisation: 'B', abgehakt: { qr: 'C' } }
-    expect(standVereinen(feld, keks)).toEqual({ v: 1, basis: 'A', organisation: 'B', abgehakt: { qr: 'C' } })
+  it('das Feld am Benutzer gilt, sobald es dort steht — sonst der Cookie', () => {
+    const keks = { v: 1 as const, basis: 'aus dem Cookie', abgehakt: { qr: 'C' } }
+    expect(standWaehlen({ einfuehrung: { v: 1, basis: 'A' } }, keks)).toEqual({ v: 1, basis: 'A' })
+    // Feld im Schema, aber noch leer: der Cookie hält, was vorher vermerkt war
+    expect(standWaehlen({ einfuehrung: null }, keks)).toEqual(keks)
+    // Feld (noch) nicht in PocketBase angelegt
+    expect(standWaehlen({}, keks)).toEqual(keks)
+  })
+
+  it('ein zurückgenommener Haken kommt nicht aus dem Cookie zurück', () => {
+    const feld = { v: 1, basis: 'A' }
+    const keksMitHaken = { v: 1 as const, basis: 'A', abgehakt: { seite: 'früher' } }
+    expect(standWaehlen({ einfuehrung: feld }, keksMitHaken).abgehakt).toBeUndefined()
   })
 
   it('vermerkt Teile nur einmal, mit dem ersten Zeitpunkt', () => {
@@ -112,6 +121,25 @@ describe('Einführung: Checkliste', () => {
 })
 
 describe('Einführung: welche Schritte jemand sieht', () => {
+  it('Nur-Lernbar folgt derselben Regel wie der Login', () => {
+    expect(nurLernbar(nutzer({ permissions: { lernbar: true } }))).toBe(true)
+    expect(nurLernbar(nutzer({ permissions: { lernbar: true, chat: false } }))).toBe(true)
+    expect(nurLernbar(nutzer({ permissions: { lernbar: true, chat: true } }))).toBe(false)
+    expect(nurLernbar(nutzer({ permissions: { patienten: true } }))).toBe(false)
+  })
+
+  it('wer im Hub landet, bekommt Hub, Control und Profil erklärt — auch ohne das Recht "dashboard"', () => {
+    const ids = schritte(nutzer({ permissions: { lernbar: true, chat: true } }), ['basis']).map((s) => s.id)
+    expect(ids).toEqual(expect.arrayContaining(['hub', 'control', 'profil']))
+    expect(ids).not.toContain('einstellungen')
+  })
+
+  it('befristetes EKS-Recht verspricht im Überblick nichts, was die Seite nicht öffnet', () => {
+    const bis = new Date(Date.now() + 864e5).toISOString()
+    const u = nutzer({ permissions: { patienten: true }, temp_permissions: { eks: { until: bis }, patienten: { until: bis } } })
+    expect(schritte(u, ['basis']).find((s) => s.id === 'module')?.module).toEqual(['patienten'])
+  })
+
   it('nur, was zu den eigenen Rechten passt — wer nur die Lernbar hat, bekommt kein Hub erklärt', () => {
     const ids = schritte(nutzer({ permissions: { lernbar: true } }), ['basis']).map((s) => s.id)
     expect(ids).toContain('unitas')
@@ -146,9 +174,12 @@ describe('Einführung: welche Schritte jemand sieht', () => {
 
   it('sagt, wo man die Einführung wiederfindet — je nachdem, was man erreichen kann', () => {
     const mitHub = schritte(nutzer({ permissions: { dashboard: true } }), ['basis']).slice(-1)[0]
-    const nurLernbar = schritte(nutzer({ permissions: { lernbar: true } }), ['basis']).slice(-1)[0]
+    const nurLern = schritte(nutzer({ permissions: { lernbar: true } }), ['basis']).slice(-1)[0]
     expect(mitHub.hinweis).toContain('Einstellungen')
-    expect(nurLernbar.hinweis).toContain('Unitas')
+    expect(nurLern.hinweis).toContain('Pfeil oben links')
+    const ohneEinstellungen = schritte(nutzer({ permissions: { patienten: true } }), ['basis']).slice(-1)[0]
+    expect(ohneEinstellungen.hinweis).toContain('Initialen')
+    expect(ohneEinstellungen.hinweis).not.toContain('Einstellungen')
   })
 
   it('nennt die Adresse der Organisationsseite, wenn der Code bekannt ist', () => {

@@ -112,8 +112,22 @@ export function useAuth() {
   function logout() {
     // EKS hält Einsatzdaten lokal. localStorage.clear() darf sie nicht stillschweigend vernichten.
     const pending = Number(localStorage.getItem('eks_pending_count') || '0')
-    const frage = pending > 0
-      ? `Achtung: ${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.\n\nBeim Abmelden gehen lokale Daten verloren. Wirklich abmelden?`
+    // Ohne Netz abgeschickte Protokolle warten im lokalen Speicher (offline_queue_<org>)
+    // und gingen mit localStorage.clear() verloren
+    let protokolle = 0
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (!k || !k.startsWith('offline_queue_')) continue
+        const q = JSON.parse(localStorage.getItem(k) || '[]')
+        if (Array.isArray(q)) protokolle += q.length
+      }
+    } catch { /* unlesbar: nicht zählen */ }
+    const warnungen: string[] = []
+    if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
+    if (protokolle > 0) warnungen.push(`${protokolle} Protokoll${protokolle === 1 ? ' wartet' : 'e warten'} noch auf diesem Gerät auf die Übertragung.`)
+    const frage = warnungen.length
+      ? `Achtung: ${warnungen.join(' ')}\n\nBeim Abmelden gehen lokale Daten verloren. Wirklich abmelden?`
       : 'Wirklich abmelden?'
     if (confirm(frage)) {
       pb.authStore.clear()

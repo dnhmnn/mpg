@@ -410,7 +410,8 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   // License
   const [license, setLicense] = useState<any>(null)
 
-  const canManageUsers = user?.supervisor || user?.role === 'mpg'
+  // Dieselbe Regel wie die Benutzerverwaltung (Unitarii): wer Benutzer dauerhaft verwalten darf
+  const canManageUsers = istVerantwortlich(user)
 
   useEffect(() => {
     if (user) {

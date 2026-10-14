@@ -4,6 +4,7 @@
 // Welche Punkte es gibt und wie sie zählen, steht in lib/einfuehrung.ts.
 
 import { useEffect, useState } from 'react'
+import type React from 'react'
 import { pb } from '../lib/pocketbase'
 import { CHECKLISTE, checklistenStand, abhaken, type Befunde } from '../lib/einfuehrung'
 import { hatRecht } from '../lib/apps'
@@ -86,13 +87,13 @@ export default function OrgCheckliste({ user, kompakt = false, onGehe }: { user:
                 border: p.erledigt ? 'none' : '1.5px solid rgba(var(--lbf-rot-rgb),0.3)', background: p.erledigt ? '#16a34a' : 'var(--lbf-card)', color: '#fff' }}>
               {p.erledigt && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>}
             </button>
-            <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ flex: 1, minWidth: 0, hyphens: 'auto', WebkitHyphens: 'auto', overflowWrap: 'break-word' } as React.CSSProperties}>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>{p.titel}</div>
               {!kompakt && <div style={{ fontSize: 12.5, color: 'var(--warm-gray)', marginTop: 2, lineHeight: 1.45 }}>{p.text}</div>}
               {p.quelle === 'erkannt' && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--lbf-ok-text)', marginTop: 2 }}>erledigt</div>}
             </div>
             {p.pfad && (
-              <button onClick={() => onGehe(p.pfad!)} style={{ flexShrink: 0, background: 'none', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={() => onGehe(p.pfad!)} aria-label={`${p.titel}: öffnen`} style={{ flexShrink: 0, background: 'none', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '5px 10px', fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }}>
                 Öffnen
               </button>
             )}

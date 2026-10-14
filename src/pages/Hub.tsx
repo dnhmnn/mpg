@@ -10,7 +10,8 @@ import AppsModal from '../components/AppsModal'
 import EditModal from '../components/EditModal'
 import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
-import { EinfuehrungAutomatisch } from '../components/Einfuehrung'
+import Einfuehrung, { EinfuehrungAutomatisch, useEinfuehrungStand } from '../components/Einfuehrung'
+import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
 import { ALL_APPS, hatRecht } from '../lib/apps'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
@@ -26,7 +27,6 @@ const PREDEFINED_SHORTCUTS = [
   { id: 'inventur',    name: 'Inventur starten',           url: '/lager' },
   { id: 'darkmode',    name: 'Dark Mode umschalten',       url: null },
   { id: 'dateien',     name: 'Dateien suchen',             url: '/files' },
-  { id: 'qr',          name: 'QR Code generieren',        url: '/qr' },
 ] as const
 
 type ShortcutId = typeof PREDEFINED_SHORTCUTS[number]['id']
@@ -43,7 +43,6 @@ function ShortcutIcon({ id, color = 'currentColor' }: { id: ShortcutId; color?: 
   if (id === 'inventur') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
   if (id === 'darkmode') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
   if (id === 'dateien') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-  if (id === 'qr') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/><rect x="18" y="14" width="3" height="3"/><rect x="14" y="18" width="3" height="3"/><rect x="18" y="18" width="3" height="3"/></svg>
   return null
 }
 
@@ -56,6 +55,9 @@ function initials(name?: string | null): string {
 export default function Hub() {
   const navigate = useNavigate()
   const { user, loading, logout, refresh } = useAuth()
+  // Einführung über das Profil — erreicht jeder, auch ohne Einstellungen
+  const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
+  const { standRef: einfuehrungStandRef, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
 
   const [logoError, setLogoError] = useState(false)
@@ -381,6 +383,10 @@ export default function Hub() {
       <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
       {/* Einführung für neue Benutzer und Organisationen — nach der Begrüßung */}
       <EinfuehrungAutomatisch user={user} verzoegerung={showGreeting ? 2600 : 500} />
+      {einfuehrungTeile && user && (
+        <Einfuehrung user={user} teile={einfuehrungTeile}
+          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStandRef.current, einfuehrungTeile, new Date())); setEinfuehrungTeile(null) }} />
+      )}
       <AppsModal
         isOpen={showAppsModal}
         onClose={() => { setShowAppsModal(false); setEditMode(false) }}
@@ -541,6 +547,17 @@ export default function Hub() {
                     <path d="M12 5v14M5 12l7-7 7 7"/>
                   </svg>
                   Zum Homebildschirm hinzufügen
+                </button>
+
+                {/* Einführung — für alle erreichbar, auch ohne Einstellungen */}
+                <button
+                  onClick={() => { setProfileSheetOpen(false); setEinfuehrungTeile(istVerantwortlich(user) ? ['basis', 'organisation'] : ['basis']) }}
+                  style={{ width: '100%', marginTop: 10, background: 'none', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 12, padding: '13px 16px', color: 'var(--lbf-text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>
+                  Einführung ansehen
                 </button>
 
               </div>
