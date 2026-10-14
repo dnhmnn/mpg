@@ -86,9 +86,13 @@ function tag(wert?: string): string | null {
   return m ? m[1] : null
 }
 
-/** Darf jemand die Organisation einrichten? Wer Benutzer verwalten darf. */
+/**
+ * Ist jemand verantwortlich für die Organisation? Wer Benutzer verwalten darf
+ * — dauerhaft. Ein befristetes Recht (Vertretung) macht noch niemanden zum
+ * Verantwortlichen, und die Benutzerverwaltung selbst lässt dann auch nicht hinein.
+ */
 export function istVerantwortlich(user: User | null | undefined): boolean {
-  return hatRecht(user, 'unitarii')
+  return !!user && (user.supervisor === true || user.permissions?.unitarii === true)
 }
 
 /**
@@ -156,7 +160,7 @@ export const MODULE: { id: string; recht: string; name: string; satz: string }[]
   { id: 'lager', recht: 'lager', name: 'Lager', satz: 'Bestände je Standort ein- und ausbuchen, Ablaufdaten im Blick behalten und nachbestellen.' },
   { id: 'dateien', recht: 'dateien', name: 'Dateien', satz: 'Die gemeinsame Ablage: Ordner anlegen, Dateien hochladen und wiederfinden.' },
   { id: 'lernbar', recht: 'lernbar', name: 'Unitas', satz: 'Deine Protokolle, deine Vorgänge und die Lernbar mit Terminen, Modulen und Bibliothek.' },
-  { id: 'ausbildungen', recht: 'ausbildungen_manage', name: 'Ausbildungen', satz: 'Ausbildungstermine, Teilnehmer und Lernmodule planen.' },
+  { id: 'ausbildungen', recht: 'ausbildungen_manage', name: 'Ausbildungen', satz: 'Ausbildungstermine planen, Teilnehmer und Lernmodule verwalten, per Link einladen.' },
   { id: 'unitarii', recht: 'unitarii', name: 'Benutzer', satz: 'Benutzer deiner Organisation anlegen und ihre Rechte vergeben.' },
   { id: 'mpg', recht: 'dashboard', name: 'MPG', satz: 'Medizinprodukte verwalten, nach Vorlage prüfen und Defekte melden.' },
   { id: 'chat', recht: 'chat', name: 'Chat', satz: 'Direktnachrichten an Personen deiner Organisation, auf deinem Gerät verschlüsselt.' },
@@ -255,11 +259,12 @@ export const SCHRITTE: EinfSchritt[] = [
   {
     id: 'org-benutzer', teil: 'organisation', bild: 'organisation', module: ['unitarii'],
     titel: 'Benutzer und Rechte',
-    text: 'Unter „Benutzer“ legst du die Mitglieder deiner Organisation an. Die Rolle schlägt passende Rechte vor; die Häkchen passt du danach für jede Person einzeln an.',
+    text: 'Unter „Benutzer“ legst du die Mitglieder deiner Organisation an und bestimmst, welche Module sie nutzen dürfen. Beim ersten Login bekommen sie automatisch ihre Einführung.',
     punkte: [
-      'Rollen-Vorlagen legen fest, welche Rechte eine Rolle vorschlägt. Bestehende Benutzer bleiben davon unberührt.',
-      'Rechte lassen sich auch befristet vergeben, zum Beispiel für eine Vertretung.',
-      'Neue Benutzer bekommen beim ersten Login automatisch ihre Einführung.',
+      'Neuer Benutzer: Name, E-Mail und Passwort. Das Passwort gibst du selbst weiter — Responda verschickt dabei keine E-Mail.',
+      'Die Rolle setzt Häkchen nach Vorlage, danach passt du sie einzeln an. Die Vorlagen änderst du über das Symbol mit den Schiebereglern.',
+      'Zusatzrechte lassen sich befristet freigeben, von einer Stunde bis zu sieben Tagen.',
+      '„Zugang aktiv“ ausschalten sperrt den Login — besser als Löschen.',
     ],
     rechte: ['unitarii'],
   },
@@ -322,7 +327,7 @@ export function meineModule(user: User) {
 // ── Checkliste "Organisation einrichten" ────────────────────────────────────
 
 /** Was sich automatisch feststellen lässt. Fehlt ein Befund, bleibt der Punkt zum Abhaken. */
-export type Befund = 'benutzer' | 'rechte' | 'eks' | 'formulare' | 'homescreen'
+export type Befund = 'benutzer' | 'rechte' | 'eks' | 'formulare' | 'cirs'
 export type Befunde = Partial<Record<Befund, boolean>>
 
 export interface Punkt {
@@ -339,31 +344,31 @@ export interface Punkt {
 export const CHECKLISTE: Punkt[] = [
   {
     id: 'benutzer', titel: 'Mitglieder anlegen', befund: 'benutzer', recht: 'unitarii', pfad: '/unitarii',
-    text: 'Lege die Benutzer deiner Organisation an. Jeder bekommt beim ersten Login seine Einführung.',
+    text: 'Lege die Benutzer deiner Organisation an. Das Passwort gibst du ihnen selbst weiter — beim Anlegen verschickt Responda keine E-Mail.',
   },
   {
-    id: 'vorlagen', titel: 'Rollen-Vorlagen prüfen', befund: 'rechte', recht: 'unitarii', pfad: '/unitarii',
-    text: 'Lege fest, welche Rechte eine Rolle vorschlägt. Das spart Häkchen bei jedem neuen Benutzer.',
+    id: 'vorlagen', titel: 'Rollen-Vorlagen anpassen', befund: 'rechte', recht: 'unitarii', pfad: '/unitarii',
+    text: 'Lege fest, welche Rechte jede Rolle beim Anlegen vorschlägt — über das Symbol mit den Schiebereglern. Das spart Häkchen und hält die Rechte einheitlich.',
   },
   {
-    id: 'eks', titel: 'EKS-Recht vergeben', befund: 'eks', recht: 'unitarii', pfad: '/unitarii',
-    text: 'Die Einsatzführung (EKS) steckt in keiner Rollen-Vorlage. Vergib das Recht einzeln an die, die führen.',
+    id: 'eks', titel: 'Einsatzführung (EKS) freigeben', befund: 'eks', recht: 'unitarii', pfad: '/unitarii',
+    text: 'Das Recht für die Einsatzführung steckt in keiner Rollen-Vorlage. Wenn ihr EKS nutzt, vergib es einzeln an die, die Einsätze führen.',
   },
   {
-    id: 'formulare', titel: 'Formulare festlegen', befund: 'formulare', recht: 'dokumente', pfad: '/vorgaenge',
-    text: 'Bestimme unter Vorgänge → Formulare, was auf der Seite deiner Organisation erscheint.',
+    id: 'formulare', titel: 'Formulare der Seite festlegen', befund: 'formulare', recht: 'dokumente', pfad: '/vorgaenge',
+    text: 'Schalte unter Vorgänge → Formulare ein oder aus, was auf der Seite deiner Organisation steht. Eigene Vorlagen kannst du dort ergänzen.',
   },
   {
-    id: 'seite', titel: 'Seite bekannt machen', pfad: '/:org',
-    text: 'Gib die Adresse der Seite deiner Organisation an die Einsatzkräfte weiter, zum Beispiel als Aushang auf der Wache.',
+    id: 'seite', titel: 'Seite der Organisation weitergeben', pfad: '/:org',
+    text: 'Über die Seite deiner Organisation erreichen alle ohne Anmeldung Patientendokumentation, CIRS-Meldung und eure weiteren Formulare. Gib die Adresse an alle weiter, die dokumentieren oder melden.',
   },
   {
-    id: 'cirs', titel: 'CIRS-Zuständigkeit klären', recht: 'dokumente', pfad: '/vorgaenge?bereich=cirs',
-    text: 'Lege fest, wer eingehende CIRS-Meldungen bearbeitet. Neue Meldungen erscheinen im Hub unter „Neuigkeiten“.',
+    id: 'cirs', titel: 'CIRS-Bearbeitung klären', befund: 'cirs', recht: 'unitarii', pfad: '/unitarii',
+    text: 'CIRS-Meldungen sieht nur, wer das Recht für Vorgänge hat. Vergib es an die Personen, die Meldungen bewerten; die Zuständigkeit legt ihr dann je Meldung fest.',
   },
   {
-    id: 'homescreen', titel: 'Responda auf den Homebildschirm', befund: 'homescreen',
-    text: 'Über deine Initialen im Hub: „Zum Homebildschirm hinzufügen“. Dann startet Responda wie eine App.',
+    id: 'app', titel: 'Responda auf die Telefone', pfad: '/app',
+    text: 'Unter app.responda.systems/app steht für iPhone, Android und Computer, wie Responda auf den Startbildschirm kommt. Schick den Link an deine Mitglieder.',
   },
 ]
 

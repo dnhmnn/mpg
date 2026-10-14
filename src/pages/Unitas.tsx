@@ -129,7 +129,7 @@ export default function Unitas() {
 
   // Einführung erneut ansehen (Konto)
   const [einfuehrungOffen, setEinfuehrungOffen] = useState(false)
-  const { stand: einfuehrungStand, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
+  const { standRef: einfuehrungStandRef, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
   // Konto-Form
   const [kontaktEmail, setKontaktEmail] = useState('')
   const [savingEmail, setSavingEmail] = useState(false)
@@ -299,7 +299,7 @@ export default function Unitas() {
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
       {einfuehrungOffen && user && (
         <Einfuehrung user={user} teile={['basis']}
-          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStand, ['basis'], new Date())); setEinfuehrungOffen(false) }} />
+          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStandRef.current, ['basis'], new Date())); setEinfuehrungOffen(false) }} />
       )}
 
       {/* ── Greeting overlay — dark red curtain ── */}

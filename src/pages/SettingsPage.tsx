@@ -352,7 +352,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   const navigate = useNavigate()
   const [view, setView] = useState<View>('main')
   const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
-  const { stand: einfuehrungStand, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
+  const { stand: einfuehrungStand, standRef: einfuehrungStandRef, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
   const [themeMode, setThemeMode] = useState<ThemeMode>(getTheme())
   const [dockPins, setDockPinsState] = useState<string[]>(() =>
     user ? getDockPins(user.id) : []
@@ -1117,7 +1117,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
 
       {einfuehrungTeile && user && (
         <Einfuehrung user={user} teile={einfuehrungTeile}
-          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStand, einfuehrungTeile, new Date())); setEinfuehrungTeile(null) }} />
+          onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStandRef.current, einfuehrungTeile, new Date())); setEinfuehrungTeile(null) }} />
       )}
 
       {/* User Modal */}

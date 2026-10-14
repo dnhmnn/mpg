@@ -22,20 +22,38 @@ import OrgCheckliste from './OrgCheckliste'
 const SCHRIFT = "'Atkinson Hyperlegible', -apple-system, sans-serif"
 
 // ── Stand: am Benutzer, mit Cookie als Rückhalt ──────────────────────────────
+//
+// Ein gemeinsamer Stand je Benutzer für alle Stellen der Seite: Die
+// Einstellungen und die Checkliste darin halten sonst je eine eigene Kopie,
+// und wer zuletzt speichert, überschreibt die Haken des anderen.
+
+const staende = new Map<string, Stand>()
+const zuhoerer = new Set<() => void>()
+
+function standHolen(user: User): Stand {
+  const da = staende.get(user.id)
+  if (da) return da
+  const s = standVereinen(standLesen((user as { einfuehrung?: unknown }).einfuehrung), cookieLesen(user.id))
+  staende.set(user.id, s)
+  return s
+}
 
 export function useEinfuehrungStand(user: User | null) {
-  const [stand, setStand] = useState<Stand>({ v: 1 })
+  const [, neuZeichnen] = useState(0)
+  useEffect(() => {
+    const f = () => neuZeichnen((n) => n + 1)
+    zuhoerer.add(f)
+    return () => { zuhoerer.delete(f) }
+  }, [])
+  const stand: Stand = user ? standHolen(user) : { v: 1 }
   const standRef = useRef(stand)
   standRef.current = stand
-  useEffect(() => {
-    if (!user) return
-    setStand(standVereinen(standLesen((user as { einfuehrung?: unknown }).einfuehrung), cookieLesen(user.id)))
-  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const speichern = useCallback(async (neu: Stand) => {
     if (!user) return
-    setStand(neu)
+    staende.set(user.id, neu)
     standRef.current = neu
+    zuhoerer.forEach((f) => f())
     try { document.cookie = cookieText(user.id, neu) } catch { /* Cookies gesperrt */ }
     // Fehlt das Feld "einfuehrung" in PocketBase, wird es stillschweigend ignoriert — der Cookie hält dann den Stand
     try { await pb.collection('users').update(user.id, { einfuehrung: neu }, { requestKey: null }) } catch { /* offline: der Cookie hält ihn */ }
@@ -50,25 +68,30 @@ export function useEinfuehrungStand(user: User | null) {
  * Zeigt die Einführung einmal, wenn sie dem Benutzer zusteht (siehe
  * automatisch in lib/einfuehrung). Im Hub wartet sie, bis die Begrüßung
  * durch ist.
+ *
+ * Geprüft wird einmal je Benutzer-ID. Das Hub lädt den Benutzer neu, sobald
+ * sich sein Datensatz ändert — beim ersten Login etwa, wenn die Rechte aus der
+ * Rollen-Vorlage nachgetragen werden. Hinge der Start am Benutzer-Objekt,
+ * bräche dieses Neuladen die wartende Einführung ab.
  */
 export function EinfuehrungAutomatisch({ user, verzoegerung = 0 }: { user: User | null; verzoegerung?: number }) {
-  const { stand, speichern } = useEinfuehrungStand(user)
+  const { standRef, speichern } = useEinfuehrungStand(user)
   const [teile, setTeile] = useState<Teil[]>([])
-  const geprueft = useRef(false)
+  const nutzerRef = useRef(user)
+  nutzerRef.current = user
   useEffect(() => {
-    if (!user || geprueft.current) return
-    // Erst prüfen, wenn der Stand des Benutzers gelesen ist
-    const t = automatisch(user as User & { created?: string }, standVereinen(standLesen((user as { einfuehrung?: unknown }).einfuehrung), cookieLesen(user.id)))
-    geprueft.current = true
+    const u = nutzerRef.current
+    if (!u) return
+    const t = automatisch(u as User & { created?: string }, standHolen(u))
     if (!t.length) return
     const uhr = window.setTimeout(() => setTeile(t), verzoegerung)
     return () => window.clearTimeout(uhr)
-  }, [user, verzoegerung])
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user || !teile.length) return null
   return (
     <Einfuehrung user={user} teile={teile}
-      onEnde={() => { speichern(vermerken(stand, teile, new Date())); setTeile([]) }} />
+      onEnde={() => { speichern(vermerken(standRef.current, teile, new Date())); setTeile([]) }} />
   )
 }
 

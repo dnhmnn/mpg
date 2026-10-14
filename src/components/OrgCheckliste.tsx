@@ -16,18 +16,31 @@ export default function OrgCheckliste({ user, kompakt = false, onGehe }: { user:
 
   useEffect(() => {
     let weg = false
-    const b: Befunde = {}
-    try { b.homescreen = window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true } catch { /* egal */ }
-    setBefunde({ ...b })
+    setBefunde({})
     if (user.organization_id) {
-      pb.collection('users').getList(1, 2, { filter: pb.filter('organization_id = {:o}', { o: user.organization_id }), fields: 'id', requestKey: null })
-        .then((r) => { if (!weg) setBefunde((x) => ({ ...x, benutzer: r.totalItems > 1 })) })
-        .catch(() => { /* ohne Recht oder offline: bleibt offen */ })
-      // EKS steckt in keiner Rollen-Vorlage: erledigt, sobald jemand das Recht hat
-      pb.collection('users').getList(1, 1, { filter: pb.filter('organization_id = {:o} && permissions.eks = true', { o: user.organization_id }), fields: 'id', requestKey: null })
-        .then((r) => { if (!weg) setBefunde((x) => ({ ...x, eks: r.totalItems > 0 })) })
-        .catch(() => { /* Filter auf JSON-Felder nicht möglich oder offline: bleibt zum Abhaken */ })
-      pb.collection('organizations').getOne(user.organization_id, { fields: 'id,role_permissions,form_config', requestKey: null })
+      const o = user.organization_id
+      // Die Mitglieder einmal laden und im Gerät zählen — ohne Filter auf JSON-Felder.
+      // Ausbildungs-Teilnehmer zählen nicht als Mitglieder (sie haben oft keinen eigenen Login).
+      pb.collection('users').getFullList<{ id: string; role?: string; permissions?: Record<string, boolean> }>({
+        filter: pb.filter('organization_id = {:o}', { o }), fields: 'id,role,permissions', requestKey: null,
+      })
+        .then((liste) => {
+          if (weg) return
+          const mitglieder = liste.filter((u) => u.role !== 'teilnehmer')
+          setBefunde((x) => ({
+            ...x,
+            benutzer: mitglieder.length > 1,
+            // EKS steckt in keiner Rollen-Vorlage: erledigt, sobald jemand das Recht hat
+            eks: mitglieder.some((u) => u.permissions?.eks === true),
+            // CIRS: außer dir darf noch jemand Meldungen bearbeiten
+            cirs: mitglieder.some((u) => u.id !== user.id && u.permissions?.dokumente === true),
+          }))
+        })
+        .catch(() => { /* ohne Recht oder offline: bleibt zum Abhaken */ })
+      pb.collection('form_templates').getList(1, 1, { filter: pb.filter('organization_id = {:o}', { o }), fields: 'id', requestKey: null })
+        .then((r) => { if (!weg && r.totalItems > 0) setBefunde((x) => ({ ...x, formulare: true })) })
+        .catch(() => { /* keine eigenen Vorlagen oder keine Sammlung */ })
+      pb.collection('organizations').getOne(o, { fields: 'id,role_permissions,form_config', requestKey: null })
         .then((o: Record<string, unknown>) => {
           if (weg) return
           const rp = o.role_permissions
@@ -35,7 +48,7 @@ export default function OrgCheckliste({ user, kompakt = false, onGehe }: { user:
           setBefunde((x) => ({
             ...x,
             rechte: !!rp && typeof rp === 'object' && Object.keys(rp as object).length > 0,
-            formulare: !!fc && typeof fc === 'object' && Object.keys(fc as object).length > 0,
+            formulare: x.formulare || (!!fc && typeof fc === 'object' && Object.keys(fc as object).length > 0),
           }))
         })
         .catch(() => { /* bleibt offen */ })

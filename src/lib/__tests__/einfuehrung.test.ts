@@ -50,10 +50,10 @@ describe('Einführung: wer sie automatisch bekommt', () => {
     expect(automatisch(sv, { v: 1 })).toEqual([])
   })
 
-  it('ein befristetes Recht zählt, solange es läuft', () => {
+  it('ein befristetes Recht (Vertretung) macht noch niemanden zum Verantwortlichen', () => {
     const bis = new Date(Date.now() + 864e5).toISOString()
-    const admin = nutzer({ permissions: {}, temp_permissions: { unitarii: { until: bis } }, orgCreated: '2026-10-14 12:00:00.000Z' })
-    expect(automatisch(admin, { v: 1 })).toEqual(['basis', 'organisation'])
+    const vertretung = nutzer({ permissions: {}, temp_permissions: { unitarii: { until: bis } }, orgCreated: '2026-10-14 12:00:00.000Z' })
+    expect(automatisch(vertretung, { v: 1 })).toEqual(['basis'])
   })
 })
 
