@@ -2,7 +2,27 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { pbFehlerText } from '../lib/pbFehler'
 import KachelGenerator from './KachelGenerator'
+
+/**
+ * Das URL-Kürzel einer Organisation: nur Kleinbuchstaben und Ziffern — so hat
+ * es die bisherige Verwaltung verlangt (pattern [a-z0-9]+), und so steht es in
+ * Adressen wie app.responda.systems/<kürzel>. Umlaute werden umgeschrieben.
+ */
+function kuerzel(text: string): string {
+  return text.toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^a-z0-9]/g, '')
+}
+
+const ORG_FELDER: Record<string, string> = {
+  org_name: 'Name', org_code: 'Kürzel', max_users: 'Max. Benutzer', license_type: 'Lizenztyp',
+  license_valid_until: 'Lizenz gültig bis', is_active: 'Aktiv',
+}
+const NUTZER_FELDER: Record<string, string> = {
+  name: 'Name', email: 'E-Mail', password: 'Passwort', passwordConfirm: 'Passwort (Wiederholung)', role: 'Rolle', organization_id: 'Organisation',
+}
 
 interface LandingContent {
   id?: string
@@ -191,6 +211,7 @@ export default function Supervisor() {
   const [newOrgName, setNewOrgName] = useState('')
   const [newOrgCode, setNewOrgCode] = useState('')
   const [newOrgLicenseType, setNewOrgLicenseType] = useState('standard')
+  const [newOrgMaxUsers, setNewOrgMaxUsers] = useState('10')
   const [newOrgError, setNewOrgError] = useState('')
   const [creatingOrg, setCreatingOrg] = useState(false)
 
@@ -336,7 +357,7 @@ export default function Supervisor() {
         is_active: editActive
       } : null)
     } catch (e: any) {
-      setSaveMsg('Fehler: ' + (e?.message || 'Unbekannt'))
+      setSaveMsg('Nicht gespeichert: ' + pbFehlerText(e, ORG_FELDER))
     } finally {
       setSaving(false)
     }
@@ -344,23 +365,31 @@ export default function Supervisor() {
 
   async function createOrg() {
     setNewOrgError('')
-    if (!newOrgName.trim()) { setNewOrgError('Name erforderlich'); return }
-    if (!newOrgCode.trim()) { setNewOrgError('Kürzel erforderlich'); return }
+    const name = newOrgName.trim()
+    const code = kuerzel(newOrgCode)
+    const maxNutzer = parseInt(newOrgMaxUsers, 10)
+    if (!name) { setNewOrgError('Name erforderlich'); return }
+    if (!code) { setNewOrgError('Kürzel erforderlich — nur Kleinbuchstaben und Ziffern, z.B. brkmuenchen'); return }
+    if (orgs.some(o => (o.org_code || '').toLowerCase() === code)) { setNewOrgError(`Das Kürzel „${code}“ ist schon vergeben.`); return }
+    if (!Number.isFinite(maxNutzer) || maxNutzer < 1) { setNewOrgError('Max. Benutzer: mindestens 1'); return }
     setCreatingOrg(true)
     try {
       await pb.collection('organizations').create({
-        org_name: newOrgName,
-        org_code: newOrgCode,
+        org_name: name,
+        org_code: code,
         is_active: true,
-        license_type: newOrgLicenseType || 'standard'
+        license_type: newOrgLicenseType || 'standard',
+        // Die bisherige Verwaltung hat immer eine Obergrenze mitgeschickt (Vorgabe 10)
+        max_users: maxNutzer,
       })
       setShowNewOrgModal(false)
       setNewOrgName('')
       setNewOrgCode('')
       setNewOrgLicenseType('standard')
+      setNewOrgMaxUsers('10')
       await loadOrgs()
     } catch (e: any) {
-      setNewOrgError('Fehler: ' + (e?.message || 'Unbekannt'))
+      setNewOrgError('Nicht angelegt: ' + pbFehlerText(e, ORG_FELDER))
     } finally {
       setCreatingOrg(false)
     }
@@ -393,7 +422,7 @@ export default function Supervisor() {
       await loadOrgUsers(selectedOrg.id)
       setOrgs(prev => prev.map(o => o.id === selectedOrg.id ? { ...o, userCount: o.userCount + 1 } : o))
     } catch (e: any) {
-      setNewUserMsg('Fehler: ' + (e?.message || 'Unbekannt'))
+      setNewUserMsg('Nicht angelegt: ' + pbFehlerText(e, NUTZER_FELDER))
     } finally {
       setCreatingUser(false)
     }
@@ -704,6 +733,7 @@ export default function Supervisor() {
               setNewOrgName('')
               setNewOrgCode('')
               setNewOrgLicenseType('standard')
+              setNewOrgMaxUsers('10')
               setNewOrgError('')
               setShowNewOrgModal(true)
             }}
@@ -1428,12 +1458,27 @@ export default function Supervisor() {
             </div>
 
             <div style={{ marginBottom: 14 }}>
-              <div style={fieldLabelStyle}>Code</div>
+              <div style={fieldLabelStyle}>Kürzel</div>
               <input
                 type="text"
                 value={newOrgCode}
-                onChange={e => setNewOrgCode(e.target.value)}
-                placeholder="URL-Kürzel z.B. brk-muenchen"
+                onChange={e => setNewOrgCode(kuerzel(e.target.value))}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="URL-Kürzel z.B. brkmuenchen"
+                style={fieldInputStyle}
+              />
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={fieldLabelStyle}>Max. Benutzer</div>
+              <input
+                type="number"
+                min={1}
+                inputMode="numeric"
+                value={newOrgMaxUsers}
+                onChange={e => setNewOrgMaxUsers(e.target.value)}
                 style={fieldInputStyle}
               />
             </div>
