@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ALLE_MODULE, MODULE, appFrei, formularFrei, freigabeText, freigeschaltet, modulFrei, rechtFrei } from '../freigabe'
+import { ALLE_MODULE, MODULE, appFrei, enthaltenIn, formularFrei, freigabeText, freigeschaltet, gebucht, mitEnthaltenen, modulFrei, rechtFrei } from '../freigabe'
 import { ALL_APPS, PERM_LABELS } from '../apps'
 
 describe('Freischaltung: was gilt', () => {
@@ -54,6 +54,50 @@ describe('Freischaltung: Kacheln, Rechte, Formulare', () => {
     expect(formularFrei(org, 'produktausgabe')).toBe(false)
     expect(formularFrei(org, 'defektmeldung')).toBe(false)
     expect(freigabeText(org)).toBe(`2 von ${MODULE.length} Modulen`)
+  })
+})
+
+describe('Freischaltung: Lager schließt Dateien, MPG und Vorgänge fest ein', () => {
+  const nurLager = { freigeschaltet: ['lager'] }
+
+  it('wer Lager bucht, hat Dateien & Schreibstube, MPG und Vorgänge mit', () => {
+    for (const m of ['lager', 'dateien', 'mpg', 'dokumente']) expect(modulFrei(nurLager, m), m).toBe(true)
+    for (const a of ['lager', 'dateien', 'office', 'mpg', 'dokumente', 'unitarii', 'settings']) expect(appFrei(nurLager, a), a).toBe(true)
+    expect(modulFrei(nurLager, 'patienten')).toBe(false)
+    expect(appFrei(nurLager, 'eks')).toBe(false)
+    expect(rechtFrei(nurLager, 'dateien')).toBe(true)
+    expect(rechtFrei(nurLager, 'dokumente')).toBe(true)
+    expect(formularFrei(nurLager, 'cirs')).toBe(true)
+    expect(formularFrei(nurLager, 'defektmeldung')).toBe(true)
+    expect(freigabeText(nurLager)).toBe(`4 von ${MODULE.length} Modulen`)
+  })
+
+  it('gespeichert bleibt nur, was gebucht ist; nutzbar ist es samt Enthaltenem', () => {
+    expect(gebucht(nurLager)).toEqual(['lager'])
+    expect(freigeschaltet(nurLager)).toEqual(['lager', 'mpg', 'dokumente', 'dateien'].sort((a, b) => ALLE_MODULE.indexOf(a) - ALLE_MODULE.indexOf(b)))
+    expect(gebucht({})).toBeNull()
+    expect(freigeschaltet({})).toBeNull()
+  })
+
+  it('ohne Lager fällt das Enthaltene wieder weg — ausdrücklich Gebuchtes bleibt', () => {
+    expect(modulFrei({ freigeschaltet: ['patienten'] }, 'dateien')).toBe(false)
+    expect(mitEnthaltenen(['dateien'])).toEqual(['dateien'])
+    expect(modulFrei({ freigeschaltet: ['dateien'] }, 'dokumente')).toBe(false)
+  })
+
+  it('sagt, worin ein Modul enthalten ist', () => {
+    expect(enthaltenIn('dateien', ['lager'])?.id).toBe('lager')
+    expect(enthaltenIn('dokumente', ['lager', 'dokumente'])?.id).toBe('lager')
+    expect(enthaltenIn('lager', ['lager'])).toBeUndefined()
+    expect(enthaltenIn('dateien', ['patienten'])).toBeUndefined()
+    expect(enthaltenIn('patienten', ['lager'])).toBeUndefined()
+  })
+
+  it('der Katalog schließt nur bekannte Module ein und keines sich selbst', () => {
+    for (const m of MODULE) for (const e of m.enthaelt ?? []) {
+      expect(ALLE_MODULE.includes(e), `${m.id}: ${e}`).toBe(true)
+      expect(e).not.toBe(m.id)
+    }
   })
 })
 

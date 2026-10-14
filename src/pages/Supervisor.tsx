@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
-import { ALLE_MODULE, MODULE as FREIGABE_MODULE, freigabeText, freigeschaltet } from '../lib/freigabe'
+import { ALLE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen } from '../lib/freigabe'
 import KachelGenerator from './KachelGenerator'
 
 /**
@@ -180,15 +180,18 @@ const fieldInputStyle: React.CSSProperties = {
 }
 
 /**
- * Welche Module eine Organisation nutzen darf — ersetzt den früheren
- * Lizenztyp. Benutzerverwaltung und Einstellungen sind immer dabei.
+ * Welche Module eine Organisation bucht — ersetzt den früheren Lizenztyp.
+ * Benutzerverwaltung und Einstellungen sind immer dabei. Was ein gebuchtes
+ * Modul fest einschließt (Lager: Dateien, MPG, Vorgänge), steht angehakt und
+ * gesperrt daneben; gespeichert wird nur, was gebucht ist.
  */
 function ModulAuswahl({ wert, onChange }: { wert: string[]; onChange: (w: string[]) => void }) {
+  const name = (id: string) => FREIGABE_MODULE.find((m) => m.id === id)?.name ?? id
   const knopf: React.CSSProperties = { background: 'none', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-        <div style={{ ...fieldLabelStyle, marginBottom: 0 }}>Freigeschaltete Module · {wert.length} von {FREIGABE_MODULE.length}</div>
+        <div style={{ ...fieldLabelStyle, marginBottom: 0 }}>Freigeschaltete Module · {mitEnthaltenen(wert).length} von {FREIGABE_MODULE.length}</div>
         <div style={{ display: 'flex', gap: 6 }}>
           <button type="button" onClick={() => onChange([...ALLE_MODULE])} style={knopf}>Alle</button>
           <button type="button" onClick={() => onChange([])} style={knopf}>Keine</button>
@@ -196,15 +199,23 @@ function ModulAuswahl({ wert, onChange }: { wert: string[]; onChange: (w: string
       </div>
       <div style={{ border: '0.5px solid var(--lbf-border)', borderRadius: 10, overflow: 'hidden' }}>
         {FREIGABE_MODULE.map((m, i) => {
-          const an = wert.includes(m.id)
+          // Fest in einem gebuchten Modul enthalten: angehakt und nicht abwählbar
+          const in_ = enthaltenIn(m.id, wert)
+          const an = wert.includes(m.id) || !!in_
           return (
-            <label key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', cursor: 'pointer', borderTop: i ? '0.5px solid var(--lbf-border-light)' : 'none', background: an ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'none' }}>
-              <input type="checkbox" checked={an}
+            <label key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', cursor: in_ ? 'default' : 'pointer', borderTop: i ? '0.5px solid var(--lbf-border-light)' : 'none', background: an ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'none' }}>
+              <input type="checkbox" checked={an} disabled={!!in_}
                 onChange={(e) => onChange(e.target.checked ? ALLE_MODULE.filter((x) => x === m.id || wert.includes(x)) : wert.filter((x) => x !== m.id))}
                 style={{ marginTop: 3, accentColor: 'var(--lbf-akzent-grund)', width: 16, height: 16, flexShrink: 0 }} />
               <span style={{ minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: an ? 'var(--lbf-text)' : 'var(--warm-gray)' }}>{m.name}</span>
                 <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>{m.beschreibung}</span>
+                {m.enthaelt?.length ? (
+                  <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 2 }}>Enthält {m.enthaelt.map(name).join(', ')}</span>
+                ) : null}
+                {in_ && (
+                  <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 2 }}>In {in_.name} enthalten</span>
+                )}
               </span>
             </label>
           )
@@ -347,7 +358,7 @@ export default function Supervisor() {
     setSelectedOrg(org)
     setEditName(org.org_name || '')
     setEditCode(org.org_code || '')
-    setEditFreigabe(freigeschaltet(org) ?? [...ALLE_MODULE])
+    setEditFreigabe(gebucht(org) ?? [...ALLE_MODULE])
     setEditMaxUsers(org.max_users ? String(org.max_users) : '')
     setEditValidUntil(org.license_valid_until ? org.license_valid_until.slice(0, 10) : '')
     setEditActive(org.is_active)

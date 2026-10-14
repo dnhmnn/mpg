@@ -58,10 +58,12 @@ describe('Verknüpfte Rechte: Häkchen setzen', () => {
   })
 
   it('bringt keine Rechte gesperrter Module mit und reicht über sie nichts weiter', () => {
-    const org = { freigeschaltet: ['lager', 'dateien', 'mpg'] }
-    expect(mitgebracht('lager', STANDARD, org).sort()).toEqual(['dashboard', 'dateien'])
-    const kette = { lager: ['dokumente'], dokumente: ['chat'] }
-    expect(mitgebracht('lager', kette, { freigeschaltet: ['lager', 'chat'] })).toEqual([])
+    // Lager gebucht: Dateien, MPG und Vorgänge sind darin enthalten, Patienten nicht
+    const org = { freigeschaltet: ['lager', 'chat'] }
+    expect(mitgebracht('lager', STANDARD, org).sort()).toEqual(['dashboard', 'dateien', 'dokumente'])
+    expect(mitgebracht('lager', { lager: ['patienten', 'dateien'] }, org)).toEqual(['dateien'])
+    const kette = { lager: ['patienten'], patienten: ['chat'] }
+    expect(mitgebracht('lager', kette, org)).toEqual([])
   })
 
   it('ein Recht eines gesperrten Moduls bringt nichts mit', () => {
