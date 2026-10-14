@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useOrg } from './OrgPublicLayout'
 import { pb } from '../../lib/pocketbase'
+import { formularFrei } from '../../lib/freigabe'
 import type { FormTemplate } from './formSchema'
 
 const STATIC_ITEMS = [
@@ -86,7 +87,8 @@ export default function OrgLanding() {
     }).then(setCustomTemplates).catch(() => {})
   }, [org.id])
 
-  const visibleStatic = STATIC_ITEMS.filter(item => !hiddenForms.includes(item.id))
+  // Ausgeblendet (Vorgänge → Formulare) oder Modul nicht freigeschaltet (Supervisor)
+  const visibleStatic = STATIC_ITEMS.filter(item => !hiddenForms.includes(item.id) && formularFrei(org, item.id))
   const hasAnyForm = visibleStatic.length > 0 || customTemplates.length > 0
 
   return (

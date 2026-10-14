@@ -8,6 +8,7 @@ import {
   type TemplateFieldDef, type FormTemplate,
 } from './public/formSchema'
 import CirsVerwaltung from './vorgaenge/CirsVerwaltung'
+import { formularFrei } from '../lib/freigabe'
 
 type Tab = 'formulare' | 'editor' | 'cirs'
 type FType = 'text' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'textarea'
@@ -55,6 +56,8 @@ export default function Vorgaenge() {
   const [orgId, setOrgId] = useState<string | null>(null)
   const [orgName, setOrgName] = useState('')
   const [orgCode, setOrgCode] = useState('')
+  // Für die Freischaltung der Formulare (Supervisor → Module)
+  const [orgDaten, setOrgDaten] = useState<unknown>(null)
 
   // Form config (for Notaufnahme-Protokoll + hidden_forms)
   const [cfg, setCfg] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
@@ -96,6 +99,7 @@ export default function Vorgaenge() {
         setOrgId(org.id)
         setOrgName(org.org_name || '')
         setOrgCode(org.org_code || '')
+        setOrgDaten(org)
         if (org.form_config) {
           setCfg({ ...DEFAULT_FORM_CONFIG, ...(org.form_config as FormConfig) })
         }
@@ -453,7 +457,7 @@ export default function Vorgaenge() {
           <>
             {/* Static forms */}
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Standardformulare</div>
-            {STATIC_FORMS.map(form => {
+            {STATIC_FORMS.filter(form => formularFrei(orgDaten ?? user?.organization, form.id)).map(form => {
               const isHidden = (cfg.hidden_forms || []).includes(form.id)
               return (
                 <div key={form.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(var(--lbf-grau-rgb),0.35)' : 'var(--lbf-akzent)'}`, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>

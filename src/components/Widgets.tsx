@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { hatRecht } from '../lib/apps'
+import { modulFrei } from '../lib/freigabe'
 import { fallAus, istUeberfaellig, type CirsDatensatz } from '../lib/cirs'
 import type { User } from '../types'
 
@@ -43,7 +44,9 @@ export default function Widgets({ user }: WidgetsProps) {
     const prefs = (() => {
       try { return JSON.parse(localStorage.getItem('notif_prefs') || '{}') } catch { return {} }
     })()
-    const enabled = (key: string) => prefs[key] !== false
+    // Abgeschaltete Hinweise und gesperrte Module fragen gar nicht erst
+    const MODUL: Record<string, string> = { patienten: 'patienten', lager: 'lager', ausbildungen: 'ausbildungen', mpg: 'mpg', produktausgabe: 'lager', cirs: 'dokumente' }
+    const enabled = (key: string) => prefs[key] !== false && (!MODUL[key] || modulFrei(user?.organization, MODUL[key]))
 
     const queries: Promise<any>[] = []
 

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { PERM_LABELS, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail } from '../lib/apps'
+import { PERM_LABELS as ALLE_RECHTE, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail } from '../lib/apps'
+import { appFrei, rechtFrei } from '../lib/freigabe'
 
 interface UUser {
   id: string
@@ -84,6 +85,12 @@ function fmtCountdown(iso?: string): string {
 
 export default function Unitarii() {
   const { user, loading: authLoading } = useAuth()
+  // Nur Rechte für Module, die der Organisation freigeschaltet sind (Supervisor).
+  // Schon vergebene Rechte gesperrter Module bleiben am Benutzer stehen.
+  const PERM_LABELS = ALLE_RECHTE
+    .filter(p => rechtFrei(user?.organization, p.key))
+    // "dashboard" öffnet MPG und die Einstellungen — der Name sagt, was davon freigeschaltet ist
+    .map(p => p.key === 'dashboard' ? { ...p, label: appFrei(user?.organization, 'mpg') ? 'MPG & Einstellungen' : 'Einstellungen' } : p)
   const navigate = useNavigate()
   const [tab, setTab] = useState<'benutzer' | 'neuigkeiten' | 'temp'>('benutzer')
   const [loading, setLoading] = useState(true)

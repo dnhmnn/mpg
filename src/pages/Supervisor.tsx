@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
+import { ALLE_MODULE, MODULE as FREIGABE_MODULE, freigabeText, freigeschaltet } from '../lib/freigabe'
 import KachelGenerator from './KachelGenerator'
 
 /**
@@ -86,6 +87,8 @@ interface Org {
   license_type?: string
   max_users?: number
   license_valid_until?: string
+  /** Freigeschaltete Module (JSON-Feld); fehlt es, ist alles frei. */
+  freigeschaltet?: unknown
   userCount: number
 }
 
@@ -176,6 +179,44 @@ const fieldInputStyle: React.CSSProperties = {
   boxSizing: 'border-box'
 }
 
+/**
+ * Welche Module eine Organisation nutzen darf — ersetzt den früheren
+ * Lizenztyp. Benutzerverwaltung und Einstellungen sind immer dabei.
+ */
+function ModulAuswahl({ wert, onChange }: { wert: string[]; onChange: (w: string[]) => void }) {
+  const knopf: React.CSSProperties = { background: 'none', border: '1px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 8, padding: '4px 10px', fontSize: 12, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
+        <div style={{ ...fieldLabelStyle, marginBottom: 0 }}>Freigeschaltete Module · {wert.length} von {FREIGABE_MODULE.length}</div>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <button type="button" onClick={() => onChange([...ALLE_MODULE])} style={knopf}>Alle</button>
+          <button type="button" onClick={() => onChange([])} style={knopf}>Keine</button>
+        </div>
+      </div>
+      <div style={{ border: '0.5px solid var(--lbf-border)', borderRadius: 10, overflow: 'hidden' }}>
+        {FREIGABE_MODULE.map((m, i) => {
+          const an = wert.includes(m.id)
+          return (
+            <label key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', cursor: 'pointer', borderTop: i ? '0.5px solid var(--lbf-border-light)' : 'none', background: an ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'none' }}>
+              <input type="checkbox" checked={an}
+                onChange={(e) => onChange(e.target.checked ? ALLE_MODULE.filter((x) => x === m.id || wert.includes(x)) : wert.filter((x) => x !== m.id))}
+                style={{ marginTop: 3, accentColor: 'var(--lbf-akzent-grund)', width: 16, height: 16, flexShrink: 0 }} />
+              <span style={{ minWidth: 0 }}>
+                <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: an ? 'var(--lbf-text)' : 'var(--warm-gray)' }}>{m.name}</span>
+                <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>{m.beschreibung}</span>
+              </span>
+            </label>
+          )
+        })}
+      </div>
+      <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6, lineHeight: 1.4 }}>
+        Benutzerverwaltung und Einstellungen sind immer dabei. Gesperrte Module verschwinden aus Hub, Rechtevergabe und von der Seite der Organisation; vergebene Rechte bleiben erhalten.
+      </div>
+    </div>
+  )
+}
+
 const fieldLabelStyle: React.CSSProperties = {
   fontSize: 10,
   fontWeight: 700,
@@ -200,7 +241,7 @@ export default function Supervisor() {
 
   const [editName, setEditName] = useState('')
   const [editCode, setEditCode] = useState('')
-  const [editLicenseType, setEditLicenseType] = useState('')
+  const [editFreigabe, setEditFreigabe] = useState<string[]>([...ALLE_MODULE])
   const [editMaxUsers, setEditMaxUsers] = useState('')
   const [editValidUntil, setEditValidUntil] = useState('')
   const [editActive, setEditActive] = useState(true)
@@ -210,7 +251,9 @@ export default function Supervisor() {
   const [showNewOrgModal, setShowNewOrgModal] = useState(false)
   const [newOrgName, setNewOrgName] = useState('')
   const [newOrgCode, setNewOrgCode] = useState('')
-  const [newOrgLicenseType, setNewOrgLicenseType] = useState('standard')
+  const [newOrgFreigabe, setNewOrgFreigabe] = useState<string[]>([...ALLE_MODULE])
+  // Hinweis über der Liste, z.B. wenn das Feld "freigeschaltet" in PocketBase fehlt
+  const [orgHinweis, setOrgHinweis] = useState('')
   const [newOrgMaxUsers, setNewOrgMaxUsers] = useState('10')
   const [newOrgError, setNewOrgError] = useState('')
   const [creatingOrg, setCreatingOrg] = useState(false)
@@ -304,7 +347,7 @@ export default function Supervisor() {
     setSelectedOrg(org)
     setEditName(org.org_name || '')
     setEditCode(org.org_code || '')
-    setEditLicenseType(org.license_type || '')
+    setEditFreigabe(freigeschaltet(org) ?? [...ALLE_MODULE])
     setEditMaxUsers(org.max_users ? String(org.max_users) : '')
     setEditValidUntil(org.license_valid_until ? org.license_valid_until.slice(0, 10) : '')
     setEditActive(org.is_active)
@@ -329,32 +372,35 @@ export default function Supervisor() {
     setSaving(true)
     setSaveMsg('')
     try {
-      await pb.collection('organizations').update(selectedOrg.id, {
+      const gespeichert = await pb.collection('organizations').update(selectedOrg.id, {
         org_name: editName,
         org_code: editCode,
-        license_type: editLicenseType || null,
         max_users: editMaxUsers ? parseInt(editMaxUsers) : null,
         license_valid_until: editValidUntil || null,
-        is_active: editActive
+        is_active: editActive,
+        freigeschaltet: editFreigabe,
       })
-      setSaveMsg('Gespeichert.')
+      // Fehlt das Feld in PocketBase, wird die Auswahl stillschweigend verworfen — das sagen
+      setSaveMsg('freigeschaltet' in gespeichert
+        ? 'Gespeichert.'
+        : 'Gespeichert — aber das Feld „freigeschaltet“ fehlt in PocketBase (Sammlung organizations, Typ JSON). Die Modulauswahl wurde nicht übernommen.')
       setOrgs(prev => prev.map(o => o.id === selectedOrg.id ? {
         ...o,
         org_name: editName,
         org_code: editCode,
-        license_type: editLicenseType || undefined,
         max_users: editMaxUsers ? parseInt(editMaxUsers) : undefined,
         license_valid_until: editValidUntil || undefined,
-        is_active: editActive
+        is_active: editActive,
+        freigeschaltet: editFreigabe,
       } : o))
       setSelectedOrg(prev => prev ? {
         ...prev,
         org_name: editName,
         org_code: editCode,
-        license_type: editLicenseType || undefined,
         max_users: editMaxUsers ? parseInt(editMaxUsers) : undefined,
         license_valid_until: editValidUntil || undefined,
-        is_active: editActive
+        is_active: editActive,
+        freigeschaltet: editFreigabe,
       } : null)
     } catch (e: any) {
       setSaveMsg('Nicht gespeichert: ' + pbFehlerText(e, ORG_FELDER))
@@ -374,18 +420,22 @@ export default function Supervisor() {
     if (!Number.isFinite(maxNutzer) || maxNutzer < 1) { setNewOrgError('Max. Benutzer: mindestens 1'); return }
     setCreatingOrg(true)
     try {
-      await pb.collection('organizations').create({
+      const angelegt = await pb.collection('organizations').create({
         org_name: name,
         org_code: code,
         is_active: true,
-        license_type: newOrgLicenseType || 'standard',
+        // Altes Feld ohne Bedeutung mehr — wird mitgeschickt, falls es in PocketBase Pflicht ist
+        license_type: 'standard',
         // Die bisherige Verwaltung hat immer eine Obergrenze mitgeschickt (Vorgabe 10)
         max_users: maxNutzer,
+        freigeschaltet: newOrgFreigabe,
       })
+      setOrgHinweis('freigeschaltet' in angelegt ? ''
+        : `„${name}“ ist angelegt — aber das Feld „freigeschaltet“ fehlt in PocketBase (Sammlung organizations, Typ JSON). Bis es angelegt ist, sind alle Module frei.`)
       setShowNewOrgModal(false)
       setNewOrgName('')
       setNewOrgCode('')
-      setNewOrgLicenseType('standard')
+      setNewOrgFreigabe([...ALLE_MODULE])
       setNewOrgMaxUsers('10')
       await loadOrgs()
     } catch (e: any) {
@@ -732,7 +782,7 @@ export default function Supervisor() {
             onClick={() => {
               setNewOrgName('')
               setNewOrgCode('')
-              setNewOrgLicenseType('standard')
+              setNewOrgFreigabe([...ALLE_MODULE])
               setNewOrgMaxUsers('10')
               setNewOrgError('')
               setShowNewOrgModal(true)
@@ -758,6 +808,12 @@ export default function Supervisor() {
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
           ORGANISATIONEN
         </div>
+        {orgHinweis && (
+          <div role="status" style={{ background: 'var(--lbf-warn-grund)', color: 'var(--lbf-warn-text)', borderRadius: 10, padding: '10px 14px', fontSize: 13, marginBottom: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ flex: 1 }}>{orgHinweis}</span>
+            <button onClick={() => setOrgHinweis('')} style={{ background: 'none', border: 'none', color: 'inherit', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>OK</button>
+          </div>
+        )}
 
         {dataLoading ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--warm-gray)', fontStyle: 'italic', fontSize: 14 }}>
@@ -809,7 +865,7 @@ export default function Supervisor() {
                   {org.org_code}
                   {' · '}
                   {org.userCount} {org.userCount === 1 ? 'Benutzer' : 'Benutzer'}
-                  {org.license_type ? ` · ${org.license_type}` : ''}
+                  {' · '}{freigabeText(org)}
                 </div>
                 <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
                   {org.license_valid_until
@@ -1149,17 +1205,7 @@ export default function Supervisor() {
               </div>
 
               <div style={{ marginBottom: 14 }}>
-                <div style={fieldLabelStyle}>Lizenztyp</div>
-                <select
-                  value={editLicenseType}
-                  onChange={e => setEditLicenseType(e.target.value)}
-                  style={{ ...fieldInputStyle }}
-                >
-                  <option value="">—</option>
-                  <option value="standard">Standard</option>
-                  <option value="pro">Pro</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
+                <ModulAuswahl wert={editFreigabe} onChange={setEditFreigabe} />
               </div>
 
               <div style={{ marginBottom: 14 }}>
@@ -1439,9 +1485,12 @@ export default function Supervisor() {
               background: 'var(--lbf-card)',
               borderRadius: 16,
               padding: 24,
-              maxWidth: 360,
+              maxWidth: 440,
               width: 'calc(100% - 40px)',
-              margin: 20
+              margin: 20,
+              // Mit der Modulauswahl ist das Fenster höher als ein Telefon
+              maxHeight: 'calc(100dvh - 40px)',
+              overflowY: 'auto'
             }}
           >
             <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>Neue Organisation</div>
@@ -1484,12 +1533,7 @@ export default function Supervisor() {
             </div>
 
             <div style={{ marginBottom: 20 }}>
-              <div style={fieldLabelStyle}>Lizenztyp</div>
-              <select value={newOrgLicenseType} onChange={e => setNewOrgLicenseType(e.target.value)} style={fieldInputStyle}>
-                <option value="standard">Standard</option>
-                <option value="pro">Pro</option>
-                <option value="enterprise">Enterprise</option>
-              </select>
+              <ModulAuswahl wert={newOrgFreigabe} onChange={setNewOrgFreigabe} />
             </div>
 
             {newOrgError && (

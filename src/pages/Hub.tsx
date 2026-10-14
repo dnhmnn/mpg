@@ -13,6 +13,7 @@ import NotificationModal from '../components/NotificationModal'
 import Einfuehrung, { EinfuehrungAutomatisch, useEinfuehrungStand } from '../components/Einfuehrung'
 import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
 import { ALL_APPS, hatRecht } from '../lib/apps'
+import { appFrei } from '../lib/freigabe'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
 
@@ -155,6 +156,19 @@ export default function Hub() {
     return hatRecht(user, perm)
   }
 
+  // Ein Kurzbefehl führt in ein Modul — nur zeigen, wenn dessen Kachel erlaubt ist
+  function kurzbefehlErlaubt(url: string | null): boolean {
+    if (!url) return true
+    const id = Object.keys(ALL_APPS).find(k => ALL_APPS[k].url === url) ?? (url === '/lernbar' ? 'lernbar' : undefined)
+    return !id || kachelErlaubt(id)
+  }
+
+  // Eine Kachel erscheint, wenn der Benutzer das Recht hat und das Modul für
+  // die Organisation freigeschaltet ist (Supervisor → Organisation)
+  function kachelErlaubt(id: string): boolean {
+    return hasPermission(ALL_APPS[id].permission) && appFrei(user?.organization, id)
+  }
+
   function getActiveTempPermAppIds(): string[] {
     const tempPerms = (user as any)?.temp_permissions as Record<string, { until: string }> | undefined
     if (!tempPerms) return []
@@ -162,7 +176,7 @@ export default function Hub() {
     const activePerms = Object.entries(tempPerms)
       .filter(([, v]) => new Date(v.until).getTime() > now)
       .map(([k]) => k)
-    return Object.keys(ALL_APPS).filter(id => activePerms.includes(ALL_APPS[id].permission))
+    return Object.keys(ALL_APPS).filter(id => activePerms.includes(ALL_APPS[id].permission) && appFrei(user?.organization, id))
   }
 
   function loadUserApps() {
@@ -172,16 +186,13 @@ export default function Hub() {
     if (saved) {
       apps = JSON.parse(saved)
       if (!apps.includes('settings')) apps.push('settings')
-      const newApps = Object.keys(ALL_APPS).filter(id => {
-        const app = ALL_APPS[id]
-        return hasPermission(app.permission) && !apps.includes(id)
-      })
+      const newApps = Object.keys(ALL_APPS).filter(id => kachelErlaubt(id) && !apps.includes(id))
       if (newApps.length > 0) {
         apps = [...apps, ...newApps]
         localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(apps))
       }
     } else {
-      apps = Object.keys(ALL_APPS).filter(id => hasPermission(ALL_APPS[id].permission))
+      apps = Object.keys(ALL_APPS).filter(id => kachelErlaubt(id))
     }
     // Always inject active temp-permission apps even if user removed them from grid
     const tempAppIds = getActiveTempPermAppIds()
@@ -194,7 +205,7 @@ export default function Hub() {
   function updateAvailableApps(currentApps: string[]) {
     if (!user) return
     const available = Object.keys(ALL_APPS)
-      .filter(id => id !== 'settings' && hasPermission(ALL_APPS[id].permission) && !currentApps.includes(id))
+      .filter(id => id !== 'settings' && kachelErlaubt(id) && !currentApps.includes(id))
       .map(id => ALL_APPS[id])
     setAvailableApps(available)
   }
@@ -337,7 +348,8 @@ export default function Hub() {
               </button>
             </div>
             <AppGrid
-              userApps={userApps}
+              // Gespeicherte Kachellisten können gesperrte Module enthalten
+              userApps={userApps.filter(id => !ALL_APPS[id] || appFrei(user?.organization, id))}
               editMode={editMode}
               onRemoveApp={handleRemoveApp}
               onAppClick={trackAppClick}
@@ -433,7 +445,7 @@ export default function Hub() {
             </button>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 10px' }}>
-            {(editingShortcuts ? PREDEFINED_SHORTCUTS : PREDEFINED_SHORTCUTS.filter(s => enabledShortcuts.includes(s.id))).map(s => {
+            {(editingShortcuts ? PREDEFINED_SHORTCUTS : PREDEFINED_SHORTCUTS.filter(s => enabledShortcuts.includes(s.id))).filter(s => kurzbefehlErlaubt(s.url)).map(s => {
               const on = enabledShortcuts.includes(s.id)
               return (
                 <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>

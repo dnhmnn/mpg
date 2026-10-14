@@ -45,6 +45,8 @@ const WebsiteEditor = lazy(() => import('./pages/WebsiteEditor'))
 const EKS = lazy(() => import('./pages/eks/EKS'))
 const EksAuswahl = lazy(() => import('./pages/eks/EksAuswahl'))
 const OrgPublicLayout = lazy(() => import('./pages/public/OrgPublicLayout'))
+// Aus demselben Baustein wie das Layout — ist beim Aufruf eines Formulars schon geladen
+const FormularFrei = lazy(() => import('./pages/public/OrgPublicLayout').then(m => ({ default: m.FormularFrei })))
 const OrgLanding = lazy(() => import('./pages/public/OrgLanding'))
 const OrgPatienten = lazy(() => import('./pages/public/OrgPatienten'))
 const OrgProduktausgabe = lazy(() => import('./pages/public/OrgProduktausgabe'))
@@ -140,14 +142,14 @@ function App() {
               * Das alte Formular ist unter /patienten-alt erreichbar — es
               * bleibt, bis die neue Maske im Dienst bestanden hat.
               */}
-            <Route path="patienten" element={<Suspense fallback={null}><Doku /></Suspense>} />
-            <Route path="doku" element={<Suspense fallback={null}><Doku /></Suspense>} />
-            <Route path="patienten-alt" element={<OrgPatienten />} />
-            <Route path="schnelldoku" element={<OrgSchnelldoku />} />
-            <Route path="produktausgabe" element={<OrgProduktausgabe />} />
-            <Route path="cirs" element={<OrgCirs />} />
+            <Route path="patienten" element={<FormularFrei formular="patienten"><Suspense fallback={null}><Doku /></Suspense></FormularFrei>} />
+            <Route path="doku" element={<FormularFrei formular="patienten"><Suspense fallback={null}><Doku /></Suspense></FormularFrei>} />
+            <Route path="patienten-alt" element={<FormularFrei formular="patienten"><OrgPatienten /></FormularFrei>} />
+            <Route path="schnelldoku" element={<FormularFrei formular="patienten"><OrgSchnelldoku /></FormularFrei>} />
+            <Route path="produktausgabe" element={<FormularFrei formular="produktausgabe"><OrgProduktausgabe /></FormularFrei>} />
+            <Route path="cirs" element={<FormularFrei formular="cirs"><OrgCirs /></FormularFrei>} />
             <Route path="formular/:templateId" element={<OrgFormular />} />
-            <Route path="defektmeldung" element={<OrgDefektmeldung />} />
+            <Route path="defektmeldung" element={<FormularFrei formular="defektmeldung"><OrgDefektmeldung /></FormularFrei>} />
           </Route>
         )}
       </Routes>

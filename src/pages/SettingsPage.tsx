@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS, EMPTY_PERMS, getRoleTemplate, kachelFarbe } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS as ALLE_RECHTE, EMPTY_PERMS, getRoleTemplate, kachelFarbe } from '../lib/apps'
+import { MODULE as FREIGABE_MODULE, appFrei, freigeschaltet, rechtFrei } from '../lib/freigabe'
 import AppIcon from '../components/AppIcon'
 import { useAuth } from '../hooks/useAuth'
 import Einfuehrung, { useEinfuehrungStand } from '../components/Einfuehrung'
@@ -349,6 +350,11 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   // blieben Profil, Passwort und der Bereich für Verantwortliche leer.
   const { user: angemeldet } = useAuth()
   const user = vorgegeben ?? angemeldet
+  // Nur Rechte freigeschalteter Module anbieten (wie in der Benutzerverwaltung)
+  const PERM_LABELS = ALLE_RECHTE
+    .filter(p => rechtFrei(user?.organization, p.key))
+    // "dashboard" öffnet MPG und die Einstellungen — der Name sagt, was davon freigeschaltet ist
+    .map(p => p.key === 'dashboard' ? { ...p, label: appFrei(user?.organization, 'mpg') ? 'MPG & Einstellungen' : 'Einstellungen' } : p)
   const navigate = useNavigate()
   const [view, setView] = useState<View>('main')
   const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
@@ -1003,9 +1009,15 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
             <div className="license-status">✓ Aktiv</div>
             <div className="license-title">{license.org_name || 'Organisation'}</div>
             <div className="license-details">
-              <div className="license-row">
-                <span>Lizenztyp</span>
-                <span>{license.license_type ? license.license_type.charAt(0).toUpperCase() + license.license_type.slice(1) : 'Standard'}</span>
+              <div className="license-row" style={{ alignItems: 'flex-start' }}>
+                <span>Module</span>
+                <span style={{ textAlign: 'right' }}>
+                  {(() => {
+                    const frei = freigeschaltet(license)
+                    const namen = FREIGABE_MODULE.filter(m => frei === null || frei.includes(m.id)).map(m => m.name)
+                    return frei === null ? 'Alle Module' : namen.length ? namen.join(', ') : 'Keine'
+                  })()}
+                </span>
               </div>
               <div className="license-row">
                 <span>Benutzer</span>

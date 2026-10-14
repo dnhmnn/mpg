@@ -15,6 +15,7 @@
 // geleert — ein Vermerk dort wäre nach dem nächsten Login weg.
 
 import { hatRecht } from './apps'
+import { appFrei, modulFrei } from './freigabe'
 import type { User } from '../types'
 
 /** Ab diesem Tag angelegte Benutzer und Organisationen bekommen die Einführung automatisch. */
@@ -161,6 +162,8 @@ export interface EinfSchritt {
   rechte?: string[]
   /** Nur für die, die nach dem Login im Hub landen (nicht Nur-Lernbar). */
   imHub?: true
+  /** Nur, wenn dieses Modul für die Organisation freigeschaltet ist. */
+  modul?: string
 }
 
 /**
@@ -250,6 +253,7 @@ export const SCHRITTE: EinfSchritt[] = [
       'Lernbar: Termine zu- oder absagen, zugewiesene Module bearbeiten, Bibliothek und EKG-Training.',
     ],
     rechte: ['lernbar'],
+    modul: 'lernbar',
   },
   {
     id: 'doku', teil: 'basis', bild: 'patienten',
@@ -261,6 +265,7 @@ export const SCHRITTE: EinfSchritt[] = [
       'Ohne Netz wartet das Protokoll auf dem Gerät und geht raus, sobald du die Dokumentation mit Netz wieder öffnest.',
     ],
     rechte: ['lernbar', 'patienten'],
+    modul: 'patienten',
   },
   {
     id: 'einstellungen', teil: 'basis', bild: 'einstellungen',
@@ -297,6 +302,7 @@ export const SCHRITTE: EinfSchritt[] = [
       'Unter Vorgänge → CIRS bearbeitest du eingegangene CIRS-Meldungen.',
     ],
     rechte: ['dokumente'],
+    modul: 'dokumente',
   },
   {
     id: 'org-checkliste', teil: 'organisation', bild: 'checkliste',
@@ -322,6 +328,7 @@ function fertig(user: User, teil: Teil): EinfSchritt {
 export function schritte(user: User, teile: Teil[]): EinfSchritt[] {
   if (!teile.length) return []
   const darf = (s: EinfSchritt) => (!s.rechte || s.rechte.some((r) => hatRecht(user, r))) && (!s.imHub || !nurLernbar(user))
+    && (!s.modul || modulFrei(user.organization, s.modul))
   const liste = SCHRITTE
     .filter((s) => teile.includes(s.teil) && darf(s))
     // Der Überblick zeigt nur die eigenen Module, mit einem Satz je Modul; ohne eigene Module entfällt er
@@ -348,9 +355,9 @@ export function schritte(user: User, teile: Teil[]): EinfSchritt[] {
 const NUR_DAUERHAFT = new Set(['eks', 'unitarii'])
 
 export function meineModule(user: User) {
-  return MODULE.filter((m) => NUR_DAUERHAFT.has(m.recht)
+  return MODULE.filter((m) => appFrei(user.organization, m.id) && (NUR_DAUERHAFT.has(m.recht)
     ? user.supervisor === true || user.permissions?.[m.recht] === true
-    : hatRecht(user, m.recht))
+    : hatRecht(user, m.recht)))
 }
 
 // ── Checkliste "Organisation einrichten" ────────────────────────────────────
@@ -368,6 +375,8 @@ export interface Punkt {
   recht?: string
   /** Woran es automatisch erkannt wird. */
   befund?: Befund
+  /** Nur, wenn dieses Modul für die Organisation freigeschaltet ist. */
+  modul?: string
 }
 
 export const CHECKLISTE: Punkt[] = [
@@ -380,11 +389,11 @@ export const CHECKLISTE: Punkt[] = [
     text: 'Lege fest, welche Rechte jede Rolle beim Anlegen vorschlägt — über das Symbol mit den Schiebereglern. Das spart Häkchen und hält die Rechte einheitlich.',
   },
   {
-    id: 'eks', titel: 'Einsatzführung (EKS) freigeben', befund: 'eks', recht: 'unitarii', pfad: '/unitarii',
+    id: 'eks', titel: 'Einsatzführung (EKS) freigeben', befund: 'eks', recht: 'unitarii', pfad: '/unitarii', modul: 'eks',
     text: 'Das Recht für die Einsatzführung steckt in keiner der vorgegebenen Rollen-Vorlagen. Wenn ihr EKS nutzt, vergib es einzeln an die, die Einsätze führen.',
   },
   {
-    id: 'formulare', titel: 'Formulare der Seite festlegen', befund: 'formulare', recht: 'dokumente', pfad: '/vorgaenge',
+    id: 'formulare', titel: 'Formulare der Seite festlegen', befund: 'formulare', recht: 'dokumente', pfad: '/vorgaenge', modul: 'dokumente',
     text: 'Schalte unter Vorgänge → Formulare Patientendokumentation, Produktausgabe und CIRS-Meldung für die Seite deiner Organisation ein oder aus. Eigene Vorlagen kannst du dort ergänzen.',
   },
   {
@@ -392,7 +401,7 @@ export const CHECKLISTE: Punkt[] = [
     text: 'Über die Seite deiner Organisation erreichen alle ohne Anmeldung Patientendokumentation, CIRS-Meldung und eure weiteren Formulare. Gib die Adresse an alle weiter, die dokumentieren oder melden.',
   },
   {
-    id: 'cirs', titel: 'CIRS-Bearbeitung klären', befund: 'cirs', recht: 'unitarii', pfad: '/unitarii',
+    id: 'cirs', titel: 'CIRS-Bearbeitung klären', befund: 'cirs', recht: 'unitarii', pfad: '/unitarii', modul: 'dokumente',
     text: 'CIRS-Meldungen sieht nur, wer das Recht für Vorgänge hat. Vergib es an die Personen, die Meldungen bewerten; die Zuständigkeit legt ihr dann je Meldung fest.',
   },
   {

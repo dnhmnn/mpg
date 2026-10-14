@@ -8,6 +8,7 @@ import type React from 'react'
 import { pb } from '../lib/pocketbase'
 import { CHECKLISTE, checklistenStand, abhaken, type Befunde } from '../lib/einfuehrung'
 import { hatRecht } from '../lib/apps'
+import { modulFrei } from '../lib/freigabe'
 import type { User } from '../types'
 import { useEinfuehrungStand } from './Einfuehrung'
 
@@ -60,7 +61,7 @@ export default function OrgCheckliste({ user, kompakt = false, onGehe }: { user:
   const code = (user.organization as { org_code?: string } | undefined)?.org_code
   const punkte = checklistenStand(
     CHECKLISTE
-      .filter((p) => !p.recht || hatRecht(user, p.recht))
+      .filter((p) => (!p.recht || hatRecht(user, p.recht)) && (!p.modul || modulFrei(user.organization, p.modul)))
       // Die Seite der Organisation braucht ihren Code; ohne ihn kein Link
       .map((p) => (p.pfad?.includes(':org') ? { ...p, pfad: code ? p.pfad.replace(':org', code) : undefined } : p)),
     befunde, stand)
