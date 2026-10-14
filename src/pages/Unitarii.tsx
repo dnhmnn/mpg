@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { PERM_LABELS as ALLE_RECHTE, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail } from '../lib/apps'
-import { appFrei, rechtFrei } from '../lib/freigabe'
+import { EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte } from '../lib/apps'
+import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
+import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
 
 interface UUser {
   id: string
@@ -87,10 +88,9 @@ export default function Unitarii() {
   const { user, loading: authLoading } = useAuth()
   // Nur Rechte für Module, die der Organisation freigeschaltet sind (Supervisor).
   // Schon vergebene Rechte gesperrter Module bleiben am Benutzer stehen.
-  const PERM_LABELS = ALLE_RECHTE
-    .filter(p => rechtFrei(user?.organization, p.key))
-    // "dashboard" öffnet MPG und die Einstellungen — der Name sagt, was davon freigeschaltet ist
-    .map(p => p.key === 'dashboard' ? { ...p, label: appFrei(user?.organization, 'mpg') ? 'MPG & Einstellungen' : 'Einstellungen' } : p)
+  const org = user?.organization
+  const PERM_LABELS = vergebbareRechte(org)
+  const rechtName = (k: string) => PERM_LABELS.find(p => p.key === k)?.label ?? k
   const navigate = useNavigate()
   const [tab, setTab] = useState<'benutzer' | 'neuigkeiten' | 'temp'>('benutzer')
   const [loading, setLoading] = useState(true)
@@ -118,7 +118,7 @@ export default function Unitarii() {
   const [tempOpen, setTempOpen] = useState(false)
   const [tempForm, setTempForm] = useState({
     name: '', email: '', password: genPassword(),
-    role: 'benutzer', permissions: { ...EMPTY_PERMS, lernbar: true },
+    role: 'benutzer', permissions: { ...EMPTY_PERMS, lernbar: true } as Record<string, boolean>,
     durationHours: 24, customExpiresAt: '',
   })
   const [savingTemp, setSavingTemp] = useState(false)
@@ -128,6 +128,15 @@ export default function Unitarii() {
   const [templateRole, setTemplateRole] = useState('benutzer')
   const [templateDraft, setTemplateDraft] = useState<Record<string, boolean>>({ ...EMPTY_PERMS })
   const [savingTemplate, setSavingTemplate] = useState(false)
+
+  // Verknüpfte Rechte (lib/verknuepfung.ts): bis die Organisation geladen ist, die vom Login
+  const [orgVerkn, setOrgVerkn] = useState<Verknuepfungen>(() => verknuepfungen(org))
+  const [verknFeldDa, setVerknFeldDa] = useState(true)
+  const [verknOpen, setVerknOpen] = useState(false)
+  const [verknDraft, setVerknDraft] = useState<Verknuepfungen>({})
+  const [verknRecht, setVerknRecht] = useState('lager')
+  const [savingVerkn, setSavingVerkn] = useState(false)
+  const [anwenden, setAnwenden] = useState(false)
 
   useEffect(() => { if (user) loadAll() }, [user])
 
@@ -145,8 +154,10 @@ export default function Unitarii() {
   async function loadOrgRolePerms() {
     if (!user?.organization_id) return
     try {
-      const org = await pb.collection('organizations').getOne(user.organization_id)
-      setOrgRolePerms((org.role_permissions as any) || {})
+      const o = await pb.collection('organizations').getOne(user.organization_id)
+      setOrgRolePerms((o.role_permissions as any) || {})
+      setOrgVerkn(verknuepfungen(o))
+      setVerknFeldDa('verknuepfungen' in o)
     } catch { /* field may not exist yet */ }
   }
 
@@ -200,13 +211,18 @@ export default function Unitarii() {
   function addTempPerm(key: string, hours: number) {
     if (!key) return
     const until = new Date(Date.now() + hours * 3600 * 1000).toISOString()
-    setUserForm(p => ({
-      ...p,
-      temp_permissions: {
-        ...p.temp_permissions,
-        [key]: { until, granted_by: user?.name || user?.email || '' },
-      },
-    }))
+    const von = user?.name || user?.email || ''
+    setUserForm(p => {
+      const temp = { ...p.temp_permissions, [key]: { until, granted_by: von } }
+      // Verknüpfte Rechte gelten genauso lange — außer sie sind schon dauerhaft oder länger da
+      for (const z of mitgebracht(key, orgVerkn, org)) {
+        if (p.permissions[z]) continue
+        const bisher = temp[z]?.until
+        if (bisher && new Date(bisher).getTime() >= new Date(until).getTime()) continue
+        temp[z] = { until, granted_by: von }
+      }
+      return { ...p, temp_permissions: temp }
+    })
     setTempPermKey('')
   }
 
@@ -385,6 +401,74 @@ export default function Unitarii() {
     finally { setSavingTemplate(false) }
   }
 
+  function openVerkn() {
+    setVerknDraft(orgVerkn)
+    setVerknRecht(Object.keys(orgVerkn).find(k => PERM_LABELS.some(p => p.key === k)) ?? PERM_LABELS[0]?.key ?? 'lager')
+    setVerknOpen(true)
+  }
+
+  function toggleVerkn(von: string, ziel: string, an: boolean) {
+    setVerknDraft(d => {
+      const liste = (d[von] ?? []).filter(z => z !== ziel)
+      const neu = { ...d, [von]: an ? [...liste, ziel] : liste }
+      if (!neu[von].length) delete neu[von]
+      return neu
+    })
+  }
+
+  async function saveVerkn() {
+    if (!user?.organization_id) return
+    setSavingVerkn(true)
+    try {
+      const o = await pb.collection('organizations').update(user.organization_id, { verknuepfungen: verknDraft })
+      if (!('verknuepfungen' in o)) {
+        setVerknFeldDa(false)
+        showMsg('Nicht gespeichert — das Feld „verknuepfungen“ fehlt in PocketBase', 'error')
+        return
+      }
+      setVerknFeldDa(true)
+      setOrgVerkn(verknuepfungen(o))
+      showMsg('Verknüpfungen gespeichert')
+    } catch (e: any) { showMsg('Fehler: ' + (e?.message || e), 'error') }
+    finally { setSavingVerkn(false) }
+  }
+
+  // Bestehende Benutzer nachziehen: fehlende verknüpfte Rechte ergänzen, nichts wegnehmen
+  async function verknuepfungenAnwenden() {
+    if (!user?.organization_id) return
+    setAnwenden(true)
+    try {
+      const liste = await pb.collection('users').getFullList<UUser>({
+        filter: pb.filter('organization_id = {:o}', { o: user.organization_id }),
+        fields: 'id,name,email,permissions,supervisor', requestKey: null,
+      })
+      // Supervisor dürfen ohnehin alles
+      const plan = liste.filter(u => !u.supervisor)
+        .map(u => ({ u, dazu: ergaenzen(u.permissions, orgVerkn, org).dazu }))
+        .filter(x => x.dazu.length)
+      if (!plan.length) { showMsg('Alle Benutzer haben die verknüpften Rechte schon'); return }
+      const zeilen = plan.slice(0, 12).map(x => `• ${x.u.name || x.u.email}: ${x.dazu.map(rechtName).join(', ')}`)
+      if (plan.length > 12) zeilen.push(`… und ${plan.length - 12} weitere`)
+      if (!confirm(`Bei ${plan.length} ${plan.length === 1 ? 'Benutzer' : 'Benutzern'} werden Rechte ergänzt:\n\n${zeilen.join('\n')}\n\nWeggenommen wird nichts.`)) return
+      let ok = 0
+      let fehler = 0
+      for (const x of plan) {
+        try {
+          // Frisch lesen, damit eine Änderung von nebenan nicht verloren geht
+          const frisch = await pb.collection('users').getOne<UUser>(x.u.id, { fields: 'id,permissions', requestKey: null })
+          const { rechte, dazu } = ergaenzen(frisch.permissions, orgVerkn, org)
+          if (dazu.length) await pb.collection('users').update(x.u.id, { permissions: rechte }, { requestKey: null })
+          ok++
+        } catch { fehler++ }
+      }
+      await loadUsers()
+      showMsg(fehler
+        ? `${ok} ergänzt, ${fehler} nicht gespeichert`
+        : `Bei ${ok} ${ok === 1 ? 'Benutzer' : 'Benutzern'} ergänzt`, fehler ? 'error' : 'success')
+    } catch (e: any) { showMsg('Fehler: ' + (e?.message || e), 'error') }
+    finally { setAnwenden(false) }
+  }
+
   if (authLoading) return null
 
   if (!user?.supervisor && !user?.permissions?.unitarii) {
@@ -471,6 +555,16 @@ export default function Unitarii() {
         {/* ── BENUTZER ── */}
         {tab === 'benutzer' && (
           <>
+            <button onClick={openVerkn} aria-label="Verknüpfte Rechte bearbeiten" style={{ width: '100%', textAlign: 'left', background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', border: 'none', padding: '12px 14px', marginBottom: 20, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Verknüpfte Rechte</div>
+                <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 3, lineHeight: 1.45 }}>
+                  {verknuepfungZeilen(PERM_LABELS, orgVerkn, org).join(' · ') || 'Keine — jedes Recht wird einzeln vergeben'}
+                </div>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: 'var(--warm-gray)', flexShrink: 0 }}><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 14 }}>Alle Benutzer</div>
 
             {regularUsers.length === 0 ? (
@@ -569,7 +663,7 @@ export default function Unitarii() {
               <select value={userForm.role} onChange={e => {
                 const role = e.target.value
                 const template = getRoleTemplate(role, { role_permissions: orgRolePerms })
-                setUserForm(p => ({ ...p, role, permissions: { ...p.permissions, ...template } }))
+                setUserForm(p => ({ ...p, role, permissions: ergaenzen({ ...p.permissions, ...template }, orgVerkn, org).rechte }))
               }} style={INPUT}>
                 {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
@@ -583,11 +677,12 @@ export default function Unitarii() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                    <input type="checkbox" checked={!!userForm.permissions[key]} onChange={e => setUserForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
+                    <input type="checkbox" checked={!!userForm.permissions[key]} onChange={e => { const an = e.target.checked; setUserForm(p => ({ ...p, permissions: haken(p.permissions, key, an, orgVerkn, org) })) }} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                     {label}
                   </label>
                 ))}
               </div>
+              <VerknuepfungHinweis rechte={PERM_LABELS} v={orgVerkn} org={org} />
             </div>
 
             <div>
@@ -683,11 +778,12 @@ export default function Unitarii() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                    <input type="checkbox" checked={!!templateDraft[key]} onChange={e => setTemplateDraft(p => ({ ...p, [key]: e.target.checked }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
+                    <input type="checkbox" checked={!!templateDraft[key]} onChange={e => { const an = e.target.checked; setTemplateDraft(p => haken(p, key, an, orgVerkn, org)) }} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                     {label}
                   </label>
                 ))}
               </div>
+              <VerknuepfungHinweis rechte={PERM_LABELS} v={orgVerkn} org={org} />
             </div>
           </div>
 
@@ -699,6 +795,76 @@ export default function Unitarii() {
           </div>
         </Sheet>
       )}
+
+      {/* ── VERKNÜPFTE RECHTE SHEET ── */}
+      {verknOpen && (() => {
+        const geaendert = !gleicheVerknuepfungen(verknDraft, orgVerkn)
+        const ziele = PERM_LABELS.filter(p => p.key !== verknRecht && !NIE_MITGEBRACHT.includes(p.key))
+        const zeilen = verknuepfungZeilen(PERM_LABELS, verknDraft, org)
+        return (
+          <Sheet title="Verknüpfte Rechte" onClose={() => setVerknOpen(false)}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5 }}>
+                Wer ein Recht bekommt, bekommt die verknüpften gleich mit angehakt — beim Anlegen, beim Bearbeiten, über die Rolle und bei temporären Rechten. Danach lässt sich jedes einzeln wieder abwählen.
+              </div>
+
+              <Field label="Recht">
+                <select value={verknRecht} onChange={e => setVerknRecht(e.target.value)} style={INPUT}>
+                  {PERM_LABELS.map(p => (
+                    <option key={p.key} value={p.key}>{p.label}{verknDraft[p.key]?.length ? ` (bringt ${verknDraft[p.key].length} mit)` : ''}</option>
+                  ))}
+                </select>
+              </Field>
+
+              <div>
+                <div style={LABEL}>{rechtName(verknRecht)} bringt mit</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
+                  {ziele.map(({ key, label }) => (
+                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
+                      <input type="checkbox" checked={!!verknDraft[verknRecht]?.includes(key)} onChange={e => toggleVerkn(verknRecht, key, e.target.checked)} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
+                      {label}
+                    </label>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6, lineHeight: 1.45 }}>
+                  Die Benutzerverwaltung wird nie mitgebracht: Wer sie hat, kann jedes Recht vergeben, auch das für Patientendaten. Sie wird immer einzeln vergeben.
+                </div>
+              </div>
+
+              <div>
+                <div style={LABEL}>Eingestellt</div>
+                <div style={{ fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.6 }}>
+                  {zeilen.length ? zeilen.map(z => <div key={z}>{z}</div>) : <span style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>Keine Verknüpfungen</span>}
+                </div>
+              </div>
+
+              {!verknFeldDa && (
+                <div role="alert" style={{ fontSize: 12, lineHeight: 1.5, padding: '10px 12px', borderRadius: 10, background: 'var(--lbf-warn-grund)', color: 'var(--lbf-warn-text)' }}>
+                  Das Feld „verknuepfungen“ fehlt in PocketBase (Sammlung organizations, Typ JSON). Bis es angelegt ist, gilt die Voreinstellung (Lager bringt Dateien &amp; Schreibstube, MPG und Vorgänge mit), und Änderungen hier werden nicht gespeichert.
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
+              <button onClick={() => setVerknDraft(verknuepfungen({ verknuepfungen: STANDARD_VERKNUEPFUNGEN }))} style={BTN_SECONDARY}>Auf Standard zurücksetzen</button>
+              <button onClick={saveVerkn} disabled={savingVerkn || !geaendert} style={{ ...BTN_PRIMARY, flex: 1, opacity: (savingVerkn || !geaendert) ? 0.5 : 1 }}>
+                {savingVerkn ? 'Speichert…' : 'Speichern'}
+              </button>
+            </div>
+
+            <div style={{ marginTop: 22, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
+              <div style={LABEL}>Bestehende Benutzer</div>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 10 }}>
+                Ergänzt bei allen Benutzern die verknüpften Rechte, die ihnen noch fehlen — etwa bei allen mit Lager. Es zählen die dauerhaften Rechte; weggenommen wird nichts. Vorher siehst du, wer was bekommt.
+              </div>
+              <button onClick={verknuepfungenAnwenden} disabled={anwenden || geaendert} style={{ ...BTN_SECONDARY, width: '100%', opacity: (anwenden || geaendert) ? 0.5 : 1, cursor: (anwenden || geaendert) ? 'not-allowed' : 'pointer' }}>
+                {anwenden ? 'Wird angewendet…' : 'Verknüpfungen anwenden'}
+              </button>
+              {geaendert && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>Erst speichern, dann anwenden.</div>}
+            </div>
+          </Sheet>
+        )
+      })()}
 
       {/* ── NEUIGKEIT SHEET ── */}
       {nOpen && (
@@ -743,11 +909,12 @@ export default function Unitarii() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
-                    <input type="checkbox" checked={!!tempForm.permissions[key]} onChange={e => setTempForm(p => ({ ...p, permissions: { ...p.permissions, [key]: e.target.checked } }))} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
+                    <input type="checkbox" checked={!!tempForm.permissions[key]} onChange={e => { const an = e.target.checked; setTempForm(p => ({ ...p, permissions: haken(p.permissions, key, an, orgVerkn, org) })) }} style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }} />
                     {label}
                   </label>
                 ))}
               </div>
+              <VerknuepfungHinweis rechte={PERM_LABELS} v={orgVerkn} org={org} />
             </div>
             <Field label="Dauer">
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>

@@ -26,6 +26,10 @@ export interface Organization {
   max_users?: number
   license_valid_until?: string
   role_permissions?: Record<string, Record<string, boolean>>
+  /** Freigeschaltete Module (lib/freigabe.ts); leer = alles frei */
+  freigeschaltet?: string[] | null
+  /** Recht → mitgebrachte Rechte (lib/verknuepfung.ts); leer = Voreinstellung */
+  verknuepfungen?: Record<string, string[]> | null
 }
 
 export interface App {

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
 import { ROLES } from '../lib/apps'
+import { ergaenzen, verknuepfungen } from '../lib/verknuepfung'
 import type { User } from '../types'
 
 export function useAuth() {
@@ -42,21 +43,6 @@ export function useAuth() {
         return
       }
 
-      if (userData && userData.permissions_migrated !== true && navigator.onLine) {
-        const template = ROLES[userData.role || 'benutzer']?.permissions || {}
-        const merged = {
-          ...template,
-          ...(userData.lernbar_access ? { lernbar: true } : {}),
-          ...(userData.permissions || {}),
-        }
-        try {
-          await pb.collection('users').update(userData.id, { permissions: merged, permissions_migrated: true })
-          userData = { ...userData, permissions: merged, permissions_migrated: true }
-        } catch (e) {
-          console.error('Permission migration failed:', e)
-        }
-      }
-
       if (userData && userData.organization_id) {
         try {
           const org = await pb.collection('organizations').getOne(userData.organization_id)
@@ -67,6 +53,26 @@ export function useAuth() {
           try { localStorage.setItem(ORG_CACHE(userData.organization_id), JSON.stringify(org)) } catch { /* Speicher voll */ }
         } catch (e) {
           applyCachedOrg(userData)
+        }
+      }
+
+      // Nach dem Laden der Organisation: Die Rollen-Vorlage bringt ihre verknüpften
+      // Rechte mit (Benutzer, die der Supervisor nur mit einer Rolle angelegt hat).
+      // Was am Benutzer schon ausdrücklich steht — auch ein abgewähltes Häkchen —, gilt weiter.
+      if (userData && userData.permissions_migrated !== true && navigator.onLine) {
+        const template = ROLES[userData.role || 'benutzer']?.permissions || {}
+        const merged = {
+          ...ergaenzen({
+            ...template,
+            ...(userData.lernbar_access ? { lernbar: true } : {}),
+          }, verknuepfungen(userData.organization), userData.organization).rechte,
+          ...(userData.permissions || {}),
+        }
+        try {
+          await pb.collection('users').update(userData.id, { permissions: merged, permissions_migrated: true })
+          userData = { ...userData, permissions: merged, permissions_migrated: true }
+        } catch (e) {
+          console.error('Permission migration failed:', e)
         }
       }
 

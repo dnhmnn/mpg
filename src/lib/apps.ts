@@ -1,4 +1,5 @@
 import type { App, User } from '../types'
+import { appFrei, rechtFrei } from './freigabe'
 
 export const ALL_APPS: Record<string, App> = {
   einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze',                permission: 'einsaetze',           color: '#600812' },
@@ -71,6 +72,23 @@ export const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'chat',               label: 'Chat' },
   { key: 'notizen',            label: 'Notizen' },
 ]
+
+/**
+ * Die Rechte, die in dieser Organisation vergeben werden können — nur die
+ * freigeschalteter Module, mit Namen, die sagen, was sie öffnen.
+ * Schon vergebene Rechte gesperrter Module bleiben am Benutzer stehen.
+ */
+export function vergebbareRechte(org: unknown): { key: string; label: string }[] {
+  return PERM_LABELS
+    .filter(p => rechtFrei(org, p.key))
+    .map(p => {
+      // "dashboard" öffnet MPG und die Einstellungen — der Name sagt, was davon freigeschaltet ist
+      if (p.key === 'dashboard') return { ...p, label: appFrei(org, 'mpg') ? 'MPG & Einstellungen' : 'Einstellungen' }
+      // "dateien" öffnet auch die Schreibstube
+      if (p.key === 'dateien') return { ...p, label: 'Dateien & Schreibstube' }
+      return p
+    })
+}
 
 export const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
 

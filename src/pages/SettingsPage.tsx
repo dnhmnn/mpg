@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, PERM_LABELS as ALLE_RECHTE, EMPTY_PERMS, getRoleTemplate, kachelFarbe } from '../lib/apps'
-import { MODULE as FREIGABE_MODULE, appFrei, freigeschaltet, rechtFrei } from '../lib/freigabe'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { ergaenzen, haken, verknuepfungen } from '../lib/verknuepfung'
+import VerknuepfungHinweis from '../components/VerknuepfungHinweis'
+import { MODULE as FREIGABE_MODULE, freigeschaltet } from '../lib/freigabe'
 import AppIcon from '../components/AppIcon'
 import { useAuth } from '../hooks/useAuth'
 import Einfuehrung, { useEinfuehrungStand } from '../components/Einfuehrung'
@@ -351,10 +353,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   const { user: angemeldet } = useAuth()
   const user = vorgegeben ?? angemeldet
   // Nur Rechte freigeschalteter Module anbieten (wie in der Benutzerverwaltung)
-  const PERM_LABELS = ALLE_RECHTE
-    .filter(p => rechtFrei(user?.organization, p.key))
-    // "dashboard" öffnet MPG und die Einstellungen — der Name sagt, was davon freigeschaltet ist
-    .map(p => p.key === 'dashboard' ? { ...p, label: appFrei(user?.organization, 'mpg') ? 'MPG & Einstellungen' : 'Einstellungen' } : p)
+  const PERM_LABELS = vergebbareRechte(user?.organization)
   const navigate = useNavigate()
   const [view, setView] = useState<View>('main')
   const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
@@ -1181,7 +1180,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                     const role = e.target.value
                     const template = getRoleTemplate(role, license)
                     setUserFormRole(role)
-                    setUserFormPermissions(p => ({ ...p, ...template }))
+                    setUserFormPermissions(p => ergaenzen({ ...p, ...template }, verknuepfungen(license ?? user?.organization), user?.organization).rechte)
                   }}
                   className="ios-field-select"
                 >
@@ -1205,13 +1204,14 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                       <input
                         type="checkbox"
                         checked={!!userFormPermissions[key]}
-                        onChange={(e) => setUserFormPermissions(p => ({ ...p, [key]: e.target.checked }))}
+                        onChange={(e) => { const an = e.target.checked; setUserFormPermissions(p => haken(p, key, an, verknuepfungen(license ?? user?.organization), user?.organization)) }}
                         style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }}
                       />
                       {label}
                     </label>
                   ))}
                 </div>
+                <VerknuepfungHinweis rechte={PERM_LABELS} v={verknuepfungen(license ?? user?.organization)} org={user?.organization} />
               </div>
               {userFormMsg && (
                 <div style={{ marginTop: '12px', fontSize: '14px', color: userFormMsg.includes('✅') ? '#34c759' : '#ff3b30' }}>
