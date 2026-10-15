@@ -176,8 +176,11 @@ export default function Unitarii() {
   }
 
   async function loadNeuigkeiten() {
+    // Nur die eigene Organisation — Neuigkeiten anderer Organisationen gehen niemanden hier an
+    if (!user?.organization_id) { setNeuigkeiten([]); return }
     try {
       const r = await pb.collection('unitas_neuigkeiten').getFullList({
+        filter: pb.filter('organisation_id = {:o}', { o: user.organization_id }),
         sort: '-gepinnt,-created',
         requestKey: `bv-n-${Date.now()}`,
       })
@@ -310,9 +313,10 @@ export default function Unitarii() {
 
   async function saveN() {
     if (!nForm.titel.trim()) return
+    const orgId = user?.organization_id || ''
+    if (!orgId) { showMsg('Ohne Organisation lässt sich nichts veröffentlichen', 'error'); return }
     setSavingN(true)
     try {
-      const orgId = user?.organization_id || ''
       let data: any
       if (nAnhang) {
         const fd = new FormData()
@@ -320,14 +324,14 @@ export default function Unitarii() {
         fd.append('inhalt', nForm.inhalt)
         fd.append('gepinnt', nForm.gepinnt ? 'true' : 'false')
         fd.append('erstellt_von', user?.name || user?.email || '')
-        if (orgId) fd.append('organisation_id', orgId)
+        fd.append('organisation_id', orgId)
         fd.append('anhang', nAnhang)
         data = fd
       } else {
         data = {
           titel: nForm.titel, inhalt: nForm.inhalt, gepinnt: nForm.gepinnt,
           erstellt_von: user?.name || user?.email || '',
-          ...(orgId ? { organisation_id: orgId } : {}),
+          organisation_id: orgId,
         }
       }
       if (editingN) await pb.collection('unitas_neuigkeiten').update(editingN.id, data)

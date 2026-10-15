@@ -211,13 +211,18 @@ export default function Unitas() {
         setModule(modulRecords as any)
       }
 
-      // Neuigkeiten
+      // Neuigkeiten — nur die der eigenen Organisation
       try {
-        const neuigkeitenRecords = await pb.collection('unitas_neuigkeiten').getFullList({
-          sort: '-gepinnt,-created',
-          requestKey: `lernbar-neuigkeiten-${Date.now()}`
-        })
-        setNeuigkeiten(neuigkeitenRecords as any)
+        if (user?.organization_id) {
+          const neuigkeitenRecords = await pb.collection('unitas_neuigkeiten').getFullList({
+            filter: pb.filter('organisation_id = {:o}', { o: user.organization_id }),
+            sort: '-gepinnt,-created',
+            requestKey: `lernbar-neuigkeiten-${Date.now()}`
+          })
+          setNeuigkeiten(neuigkeitenRecords as any)
+        } else {
+          setNeuigkeiten([])
+        }
       } catch {
         // collection may not exist yet
       }
