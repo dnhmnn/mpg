@@ -3,7 +3,8 @@
 // Jeder neue Benutzer mit echter Adresse bekommt eine Willkommens-E-Mail,
 // automatisch — egal ob der Supervisor, die Benutzerverwaltung oder die
 // Einstellungen ihn anlegen. Mit Link zur App, Organisation, Org-Code und
-// "Passwort festlegen". Inhalt und Ausnahmen stehen in willkommen-mail.js.
+// "Passwort festlegen". Inhalt und Ausnahmen stehen in willkommen-mail.js,
+// die eingebettete Schrift in willkommen-schrift.js.
 //
 // Der Versand läuft nach dem Speichern: Klappt er nicht (kein Mailserver,
 // Adresse abgelehnt), ist der Benutzer trotzdem angelegt — der Fehler steht
@@ -28,6 +29,10 @@ onRecordAfterCreateSuccess((e) => {
     let rechte = null
     try { rechte = JSON.parse(r.getString("permissions") || "null") } catch (err) { rechte = null }
 
+    // Atkinson Hyperlegible eingebettet; fehlt die Datei, gilt die Ersatzschrift
+    let schrift = ""
+    try { schrift = require(`${__hooks}/willkommen-schrift.js`).css || "" } catch (err) { schrift = "" }
+
     const mail = willkommenMail({
       name: r.getString("name"),
       email: r.getString("email"),
@@ -35,6 +40,7 @@ onRecordAfterCreateSuccess((e) => {
       permissions: rechte,
       supervisor: r.getBool("supervisor"),
       org: org,
+      schrift: schrift,
     })
 
     if (mail) {
@@ -94,6 +100,9 @@ routerAdd("POST", "/willkommen/senden", (e) => {
   let rechte = null
   try { rechte = JSON.parse(ziel.getString("permissions") || "null") } catch (err) { rechte = null }
 
+  let schrift = ""
+  try { schrift = require(`${__hooks}/willkommen-schrift.js`).css || "" } catch (err) { schrift = "" }
+
   const settings = e.app.settings()
   const stand = { erweiterung: true, smtp: !!settings.smtp.enabled, absender: settings.meta.senderAddress || "" }
 
@@ -104,6 +113,7 @@ routerAdd("POST", "/willkommen/senden", (e) => {
     permissions: rechte,
     supervisor: ziel.getBool("supervisor"),
     org: org,
+    schrift: schrift,
   })
   if (!mail) {
     return e.json(400, Object.assign({}, stand, { fehler: "Für diese Adresse gibt es keine Willkommens-E-Mail (Platzhalter oder temporärer Zugang)." }))

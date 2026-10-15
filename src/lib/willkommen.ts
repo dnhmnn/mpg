@@ -19,7 +19,7 @@ export function willkommenErgebnis(status: number | undefined, a: Antwort | null
   }
   // Die Route fehlt: PocketBase antwortet mit seinem eigenen 404 ohne "fehler"
   if (status === 404 && !d.fehler) {
-    return { ok: false, text: 'Die Server-Erweiterung fehlt: willkommen.pb.js und willkommen-mail.js liegen nicht im Ordner pb_hooks von PocketBase — oder PocketBase wurde danach nicht neu gestartet. Solange gehen keine Willkommens-E-Mails raus.' }
+    return { ok: false, text: 'Die Server-Erweiterung fehlt: willkommen.pb.js, willkommen-mail.js und willkommen-schrift.js liegen nicht im Ordner pb_hooks von PocketBase — oder PocketBase wurde danach nicht neu gestartet. Solange gehen keine Willkommens-E-Mails raus.' }
   }
   if (status === 502) {
     const smtp = d.smtp === false

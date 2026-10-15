@@ -93,3 +93,36 @@ describe('Willkommens-E-Mail: Sonderfälle', () => {
     expect(m.text).not.toContain('\n\n\n')
   })
 })
+
+describe('Willkommens-E-Mail: Schrift wie in der App', () => {
+  // Die eingebettete Schrift (pb_hooks/willkommen-schrift.js), wie der Hook sie mitgibt
+  const schriftModul = { exports: {} as { css?: string } }
+  runInNewContext(readFileSync(new URL('../../../pb_hooks/willkommen-schrift.js', import.meta.url), 'utf8'), { module: schriftModul, exports: schriftModul.exports })
+  const schrift = schriftModul.exports.css!
+  const mail = willkommenMail({ name: 'Ömer Groß', email: 'oemer@example.com', role: 'benutzer', org: { name: 'Wache Süd', code: 'sued' }, schrift })!
+
+  it('bringt Atkinson Hyperlegible in allen vier Schnitten eingebettet mit — ohne Google', () => {
+    expect(mail.html.startsWith('<!DOCTYPE html>')).toBe(true)
+    const kopf = mail.html.slice(0, mail.html.indexOf('</head>'))
+    expect((kopf.match(/@font-face/g) || []).length).toBe(4)
+    for (const s of ['font-style:normal;font-weight:400', 'font-style:normal;font-weight:700', 'font-style:italic;font-weight:400', 'font-style:italic;font-weight:700']) expect(kopf).toContain(s)
+    expect(mail.html).not.toMatch(/fonts\.googleapis|fonts\.gstatic/)
+  })
+
+  it('bleibt klein genug, dass Gmail sie nicht kürzt (unter 100 KB)', () => {
+    expect(new TextEncoder().encode(mail.html).length).toBeLessThan(100_000)
+  })
+
+  it('setzt die Schrift an jedem Textelement (Tabellen erben sie nicht überall)', () => {
+    const koerper = mail.html.slice(mail.html.indexOf('<body'))
+    const elemente = koerper.match(/<(p|td|a|span|div)\s[^>]*style="[^"]*"/g) || []
+    expect(elemente.length).toBeGreaterThan(10)
+    for (const e of elemente) expect(e, e.slice(0, 60)).toContain("font-family:'Atkinson Hyperlegible'")
+  })
+
+  it('ohne mitgegebene Schrift: dieselbe E-Mail mit Ersatzschrift', () => {
+    const ohne = willkommenMail({ name: 'A', email: 'a@example.com' })!
+    expect(ohne.html).not.toContain('@font-face')
+    expect(ohne.html).toContain("font-family:'Atkinson Hyperlegible',Helvetica,Arial,sans-serif")
+  })
+})
