@@ -4,9 +4,10 @@ import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
 import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen } from '../lib/freigabe'
-import { ROLLEN, getRoleTemplate, rollenName } from '../lib/apps'
+import { ROLLEN, getRoleTemplate, isPlaceholderEmail, rollenName } from '../lib/apps'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { zufallsPasswort } from '../lib/passwort'
+import WillkommenKnopf from '../components/WillkommenKnopf'
 import KachelGenerator from './KachelGenerator'
 
 /**
@@ -944,6 +945,14 @@ export default function Supervisor() {
               {profilSaving ? 'Speichern…' : 'Profil speichern'}
             </button>
           </div>
+
+          <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '28px 0 12px' }}>Willkommens-E-Mail</div>
+          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', padding: '16px 20px' }}>
+            <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 12 }}>
+              Neue Benutzer bekommen sie automatisch. Die Probe schickt sie dir selbst und zeigt, ob der Versand auf dem Server klappt — und sonst, woran es liegt.
+            </div>
+            <WillkommenKnopf label="Probe an mich senden" />
+          </div>
         </div>
       )}
 
@@ -1687,6 +1696,13 @@ export default function Supervisor() {
               <RollenAuswahl wert={userFormRole} onChange={setUserFormRole}
                 hinweis={editingUser && userFormRole !== (editingUser.role || 'benutzer') ? 'Beim Speichern kommen die Rechte der neuen Rolle dazu; bestehende bleiben.' : undefined} />
             </div>
+
+            {editingUser && !isPlaceholderEmail(editingUser.email) && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={fieldLabelStyle}>Willkommens-E-Mail</div>
+                <WillkommenKnopf userId={editingUser.id} />
+              </div>
+            )}
 
             {userFormMsg && (
               <div style={{ fontSize: 13, fontStyle: 'italic', color: userFormMsg.startsWith('Fehler') ? '#dc2626' : '#16a34a', marginBottom: 12 }}>

@@ -6,6 +6,7 @@ import { EMPTY_PERMS, ROLLEN, getRoleTemplate, isPlaceholderEmail, rollenName, v
 import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
 import { zufallsPasswort } from '../lib/passwort'
+import WillkommenKnopf from '../components/WillkommenKnopf'
 
 interface UUser {
   id: string
@@ -782,6 +783,11 @@ export default function Unitarii() {
                   <button onClick={passwortLinkSenden} disabled={linkLaeuft} style={{ ...BTN_SECONDARY, marginTop: 8, opacity: linkLaeuft ? 0.5 : 1 }}>
                     {linkLaeuft ? 'Wird gesendet…' : 'Link zum Passwort-Festlegen senden'}
                   </button>
+                )}
+                {editingUser && (
+                  <div style={{ marginTop: 8 }}>
+                    <WillkommenKnopf userId={editingUser.id} />
+                  </div>
                 )}
               </Field>
             )}
