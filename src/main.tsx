@@ -1,6 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import { einmalNeuLaden, istLadefehler, neueFassungAbfangen, wirdNeuGeladen } from './lib/neueFassung'
+
+// Nach einer Veröffentlichung fehlen der alten Fassung im Gerät Teile — dann einmal neu laden
+neueFassungAbfangen()
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<
@@ -17,10 +21,36 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Teil der App fehlt (alte Fassung nach Veröffentlichung): einmal neu laden statt Fehler
+    if (istLadefehler(error) && einmalNeuLaden()) { this.forceUpdate(); return }
     console.error('React Error:', error, errorInfo)
   }
 
   render() {
+    if (this.state.hasError && wirdNeuGeladen()) {
+      return (
+        <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--warm-bg)' }}>
+          <div style={{ fontStyle: 'italic', fontSize: 15, color: 'var(--warm-gray)' }}>Responda wird aktualisiert …</div>
+        </div>
+      )
+    }
+    if (this.state.hasError && istLadefehler(this.state.error)) {
+      // Neuladen gerade schon versucht — ruhig erklären statt Fehlerseite
+      return (
+        <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--warm-bg)', padding: 24 }}>
+          <div style={{ maxWidth: 360, background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid var(--lbf-akzent)', padding: '20px 22px' }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 8 }}>Neue Fassung</div>
+            <div style={{ fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.5, marginBottom: 16 }}>
+              Responda wurde aktualisiert, ein Teil der App ließ sich aber noch nicht laden. Bitte lade die Seite neu — bei schwacher Verbindung kurz warten.
+            </div>
+            <button onClick={() => window.location.reload()}
+              style={{ padding: '11px 18px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 14, fontFamily: 'inherit', cursor: 'pointer' }}>
+              Seite neu laden
+            </button>
+          </div>
+        </div>
+      )
+    }
     if (this.state.hasError) {
       return (
         <div style={{
