@@ -41,6 +41,12 @@ describe('Willkommens-E-Mail: Inhalt', () => {
     }
   })
 
+  it('erster Schritt ist "Passwort festlegen", danach die App', () => {
+    expect(mail.html.indexOf('>Passwort festlegen</a>')).toBeGreaterThan(0)
+    expect(mail.html.indexOf('>Passwort festlegen</a>')).toBeLessThan(mail.html.indexOf('>Zur App</a>'))
+    expect(mail.text.indexOf('passwort=neu')).toBeLessThan(mail.text.indexOf('Danach meldest du dich'))
+  })
+
   it('führt zur App und zu "Passwort festlegen" mit vorbelegter Adresse', () => {
     expect(mail.html).toContain('href="https://app.responda.systems/login?email=max%40example.com"')
     expect(mail.html).toContain('href="https://app.responda.systems/login?email=max%40example.com&amp;passwort=neu"')

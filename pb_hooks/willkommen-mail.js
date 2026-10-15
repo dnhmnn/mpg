@@ -3,9 +3,10 @@
 // .js statt .pb.js). Reine Funktion ohne PocketBase — so prüfen die Tests der
 // App sie mit (src/lib/__tests__/willkommen.test.ts).
 //
-// Inhalt: Link zur App, Organisation und Org-Code, die Anmelde-Adresse und
-// "Passwort festlegen" (öffnet die Anmeldung mit "Passwort vergessen"). Ein
-// Passwort steht nie in der E-Mail.
+// Inhalt: Organisation und Org-Code, die Anmelde-Adresse, als erster Schritt
+// "Passwort festlegen" (öffnet die Anmeldung mit "Passwort vergessen"), dann
+// der Link zur App. Wer Benutzer anlegt, vergibt kein Passwort — der Benutzer
+// legt es hier selbst fest. Ein Passwort steht nie in der E-Mail.
 
 const APP = "https://app.responda.systems"
 
@@ -78,9 +79,11 @@ function willkommenMail(n) {
     (org && org.code ? zeile("Org-Code", '<span style="font-weight:700;font-style:italic;color:' + ROT + ';">' + esc(org.code) + "</span>") : "") +
     zeile("Anmeldung", esc(email)) +
     "</table>" +
-    '<a href="' + esc(anmelden) + '" style="display:inline-block;background:' + ROT + ';color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:10px;">Zur App</a>' +
-    '<p style="margin:22px 0 0;font-size:14px;">Hast du von deinem Verwalter schon ein Passwort bekommen, meldest du dich damit an. Sonst legst du hier selbst eines fest: ' +
-    '<a href="' + esc(passwort) + '" style="color:' + ROT + ';font-weight:700;">Passwort festlegen</a></p>' +
+    '<p style="margin:0 0 12px;font-size:15px;">Als Erstes legst du dein Passwort fest:</p>' +
+    '<a href="' + esc(passwort) + '" style="display:inline-block;background:' + ROT + ';color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:10px;">Passwort festlegen</a>' +
+    '<p style="margin:22px 0 0;font-size:14px;">Danach meldest du dich mit deiner E-Mail-Adresse an: ' +
+    '<a href="' + esc(anmelden) + '" style="color:' + ROT + ';font-weight:700;">Zur App</a>. ' +
+    "Hat dir dein Verwalter schon ein Passwort genannt, kannst du dich gleich damit anmelden.</p>" +
     (seite
       ? '<p style="margin:14px 0 0;font-size:14px;">Die Seite deiner Organisation mit ihren Formularen, etwa für CIRS-Meldungen: <a href="' + esc(seite) + '" style="color:' + ROT + ';">' + esc(seite.replace(/^https:\/\//, "")) + "</a></p>"
       : "") +
@@ -97,10 +100,11 @@ function willkommenMail(n) {
     org && org.code ? "Org-Code: " + org.code : "",
     "Anmeldung: " + email,
     "",
-    "Zur App: " + anmelden,
-    "",
-    "Hast du von deinem Verwalter schon ein Passwort bekommen, meldest du dich damit an. Sonst legst du hier selbst eines fest:",
+    "Als Erstes legst du dein Passwort fest:",
     passwort,
+    "",
+    "Danach meldest du dich mit deiner E-Mail-Adresse an: " + anmelden,
+    "Hat dir dein Verwalter schon ein Passwort genannt, kannst du dich gleich damit anmelden.",
     seite ? "\nDie Seite deiner Organisation mit ihren Formularen: " + seite : "",
     "",
     "Tipp: Öffne die App auf dem Handy im Browser und wähle „Zum Home-Bildschirm“ — dann startet Responda wie eine App.",

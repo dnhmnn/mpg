@@ -6,6 +6,7 @@ import { pbFehlerText } from '../lib/pbFehler'
 import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen } from '../lib/freigabe'
 import { ROLLEN, getRoleTemplate, rollenName } from '../lib/apps'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
+import { zufallsPasswort } from '../lib/passwort'
 import KachelGenerator from './KachelGenerator'
 
 /**
@@ -480,14 +481,16 @@ export default function Supervisor() {
     setNewUserMsg('')
     if (!newUserName.trim()) { setNewUserMsg('Name erforderlich'); return }
     if (!newUserEmail.trim() || !newUserEmail.includes('@')) { setNewUserMsg('Gültige E-Mail erforderlich'); return }
-    if (!newUserPassword || newUserPassword.length < 8) { setNewUserMsg('Passwort mind. 8 Zeichen'); return }
+    // Ohne Passwort legt der Benutzer es über die Willkommens-E-Mail selbst fest
+    if (newUserPassword && newUserPassword.length < 8) { setNewUserMsg('Passwort mind. 8 Zeichen — oder leer lassen'); return }
+    const passwort = newUserPassword || zufallsPasswort()
     setCreatingUser(true)
     try {
       await pb.collection('users').create({
         name: newUserName,
         email: newUserEmail,
-        password: newUserPassword,
-        passwordConfirm: newUserPassword,
+        password: passwort,
+        passwordConfirm: passwort,
         role: newUserRole,
         // Die Rechte der Rolle gleich mitgeben — sonst kämen sie erst beim ersten Login
         permissions: rollenRechte(newUserRole, selectedOrg),
@@ -1439,14 +1442,17 @@ export default function Supervisor() {
                     </div>
                   </div>
                   <div style={{ marginBottom: 12 }}>
-                    <div style={fieldLabelStyle}>Passwort</div>
+                    <div style={fieldLabelStyle}>Passwort (optional)</div>
                     <input
                       type="password"
                       value={newUserPassword}
                       onChange={e => setNewUserPassword(e.target.value)}
-                      placeholder="Mind. 8 Zeichen"
+                      placeholder="Leer lassen"
                       style={fieldInputStyle}
                     />
+                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.4 }}>
+                      Leer gelassen legt der Benutzer sein Passwort über die Willkommens-E-Mail selbst fest.
+                    </div>
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <div style={fieldLabelStyle}>Rolle</div>

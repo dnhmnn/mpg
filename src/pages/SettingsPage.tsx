@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, ROLLEN, getRoleTemplate, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, ROLLEN, getRoleTemplate, isPlaceholderEmail, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { zufallsPasswort } from '../lib/passwort'
 import { haken, verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis from '../components/VerknuepfungHinweis'
 import { MODULE as FREIGABE_MODULE, freigeschaltet } from '../lib/freigabe'
@@ -540,14 +541,16 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     try {
       if (editingUser) {
         const updateData: any = { name: userFormName, role: userFormRole, permissions: userFormPermissions }
-        if (userFormPassword) {
+        // Ein Passwort setzt der Verwalter nur bei Zugängen ohne eigene E-Mail (Teilnehmer)
+        if (userFormPassword && isPlaceholderEmail(editingUser.email)) {
           updateData.password = userFormPassword
           updateData.passwordConfirm = userFormPassword
         }
         await pb.collection('users').update(editingUser.id, updateData)
         setUserFormMsg('✅ Benutzer aktualisiert!')
       } else {
-        const tempPassword = Math.random().toString(36).slice(-12) + 'A1!'
+        // Kein Passwort vom Verwalter: Der Benutzer legt es über die Willkommens-E-Mail fest
+        const tempPassword = zufallsPasswort()
         await pb.collection('users').create({
           email: userFormEmail,
           name: userFormName,
@@ -558,8 +561,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
           passwordConfirm: tempPassword,
           organization_id: user.organization_id
         })
-        await pb.collection('users').requestPasswordReset(userFormEmail)
-        setUserFormMsg('✅ Benutzer erstellt! E-Mail zur Passwortfestlegung wurde gesendet.')
+        setUserFormMsg('✅ Benutzer erstellt. Das Passwort legt er über die Willkommens-E-Mail fest.')
       }
       setTimeout(() => {
         setShowUserModal(false)
@@ -569,6 +571,18 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
       setUserFormMsg('❌ Fehler: ' + e.message)
     } finally {
       setSavingUser(false)
+    }
+  }
+
+  // Link zum Passwort-Festlegen an die gespeicherte Adresse
+  async function passwortLinkSenden() {
+    if (!editingUser?.email) return
+    setUserFormMsg('')
+    try {
+      await pb.collection('users').requestPasswordReset(editingUser.email)
+      setUserFormMsg(`✅ Link zum Passwort-Festlegen an ${editingUser.email} gesendet.`)
+    } catch (e: any) {
+      setUserFormMsg('❌ Nicht gesendet: ' + (e?.message || e))
     }
   }
 
@@ -1163,7 +1177,8 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                   </div>
                 )}
               </div>
-              {editingUser && (
+              {editingUser && isPlaceholderEmail(editingUser.email) ? (
+                // Ohne eigene E-Mail-Adresse kommt kein Link an — hier setzt der Verwalter das Passwort
                 <div className="ios-field">
                   <label>Neues Passwort (optional)</label>
                   <input
@@ -1172,6 +1187,21 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                     onChange={(e) => setUserFormPassword(e.target.value)}
                     placeholder="Leer lassen für kein Passwort"
                   />
+                </div>
+              ) : (
+                <div className="ios-field">
+                  <label>Passwort</label>
+                  <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5 }}>
+                    {editingUser
+                      ? 'Legt der Benutzer selbst fest. Hat er es vergessen oder keine Willkommens-E-Mail bekommen, schick ihm den Link zum Festlegen.'
+                      : 'Legt der Benutzer selbst fest — über den Link in der Willkommens-E-Mail.'}
+                  </div>
+                  {editingUser && (
+                    <button type="button" onClick={passwortLinkSenden}
+                      style={{ marginTop: 8, background: 'none', border: '1px solid rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                      Link zum Passwort-Festlegen senden
+                    </button>
+                  )}
                 </div>
               )}
               <div className="ios-field">

@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { EMPTY_PERMS, ROLLEN, getRoleTemplate, isPlaceholderEmail, rollenName, vergebbareRechte } from '../lib/apps'
 import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
+import { zufallsPasswort } from '../lib/passwort'
 
 interface UUser {
   id: string
@@ -107,6 +108,7 @@ export default function Unitarii() {
     temp_permissions: {} as Record<string, { until: string; granted_by?: string }>,
   })
   const [savingUser, setSavingUser] = useState(false)
+  const [linkLaeuft, setLinkLaeuft] = useState(false)
   const [tempPermKey, setTempPermKey] = useState('')
 
   const [neuigkeiten, setNeuigkeiten] = useState<Neuigkeit[]>([])
@@ -200,7 +202,7 @@ export default function Unitarii() {
       expires_at: fmtDateTimeLocal(u.expires_at),
       temp_permissions: cleanTemp,
     } : {
-      name: '', email: '', contact_email: '', phone: '', password: genPassword(),
+      name: '', email: '', contact_email: '', phone: '', password: '',
       role: 'benutzer', permissions: { ...EMPTY_PERMS },
       supervisor: false, disabled: false, expires_at: '',
       temp_permissions: {},
@@ -239,9 +241,6 @@ export default function Unitarii() {
     if (!userForm.name.trim() || !userForm.email.trim()) {
       showMsg('Name und E-Mail sind Pflicht', 'error'); return
     }
-    if (!editingUser && !userForm.password.trim()) {
-      showMsg('Passwort fehlt', 'error'); return
-    }
     setSavingUser(true)
     try {
       const expIso = userForm.expires_at ? new Date(userForm.expires_at).toISOString() : null
@@ -256,26 +255,40 @@ export default function Unitarii() {
       if (user?.supervisor) base.supervisor = userForm.supervisor
 
       if (editingUser) {
-        if (userForm.password.trim()) {
+        // Ein Passwort setzt der Verwalter nur noch bei Zugängen ohne eigene E-Mail (Teilnehmer)
+        if (isPlaceholderEmail(editingUser.email) && userForm.password.trim()) {
           base.password = userForm.password
           base.passwordConfirm = userForm.password
         }
         await pb.collection('users').update(editingUser.id, base)
         showMsg('Benutzer aktualisiert')
       } else {
+        // Kein Passwort vom Verwalter: Der Benutzer legt es über die Willkommens-E-Mail fest
+        const unbekannt = zufallsPasswort()
         await pb.collection('users').create({
           ...base,
-          password: userForm.password,
-          passwordConfirm: userForm.password,
+          password: unbekannt,
+          passwordConfirm: unbekannt,
           organization_id: user!.organization_id,
           emailVisibility: true,
         })
-        showMsg('Benutzer angelegt')
+        showMsg('Benutzer angelegt — das Passwort legt er über die Willkommens-E-Mail fest')
       }
       setEditOpen(false)
       await loadUsers()
     } catch (e: any) { showMsg('Fehler: ' + (e?.message || e), 'error') }
     finally { setSavingUser(false) }
+  }
+
+  // Link zum Passwort-Festlegen an die gespeicherte Adresse (z. B. Willkommens-E-Mail nicht angekommen)
+  async function passwortLinkSenden() {
+    if (!editingUser?.email) return
+    setLinkLaeuft(true)
+    try {
+      await pb.collection('users').requestPasswordReset(editingUser.email)
+      showMsg(`Link an ${editingUser.email} gesendet`)
+    } catch (e: any) { showMsg('Nicht gesendet: ' + (e?.message || e), 'error') }
+    finally { setLinkLaeuft(false) }
   }
 
   async function deleteUser(id: string) {
@@ -747,12 +760,31 @@ export default function Unitarii() {
               {userForm.expires_at && <button onClick={() => setUserForm(p => ({ ...p, expires_at: '' }))} style={{ ...BTN_SECONDARY, marginTop: 6, padding: '6px 12px', fontSize: 11 }}>Ablauf entfernen</button>}
             </Field>
 
-            <Field label={editingUser ? 'Neues Passwort (leer = unverändert)' : 'Passwort *'}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input type="text" value={userForm.password} onChange={e => setUserForm(p => ({ ...p, password: e.target.value }))} placeholder="••••••••" style={{ ...INPUT, fontFamily: 'monospace' }} />
-                <button onClick={() => setUserForm(p => ({ ...p, password: genPassword() }))} style={{ ...BTN_SECONDARY, padding: '0 12px' }}>Neu</button>
-              </div>
-            </Field>
+            {editingUser && isPlaceholderEmail(editingUser.email) ? (
+              // Ohne eigene E-Mail-Adresse kommt kein Link an — hier setzt der Verwalter das Passwort
+              <Field label="Neues Passwort (leer = unverändert)">
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input type="text" value={userForm.password} onChange={e => setUserForm(p => ({ ...p, password: e.target.value }))} placeholder="••••••••" style={{ ...INPUT, fontFamily: 'monospace' }} />
+                  <button onClick={() => setUserForm(p => ({ ...p, password: genPassword() }))} style={{ ...BTN_SECONDARY, padding: '0 12px' }}>Neu</button>
+                </div>
+                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                  Dieser Zugang hat keine eigene E-Mail-Adresse — ein Link zum Festlegen käme nicht an.
+                </div>
+              </Field>
+            ) : (
+              <Field label="Passwort">
+                <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5 }}>
+                  {editingUser
+                    ? 'Legt der Benutzer selbst fest. Hat er es vergessen oder keine Willkommens-E-Mail bekommen, schick ihm den Link zum Festlegen.'
+                    : 'Legt der Benutzer selbst fest — über den Link in der Willkommens-E-Mail.'}
+                </div>
+                {editingUser && (
+                  <button onClick={passwortLinkSenden} disabled={linkLaeuft} style={{ ...BTN_SECONDARY, marginTop: 8, opacity: linkLaeuft ? 0.5 : 1 }}>
+                    {linkLaeuft ? 'Wird gesendet…' : 'Link zum Passwort-Festlegen senden'}
+                  </button>
+                )}
+              </Field>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: 8, marginTop: 18, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
