@@ -95,6 +95,10 @@ function App() {
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Derselbe Link in anderen Formen: Token im Pfad, alte Seite, PocketBase-Standard mit der App als APP_URL */}
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/password-reset.html" element={<ResetPassword />} />
+        <Route path="/_/*" element={<ResetPassword />} />
         <Route path="/app" element={<Installieren />} />
         <Route path="/hub" element={<Hub />} />
         <Route path="/settings" element={<SettingsPage />} />
