@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
-import { ALLE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen } from '../lib/freigabe'
+import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen } from '../lib/freigabe'
+import { ROLLEN, getRoleTemplate, rollenName } from '../lib/apps'
+import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import KachelGenerator from './KachelGenerator'
 
 /**
@@ -89,6 +91,8 @@ interface Org {
   license_valid_until?: string
   /** Freigeschaltete Module (JSON-Feld); fehlt es, ist alles frei. */
   freigeschaltet?: unknown
+  role_permissions?: Record<string, Record<string, boolean>>
+  verknuepfungen?: unknown
   userCount: number
 }
 
@@ -97,21 +101,32 @@ interface OrgUser {
   name: string
   email: string
   role?: string
+  permissions?: Record<string, boolean>
   supervisor?: boolean
   organization_id?: string
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  mpg: 'MPG-Beauftragter',
-  lager: 'Lagerwart',
-  ausbildung: 'Ausbilder',
-  qm: 'Qualitätsmanagement',
-  benutzer: 'Benutzer'
-}
-
 function roleLabel(u: OrgUser) {
   if (u.supervisor) return 'Supervisor'
-  return ROLE_LABELS[u.role || ''] || u.role || 'Benutzer'
+  return rollenName(u.role)
+}
+
+/** Die Rechte einer Rolle für diese Organisation: ihre Vorlage samt verknüpfter Rechte. */
+function rollenRechte(role: string, org: Org): Record<string, boolean> {
+  return vorlageMitVerknuepfungen(getRoleTemplate(role, org), verknuepfungen(org), org)
+}
+
+function RollenAuswahl({ wert, onChange, hinweis }: { wert: string; onChange: (r: string) => void; hinweis?: string }) {
+  return (
+    <>
+      <select value={wert} onChange={e => onChange(e.target.value)} style={fieldInputStyle}>
+        {ROLLEN.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+      </select>
+      <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.4 }}>
+        {ROLLEN.find(r => r.id === wert)?.hinweis}{hinweis ? ' ' + hinweis : ''}
+      </div>
+    </>
+  )
 }
 
 function getInitials(name: string, email: string) {
@@ -193,19 +208,20 @@ function ModulAuswahl({ wert, onChange }: { wert: string[]; onChange: (w: string
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
         <div style={{ ...fieldLabelStyle, marginBottom: 0 }}>Freigeschaltete Module · {mitEnthaltenen(wert).length} von {FREIGABE_MODULE.length}</div>
         <div style={{ display: 'flex', gap: 6 }}>
-          <button type="button" onClick={() => onChange([...ALLE_MODULE])} style={knopf}>Alle</button>
+          <button type="button" onClick={() => onChange([...BUCHBARE_MODULE])} style={knopf}>Alle</button>
           <button type="button" onClick={() => onChange([])} style={knopf}>Keine</button>
         </div>
       </div>
       <div style={{ border: '0.5px solid var(--lbf-border)', borderRadius: 10, overflow: 'hidden' }}>
         {FREIGABE_MODULE.map((m, i) => {
-          // Fest in einem gebuchten Modul enthalten: angehakt und nicht abwählbar
+          // Immer an (Benutzerverwaltung) oder fest in einem gebuchten Modul enthalten: angehakt und nicht abwählbar
           const in_ = enthaltenIn(m.id, wert)
-          const an = wert.includes(m.id) || !!in_
+          const fest = !!m.immer || !!in_
+          const an = wert.includes(m.id) || fest
           return (
-            <label key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', cursor: in_ ? 'default' : 'pointer', borderTop: i ? '0.5px solid var(--lbf-border-light)' : 'none', background: an ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'none' }}>
-              <input type="checkbox" checked={an} disabled={!!in_}
-                onChange={(e) => onChange(e.target.checked ? ALLE_MODULE.filter((x) => x === m.id || wert.includes(x)) : wert.filter((x) => x !== m.id))}
+            <label key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '9px 12px', cursor: fest ? 'default' : 'pointer', borderTop: i ? '0.5px solid var(--lbf-border-light)' : 'none', background: an ? 'rgba(var(--lbf-rot-rgb),0.04)' : 'none' }}>
+              <input type="checkbox" checked={an} disabled={fest}
+                onChange={(e) => onChange(e.target.checked ? BUCHBARE_MODULE.filter((x) => x === m.id || wert.includes(x)) : wert.filter((x) => x !== m.id))}
                 style={{ marginTop: 3, accentColor: 'var(--lbf-akzent-grund)', width: 16, height: 16, flexShrink: 0 }} />
               <span style={{ minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 14, fontWeight: 700, color: an ? 'var(--lbf-text)' : 'var(--warm-gray)' }}>{m.name}</span>
@@ -213,6 +229,9 @@ function ModulAuswahl({ wert, onChange }: { wert: string[]; onChange: (w: string
                 {m.enthaelt?.length ? (
                   <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 2 }}>Enthält {m.enthaelt.map(name).join(', ')}</span>
                 ) : null}
+                {m.immer && (
+                  <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 2 }}>Immer dabei</span>
+                )}
                 {in_ && (
                   <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-akzent)', marginTop: 2 }}>In {in_.name} enthalten</span>
                 )}
@@ -222,7 +241,7 @@ function ModulAuswahl({ wert, onChange }: { wert: string[]; onChange: (w: string
         })}
       </div>
       <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6, lineHeight: 1.4 }}>
-        Benutzerverwaltung und Einstellungen sind immer dabei. Gesperrte Module verschwinden aus Hub, Rechtevergabe und von der Seite der Organisation; vergebene Rechte bleiben erhalten.
+        Gesperrte Module verschwinden aus Hub, Rechtevergabe und von der Seite der Organisation; vergebene Rechte bleiben erhalten.
       </div>
     </div>
   )
@@ -252,7 +271,7 @@ export default function Supervisor() {
 
   const [editName, setEditName] = useState('')
   const [editCode, setEditCode] = useState('')
-  const [editFreigabe, setEditFreigabe] = useState<string[]>([...ALLE_MODULE])
+  const [editFreigabe, setEditFreigabe] = useState<string[]>([...BUCHBARE_MODULE])
   const [editMaxUsers, setEditMaxUsers] = useState('')
   const [editValidUntil, setEditValidUntil] = useState('')
   const [editActive, setEditActive] = useState(true)
@@ -262,7 +281,7 @@ export default function Supervisor() {
   const [showNewOrgModal, setShowNewOrgModal] = useState(false)
   const [newOrgName, setNewOrgName] = useState('')
   const [newOrgCode, setNewOrgCode] = useState('')
-  const [newOrgFreigabe, setNewOrgFreigabe] = useState<string[]>([...ALLE_MODULE])
+  const [newOrgFreigabe, setNewOrgFreigabe] = useState<string[]>([...BUCHBARE_MODULE])
   // Hinweis über der Liste, z.B. wenn das Feld "freigeschaltet" in PocketBase fehlt
   const [orgHinweis, setOrgHinweis] = useState('')
   const [newOrgMaxUsers, setNewOrgMaxUsers] = useState('10')
@@ -358,7 +377,7 @@ export default function Supervisor() {
     setSelectedOrg(org)
     setEditName(org.org_name || '')
     setEditCode(org.org_code || '')
-    setEditFreigabe(gebucht(org) ?? [...ALLE_MODULE])
+    setEditFreigabe(gebucht(org) ?? [...BUCHBARE_MODULE])
     setEditMaxUsers(org.max_users ? String(org.max_users) : '')
     setEditValidUntil(org.license_valid_until ? org.license_valid_until.slice(0, 10) : '')
     setEditActive(org.is_active)
@@ -446,7 +465,7 @@ export default function Supervisor() {
       setShowNewOrgModal(false)
       setNewOrgName('')
       setNewOrgCode('')
-      setNewOrgFreigabe([...ALLE_MODULE])
+      setNewOrgFreigabe([...BUCHBARE_MODULE])
       setNewOrgMaxUsers('10')
       await loadOrgs()
     } catch (e: any) {
@@ -470,6 +489,9 @@ export default function Supervisor() {
         password: newUserPassword,
         passwordConfirm: newUserPassword,
         role: newUserRole,
+        // Die Rechte der Rolle gleich mitgeben — sonst kämen sie erst beim ersten Login
+        permissions: rollenRechte(newUserRole, selectedOrg),
+        permissions_migrated: true,
         organization_id: selectedOrg.id,
         organization_name: selectedOrg.org_name,
         emailVisibility: true
@@ -517,6 +539,10 @@ export default function Supervisor() {
     setUserFormMsg('')
     try {
       const updates: any = { name: userFormName, role: userFormRole }
+      // Neue Rolle: ihre Rechte kommen dazu, bestehende bleiben
+      if (selectedOrg && userFormRole !== (editingUser.role || 'benutzer')) {
+        updates.permissions = { ...(editingUser.permissions || {}), ...rollenRechte(userFormRole, selectedOrg) }
+      }
       if (userFormPassword) {
         updates.password = userFormPassword
         updates.passwordConfirm = userFormPassword
@@ -793,7 +819,7 @@ export default function Supervisor() {
             onClick={() => {
               setNewOrgName('')
               setNewOrgCode('')
-              setNewOrgFreigabe([...ALLE_MODULE])
+              setNewOrgFreigabe([...BUCHBARE_MODULE])
               setNewOrgMaxUsers('10')
               setNewOrgError('')
               setShowNewOrgModal(true)
@@ -1287,6 +1313,8 @@ export default function Supervisor() {
                   onClick={() => {
                     setShowNewUserSheet(v => !v)
                     setNewUserMsg('')
+                    // Der erste Benutzer einer Organisation ist meist ihr Admin
+                    setNewUserRole(orgUsers.length === 0 ? 'admin' : 'benutzer')
                   }}
                   style={{
                     background: 'var(--lbf-akzent-grund)',
@@ -1422,14 +1450,7 @@ export default function Supervisor() {
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <div style={fieldLabelStyle}>Rolle</div>
-                    <select value={newUserRole} onChange={e => setNewUserRole(e.target.value)} style={fieldInputStyle}>
-                      <option value="benutzer">Benutzer</option>
-                      <option value="mpg">MPG-Beauftragter</option>
-                      <option value="lager">Lagerwart</option>
-                      <option value="ausbildung">Ausbilder</option>
-                      <option value="qm">Qualitätsmanagement</option>
-                      <option value="teilnehmer">Teilnehmer (Ausbildungen)</option>
-                    </select>
+                    <RollenAuswahl wert={newUserRole} onChange={setNewUserRole} />
                   </div>
                   {newUserMsg && (
                     <div style={{ fontSize: 13, fontStyle: 'italic', color: newUserMsg.startsWith('Fehler') ? '#dc2626' : '#16a34a', marginBottom: 10 }}>
@@ -1657,14 +1678,8 @@ export default function Supervisor() {
 
             <div style={{ marginBottom: 20 }}>
               <div style={fieldLabelStyle}>Rolle</div>
-              <select value={userFormRole} onChange={e => setUserFormRole(e.target.value)} style={fieldInputStyle}>
-                <option value="benutzer">Benutzer</option>
-                <option value="mpg">MPG-Beauftragter</option>
-                <option value="lager">Lagerwart</option>
-                <option value="ausbildung">Ausbilder</option>
-                <option value="qm">Qualitätsmanagement</option>
-                <option value="teilnehmer">Teilnehmer (Ausbildungen)</option>
-              </select>
+              <RollenAuswahl wert={userFormRole} onChange={setUserFormRole}
+                hinweis={editingUser && userFormRole !== (editingUser.role || 'benutzer') ? 'Beim Speichern kommen die Rechte der neuen Rolle dazu; bestehende bleiben.' : undefined} />
             </div>
 
             {userFormMsg && (

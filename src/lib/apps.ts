@@ -46,11 +46,32 @@ export function hatRecht(user: User | null | undefined, recht: string, jetzt = D
 // Werden NICHT mehr für Laufzeit-Zugriffsprüfungen verwendet — einzig user.permissions
 // (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
+  // Verwalter: alle Rechte samt Benutzerverwaltung. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
+  admin:     { permissions: { dashboard: true, einsaetze: true, eks: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true, notizen: true } },
+  // Normale Benutzer: Unitas, Chat, Notizen, Einstellungen
+  benutzer:  { permissions: { dashboard: true, lernbar: true, chat: true, notizen: true } },
   mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
   lager:     { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, chat: true } },
   ausbildung:{ permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, chat: true } },
   qm:        { permissions: { dashboard: true, dokumente: true, dateien: true, chat: true } },
-  benutzer:  { permissions: { dashboard: true, lernbar: true, chat: true } },
+}
+
+/**
+ * Die Rollen beim Anlegen: Admin und Benutzer für den üblichen Fall, die
+ * Fachrollen als Vorlage für Spezialfälle, Teilnehmer für die Ausbildungen.
+ */
+export const ROLLEN: { id: string; name: string; hinweis: string }[] = [
+  { id: 'admin',      name: 'Admin',                     hinweis: 'Verwalter: alle Rechte der freigeschalteten Module, dazu die Benutzerverwaltung.' },
+  { id: 'benutzer',   name: 'Benutzer',                  hinweis: 'Normale Rechte: Unitas, Chat, Notizen und Einstellungen.' },
+  { id: 'mpg',        name: 'MPG-Beauftragter',          hinweis: 'Fachrolle: MPG, Lager, Patienten, Vorgänge, Ausbildungen und Benutzerverwaltung.' },
+  { id: 'lager',      name: 'Lagerwart',                 hinweis: 'Fachrolle: Lager mit Produktausgabe, Dateien, Chat.' },
+  { id: 'ausbildung', name: 'Ausbilder',                 hinweis: 'Fachrolle: Ausbildungen, Unitas, Einsätze, Patienten.' },
+  { id: 'qm',         name: 'Qualitätsmanagement',       hinweis: 'Fachrolle: Vorgänge und CIRS, Dateien.' },
+  { id: 'teilnehmer', name: 'Teilnehmer (Ausbildungen)', hinweis: 'Für die Ausbildungen, ohne eigene Rechte.' },
+]
+
+export function rollenName(id: string | undefined): string {
+  return ROLLEN.find(r => r.id === id)?.name ?? (id || 'Benutzer')
 }
 
 export const DEFAULT_DOCK_PINS = ['einsaetze', 'patienten', 'ausbildungen', 'mpg']

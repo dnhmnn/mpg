@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ALLE_MODULE, MODULE, appFrei, enthaltenIn, formularFrei, freigabeText, freigeschaltet, gebucht, mitEnthaltenen, modulFrei, rechtFrei } from '../freigabe'
+import { ALLE_MODULE, BUCHBARE_MODULE, MODULE, appFrei, enthaltenIn, formularFrei, freigabeText, freigeschaltet, gebucht, mitEnthaltenen, modulFrei, rechtFrei } from '../freigabe'
 import { ALL_APPS, PERM_LABELS } from '../apps'
 
 describe('Freischaltung: was gilt', () => {
@@ -12,13 +12,25 @@ describe('Freischaltung: was gilt', () => {
   })
 
   it('liest die Liste auch als JSON-Text und verwirft Unbekanntes', () => {
-    expect(freigeschaltet({ freigeschaltet: '["eks","patienten","quatsch"]' })).toEqual(['eks', 'patienten'])
+    expect(freigeschaltet({ freigeschaltet: '["eks","patienten","quatsch"]' })).toEqual(['benutzer', 'eks', 'patienten'])
+    expect(gebucht({ freigeschaltet: '["eks","patienten","quatsch"]' })).toEqual(['eks', 'patienten'])
     expect(freigeschaltet({ freigeschaltet: 'kaputt' })).toBeNull()
   })
 
-  it('eine leere Liste sperrt alle Module', () => {
+  it('eine leere Liste sperrt alle Module — außer der Benutzerverwaltung', () => {
     expect(modulFrei({ freigeschaltet: [] }, 'patienten')).toBe(false)
-    expect(freigabeText({ freigeschaltet: [] })).toBe('keine Module')
+    expect(modulFrei({ freigeschaltet: [] }, 'benutzer')).toBe(true)
+    expect(appFrei({ freigeschaltet: [] }, 'unitarii')).toBe(true)
+    expect(appFrei({ freigeschaltet: [] }, 'settings')).toBe(true)
+    expect(freigabeText({ freigeschaltet: [] })).toBe('nur Benutzerverwaltung')
+  })
+
+  it('die Benutzerverwaltung ist immer an und nicht buchbar', () => {
+    const b = MODULE.find((m) => m.id === 'benutzer')!
+    expect(b.immer).toBe(true)
+    expect(BUCHBARE_MODULE).not.toContain('benutzer')
+    expect(BUCHBARE_MODULE.length).toBe(MODULE.length - 1)
+    expect(freigabeText({ freigeschaltet: BUCHBARE_MODULE })).toBe('alle Module')
   })
 })
 
@@ -53,7 +65,7 @@ describe('Freischaltung: Kacheln, Rechte, Formulare', () => {
     expect(formularFrei(org, 'cirs')).toBe(false)
     expect(formularFrei(org, 'produktausgabe')).toBe(false)
     expect(formularFrei(org, 'defektmeldung')).toBe(false)
-    expect(freigabeText(org)).toBe(`2 von ${MODULE.length} Modulen`)
+    expect(freigabeText(org)).toBe(`3 von ${MODULE.length} Modulen`)
   })
 })
 
@@ -69,19 +81,19 @@ describe('Freischaltung: Lager schließt Dateien, MPG und Vorgänge fest ein', (
     expect(rechtFrei(nurLager, 'dokumente')).toBe(true)
     expect(formularFrei(nurLager, 'cirs')).toBe(true)
     expect(formularFrei(nurLager, 'defektmeldung')).toBe(true)
-    expect(freigabeText(nurLager)).toBe(`4 von ${MODULE.length} Modulen`)
+    expect(freigabeText(nurLager)).toBe(`5 von ${MODULE.length} Modulen`)
   })
 
   it('gespeichert bleibt nur, was gebucht ist; nutzbar ist es samt Enthaltenem', () => {
     expect(gebucht(nurLager)).toEqual(['lager'])
-    expect(freigeschaltet(nurLager)).toEqual(['lager', 'mpg', 'dokumente', 'dateien'].sort((a, b) => ALLE_MODULE.indexOf(a) - ALLE_MODULE.indexOf(b)))
+    expect(freigeschaltet(nurLager)).toEqual(['benutzer', 'lager', 'mpg', 'dokumente', 'dateien'].sort((a, b) => ALLE_MODULE.indexOf(a) - ALLE_MODULE.indexOf(b)))
     expect(gebucht({})).toBeNull()
     expect(freigeschaltet({})).toBeNull()
   })
 
   it('ohne Lager fällt das Enthaltene wieder weg — ausdrücklich Gebuchtes bleibt', () => {
     expect(modulFrei({ freigeschaltet: ['patienten'] }, 'dateien')).toBe(false)
-    expect(mitEnthaltenen(['dateien'])).toEqual(['dateien'])
+    expect(mitEnthaltenen(['dateien'])).toEqual(['benutzer', 'dateien'])
     expect(modulFrei({ freigeschaltet: ['dateien'] }, 'dokumente')).toBe(false)
   })
 
@@ -91,6 +103,8 @@ describe('Freischaltung: Lager schließt Dateien, MPG und Vorgänge fest ein', (
     expect(enthaltenIn('lager', ['lager'])).toBeUndefined()
     expect(enthaltenIn('dateien', ['patienten'])).toBeUndefined()
     expect(enthaltenIn('patienten', ['lager'])).toBeUndefined()
+    // Die Benutzerverwaltung ist immer an — nicht "in Lager enthalten"
+    expect(enthaltenIn('benutzer', ['lager'])).toBeUndefined()
   })
 
   it('der Katalog schließt nur bekannte Module ein und keines sich selbst', () => {
@@ -102,12 +116,12 @@ describe('Freischaltung: Lager schließt Dateien, MPG und Vorgänge fest ein', (
 })
 
 describe('Freischaltung: Katalog passt zur App', () => {
-  it('jede Kachel außer Benutzer und Einstellungen gehört zu genau einem Modul', () => {
-    const ohne = ['unitarii', 'settings']
+  it('jede Kachel gehört zu genau einem Modul — Benutzer und Einstellungen zur Benutzerverwaltung', () => {
     for (const id of Object.keys(ALL_APPS)) {
-      const zahl = MODULE.filter((m) => m.apps.includes(id)).length
-      expect(zahl, id).toBe(ohne.includes(id) ? 0 : 1)
+      expect(MODULE.filter((m) => m.apps.includes(id)).length, id).toBe(1)
     }
+    expect(MODULE.find((m) => m.apps.includes('unitarii'))?.id).toBe('benutzer')
+    expect(MODULE.find((m) => m.apps.includes('settings'))?.id).toBe('benutzer')
   })
 
   it('jedes Modul nennt nur bekannte Kacheln und Rechte', () => {

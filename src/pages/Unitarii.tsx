@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte } from '../lib/apps'
+import { EMPTY_PERMS, ROLLEN, getRoleTemplate, isPlaceholderEmail, rollenName, vergebbareRechte } from '../lib/apps'
 import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
 
@@ -34,7 +34,6 @@ interface Neuigkeit {
   organisation_id?: string
 }
 
-const ROLE_NAMES = ['benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer']
 
 // ── LBF styles ──
 const INPUT: React.CSSProperties = {
@@ -674,10 +673,10 @@ export default function Unitarii() {
                 const template = getRoleTemplate(role, { role_permissions: orgRolePerms })
                 setUserForm(p => ({ ...p, role, permissions: { ...p.permissions, ...vorlageMitVerknuepfungen(template, orgVerkn, org) } }))
               }} style={INPUT}>
-                {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLLEN.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
               <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
-                Setzt Standard-Rechte für diese Rolle — Häkchen unten danach individuell anpassbar.
+                {ROLLEN.find(r => r.id === userForm.role)?.hinweis} Setzt die Häkchen unten — danach einzeln anpassbar.
               </div>
             </Field>
 
@@ -778,12 +777,12 @@ export default function Unitarii() {
 
             <Field label="Rolle">
               <select value={templateRole} onChange={e => selectTemplateRole(e.target.value)} style={INPUT}>
-                {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLLEN.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </Field>
 
             <div>
-              <div style={LABEL}>Zugriffsrechte für Rolle "{templateRole}"</div>
+              <div style={LABEL}>Zugriffsrechte für Rolle „{rollenName(templateRole)}“</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--lbf-card)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
                 {PERM_LABELS.map(({ key, label }) => (
                   <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--lbf-text)' }}>
@@ -912,7 +911,7 @@ export default function Unitarii() {
             </Field>
             <Field label="Rolle">
               <select value={tempForm.role} onChange={e => setTempForm(p => ({ ...p, role: e.target.value }))} style={INPUT}>
-                {ROLE_NAMES.map(r => <option key={r} value={r}>{r}</option>)}
+                {ROLLEN.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
               </select>
             </Field>
             <div>
@@ -998,7 +997,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
         </div>
         {displayEmail && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayEmail}</div>}
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4, flexWrap: 'wrap' }}>
-          {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 4 }}>{u.role}</span>}
+          {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 4 }}>{rollenName(u.role)}</span>}
           {u.supervisor && <span style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Supervisor</span>}
           {(() => {
             const tempActive = Object.values(u.temp_permissions || {}).filter(v => v?.until && new Date(v.until).getTime() > Date.now()).length

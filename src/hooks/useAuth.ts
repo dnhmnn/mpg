@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
-import { ROLES } from '../lib/apps'
+import { ROLES, getRoleTemplate } from '../lib/apps'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import type { User } from '../types'
 
@@ -64,8 +64,10 @@ export function useAuth() {
       // gesperrte Module für immer am Benutzer. Was am Benutzer schon ausdrücklich
       // steht — auch ein abgewähltes Häkchen —, gilt weiter.
       if (userData && userData.permissions_migrated !== true && navigator.onLine) {
+        const rolle = userData.role || 'benutzer'
         const vorlage = {
-          ...(ROLES[userData.role || 'benutzer']?.permissions || {}),
+          // Mit frisch geladener Organisation ihre eigene Rollen-Vorlage, sonst die Standardvorlage
+          ...(orgFrisch ? getRoleTemplate(rolle, userData.organization as Parameters<typeof getRoleTemplate>[1]) : (ROLES[rolle]?.permissions || {})),
           ...(userData.lernbar_access ? { lernbar: true } : {}),
         }
         const merged = {

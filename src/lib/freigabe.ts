@@ -8,8 +8,8 @@
 //
 // Ein Modul umfasst die Kacheln im Hub, die Rechte, die man dafür vergeben
 // kann, und die öffentlichen Formulare auf der Seite der Organisation.
-// Benutzerverwaltung und Einstellungen gehören zu keinem Modul — die braucht
-// jede Organisation.
+// Die Benutzerverwaltung (mit den Einstellungen) braucht jede Organisation:
+// Sie steht als Modul im Katalog, ist aber immer an.
 //
 // Manche Module schließen andere fest ein: Wer Lager bucht, hat auch Dateien
 // und Schreibstube, MPG und Vorgänge. Gespeichert wird nur, was gebucht ist;
@@ -31,9 +31,13 @@ export interface Modul {
   formulare: string[]
   /** Module, die dieses fest einschließt — wer es bucht, hat sie mit. */
   enthaelt?: string[]
+  /** Hat jede Organisation, lässt sich nicht abwählen. */
+  immer?: boolean
 }
 
 export const MODULE: Modul[] = [
+  // "dashboard" öffnet die Einstellungen (und MPG, wenn das Modul frei ist) — darf nie wegfallen
+  { id: 'benutzer', name: 'Benutzerverwaltung', beschreibung: 'Benutzer anlegen, Rechte vergeben, Einstellungen', apps: ['unitarii', 'settings'], rechte: ['unitarii', 'dashboard'], formulare: [], immer: true },
   { id: 'einsaetze', name: 'Einsätze', beschreibung: 'Einsätze anlegen, Personal zuordnen, Alarmierung', apps: ['einsaetze'], rechte: ['einsaetze'], formulare: [] },
   { id: 'eks', name: 'EKS Einsatzführung', beschreibung: 'Atemschutzüberwachung, Einsatztagebuch, Kräfte', apps: ['eks'], rechte: ['eks'], formulare: [] },
   { id: 'patienten', name: 'Patientendokumentation', beschreibung: 'Protokolle erfassen, prüfen, gegenzeichnen', apps: ['patienten'], rechte: ['patienten'], formulare: ['patienten'] },
@@ -48,6 +52,9 @@ export const MODULE: Modul[] = [
 ]
 
 export const ALLE_MODULE = MODULE.map((m) => m.id)
+/** Die Module, die man buchen oder abwählen kann (ohne die, die immer an sind). */
+export const BUCHBARE_MODULE = MODULE.filter((m) => !m.immer).map((m) => m.id)
+const IMMER = MODULE.filter((m) => m.immer).map((m) => m.id)
 
 /**
  * Die gebuchten Module einer Organisation, so wie sie gespeichert sind — oder
@@ -63,9 +70,9 @@ export function gebucht(org: unknown): string[] | null {
   return wert.filter((x): x is string => typeof x === 'string' && ALLE_MODULE.includes(x))
 }
 
-/** Gebuchte Module samt allem, was sie fest einschließen (auch über Ketten), in Katalog-Reihenfolge. */
+/** Gebuchte Module samt allem, was sie fest einschließen (auch über Ketten) und was immer an ist, in Katalog-Reihenfolge. */
 export function mitEnthaltenen(liste: string[]): string[] {
-  const frei = new Set(liste)
+  const frei = new Set([...IMMER, ...liste])
   const offen = [...liste]
   while (offen.length) {
     const id = offen.shift()
@@ -78,6 +85,8 @@ export function mitEnthaltenen(liste: string[]): string[] {
 
 /** In welchem gebuchten Modul ist dieses fest enthalten? (für "in Lager enthalten") */
 export function enthaltenIn(modulId: string, liste: string[]): Modul | undefined {
+  // Was immer an ist, steckt in keinem anderen Modul
+  if (IMMER.includes(modulId)) return undefined
   return MODULE.find((m) => m.id !== modulId && liste.includes(m.id) && mitEnthaltenen([m.id]).includes(modulId))
 }
 
@@ -99,13 +108,13 @@ function modulMit(feld: 'apps' | 'rechte' | 'formulare', wert: string): Modul | 
   return MODULE.find((m) => m[feld].includes(wert))
 }
 
-/** Darf diese Kachel erscheinen? Kacheln ohne Modul (Benutzer, Einstellungen) immer. */
+/** Darf diese Kachel erscheinen? Benutzer und Einstellungen immer (Modul Benutzerverwaltung). */
 export function appFrei(org: unknown, appId: string): boolean {
   const m = modulMit('apps', appId)
   return !m || modulFrei(org, m.id)
 }
 
-/** Darf dieses Recht vergeben werden? Rechte ohne Modul (Benutzerverwaltung, Dashboard) immer. */
+/** Darf dieses Recht vergeben werden? Benutzerverwaltung und Dashboard immer. */
 export function rechtFrei(org: unknown, recht: string): boolean {
   const m = modulMit('rechte', recht)
   return !m || modulFrei(org, m.id)
@@ -117,10 +126,10 @@ export function formularFrei(org: unknown, formular: string): boolean {
   return !m || modulFrei(org, m.id)
 }
 
-/** "7 von 11 Modulen" — oder "alle Module". */
+/** "7 von 12 Modulen" — oder "alle Module", "nur Benutzerverwaltung". */
 export function freigabeText(org: unknown): string {
   const frei = freigeschaltet(org)
   if (frei === null || frei.length === MODULE.length) return 'alle Module'
-  if (frei.length === 0) return 'keine Module'
+  if (frei.every((id) => IMMER.includes(id))) return 'nur Benutzerverwaltung'
   return `${frei.length} von ${MODULE.length} Modulen`
 }

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, ROLLEN, getRoleTemplate, kachelFarbe, vergebbareRechte } from '../lib/apps'
 import { haken, verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis from '../components/VerknuepfungHinweis'
 import { MODULE as FREIGABE_MODULE, freigeschaltet } from '../lib/freigabe'
@@ -590,14 +590,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   const roleLabels: Record<string, string> = {
     mpg: 'MPG', lager: 'Lager', ausbildung: 'Ausbildung', qm: 'QM', benutzer: 'Benutzer', teilnehmer: 'Teilnehmer'
   }
-  const roleOptions = [
-    { value: 'benutzer', label: 'Benutzer' },
-    { value: 'lager', label: 'Lager' },
-    { value: 'ausbildung', label: 'Ausbildung' },
-    { value: 'qm', label: 'QM' },
-    { value: 'mpg', label: 'MPG' },
-    { value: 'teilnehmer', label: 'Teilnehmer (Ausbildungen)' }
-  ]
+  const roleOptions = ROLLEN.map(r => ({ value: r.id, label: r.name }))
 
   const isMain = view === 'main'
   const mainTransform = isMain ? 'translateX(0)' : 'translateX(-100%)'
@@ -1200,7 +1193,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                   ))}
                 </select>
                 <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
-                  Setzt Standard-Rechte für diese Rolle — Häkchen unten danach individuell anpassbar.
+                  {ROLLEN.find(r => r.id === userFormRole)?.hinweis} Setzt die Häkchen unten — danach einzeln anpassbar.
                 </div>
               </div>
               <div style={{ marginBottom: 16 }}>
