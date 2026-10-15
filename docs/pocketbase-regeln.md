@@ -40,6 +40,28 @@ Organisation sieht niemand mehr (im Admin-Bereich zuordnen oder löschen).
 @request.auth.id != "" && organisation_id = @request.auth.organization_id && (@request.auth.supervisor = true || @request.auth.permissions.unitarii = true)
 ```
 
+## cirs_reports
+
+CIRS-Meldungen. Melden darf jeder über die Seite der Organisation; lesen und
+bearbeiten nur Supervisor und Benutzer mit dem Recht Vorgänge, nur in der
+eigenen Organisation. Dazu gehört der Hook `pb_hooks/cirs.pb.js`.
+
+**Create**
+```
+organization_id != ""
+```
+
+**List/Search**, **View** und **Update**
+```
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.supervisor = true || @request.auth.permissions.dokumente = true)
+```
+
+**Delete**: gesperrt — in der Admin-Oberfläche das Schloss stehen lassen
+(null), nicht leeren Text eintragen (das hieße „öffentlich“).
+
+Befristete Vorgänge-Rechte sind hier bewusst nicht drin (siehe unten); wer
+das Recht nur befristet hat, sieht CIRS-Meldungen über die API nicht.
+
 ## Vorsicht bei befristeten Rechten in Regeln
 
 `@request.auth.temp_permissions.<recht>.until > @now` ist **unzuverlässig**:

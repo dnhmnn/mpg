@@ -29,7 +29,10 @@
 // PocketBase 0.28 geprüft, auch für Echtzeit-Abos):
 //   Create      : organization_id != ""
 //   List/View/Update :
-//     @request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.supervisor = true || @request.auth.permissions.dokumente = true || @request.auth.temp_permissions.dokumente.until > @now)
+//     @request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.supervisor = true || @request.auth.permissions.dokumente = true)
+//   (Ohne befristete Rechte: "temp_permissions.….until > @now" vergleicht als
+//   Text und lässt ein am selben Tag abgelaufenes Recht bis Mitternacht
+//   gelten — siehe docs/pocketbase-regeln.md.)
 //   Delete      : gesperrt (Schloss in der Admin-Oberfläche, also null — nicht
 //                 als leerer Text, das hieße "öffentlich")
 
