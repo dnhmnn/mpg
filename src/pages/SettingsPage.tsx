@@ -1164,6 +1164,11 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                   disabled={!!editingUser}
                   style={editingUser ? { background: 'var(--warm-bg)', color: 'var(--warm-gray)' } : {}}
                 />
+                {!editingUser && (
+                  <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                    Bekommt automatisch eine Willkommens-E-Mail mit Link zur App, Org-Code und „Passwort festlegen“.
+                  </div>
+                )}
               </div>
               {editingUser && (
                 <div className="ios-field">

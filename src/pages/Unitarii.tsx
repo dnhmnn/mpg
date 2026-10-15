@@ -653,7 +653,14 @@ export default function Unitarii() {
               </Field>
             ) : (
               <>
-                <Field label="E-Mail *"><input type="email" value={userForm.email} onChange={e => setUserForm(p => ({ ...p, email: e.target.value }))} placeholder="max@example.com" style={INPUT} /></Field>
+                <Field label="E-Mail *">
+                  <input type="email" value={userForm.email} onChange={e => setUserForm(p => ({ ...p, email: e.target.value }))} placeholder="max@example.com" style={INPUT} />
+                  {!editingUser && (
+                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                      Bekommt automatisch eine Willkommens-E-Mail mit Link zur App, Org-Code und „Passwort festlegen“.
+                    </div>
+                  )}
+                </Field>
                 <Field label="Kontakt-E-Mail (optional, falls abweichend)">
                   <input type="email" value={userForm.contact_email} onChange={e => setUserForm(p => ({ ...p, contact_email: e.target.value }))} placeholder="max@example.com" style={INPUT} />
                 </Field>

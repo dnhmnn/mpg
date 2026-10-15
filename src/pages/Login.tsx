@@ -7,10 +7,13 @@ export default function Login() {
   const [searchParams] = useSearchParams()
   const disabledHint = searchParams.get('reason') === 'disabled'
   const betaHint = searchParams.get('reason') === 'beta'
+  // Aus der Willkommens-E-Mail: Adresse vorbelegt, "Passwort festlegen" öffnet gleich das Zurücksetzen
+  const vorgabeEmail = searchParams.get('email') || ''
+  const neuesPasswort = searchParams.get('passwort') === 'neu'
 
-  const [step, setStep] = useState<'login' | 'mfa' | 'reset'>('login')
+  const [step, setStep] = useState<'login' | 'mfa' | 'reset'>(neuesPasswort ? 'reset' : 'login')
 
-  const [identifier, setIdentifier] = useState('')
+  const [identifier, setIdentifier] = useState(vorgabeEmail)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -19,7 +22,7 @@ export default function Login() {
   const [otpId, setOtpId] = useState('')
   const [mfaCode, setMfaCode] = useState('')
 
-  const [resetEmail, setResetEmail] = useState('')
+  const [resetEmail, setResetEmail] = useState(neuesPasswort ? vorgabeEmail : '')
   const [resetMsg, setResetMsg] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
 
@@ -269,8 +272,8 @@ export default function Login() {
 
             <div style={{ marginBottom: 24 }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Passwort</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Zurücksetzen</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>Wir senden dir einen Reset-Link per E-Mail</div>
+              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>{neuesPasswort ? 'Festlegen' : 'Zurücksetzen'}</div>
+              <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>{neuesPasswort ? 'Wir senden dir einen Link, mit dem du dein Passwort festlegst' : 'Wir senden dir einen Reset-Link per E-Mail'}</div>
             </div>
 
             <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -288,7 +291,7 @@ export default function Login() {
 
               <button type="submit" disabled={resetLoading || resetSuccess} className="l-btn"
                 style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: resetLoading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: (resetLoading || resetSuccess) ? 0.7 : 1, letterSpacing: '0.02em' }}>
-                {resetLoading ? 'Wird gesendet…' : 'Reset-Link senden'}
+                {resetLoading ? 'Wird gesendet…' : neuesPasswort ? 'Link senden' : 'Reset-Link senden'}
               </button>
             </form>
           </>

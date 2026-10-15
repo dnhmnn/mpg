@@ -1406,6 +1406,9 @@ export default function Supervisor() {
                       placeholder="email@beispiel.de"
                       style={fieldInputStyle}
                     />
+                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.4 }}>
+                      Bekommt automatisch eine Willkommens-E-Mail mit Link zur App, Org-Code und „Passwort festlegen“.
+                    </div>
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={fieldLabelStyle}>Passwort</div>
