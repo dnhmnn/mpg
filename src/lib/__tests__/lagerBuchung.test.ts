@@ -27,6 +27,8 @@ class FakeServer implements Server {
   vorDemSenden: (() => void) | null = null
   /** Einzelanfrage Nummer n (ohne Batch) wird abgelehnt. */
   ablehnenBeiEinzel = -1
+  /** Einzelanfrage Nummer n wird ausgeführt, die Antwort geht aber verloren. */
+  antwortVerlorenBeiEinzel = -1
   einzelGesendet = 0
   batches = 0
 
@@ -84,8 +86,11 @@ class FakeServer implements Server {
   async sende(a: Anfrage) {
     this.netz()
     this.vorDemSenden?.(); this.vorDemSenden = null
-    if (this.einzelGesendet++ === this.ablehnenBeiEinzel) throw { status: 400, response: { status: 400, message: 'Failed', data: { quantity: { code: 'validation_invalid_value' } } } }
-    return this.anwenden(a)
+    const nr = this.einzelGesendet++
+    if (nr === this.ablehnenBeiEinzel) throw { status: 400, response: { status: 400, message: 'Failed', data: { quantity: { code: 'validation_invalid_value' } } } }
+    const antwort = this.anwenden(a)
+    if (nr === this.antwortVerlorenBeiEinzel) throw { status: 0, message: 'Failed to fetch' }
+    return antwort
   }
   async loesche(collection: string, gid: string) {
     this.netz()
@@ -289,5 +294,67 @@ describe('Lager: Rückgängig als Gegenbuchung', () => {
     expect([s.menge(), s.menge('hand', 'lager')]).toEqual([6, 3])
     await macheRueckgaengig(s, e, WER)
     expect([s.menge(), s.menge('hand', 'lager')]).toEqual([9, 0])
+  })
+})
+
+describe('Lager: Vorgangs-Nummer für das Logbuch', () => {
+  it('alle Journalzeilen einer Buchung tragen dieselbe Vorgangs-Nummer (= Client-ID)', () => {
+    const plan = planeBuchung([
+      { art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 3, einsatz: 'E-7' },
+      { art: 'umlagerung', item_id: 'hand', von: 'rtw1', nach: 'lager', menge: 2, vonName: 'RTW 1', nachName: 'Lager' },
+    ], bestand(), WER, 'vorgang00000001', { neueId: id })
+    const journal = plan.anfragen.filter(a => a.collection === 'inventory_transactions')
+    expect(journal.length).toBeGreaterThan(3)
+    expect(journal.every(a => a.body.vorgang === 'vorgang00000001')).toBe(true)
+  })
+
+  it('die Rücknahme hat ihre eigene Vorgangs-Nummer, verweist aufs Original und behält den Einsatz', async () => {
+    const s = new FakeServer(bestand())
+    const e = await buche(s, [{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 2, einsatz: 'E-7' }], { wer: WER, clientId: 'original0000001' })
+    await macheRueckgaengig(s, e, WER, 'ruecknahme00001')
+    const gegen = [...s.tx.values()].filter(t => t.quantity > 0)
+    expect(gegen).toHaveLength(1)
+    expect(gegen[0]).toMatchObject({ vorgang: 'ruecknahme00001', storno_von: 'original0000001', einsatz: 'E-7', note: 'Rückgängig · Charge BALD · Einsatz E-7' })
+  })
+})
+
+describe('Lager: gescannte Charge geht zuerst', () => {
+  it('die Zeile mit der gescannten Chargen-Nr. wird zuerst entnommen, nicht die früher ablaufende', () => {
+    const plan = planeBuchung([{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 1, charge: { batch: 'spaet' } }], bestand(), WER, 'c', { neueId: id })
+    expect(plan.posten.map(p => p.batch)).toEqual(['SPAET'])
+  })
+
+  it('bei gleicher Chargen-Nr. mit verschiedenem MHD entscheidet das MHD; unbekannte Charge → zuerst ablaufend', () => {
+    const zeilen = [...bestand(), zeile('spaet2', 1, '2028-01-01', 'SPAET')]
+    const a = planeBuchung([{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 1, charge: { batch: 'SPAET', mhd: '2028-01-01' } }], zeilen, WER, 'c', { neueId: id })
+    expect(a.posten[0].stock_id).toBe('spaet2')
+    const b = planeBuchung([{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 1, charge: { batch: 'GIBTSNICHT' } }], zeilen, WER, 'c', { neueId: id })
+    expect(b.posten[0].stock_id).toBe('bald')
+  })
+})
+
+describe('Lager: ohne Sammelbuchung (Batch aus) und Netzabbruch mittendrin', () => {
+  it('meldet „teilweise“ — eine solche Buchung darf nicht automatisch wiederholt werden', async () => {
+    const s = new FakeServer(bestand())
+    s.batchAus = true
+    s.antwortVerlorenBeiEinzel = 0          // erster Abzug kommt an, Antwort verloren
+    const f = await buche(s, [{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 3 }], { wer: WER, clientId: 'teilweise000001' }).catch(e => e)
+    expect(f).toBeInstanceOf(BuchungsFehler)
+    expect(f).toMatchObject({ art: 'netz', vielleichtGebucht: true, teilweise: true })
+    expect(s.menge()).toBe(7)               // 2 von „bald“ sind schon weg …
+    expect(s.journal()).toBe(0)             // … das Journal weiß davon nichts: Fall fürs Logbuch, nicht für eine Wiederholung
+  })
+
+  it('mit Sammelbuchung bleibt ein Abbruch „ganz oder gar nicht“ — Wiederholung ist sicher', async () => {
+    const s = new FakeServer(bestand())
+    s.antwortVerloren = 1
+    const f = await buche(s, [{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 3 }], { wer: WER, clientId: 'ganz00000000001' }).catch(e => e)
+    expect(f).toMatchObject({ art: 'netz', vielleichtGebucht: true, teilweise: false })
+  })
+
+  it('ohne Organisation oder Benutzer wird nichts gebucht', async () => {
+    const s = new FakeServer(bestand())
+    await expect(buche(s, [{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 1 }], { wer: { organization_id: '', user: '' } })).rejects.toMatchObject({ art: 'abgelehnt' })
+    expect(s.menge()).toBe(9)
   })
 })

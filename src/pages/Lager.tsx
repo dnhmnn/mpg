@@ -3,9 +3,11 @@ import QRCode from 'qrcode'
 import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
 import { parseGs1, sameCode, beschreibeGs1, type Gs1Daten } from '../lib/gs1'
-import { queueBuchung, queueCount, flushQueue, snapshotSet, snapshotGet, speicherSichern, type PendingBuchung } from '../lib/lagerOffline'
+import { queueBuchung, queueCount, queueAll, queueRemove, queueHatOffene, flushQueue, positionen, eintragStatus, snapshotSet, snapshotGet, speicherSichern, type PendingBuchung } from '../lib/lagerOffline'
 import { useAuth } from '../hooks/useAuth'
-import { ablaufStatus, entnahmeReihenfolge, fefo, fehltAmStandort, inventurBasis, inventurDifferenz, summe, type Zaehlzeitpunkt } from '../lib/lagerRechnung'
+import { NOTIZ, ablaufStatus, fefo, fehltAmStandort, gefuehrteArtikel, inventurBasis, inventurDifferenz, istUmlagerung, summe, wirklichAusgegeben, type Zaehlzeitpunkt } from '../lib/lagerRechnung'
+import { BuchungsFehler, buche, macheRueckgaengig, neueBuchungsId, pbServer, type Bewegung, type Ergebnis } from '../lib/lagerBuchung'
+import LagerLogbuch from '../components/LagerLogbuch'
 import { pbFehlerText } from '../lib/pbFehler'
 import StatusBar from '../components/StatusBar'
 
@@ -57,6 +59,43 @@ function getMinStock(item: InventoryItem, locationId: string | null): number {
 function getBedarf(item: InventoryItem, locationId: string | null): number {
   if (!locationId) return 0
   return item.bedarf?.[locationId] || 0
+}
+
+// Der eine Buchungsweg (src/lib/lagerBuchung.ts) gegen PocketBase
+const lagerServer = pbServer(pb)
+
+/** Eine Buchungsabsicht am Standort: Menge mit Vorzeichen (+ ein, − aus). */
+interface Absicht {
+  item_id: string
+  delta: number
+  expiry?: string
+  batch?: string
+  einsatz?: string
+  /** Diese Bestandszeile zuerst. */
+  bevorzugt?: string
+  /** Gescannte Charge zuerst. */
+  charge?: { batch: string; mhd?: string | null }
+}
+
+function zuBewegung(a: Absicht, location_id: string, notiz?: string): Bewegung {
+  return a.delta > 0
+    ? { art: 'zugang', item_id: a.item_id, location_id, menge: a.delta, expiry: a.expiry || null, batch: a.batch || null, einsatz: a.einsatz, notiz: notiz || undefined }
+    : { art: 'abgang', item_id: a.item_id, location_id, menge: -a.delta, einsatz: a.einsatz, bevorzugt: a.bevorzugt, charge: a.charge, notiz: notiz || undefined }
+}
+
+/** Fehler einer Buchung für Menschen. `wiederholbar`: erneutes Tippen bucht nicht doppelt. */
+function buchungsFehlerText(e: unknown, wiederholbar = false): string {
+  if (e instanceof BuchungsFehler) {
+    if (e.art === 'netz') {
+      if (e.teilweise) return e.message
+      if (!e.vielleichtGebucht) return 'Keine Verbindung zum Server — nichts gebucht.'
+      return wiederholbar
+        ? 'Keine Antwort vom Server — ob gebucht wurde, ist unklar. Erneut tippen bucht nicht doppelt.'
+        : 'Keine Antwort vom Server — ob gebucht wurde, ist unklar. Bitte im Logbuch nachsehen.'
+    }
+    return e.message
+  }
+  return pbFehlerText(e)
 }
 
 interface StockItem {
@@ -313,6 +352,12 @@ export default function Lager() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
+  // „Rückgängig“ nach einer Buchung, 10 Sekunden lang
+  const [rueckgaengig, setRueckgaengig] = useState<{ text: string; ergebnis?: Ergebnis; queueId?: string; bestellungen?: Promise<string[]>; bis: number; undoId: string; versuch: number; laeuft?: boolean } | null>(null)
+  // Logbuch: zählt hoch nach jeder Buchung (lädt neu), Vorgabe beim Öffnen, wartende Offline-Buchungen
+  const [logStand, setLogStand] = useState(0)
+  const [logVorgabe, setLogVorgabe] = useState<{ itemId?: string; q?: string; alleStandorte?: boolean; zeitraum?: 'heute' | '24h' | '7t' | '30t' | 'alle' } | undefined>(undefined)
+  const [wartend, setWartend] = useState<{ id: string; item_id: string; location_id: string; delta: number; created_at: number; einsatz?: string; client_id?: string; status?: 'wartet' | 'unklar' | 'teilweise' | 'abgelehnt'; fehler?: string }[]>([])
   
   const [showLogModal, setShowLogModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -382,6 +427,11 @@ export default function Lager() {
   const [transferQty, setTransferQty] = useState(1)
   const [transferTargetId, setTransferTargetId] = useState('')
   const [savingTransfer, setSavingTransfer] = useState(false)
+  // Umlagerung: dieselbe Buchungs-ID beim erneuten Tippen nach einem Abbruch → nie doppelt
+  const transferIdRef = useRef<{ id: string; schluessel: string; seit: number } | null>(null)
+  // Inventur-Korrektur und Import: je Position eine feste Buchungs-ID, bis der Ausgang bestätigt ist
+  const auditIdsRef = useRef<Record<string, { id: string; diff: number }>>({})
+  const importIdsRef = useRef<Record<string, string>>({})
   
   const [newLocationName, setNewLocationName] = useState('')
 
@@ -391,7 +441,6 @@ export default function Lager() {
   const [alertTestMsg, setAlertTestMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   
   // Log/Transaction state
-  const [transactions, setTransactions] = useState<Transaction[]>([])
   
   // Inventur state
   const [inventoryTab, setInventoryTab] = useState<'new' | 'history' | 'schedule'>('new')
@@ -426,11 +475,14 @@ export default function Lager() {
   const [einChargen, setEinChargen] = useState<{ menge: number; mhd: string; charge: string }[]>([{ menge: 1, mhd: '', charge: '' }])
   const [buchungSearch, setBuchungSearch] = useState('')
   const [savingBuchung, setSavingBuchung] = useState(false)
+  const [buchungFehler, setBuchungFehler] = useState<string | null>(null)
+  // Beim Ausbuchen gescannte Charge (GS1) — wird zuerst entnommen
+  const [buchungScanCharge, setBuchungScanCharge] = useState<{ batch: string; mhd?: string | null } | null>(null)
+  const [savingMulti, setSavingMulti] = useState(false)
 
   // Item detail state
   const [showItemDetailModal, setShowItemDetailModal] = useState(false)
   const [detailItem, setDetailItem] = useState<DisplayItem | null>(null)
-  const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([])
   const [detailStockEntries, setDetailStockEntries] = useState<StockItem[]>([])
   // Nachträgliche Chargen-/MHD-Pflege je Bestandszeile
   const [stockEdit, setStockEdit] = useState<{ id: string; batch: string; expiry: string } | null>(null)
@@ -517,63 +569,61 @@ export default function Lager() {
   // Die Warteschlange wird beim Wiederverbinden gegen den AKTUELLEN Serverstand
   // ausgeführt, nicht gegen den, der beim Buchen galt.
   async function synchronisiereOffline() {
-    if (!navigator.onLine) return
+    // Erst übertragen, wenn klar ist, wer angemeldet ist — sonst stünde keine Organisation daran
+    if (!navigator.onLine || !userRef.current?.organization_id) return
     const offen = await queueCount()
     if (offen === 0) { setOfflineOffen(0); return }
-    const { ok, fehler } = await flushQueue(async (b: PendingBuchung) => {
-      await buchePendingGegenServer(b)
-    })
+    const { ok, fehler } = await flushQueue(buchePendingGegenServer, neueBuchungsId,
+      (id) => lagerServer.gibtEs('inventory_transactions', id))
     setOfflineOffen(await queueCount())
     await loadStock()
-    if (ok > 0) showMsg(`✅ ${ok} Offline-Buchung${ok === 1 ? '' : 'en'} übertragen${fehler ? `, ${fehler} fehlgeschlagen` : ''}`, fehler ? 'error' : 'success')
-  }
-
-  /** Führt eine gemerkte Buchung aus — dieselbe Logik wie online, nur ohne UI. */
-  async function buchePendingGegenServer(b: PendingBuchung) {
-    const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
-      filter: `item_id = "${b.item_id}" && location_id = "${b.location_id}"`,
-      sort: 'expiry_date',
-    })
-    if (b.delta > 0) {
-      await pb.collection('inventory_stock').create({
-        item_id: b.item_id, location_id: b.location_id, quantity: b.delta,
-        expiry_date: b.expiry || null, batch: (b.batch || '').trim() || null,
-        organization_id: user?.organization_id,
-      })
-      await pb.collection('inventory_transactions').create({
-        item_id: b.item_id, location_id: b.location_id, type: 'einbuchung', quantity: b.delta,
-        expiry_date: b.expiry || null, batch: (b.batch || '').trim() || null,
-        note: ['offline erfasst', b.batch ? `Charge ${b.batch}` : null].filter(Boolean).join(' · '),
-        user: user?.email || user?.id, organization_id: user?.organization_id,
-      })
-    } else {
-      let rest = Math.abs(b.delta)
-      for (const st of fefo(stockList)) {
-        if (rest <= 0) break
-        const take = Math.min(st.quantity, rest)
-        const neuQ = st.quantity - take
-        if (neuQ <= 0) await pb.collection('inventory_stock').delete(st.id)
-        else await pb.collection('inventory_stock').update(st.id, { quantity: neuQ })
-        await pb.collection('inventory_transactions').create({
-          item_id: b.item_id, location_id: b.location_id, type: 'ausbuchung', quantity: -take,
-          batch: st.batch || null, expiry_date: st.expiry_date || null, stock_id: st.id,
-          einsatz: (b.einsatz || '').trim() || null,
-          note: ['offline erfasst', st.batch ? `Charge ${st.batch}` : null, b.einsatz ? `Einsatz ${b.einsatz}` : null].filter(Boolean).join(' · '),
-          user: user?.email || user?.id, organization_id: user?.organization_id,
-        })
-        rest -= take
-      }
-      if (rest > 0) {
-        // Der Bestand hat sich zwischenzeitlich geändert — ehrlich protokollieren
-        await pb.collection('inventory_transactions').create({
-          item_id: b.item_id, location_id: b.location_id, type: 'ausbuchung', quantity: -rest,
-          einsatz: (b.einsatz || '').trim() || null,
-          note: 'offline erfasst · ohne Chargenzuordnung (Bestand zwischenzeitlich verändert)',
-          user: user?.email || user?.id, organization_id: user?.organization_id,
-        })
-      }
+    if (ok > 0 || fehler > 0) {
+      setLogStand(n => n + 1)
+      showMsg(`${ok} Offline-Buchung${ok === 1 ? '' : 'en'} übertragen${fehler ? `, ${fehler} nicht übertragen — siehe Logbuch` : ''}`, fehler ? 'error' : 'success')
     }
   }
+
+  /**
+   * Führt eine gemerkte Buchung aus — derselbe Buchungsweg wie online. Zuerst wird
+   * nachgesehen, ob sie schon angekommen ist (Antwort verloren): dann nicht doppelt.
+   * Was physisch schon entnommen wurde, wird auch ohne Bestand festgehalten.
+   */
+  async function buchePendingGegenServer(b: PendingBuchung & { client_id: string }) {
+    const notiz = [NOTIZ.offline, b.notiz].filter(Boolean).join(' · ')
+    await buche(lagerServer, positionen(b).map(p => zuBewegung(p, b.location_id, notiz)), {
+      wer: wer(), clientId: b.client_id, pruefeVorher: true, ueberzug: 'protokollieren',
+    })
+  }
+
+  const userRef = useRef(user)
+  userRef.current = user
+  const rueckRef = useRef(rueckgaengig)
+  rueckRef.current = rueckgaengig
+
+  // „Rückgängig“ verschwindet nach Ablauf — nicht, solange die Rücknahme läuft
+  useEffect(() => {
+    if (!rueckgaengig || rueckgaengig.laeuft) return
+    const bis = rueckgaengig.bis
+    const versuche = rueckgaengig.versuch
+    const t = setTimeout(() => {
+      setRueckgaengig(cur => cur && cur.bis === bis && !cur.laeuft ? null : cur)
+      if (versuche > 0) showMsg('Rücknahme unklar — bitte im Logbuch prüfen, bevor erneut gebucht wird', 'error')
+    }, Math.max(0, bis - Date.now()))
+    return () => clearTimeout(t)
+  }, [rueckgaengig])
+
+  // Noch nicht übertragene Buchungen dieses Geräts — erscheinen oben im Logbuch
+  useEffect(() => {
+    let aktiv = true
+    queueAll().then(alle => {
+      if (!aktiv) return
+      setWartend(alle.flatMap(b => positionen(b).map((p, i) => ({
+        id: `${b.id}:${i}`, item_id: p.item_id, location_id: b.location_id, delta: p.delta, created_at: b.created_at, einsatz: p.einsatz,
+        client_id: b.client_id, status: eintragStatus(b), fehler: b.last_error,
+      }))))
+    }).catch(() => { /* IndexedDB nicht verfügbar */ })
+    return () => { aktiv = false }
+  }, [offlineOffen])
 
   useEffect(() => {
     speicherSichern()
@@ -587,7 +637,7 @@ export default function Lager() {
       window.removeEventListener('online', an)
       window.removeEventListener('offline', aus)
     }
-  }, [currentLocationId])
+  }, [currentLocationId, user?.organization_id])
 
 
   async function loadLocations() {
@@ -664,43 +714,36 @@ export default function Lager() {
   async function ausbuchenAlle(output: ProductOutput) {
     const locId = outputLagerIds[output.id] || currentLocationId
     if (!locId) { showMsg('Kein Lagerort ausgewählt', 'error'); return }
+    if (buchendId) return
     setBuchendId(output.id)
     try {
       const positionen = output.payload.positionen.filter(p => p.item_id && p.qty > 0)
-      for (const pos of positionen) {
-        const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
-          filter: `item_id = "${pos.item_id}" && location_id = "${locId}"`,
-          sort: 'expiry_date',
+      if (positionen.length === 0) {
+        await pb.collection('product_outputs').update(output.id, { status: 'erledigt' })
+        showMsg('Erledigt — keine Positionen zum Ausbuchen', 'success')
+      } else {
+        const empfaenger = (output.payload.user_name ?? `${output.payload.vorname ?? ''} ${output.payload.nachname ?? ''}`).trim()
+        // Die ID der Ausgabe ist zugleich die Buchungs-ID: Doppeltipp, zwei Geräte oder ein
+        // Abbruch — die Ausgabe wird genau einmal ausgebucht. Der Status „erledigt“ steht oder
+        // fällt mit der Buchung. Was nicht (mehr) im Bestand ist, wird ehrlich ohne Charge
+        // festgehalten: Ausgegeben wurde es ja.
+        const erg = await buche(lagerServer, positionen.map(p => ({
+          art: 'abgang' as const, item_id: p.item_id, location_id: locId, menge: p.qty,
+          einsatz: (output.payload.einsatz || '').trim() || undefined,
+          notiz: [NOTIZ.produktausgabe, empfaenger && `an ${empfaenger}`].filter(Boolean).join(' · '),
+        })), {
+          wer: wer(), clientId: output.id, pruefeVorher: true, ueberzug: 'protokollieren',
+          zusatz: [{ collection: 'product_outputs', aktion: 'update', id: output.id, body: { status: 'erledigt' } }],
         })
-        let remaining = pos.qty
-        for (const stock of fefo(stockList)) {
-          if (remaining <= 0) break
-          const take = Math.min(stock.quantity, remaining)
-          const newQty = stock.quantity - take
-          if (newQty <= 0) {
-            await pb.collection('inventory_stock').delete(stock.id)
-          } else {
-            await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
-          }
-          remaining -= take
-        }
-        await pb.collection('inventory_transactions').create({
-          item_id: pos.item_id,
-          location_id: locId,
-          type: 'ausbuchung',
-          quantity: -pos.qty,
-          note: `Produktausgabe ${output.payload.einsatz} – ${output.payload.user_name ?? `${output.payload.vorname ?? ''} ${output.payload.nachname ?? ''}`.trim()}`,
-          user: user?.email || user?.id,
-          organization_id: user?.organization_id,
-        })
+        if (erg.ohneBestand > 0) showMsg(`Ausgebucht — ${erg.ohneBestand} ohne Bestand protokolliert`, 'success')
+        else showMsg(erg.schonGebucht ? 'War bereits ausgebucht' : `Ausgebucht: ${positionen.length} Position${positionen.length === 1 ? '' : 'en'}`, 'success')
+        setLogStand(n => n + 1)
       }
-      await pb.collection('product_outputs').update(output.id, { status: 'erledigt' })
       setProductOutputs(prev => prev.filter(o => o.id !== output.id))
       setAusgabenCount(prev => Math.max(0, prev - 1))
-      showMsg(`✅ Ausgebucht: ${positionen.length} Position(en)`, 'success')
       await loadStock()
-    } catch (e: any) {
-      showMsg('Fehler: ' + e.message, 'error')
+    } catch (e) {
+      showMsg(buchungsFehlerText(e, true), 'error')
     } finally {
       setBuchendId(null)
     }
@@ -726,15 +769,31 @@ export default function Lager() {
     if (locId in gefuehrtJeStandort.current) return gefuehrtJeStandort.current[locId]
     try {
       const seit = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10)
-      const txns = await pb.collection('inventory_transactions').getFullList<{ item_id: string }>({
+      const txns = await pb.collection('inventory_transactions').getFullList<{ item_id: string; note?: string; storno_von?: string }>({
         filter: pb.filter('location_id = {:l} && organization_id = {:o} && created >= {:s}', { l: locId, o: user?.organization_id, s: `${seit} 00:00:00` }),
-        fields: 'item_id', requestKey: null,
+        fields: 'item_id,note,storno_von', requestKey: null,
       })
-      gefuehrtJeStandort.current[locId] = new Set(txns.map(t => t.item_id))
+      gefuehrtJeStandort.current[locId] = gefuehrteArtikel(txns)
     } catch {
       return null
     }
     return gefuehrtJeStandort.current[locId]
+  }
+
+  /**
+   * Vorgemerkte, noch nicht übertragene Buchungen auf die Anzeige legen — sonst „springt“
+   * der Bestand nach dem Neuladen zurück, und der nächste Tipp prüft gegen zu viel.
+   * Unklare (vielleicht schon angekommene), gesperrte und gerade laufende Einträge nicht:
+   * Für die gilt der Serverstand.
+   */
+  async function mitWartenden(liste: DisplayItem[], locId: string): Promise<DisplayItem[]> {
+    try {
+      const offen = (await queueAll()).filter(b => b.location_id === locId && !b.unklar && !b.gesperrt && !b.in_uebertragung)
+      if (!offen.length) return liste
+      const delta = new Map<string, number>()
+      for (const b of offen) for (const p of positionen(b)) delta.set(p.item_id, (delta.get(p.item_id) || 0) + p.delta)
+      return liste.map(d => delta.has(d.id) ? { ...d, qty: Math.max(0, d.qty + delta.get(d.id)!) } : d)
+    } catch { return liste }
   }
 
   async function loadStock() {
@@ -746,7 +805,7 @@ export default function Lager() {
       if (snap) {
         setAllItems(snap.daten.items || [])
         // Status neu berechnen: Der Stand kann Tage alt sein, und alte Stände kannten die Regeln noch nicht
-        setDisplayItems((snap.daten.display || []).map((d: DisplayItem) => ({ ...d, status: ablaufStatus(d.expiry) })))
+        setDisplayItems(await mitWartenden((snap.daten.display || []).map((d: DisplayItem) => ({ ...d, status: ablaufStatus(d.expiry) })), currentLocationId))
         setOfflineStand(snap.ts)
         setError(null)
       } else {
@@ -812,7 +871,7 @@ export default function Lager() {
         }
       })
 
-      setDisplayItems(items_list)
+      setDisplayItems(await mitWartenden(items_list, currentLocationId))
       // Für den Offline-Fall vorhalten
       await snapshotSet(currentLocationId, { items, display: items_list })
       setOfflineStand(null)
@@ -824,7 +883,7 @@ export default function Lager() {
       if (snap) {
         setAllItems(snap.daten.items || [])
         // Status neu berechnen: Der Stand kann Tage alt sein, und alte Stände kannten die Regeln noch nicht
-        setDisplayItems((snap.daten.display || []).map((d: DisplayItem) => ({ ...d, status: ablaufStatus(d.expiry) })))
+        setDisplayItems(await mitWartenden((snap.daten.display || []).map((d: DisplayItem) => ({ ...d, status: ablaufStatus(d.expiry) })), currentLocationId))
         setOfflineStand(snap.ts)
       } else {
         setError('Fehler beim Laden: ' + e.message)
@@ -836,153 +895,182 @@ export default function Lager() {
 
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
     setMessage({ text, type })
-    setTimeout(() => setMessage(null), 4000)
+    // Fehler länger stehen lassen — sie sagen, was jetzt zu tun ist
+    const t = type === 'error' ? 8000 : 4000
+    setTimeout(() => setMessage(cur => cur?.text === text ? null : cur), t)
   }
 
-  // LOG FUNKTIONEN
-  async function loadTransactions() {
-    try {
-      const txns = await pb.collection('inventory_transactions').getFullList<Transaction>({
-        filter: `organization_id = "${user?.organization_id}"`,
-        expand: 'item_id,location_id',
-        sort: '-created',
-        limit: 100
-      })
-      
-      setTransactions(txns)
-    } catch(e: any) {
-      console.error('Error loading transactions:', e)
-    }
-  }
 
   // KI-erkannte Buchungen ausführen (aus dem Lager-Assistenten)
   async function executeAiBookings(buchungen: { item_id: string; type: 'ein' | 'aus'; menge: number; mhd: string; charge: string }[]) {
-    for (const b of buchungen) {
-      const delta = b.type === 'ein' ? b.menge : -b.menge
-      await adjustQty(b.item_id, delta, b.type === 'ein' ? (b.mhd || undefined) : undefined, b.type === 'ein' ? (b.charge || undefined) : undefined)
-    }
-    await loadStock()
+    // Eine Buchung für alles, was der Assistent erkannt hat — mit einem „Rückgängig“
+    const fehler = await bucheAmStandort(buchungen.map(b => ({
+      item_id: b.item_id,
+      delta: b.type === 'ein' ? b.menge : -b.menge,
+      expiry: b.type === 'ein' ? (b.mhd || undefined) : undefined,
+      batch: b.type === 'ein' ? (b.charge || undefined) : undefined,
+    })), NOTIZ.ki)
+    // Werfen statt nur melden: Der Assistent zeigt den Grund und behält die erkannte Liste
+    if (fehler) { showMsg(fehler, 'error'); throw new Error(fehler) }
   }
 
-  async function adjustQty(itemId: string, delta: number, expiryParam?: string, batchParam?: string, einsatz?: string, bevorzugteStockId?: string) {
-    const item = displayItems.find(it => it.id === itemId)
-    if (!item) return
+  /** Ein Tipp auf −/+ (Liste, Detail): eine Buchung. Fehler erscheinen als Meldung. */
+  async function adjustQty(itemId: string, delta: number, expiryParam?: string, batchParam?: string, einsatz?: string, bevorzugteStockId?: string): Promise<boolean> {
+    const fehler = await bucheAmStandort([{ item_id: itemId, delta, expiry: expiryParam || undefined, batch: batchParam, einsatz, bevorzugt: bevorzugteStockId }])
+    if (fehler) { showMsg(fehler, 'error'); return false }
+    return true
+  }
 
-    if (delta < 0 && item.qty + delta < 0) {
-      alert('Nicht genügend Bestand')
-      return
-    }
+  // Aus einem Ref statt aus dem Render-Stand: Der „online“-Handler und die Übertragung beim
+  // Öffnen laufen sonst womöglich mit dem Stand, bevor der Benutzer geladen war.
+  function wer() {
+    const u = userRef.current
+    return { organization_id: u?.organization_id || '', user: u?.email || u?.id || '' }
+  }
 
-    // Offline: die ABSICHT merken statt zu scheitern. Sie wird beim Wiederverbinden
-    // gegen den dann aktuellen Bestand ausgeführt — dadurch addieren sich Buchungen
-    // mehrerer Geräte korrekt, statt sich zu überschreiben.
-    if (!navigator.onLine) {
-      await queueBuchung({
-        item_id: itemId, item_name: item.name, location_id: currentLocationId || '',
-        delta, expiry: expiryParam, batch: batchParam, einsatz,
-      })
-      setDisplayItems(prev => prev.map(d => d.id === itemId ? { ...d, qty: d.qty + delta } : d))
-      setOfflineOffen(await queueCount())
-      showMsg(`Offline gespeichert: ${delta > 0 ? '+' : ''}${delta} ${item.unit || 'Stück'}`, 'success')
-      return
+  function buchungsText(absichten: Absicht[]): string {
+    const artikel = (id: string) => displayItems.find(d => d.id === id) || allItems.find(i => i.id === id)
+    const gleich = absichten.every(a => a.item_id === absichten[0].item_id && Math.sign(a.delta) === Math.sign(absichten[0].delta))
+    if (gleich) {
+      const it = artikel(absichten[0].item_id)
+      const menge = absichten.reduce((s, a) => s + Math.abs(a.delta), 0)
+      return `${absichten[0].delta > 0 ? 'Eingebucht' : 'Ausgebucht'}: ${menge} ${it?.unit || 'Stück'} ${it?.name || ''}`.trim()
     }
+    return `Gebucht: ${absichten.length} Positionen`
+  }
+
+  /**
+   * Ein Tipp = eine Buchung am aktuellen Standort. Online als EINE Sammelbuchung
+   * (alles oder nichts, genau einmal); ohne Netz — oder wenn keine Antwort kommt —
+   * in die Warteschlange, mit derselben Client-ID, damit nichts doppelt ankommt.
+   * Gibt den Fehlertext zurück, oder null, wenn gebucht bzw. vorgemerkt.
+   */
+  async function bucheAmStandort(absichten: Absicht[], notiz?: string): Promise<string | null> {
+    const locId = currentLocationId
+    if (!locId) return 'Kein Standort gewählt.'
+    const gueltig = absichten.filter(a => a.item_id && Number.isFinite(a.delta) && a.delta !== 0)
+    if (!gueltig.length) return 'Nichts zu buchen.'
+    const jeArtikel = new Map<string, number>()
+    for (const a of gueltig) jeArtikel.set(a.item_id, (jeArtikel.get(a.item_id) || 0) + a.delta)
+    for (const [id, d] of jeArtikel) {
+      const it = displayItems.find(x => x.id === id)
+      if (d < 0 && (it?.qty ?? 0) + d < 0) return `Nicht genügend Bestand: ${it?.name || 'Artikel'} (vorhanden ${it?.qty ?? 0}).`
+    }
+    const clientId = neueBuchungsId()
+    const text = buchungsText(gueltig)
+    // Anzeige sofort fortschreiben — der nächste Tipp sieht schon den neuen Stand
+    setDisplayItems(prev => prev.map(d => jeArtikel.has(d.id) ? { ...d, qty: Math.max(0, d.qty + jeArtikel.get(d.id)!) } : d))
+
+    // unklar: online gesendet, keine Antwort — kann schon auf dem Server sein. Die Übertragung
+    // prüft das zuerst; ein einfaches „Rückgängig“ (Eintrag streichen) wäre dann falsch.
+    const vormerken = async (unklar: boolean): Promise<string | null> => {
+      try {
+        const name = (id: string) => displayItems.find(d => d.id === id)?.name || allItems.find(i => i.id === id)?.name || 'Artikel'
+        const [erste, ...weitere] = gueltig.map(a => ({ item_id: a.item_id, item_name: name(a.item_id), delta: a.delta, expiry: a.expiry, batch: a.batch, einsatz: a.einsatz, charge: a.charge }))
+        const queueId = await queueBuchung({ ...erste, location_id: locId, client_id: clientId, weitere: weitere.length ? weitere : undefined, notiz, unklar: unklar || undefined })
+        setOfflineOffen(await queueCount())
+        if (unklar) showMsg(`Keine Antwort vom Server — ${text} wird geprüft und nicht doppelt gebucht`, 'success')
+        else zeigeRueckgaengig(`Offline gespeichert — ${text}`, { queueId })
+        return null
+      } catch {
+        await loadStock()
+        return unklar
+          ? 'Keine Antwort vom Server, und vormerken ging auf diesem Gerät nicht — ob gebucht wurde, ist unklar. Bitte im Logbuch prüfen, bevor erneut gebucht wird.'
+          : 'Konnte auf diesem Gerät nicht vorgemerkt werden — es wurde nichts gebucht.'
+      }
+    }
+    if (!navigator.onLine) return vormerken(false)
 
     try {
-      const stockList = await pb.collection('inventory_stock').getFullList({
-        filter: `item_id = "${itemId}" && location_id = "${currentLocationId}"`,
-        sort: 'expiry_date'
-      })
+      const erg = await buche(lagerServer, gueltig.map(a => zuBewegung(a, locId, notiz)), { wer: wer(), clientId, ueberzug: 'ablehnen' })
+      // Gebucht. Alles Weitere läuft nebenher — die Maske soll nicht an einer hängenden
+      // Nebenanfrage festhängen.
+      const bestellungen = Promise.all([...new Set(gueltig.filter(a => a.delta > 0).map(a => a.item_id))].map(markiereGeliefert))
+        .then(ids => ids.filter((x): x is string => !!x))
+      zeigeRueckgaengig(text, { ergebnis: erg, bestellungen })
+      setLogStand(n => n + 1)
+      void loadStock()
+      // Wartet noch etwas aus einem Funkloch, jetzt mit übertragen
+      if (offlineOffen > 0) void queueHatOffene().then(ja => { if (ja) synchronisiereOffline() })
+      return null
+    } catch (e) {
+      // Teilweise angekommen (ohne Sammelbuchung): nicht wiederholen — ein Mensch muss nachsehen
+      if (e instanceof BuchungsFehler && e.teilweise) {
+        await loadStock()
+        return buchungsFehlerText(e)
+      }
+      // Kein Durchkommen (Funkloch, Keller): nicht verlieren, sondern vormerken. Kam die
+      // Buchung doch an, erkennt die Übertragung das an der Client-ID.
+      if (e instanceof BuchungsFehler && e.art === 'netz') return vormerken(e.vielleichtGebucht)
+      await loadStock()
+      return buchungsFehlerText(e)
+    }
+  }
 
-      if (delta > 0) {
-        const expiry = expiryParam || null
-        const batch = (batchParam || '').trim()
-        await pb.collection('inventory_stock').create({
-          item_id: itemId,
-          location_id: currentLocationId,
-          quantity: delta,
-          expiry_date: expiry || null,
-          batch: batch || null,
-          organization_id: user?.organization_id
-        })
+  /**
+   * Wareneingang schließt den Bestell-Kreislauf: offene Bestellung als geliefert markieren.
+   * Gibt ihre ID zurück — „Rückgängig“ setzt sie wieder auf „bestellt“.
+   */
+  async function markiereGeliefert(itemId: string): Promise<string | null> {
+    try {
+      const openOrder = await pb.collection('inventory_orders').getFirstListItem(
+        pb.filter('item_id = {:i} && status = "bestellt" && organization_id = {:o}', { i: itemId, o: user?.organization_id }),
+        { requestKey: null }
+      )
+      await pb.collection('inventory_orders').update(openOrder.id, { status: 'geliefert' }, { requestKey: null })
+      return openOrder.id
+    } catch { return null /* keine offene Bestellung oder Collection fehlt */ }
+  }
 
-        await pb.collection('inventory_transactions').create({
-          item_id: itemId,
-          location_id: currentLocationId,
-          type: 'einbuchung',
-          quantity: delta,
-          expiry_date: expiry || null,
-          batch: batch || null,
-          note: batch ? `Charge ${batch}` : '',
-          user: user?.email || user?.id,
-          organization_id: user?.organization_id
-        })
+  function zeigeRueckgaengig(text: string, quelle: { ergebnis?: Ergebnis; queueId?: string; bestellungen?: Promise<string[]> }) {
+    if (quelle.ergebnis && !quelle.ergebnis.rueckgaengigMoeglich) {
+      showMsg(quelle.ergebnis.schonGebucht ? 'War bereits gebucht' : text, 'success')
+      return
+    }
+    setMessage(null)
+    setRueckgaengig({ text, ...quelle, bis: Date.now() + 10_000, undoId: neueBuchungsId(), versuch: 0 })
+  }
 
-        // Offene Bestellung dieses Artikels als geliefert markieren (Wareneingang schließt den Bestell-Kreislauf)
-        try {
-          const openOrder = await pb.collection('inventory_orders').getFirstListItem(
-            `item_id = "${itemId}" && status = "bestellt" && organization_id = "${user?.organization_id}"`,
-            { requestKey: `ord-close-${Date.now()}` }
-          )
-          await pb.collection('inventory_orders').update(openOrder.id, { status: 'geliefert' })
-        } catch { /* keine offene Bestellung oder Collection fehlt */ }
-        
-      } else {
-        // Chargen-Nachweis: JE entnommener Bestandszeile eine eigene Buchung.
-        // Vorher gab es nur eine Sammelbuchung ohne Charge — dadurch war bei einem
-        // Rückruf nicht nachvollziehbar, wohin die betroffene Charge gegangen ist.
-        let remaining = Math.abs(delta)
-        // Optional bevorzugte Charge zuerst, danach zuerst ablaufend zuerst (ohne MHD zuletzt)
-        const reihenfolge = entnahmeReihenfolge(stockList, bevorzugteStockId)
-
-        for (const stock of reihenfolge) {
-          if (remaining <= 0) break
-
-          const take = Math.min(stock.quantity, remaining)
-          const newQty = stock.quantity - take
-
-          if (newQty <= 0) {
-            await pb.collection('inventory_stock').delete(stock.id)
-          } else {
-            await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
-          }
-
-          await pb.collection('inventory_transactions').create({
-            item_id: itemId,
-            location_id: currentLocationId,
-            type: 'ausbuchung',
-            quantity: -take,
-            batch: stock.batch || null,
-            expiry_date: stock.expiry_date || null,
-            stock_id: stock.id,
-            einsatz: (einsatz || '').trim() || null,
-            note: [stock.batch ? `Charge ${stock.batch}` : null, einsatz ? `Einsatz ${einsatz}` : null].filter(Boolean).join(' · '),
-            user: user?.email || user?.id,
-            organization_id: user?.organization_id
-          })
-
-          remaining -= take
+  /** Nimmt die letzte Buchung als Gegenbuchung zurück — oder streicht sie aus der Warteschlange. */
+  async function rueckgaengigAusfuehren() {
+    const r = rueckgaengig
+    if (!r || r.laeuft) return
+    setRueckgaengig({ ...r, laeuft: true })
+    try {
+      if (r.queueId) {
+        // Streichen geht nur, solange der Eintrag noch wartet — nicht, wenn er schon (oder gerade) übertragen wird
+        if (!(await queueRemove(r.queueId))) {
+          throw new BuchungsFehler('Wird gerade übertragen oder ist schon übertragen — bitte im Logbuch prüfen und die Menge dann normal zurückbuchen.', 'abgelehnt')
         }
-
-        // Kein Bestand vorhanden (z.B. Korrektur ins Minus) — trotzdem protokollieren
-        if (remaining > 0) {
-          await pb.collection('inventory_transactions').create({
-            item_id: itemId,
-            location_id: currentLocationId,
-            type: 'ausbuchung',
-            quantity: -remaining,
-            einsatz: (einsatz || '').trim() || null,
-            note: 'ohne Chargenzuordnung',
-            user: user?.email || user?.id,
-            organization_id: user?.organization_id
-          })
+        setOfflineOffen(await queueCount())
+      } else if (r.ergebnis) {
+        // Gleiche ID bei jedem Versuch: Eine schon angekommene Rücknahme wird erkannt
+        await macheRueckgaengig(lagerServer, r.ergebnis, wer(), r.undoId, r.versuch > 0)
+        // Als geliefert markierte Bestellungen wieder öffnen — es kam ja nichts an
+        for (const id of (await r.bestellungen?.catch(() => [])) || []) {
+          try { await pb.collection('inventory_orders').update(id, { status: 'bestellt' }, { requestKey: null }) } catch { /* bestmöglich */ }
         }
       }
-      
+      // Nur die eigene Leiste schließen — eine neuere Buchung behält ihr „Rückgängig“
+      setRueckgaengig(cur => cur?.undoId === r.undoId ? null : cur)
+      showMsg('Zurückgenommen', 'success')
+      setLogStand(n => n + 1)
       await loadStock()
-      showMsg(`✅ ${delta > 0 ? 'Eingebucht' : 'Ausgebucht'}: ${Math.abs(delta)} ${item.unit || 'Stück'}`, 'success')
-      
-    } catch(e: any) {
-      setError('Fehler: ' + e.message)
+    } catch (e) {
+      if (e instanceof BuchungsFehler && e.art === 'netz' && !e.teilweise) {
+        const text = e.vielleichtGebucht ? 'Keine Antwort — Rücknahme erneut prüfen (bucht nicht doppelt)' : 'Keine Verbindung — Rücknahme erneut versuchen'
+        const cur = rueckRef.current
+        if (!cur || cur.undoId === r.undoId) {
+          setRueckgaengig({ ...r, laeuft: false, versuch: r.versuch + 1, bis: Date.now() + 15_000, text })
+        } else {
+          // Inzwischen zeigt die Leiste eine neuere Buchung — diese hier nicht still verlieren
+          showMsg('Rücknahme ohne Antwort — bitte im Logbuch prüfen', 'error')
+        }
+        return
+      }
+      setRueckgaengig(cur => cur?.undoId === r.undoId ? null : cur)
+      showMsg(buchungsFehlerText(e), 'error')
+      await loadStock()
     }
   }
 
@@ -1006,13 +1094,13 @@ export default function Lager() {
           ...rest, barcodes, barcode: null,
           organization_id: user?.organization_id
         })
-        showMsg('✅ Artikel aktualisiert!', 'success')
+        showMsg('Artikel aktualisiert!', 'success')
       } else {
         await pb.collection('inventory_items').create({
           ...rest, barcodes: code ? [code] : [],
           organization_id: user?.organization_id
         })
-        showMsg('✅ Artikel angelegt!', 'success')
+        showMsg('Artikel angelegt!', 'success')
       }
       
       setShowAddItemModal(false)
@@ -1039,7 +1127,7 @@ export default function Lager() {
       
       await pb.collection('inventory_items').delete(itemId)
       await loadStock()
-      showMsg('✅ Artikel gelöscht!', 'success')
+      showMsg('Artikel gelöscht!', 'success')
       
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -1061,7 +1149,7 @@ export default function Lager() {
       
       setNewLocationName('')
       await loadLocations()
-      showMsg('✅ Standort hinzugefügt!', 'success')
+      showMsg('Standort hinzugefügt!', 'success')
       
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -1087,7 +1175,7 @@ export default function Lager() {
       
       await pb.collection('inventory_locations').delete(locId)
       await loadLocations()
-      showMsg('✅ Standort gelöscht!', 'success')
+      showMsg('Standort gelöscht!', 'success')
       
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -1114,7 +1202,7 @@ export default function Lager() {
     if (scanMode === 'form') {
       setItemFormData(prev => ({ ...prev, barcode: code }))
       setShowScanModal(false)
-      showMsg('✅ Code übernommen: ' + code, 'success')
+      showMsg('Code übernommen: ' + code, 'success')
       return
     }
     if ((scanMode as string) === 'assign' && scanAssignItem) {
@@ -1149,8 +1237,11 @@ export default function Lager() {
     setBuchungQty(1)
     setBuchungExpiry('')
     setBuchungBatch('')
-    // Aus dem GS1-Code gelesene Charge und MHD übernehmen — spart das Abtippen
+    // Aus dem GS1-Code gelesene Charge und MHD übernehmen — spart das Abtippen.
+    // Beim Ausbuchen geht die gescannte Charge zuerst ab, nicht die früheste.
     setEinChargen([{ menge: 1, mhd: scanGs1?.expiry || '', charge: scanGs1?.lot || '' }])
+    setBuchungScanCharge(type === 'aus' && scanGs1?.lot ? { batch: scanGs1.lot, mhd: scanGs1.expiry || null } : null)
+    setBuchungFehler(null)
     setShowBuchungModal(true)
   }
 
@@ -1170,7 +1261,7 @@ export default function Lager() {
       setAuditItems(prev => prev.map(ai => ai.item_id === item.id && ai.expand?.item_id
         ? { ...ai, expand: { ...ai.expand, item_id: { ...ai.expand.item_id, barcodes: neu } } } : ai))
       setShowScanModal(false)
-      showMsg(`✅ Code mit „${item.name}" verknüpft (${neu.length} gesamt)`, 'success')
+      showMsg(`Code mit „${item.name}" verknüpft (${neu.length} gesamt)`, 'success')
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     }
@@ -1228,7 +1319,7 @@ export default function Lager() {
     try {
       await pb.collection('inventory_items').update(itemId, { bedarf })
       setAllItems(prev => prev.map(i => i.id === itemId ? { ...i, bedarf } : i))
-      showMsg(menge > 0 ? '✅ Auf die Bestellliste gesetzt' : 'Vom Bedarf entfernt', 'success')
+      showMsg(menge > 0 ? 'Auf die Bestellliste gesetzt' : 'Vom Bedarf entfernt', 'success')
     } catch(e: any) {
       showMsg('Fehler: ' + e.message + ' — existiert das Feld "bedarf" (JSON) in inventory_items?', 'error')
     }
@@ -1239,7 +1330,7 @@ export default function Lager() {
     try {
       await pb.collection('inventory_items').update(itemId, { nicht_bestellen: value })
       setAllItems(prev => prev.map(i => i.id === itemId ? { ...i, nicht_bestellen: value } : i))
-      showMsg(value ? 'Artikel wird nicht mehr bestellt' : '✅ Wieder in der Bestellliste', 'success')
+      showMsg(value ? 'Artikel wird nicht mehr bestellt' : 'Wieder in der Bestellliste', 'success')
     } catch(e: any) {
       showMsg('Fehler: ' + e.message + ' — existiert das Feld "nicht_bestellen" (Bool) in inventory_items?', 'error')
     }
@@ -1364,7 +1455,7 @@ export default function Lager() {
         },
       }) as { success?: boolean; error?: string }
       if (res?.success) {
-        showMsg(`✅ Bestellung an ${supplierName} gesendet!`, 'success')
+        showMsg(`Bestellung an ${supplierName} gesendet!`, 'success')
         await loadOpenOrders()
       } else {
         alert('Fehler: ' + (res?.error || 'Unbekannt'))
@@ -1389,7 +1480,7 @@ export default function Lager() {
     ).join('\n')
     try {
       await navigator.clipboard.writeText(text)
-      showMsg('✅ Bestellliste kopiert!', 'success')
+      showMsg('Bestellliste kopiert!', 'success')
     } catch {
       alert(text)
     }
@@ -1412,60 +1503,33 @@ export default function Lager() {
     try {
       const sourceName = locations.find(l => l.id === currentLocationId)?.name || 'Quelle'
       const targetName = locations.find(l => l.id === transferTargetId)?.name || 'Ziel'
-
-      const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
-        filter: `item_id = "${transferItemId}" && location_id = "${currentLocationId}"`,
-        sort: 'expiry_date'
-      })
-
-      let remaining = transferQty
-      for (const stock of fefo(stockList)) {
-        if (remaining <= 0) break
-        const take = Math.min(stock.quantity, remaining)
-
-        // Quelle reduzieren
-        if (stock.quantity - take <= 0) {
-          await pb.collection('inventory_stock').delete(stock.id)
-        } else {
-          await pb.collection('inventory_stock').update(stock.id, { quantity: stock.quantity - take })
-        }
-
-        // Am Ziel anlegen — gleiche Charge + gleiches MHD bleiben erhalten
-        await pb.collection('inventory_stock').create({
-          item_id: transferItemId,
-          location_id: transferTargetId,
-          quantity: take,
-          expiry_date: stock.expiry_date || null,
-          batch: stock.batch || null,
-          organization_id: user?.organization_id,
-        })
-
-        remaining -= take
-      }
-
-      // Protokoll auf beiden Seiten
-      await pb.collection('inventory_transactions').create({
-        item_id: transferItemId, location_id: currentLocationId,
-        type: 'ausbuchung', quantity: -transferQty,
-        note: `Umlagerung → ${targetName}`,
-        user: user?.email || user?.id, organization_id: user?.organization_id,
-      })
-      await pb.collection('inventory_transactions').create({
-        item_id: transferItemId, location_id: transferTargetId,
-        type: 'einbuchung', quantity: transferQty,
-        note: `Umlagerung ← ${sourceName}`,
-        user: user?.email || user?.id, organization_id: user?.organization_id,
-      })
+      // Charge und MHD wandern mit; Quelle und Ziel, Bestand und Journal in einer Sammelbuchung
+      // Nach unklarem Ausgang dieselbe Umlagerung → dieselbe ID (und vorher nachsehen)
+      const schluessel = `${transferItemId}|${currentLocationId}|${transferTargetId}|${transferQty}`
+      // Nur kurz: Eine Stunde später ist dieselbe Umlagerung eine neue
+      const vorher = transferIdRef.current?.schluessel === schluessel && Date.now() - transferIdRef.current.seit < 5 * 60_000 ? transferIdRef.current : null
+      const wiederholung = !!vorher
+      const clientId = vorher?.id ?? neueBuchungsId()
+      transferIdRef.current = { id: clientId, schluessel, seit: vorher?.seit ?? Date.now() }
+      const erg = await buche(lagerServer, [{
+        art: 'umlagerung', item_id: transferItemId, von: currentLocationId!, nach: transferTargetId,
+        menge: transferQty, vonName: sourceName, nachName: targetName,
+      }], { wer: wer(), clientId, pruefeVorher: wiederholung })
+      transferIdRef.current = null
 
       setShowTransferModal(false)
       setTransferItemId('')
       setTransferSearch('')
       setTransferQty(1)
       setTransferTargetId('')
+      zeigeRueckgaengig(`${transferQty} ${item.unit || 'Stück'} nach „${targetName}“ umgelagert`, { ergebnis: erg })
+      setLogStand(n => n + 1)
       await loadStock()
-      showMsg(`✅ ${transferQty} ${item.unit || 'Stück'} nach „${targetName}" umgelagert`, 'success')
-    } catch (e: any) {
-      alert('Fehler: ' + e.message)
+    } catch (e) {
+      // Bei jedem Netzfehler die ID behalten (auch wenn die Vorab-Prüfung scheiterte) —
+      // erst eine klare Antwort des Servers beendet die Ungewissheit
+      if (!(e instanceof BuchungsFehler && e.art === 'netz' && !e.teilweise)) transferIdRef.current = null
+      showMsg(buchungsFehlerText(e, true), 'error')
     } finally {
       setSavingTransfer(false)
     }
@@ -1481,7 +1545,7 @@ export default function Lager() {
       const sicher = q.replace(/"/g, '')
       // Noch im Bestand …
       const list = await pb.collection('inventory_stock').getFullList<StockItem>({
-        filter: `organization_id = "${user?.organization_id}" && batch ~ "${sicher}"`,
+        filter: `organization_id = "${user?.organization_id}" && batch ~ "${sicher}" && quantity > 0`,
         sort: 'location_id',
       })
       setRecallResults(list)
@@ -1492,7 +1556,8 @@ export default function Lager() {
           filter: `organization_id = "${user?.organization_id}" && batch ~ "${sicher}" && type = "ausbuchung"`,
           sort: '-created',
         })
-        setRecallAusgaben(aus)
+        // Wohin ist die Charge WIRKLICH gegangen: ohne Umlagerungen, ohne zurückgenommene Entnahmen
+        setRecallAusgaben(wirklichAusgegeben(aus).filter(t => !istUmlagerung(t.note) && !(t.note || '').startsWith(NOTIZ.rueckruf)))
       } catch { setRecallAusgaben([]) }
     } catch (e: any) {
       alert('Fehler: ' + e.message)
@@ -1505,21 +1570,17 @@ export default function Lager() {
     const itemName = allItems.find(i => i.id === s.item_id)?.name || 'Artikel'
     if (!confirm(`${s.quantity}x „${itemName}" (Charge ${s.batch}) wegen Rückruf ausbuchen?`)) return
     try {
-      await pb.collection('inventory_stock').delete(s.id)
-      await pb.collection('inventory_transactions').create({
-        item_id: s.item_id,
-        location_id: s.location_id,
-        type: 'ausbuchung',
-        quantity: -s.quantity,
-        note: `Rückruf Charge ${s.batch}`,
-        user: user?.email || user?.id,
-        organization_id: user?.organization_id,
-      })
+      // Genau diese Bestandszeile, mit der Menge, die jetzt darin ist
+      await buche(lagerServer, [{
+        art: 'abgang', item_id: s.item_id, location_id: s.location_id, menge: s.quantity,
+        nurZeile: s.id, ganzeZeile: true, notiz: NOTIZ.rueckruf,
+      }], { wer: wer() })
       setRecallResults(prev => prev ? prev.filter(x => x.id !== s.id) : prev)
+      setLogStand(n => n + 1)
       await loadStock()
-      showMsg(`✅ Charge ${s.batch} ausgebucht (Rückruf)`, 'success')
-    } catch (e: any) {
-      alert('Fehler: ' + e.message)
+      showMsg(`Charge ${s.batch} ausgebucht (Rückruf)`, 'success')
+    } catch (e) {
+      showMsg(buchungsFehlerText(e), 'error')
     }
   }
 
@@ -1548,7 +1609,7 @@ export default function Lager() {
     setSavingAlerts(true)
     try {
       await pb.collection('users').update(user.id, { lager_alerts: alertPrefs })
-      showMsg('✅ Benachrichtigungen gespeichert!', 'success')
+      showMsg('Benachrichtigungen gespeichert!', 'success')
     } catch (e: any) {
       alert('Fehler: ' + (e?.data ? JSON.stringify(e.data) : e.message) + '\n\nFalls das Feld "lager_alerts" (JSON) in der users-Collection fehlt, bitte erst in PocketBase anlegen.')
     } finally {
@@ -1569,7 +1630,7 @@ export default function Lager() {
       } else if (total === 0) {
         setAlertTestMsg({ text: 'Aktuell keine Warnungen — es gäbe nichts zu melden. (Test-Mail nur bei vorhandenen Warnungen)', type: 'success' })
       } else if (res.sent) {
-        setAlertTestMsg({ text: `✅ Test-Mail mit ${total} Warnung(en) an ${res.recipient} gesendet.`, type: 'success' })
+        setAlertTestMsg({ text: `Test-Mail mit ${total} Warnung(en) an ${res.recipient} gesendet.`, type: 'success' })
       } else {
         setAlertTestMsg({ text: `${total} Warnung(en) gefunden, aber kein Versand.`, type: 'error' })
       }
@@ -1613,7 +1674,7 @@ export default function Lager() {
       }
       setKitEditor(null)
       await loadKits()
-      showMsg('✅ Liste gespeichert!', 'success')
+      showMsg('Liste gespeichert!', 'success')
     } catch (e: any) {
       alert('Fehler: ' + (e?.data ? JSON.stringify(e.data) : e.message) + '\n\nFalls die Collection "inventory_kits" fehlt, bitte erst in PocketBase anlegen.')
     }
@@ -1624,7 +1685,7 @@ export default function Lager() {
     try {
       await pb.collection('inventory_kits').delete(kitId)
       await loadKits()
-      showMsg('✅ Liste gelöscht!', 'success')
+      showMsg('Liste gelöscht!', 'success')
     } catch (e: any) {
       alert('Fehler: ' + e.message)
     }
@@ -1674,7 +1735,7 @@ export default function Lager() {
       })
       setRunningKit(null)
       setCheckResults([])
-      showMsg(hasMaengel ? '⚠️ Check gespeichert — mit Mängeln' : '✅ Check gespeichert — alles vollständig', 'success')
+      showMsg(hasMaengel ? 'Check gespeichert — mit Mängeln' : 'Check gespeichert — alles vollständig', 'success')
     } catch (e: any) {
       alert('Fehler: ' + (e?.data ? JSON.stringify(e.data) : e.message) + '\n\nFalls die Collection "inventory_kit_checks" fehlt, bitte erst in PocketBase anlegen.')
     } finally {
@@ -1775,7 +1836,7 @@ export default function Lager() {
       } else {
         await pb.collection('lager_settings').create({ organization_id: user?.organization_id, inventur_interval: payload })
       }
-      showMsg('✅ Zeitplan gespeichert!', 'success')
+      showMsg('Zeitplan gespeichert!', 'success')
     } catch (e: any) {
       showMsg('Fehler: ' + e.message, 'error')
     }
@@ -1831,7 +1892,7 @@ export default function Lager() {
       if (currentAudit && auditLocationId === locationId) { setCurrentAudit(null); setAuditItems([]); setAuditIndex(0); setAuditLocationId(null) }
       await loadAuditHistory()
       await loadOpenAudits()
-      showMsg('✅ Inventuren zurückgesetzt', 'success')
+      showMsg('Inventuren zurückgesetzt', 'success')
     } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
@@ -1889,7 +1950,7 @@ export default function Lager() {
       setAuditSearch('')
       await loadAuditItems(audit.id, locationId)
       setAuditIndex(0)
-      showMsg('✅ Inventur gestartet!', 'success')
+      showMsg('Inventur gestartet!', 'success')
 
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -1928,60 +1989,21 @@ export default function Lager() {
     charge?: { batch?: string; expiry?: string; abzugVonStockId?: string },
   ) {
     if (diff === 0) return
-
-    const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
-      filter: `item_id = "${auditItem.item_id}" && location_id = "${locId}"`,
-      sort: 'expiry_date',
-    })
-
-    let notiz = basis === auditItem.expected_quantity
-      ? `Inventur-Korrektur: ${basis} → ${actual}`
-      : `Inventur-Korrektur: ${basis} → ${actual} (nach den Buchungen seit Start gezählt, beim Start ${auditItem.expected_quantity})`
-
-    if (diff > 0) {
-      const batch = (charge?.batch || '').trim()
-      await pb.collection('inventory_stock').create({
-        item_id: auditItem.item_id,
-        location_id: locId,
-        quantity: diff,
-        batch: batch || null,
-        expiry_date: charge?.expiry || null,
-        organization_id: user?.organization_id,
-      })
-      if (batch) notiz += ` · Charge ${batch}`
-    } else if (stockList.length > 0) {
-      let remaining = Math.abs(diff)
-      // Gewählte Charge zuerst, danach die übrigen nach Ablaufdatum
-      const gewaehlt = stockList.filter(s => s.id === charge?.abzugVonStockId)
-      const rest = fefo(stockList.filter(s => s.id !== charge?.abzugVonStockId))
-      const reihenfolge = [...gewaehlt, ...rest]
-      let ausGewaehlter = 0
-      for (const stock of reihenfolge) {
-        if (remaining <= 0) break
-        const take = Math.min(stock.quantity, remaining)
-        const newQty = stock.quantity - take
-        if (newQty <= 0) await pb.collection('inventory_stock').delete(stock.id)
-        else await pb.collection('inventory_stock').update(stock.id, { quantity: newQty })
-        if (stock.id === charge?.abzugVonStockId) ausGewaehlter = take
-        remaining -= take
-      }
-      if (gewaehlt.length) {
-        const b = gewaehlt[0].batch || 'ohne Charge'
-        notiz += ausGewaehlter === Math.abs(diff)
-          ? ` · Charge ${b}`
-          : ` · ${ausGewaehlter} aus Charge ${b}, Rest aus weiteren`
-      }
-    }
-
-    await pb.collection('inventory_transactions').create({
-      item_id: auditItem.item_id,
-      location_id: locId,
-      type: 'korrektur',
-      quantity: diff,
-      note: notiz,
-      user: user?.email || user?.id,
-      organization_id: user?.organization_id
-    })
+    const notiz = basis === auditItem.expected_quantity
+      ? `${NOTIZ.inventur}: ${basis} → ${actual}`
+      : `${NOTIZ.inventur}: ${basis} → ${actual} (nach den Buchungen seit Start gezählt, beim Start ${auditItem.expected_quantity})`
+    // Mehrmenge mit Charge/MHD als neue Bestandszeile; Fehlmenge von der gewählten Charge zuerst,
+    // als EINE Korrekturzeile. Was nicht mehr im Bestand ist, wird trotzdem festgehalten.
+    const bewegung: Bewegung = diff > 0
+      ? { art: 'zugang', typ: 'korrektur', item_id: auditItem.item_id, location_id: locId, menge: diff, batch: charge?.batch || null, expiry: charge?.expiry || null, notiz }
+      : { art: 'abgang', typ: 'korrektur', sammel: true, item_id: auditItem.item_id, location_id: locId, menge: -diff, bevorzugt: charge?.abzugVonStockId, notiz }
+    // Feste ID je Position, solange der Ausgang unklar ist: Bestätigt man nach einem
+    // Abbruch erneut, wird die Korrektur nicht doppelt gebucht
+    const vorher = auditIdsRef.current[auditItem.id]
+    const clientId = vorher?.diff === diff ? vorher.id : neueBuchungsId()
+    auditIdsRef.current[auditItem.id] = { id: clientId, diff }
+    await buche(lagerServer, [bewegung], { wer: wer(), clientId, pruefeVorher: !!vorher && vorher.diff === diff, ueberzug: 'protokollieren' })
+    setLogStand(n => n + 1)
   }
 
   // Bestandszeilen eines Artikels am INVENTUR-Standort laden.
@@ -2037,6 +2059,8 @@ export default function Lager() {
       // Verlauf genau die Abweichung, die auch gebucht wurde.
       await applyAuditCorrection(auditItem, actual, locId, diff, basis, charge)
       await pb.collection('inventory_audit_items').update(auditItem.id, { actual_quantity: actual, expected_quantity: basis, checked: true })
+      // Erst jetzt ist der Ausgang bestätigt — vorher würde ein erneutes Bestätigen doppelt korrigieren
+      delete auditIdsRef.current[auditItem.id]
       const updatedItems = await loadAuditItems(currentAudit.id, locId)
       await loadStock()
       if (updatedItems.length && updatedItems.every(ai => ai.checked)) {
@@ -2090,7 +2114,7 @@ export default function Lager() {
         : i))
       if (currentAudit) await loadAuditItems(currentAudit.id, locId)   // Zeile war sonst veraltet
       await loadStock()
-      showMsg('✅ Stammdaten gespeichert', 'success')
+      showMsg('Stammdaten gespeichert', 'success')
     } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
@@ -2107,7 +2131,7 @@ export default function Lager() {
       setAuditStockEdit(null)
       setAuditEditStocks(await loadAuditStocks(auditEdit.item_id, locId))
       await loadStock()
-      showMsg('✅ Charge/MHD gespeichert', 'success')
+      showMsg('Charge/MHD gespeichert', 'success')
     } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
@@ -2126,7 +2150,7 @@ export default function Lager() {
       })
       await loadAuditItems(currentAudit.id, locId)
       setAuditAddOpen(false)
-      showMsg('✅ Artikel zur Inventur hinzugefügt', 'success')
+      showMsg('Artikel zur Inventur hinzugefügt', 'success')
     } catch(e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
@@ -2183,7 +2207,7 @@ export default function Lager() {
       await loadAuditHistory()
       await loadOpenAudits()
       await loadStock()
-      showMsg('✅ Inventur abgeschlossen!', 'success')
+      showMsg('Inventur abgeschlossen!', 'success')
       
     } catch(e: any) {
       alert('Fehler: ' + e.message)
@@ -2199,62 +2223,56 @@ export default function Lager() {
     setBuchungEinsatz('')
     setBuchungSearch('')
     setEinChargen([{ menge: 1, mhd: '', charge: '' }])
+    setBuchungScanCharge(null)
+    setBuchungFehler(null)
   }
 
   async function saveBuchung() {
-    if (!selectedBuchungItem || !currentLocationId) {
-      alert('Bitte Artikel auswählen')
-      return
-    }
     if (savingBuchung) return
-
+    if (!selectedBuchungItem || !currentLocationId) { setBuchungFehler('Bitte Artikel auswählen.'); return }
+    let absichten: Absicht[]
     if (buchungType === 'ein') {
+      // Jede Charge/MHD als eigene Bestandszeile — alle zusammen eine Buchung
       const rows = einChargen.filter(r => r.menge > 0)
-      if (rows.length === 0) { alert('Mindestens eine Menge größer 0 eingeben'); return }
-      setSavingBuchung(true)
-      try {
-        // Jede Charge/MHD als eigener Bestandssatz einbuchen
-        for (const r of rows) {
-          await adjustQty(selectedBuchungItem, r.menge, r.mhd || undefined, r.charge || undefined)
-        }
-        setShowBuchungModal(false)
-        resetBuchungFields()
-      } catch(e: any) {
-        alert('Fehler: ' + e.message)
-      } finally {
-        setSavingBuchung(false)
-      }
-      return
+      if (rows.length === 0) { setBuchungFehler('Mindestens eine Menge größer 0 eingeben.'); return }
+      absichten = rows.map(r => ({ item_id: selectedBuchungItem, delta: r.menge, expiry: r.mhd || undefined, batch: r.charge || undefined }))
+    } else {
+      if (buchungQty <= 0) { setBuchungFehler('Die Menge muss größer 0 sein.'); return }
+      absichten = [{ item_id: selectedBuchungItem, delta: -buchungQty, einsatz: buchungEinsatz, charge: buchungScanCharge ?? undefined }]
     }
-
-    // Ausbuchung (FIFO nach MHD, keine Charge)
-    if (buchungQty <= 0) { alert('Menge muss größer 0 sein'); return }
     setSavingBuchung(true)
+    setBuchungFehler(null)
     try {
-      await adjustQty(selectedBuchungItem, -buchungQty, undefined, undefined, buchungEinsatz)
+      const fehler = await bucheAmStandort(absichten)
+      // Schlägt die Buchung fehl, bleibt die Maske offen und sagt, warum
+      if (fehler) { setBuchungFehler(fehler); return }
       setShowBuchungModal(false)
       resetBuchungFields()
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
     } finally {
       setSavingBuchung(false)
     }
   }
 
   async function saveMultiBuchung() {
-    if (multiBuchungItems.length === 0) {
-      alert('Keine Artikel hinzugefügt')
-      return
+    if (savingMulti) return
+    if (multiBuchungItems.length === 0) { showMsg('Keine Artikel hinzugefügt', 'error'); return }
+    setSavingMulti(true)
+    try {
+      // Alle Positionen als EINE Buchung — alles oder nichts, ein „Rückgängig“
+      const fehler = await bucheAmStandort(multiBuchungItems.map(entry => ({
+        item_id: entry.itemId,
+        delta: multiBuchungType === 'ein' ? entry.qty : -entry.qty,
+        expiry: multiBuchungType === 'ein' ? (entry.expiry || undefined) : undefined,
+      })), NOTIZ.mehrfach)
+      if (fehler) { showMsg(fehler, 'error'); return }
+      setShowMultiBuchungModal(false)
+      setMultiBuchungItems([])
+      setMultiBuchungNewItemId('')
+      setMultiBuchungNewQty(1)
+      setMultiBuchungNewExpiry('')
+    } finally {
+      setSavingMulti(false)
     }
-    for (const entry of multiBuchungItems) {
-      const delta = multiBuchungType === 'ein' ? entry.qty : -entry.qty
-      await adjustQty(entry.itemId, delta, entry.expiry || undefined)
-    }
-    setShowMultiBuchungModal(false)
-    setMultiBuchungItems([])
-    setMultiBuchungNewItemId('')
-    setMultiBuchungNewQty(1)
-    setMultiBuchungNewExpiry('')
   }
 
   async function openItemDetail(item: DisplayItem) {
@@ -2264,23 +2282,14 @@ export default function Lager() {
     setDetailNote(item.notes || '')
     const eigenesSoll = currentLocationId ? rawItem?.location_min_stocks?.[currentLocationId] : undefined
     setDetailSoll(eigenesSoll !== undefined ? String(eigenesSoll) : '')
-    setDetailTransactions([])
     setDetailStockEntries([])
     setShowItemDetailModal(true)
     setDetailLoadingData(true)
     try {
-      const [txns, stocks] = await Promise.all([
-        pb.collection('inventory_transactions').getFullList<Transaction>({
-          filter: `item_id = "${item.id}"`,
-          sort: '-created',
-          limit: 50
-        }),
-        pb.collection('inventory_stock').getFullList<StockItem>({
-          filter: `item_id = "${item.id}" && location_id = "${currentLocationId}"`,
-          sort: 'expiry_date'
-        })
-      ])
-      setDetailTransactions(txns)
+      const stocks = await pb.collection('inventory_stock').getFullList<StockItem>({
+        filter: `item_id = "${item.id}" && location_id = "${currentLocationId}"`,
+        sort: 'expiry_date'
+      })
       setDetailStockEntries(fefo(stocks))
     } catch(e: any) {
       console.error('Error loading item detail:', e)
@@ -2301,7 +2310,7 @@ export default function Lager() {
       setStockEdit(null)
       await reloadDetailStocks()
       await loadStock()
-      showMsg('✅ Charge/MHD gespeichert', 'success')
+      showMsg('Charge/MHD gespeichert', 'success')
     } catch(e: any) {
       alert('Fehler: ' + e.message)
     } finally {
@@ -2348,7 +2357,7 @@ export default function Lager() {
         : i))
       await loadStock()
       setDetailItem(prev => prev && existingItem ? { ...prev, notes: detailNote, min_stock: getMinStock({ ...existingItem, location_min_stocks: updatedLocationMinStocks }, currentLocationId) } : prev)
-      showMsg('✅ Gespeichert!', 'success')
+      showMsg('Gespeichert!', 'success')
     } catch(e: any) {
       const detail = e?.data ? JSON.stringify(e.data) : e.message
       alert(`Fehler: ${detail}`)
@@ -2404,6 +2413,8 @@ export default function Lager() {
       if (candidates.length > 0) return { ...row, matchType: 'similar' as const, item: null, similar: candidates, selectedItem: candidates[0], createNew: false, included: true }
       return { ...row, matchType: 'none' as const, item: null, similar: [], selectedItem: null, createNew: false, included: false }
     })
+    // IDs bleiben über ein erneutes Laden derselben Datei erhalten — ein Import mit
+    // unklarem Ende bucht schon Angekommenes beim zweiten Mal nicht doppelt
     setImportItems(matched)
     setShowImportModal(true)
     if (importFileRef.current) importFileRef.current.value = ''
@@ -2415,7 +2426,7 @@ export default function Lager() {
     let booked = 0
     let created = 0
     try {
-      for (const row of importItems) {
+      for (const [idx, row] of importItems.entries()) {
         if (!row.included && !row.createNew) continue
         let targetItem: InventoryItem | null = null
         if (row.matchType === 'exact') {
@@ -2429,27 +2440,27 @@ export default function Lager() {
           })
           targetItem = newItem as unknown as InventoryItem
           setAllItems(prev => [...prev, targetItem as InventoryItem])
+          // Beim erneuten Versuch nach einem Fehler nicht noch einmal anlegen
+          Object.assign(row, { matchType: 'exact', item: targetItem, createNew: false, included: true })
           created++
         }
-        if (!targetItem) continue
-        await pb.collection('inventory_stock').create({
-          item_id: targetItem.id, location_id: currentLocationId,
-          quantity: row.qty, expiry_date: row.expiry || null,
-          organization_id: user?.organization_id
-        })
-        await pb.collection('inventory_transactions').create({
-          item_id: targetItem.id, location_id: currentLocationId,
-          type: 'einbuchung', quantity: row.qty, note: 'CSV-Import',
-          user: user?.email || user?.id, organization_id: user?.organization_id
-        })
+        if (!targetItem || !(row.qty > 0)) continue
+        // Bestand und Journal je Zeile gemeinsam; feste ID je Zeile — ein erneuter Import
+        // nach einem Abbruch bucht schon angekommene Zeilen nicht noch einmal
+        const schluessel = `${idx}|${row.name}|${row.qty}|${row.expiry || ''}`
+        const clientId = importIdsRef.current[schluessel] ?? (importIdsRef.current[schluessel] = neueBuchungsId())
+        await buche(lagerServer, [{ art: 'zugang', item_id: targetItem.id, location_id: currentLocationId, menge: row.qty, expiry: row.expiry || null, notiz: NOTIZ.csvImport }], { wer: wer(), clientId, pruefeVorher: true })
         booked++
       }
+      setLogStand(n => n + 1)
       await loadStock()
+      importIdsRef.current = {}
       setShowImportModal(false)
       setImportItems([])
-      showMsg(`✅ ${booked} eingebucht${created > 0 ? `, ${created} neu angelegt` : ''}`, 'success')
-    } catch (e: any) {
-      showMsg('Fehler: ' + e.message, 'error')
+      showMsg(`${booked} eingebucht${created > 0 ? `, ${created} neu angelegt` : ''}`, 'success')
+    } catch (e) {
+      setLogStand(n => n + 1)
+      showMsg(`${booked} Zeile${booked === 1 ? '' : 'n'} eingebucht, dann: ${buchungsFehlerText(e, true)}`, 'error')
     } finally {
       setImportLoading(false)
     }
@@ -2569,7 +2580,7 @@ export default function Lager() {
           {ausgabenCount > 0 && <span className="lager-badge">{ausgabenCount}</span>}
           <span className="lager-action-label">Ausgaben</span>
         </button>
-        <button className="lager-action-btn" onClick={() => { loadTransactions(); setShowLogModal(true) }} title="Logbuch">
+        <button className="lager-action-btn" onClick={() => { setLogVorgabe(undefined); setShowLogModal(true) }} title="Logbuch">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           <span className="lager-action-label">Logbuch</span>
         </button>
@@ -2577,11 +2588,11 @@ export default function Lager() {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           <span className="lager-action-label">Artikel</span>
         </button>
-        <button className="lager-action-btn" onClick={() => { setBuchungType('ein'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setShowBuchungModal(true) }} title="Einbuchen">
+        <button className="lager-action-btn" onClick={() => { setBuchungType('ein'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setBuchungScanCharge(null); setBuchungFehler(null); setShowBuchungModal(true) }} title="Einbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span className="lager-action-label">Einbuchen</span>
         </button>
-        <button className="lager-action-btn" onClick={() => { setBuchungType('aus'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setShowBuchungModal(true) }} title="Ausbuchen">
+        <button className="lager-action-btn" onClick={() => { setBuchungType('aus'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setBuchungScanCharge(null); setBuchungFehler(null); setShowBuchungModal(true) }} title="Ausbuchen">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
           <span className="lager-action-label">Ausbuchen</span>
         </button>
@@ -2626,7 +2637,15 @@ export default function Lager() {
 
       {/* TOAST */}
       {message && (
-        <div className={`lager-toast lager-toast-${message.type}`}>{message.text}</div>
+        <div className={`lager-toast lager-toast-${message.type}`} style={rueckgaengig ? { bottom: 'calc(134px + env(safe-area-inset-bottom))' } : undefined}>{message.text}</div>
+      )}
+      {rueckgaengig && (
+        <div className="lager-rueck" role="status">
+          <span className="lager-rueck-text">{rueckgaengig.text}</span>
+          <button className="lager-rueck-knopf" onClick={rueckgaengigAusfuehren} disabled={rueckgaengig.laeuft}>
+            {rueckgaengig.laeuft ? 'Wird zurückgenommen …' : 'Rückgängig'}
+          </button>
+        </div>
       )}
 
       {/* MAIN CONTENT */}
@@ -2778,37 +2797,19 @@ export default function Lager() {
       {/* LOGBUCH MODAL */}
       {showLogModal && (
         <div className="lager-modal-overlay" onClick={() => setShowLogModal(false)}>
-          <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>Logbuch</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 420, overflowY: 'auto' }}>
-              {transactions.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '32px 16px', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Transaktionen vorhanden</div>
-              ) : (
-                transactions.map(txn => (
-                  <div key={txn.id} style={{ background: 'var(--lbf-fuss)', borderRadius: 8, padding: '10px 12px', borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? 'var(--lbf-akzent)' : '#d97706'}` }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{new Date(txn.created).toLocaleString('de-DE')}</div>
-                      <div style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4,
-                        background: txn.type === 'einbuchung' ? 'var(--lbf-ok-grund-2)' : txn.type === 'ausbuchung' ? 'var(--lbf-fehler-grund-2)' : 'var(--lbf-warn-grund-2)',
-                        color: txn.type === 'einbuchung' ? 'var(--lbf-ok-text)' : txn.type === 'ausbuchung' ? 'var(--lbf-fehler-text-2)' : 'var(--lbf-warn-text)'
-                      }}>
-                        {txn.type === 'einbuchung' ? 'Einbuchung' : txn.type === 'ausbuchung' ? 'Ausbuchung' : 'Korrektur'}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 13, color: 'var(--lbf-text)' }}>
-                      <div><strong>Artikel:</strong> {txn.expand?.item_id?.name || 'Unbekannt'}</div>
-                      <div><strong>Standort:</strong> {txn.expand?.location_id?.name || 'Unbekannt'}</div>
-                      <div><strong>Menge:</strong> {txn.quantity > 0 ? '+' : ''}{txn.quantity} {txn.expand?.item_id?.unit || 'Stück'}</div>
-                      <div><strong>Benutzer:</strong> {txn.user}</div>
-                      {txn.note && <div><strong>Notiz:</strong> {txn.note}</div>}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-              <button className="lager-btn" onClick={() => setShowLogModal(false)}>Schließen</button>
-            </div>
+          <div className="lager-modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
+            <LagerLogbuch
+              orgId={user?.organization_id || ''}
+              ich={{ id: user?.id || '', email: user?.email, name: user?.name }}
+              items={allItems}
+              locations={locations}
+              startLocationId={currentLocationId}
+              modus="voll"
+              vorgabe={logVorgabe}
+              wartend={wartend}
+              aktualisiert={logStand}
+              onClose={() => { setShowLogModal(false); setLogVorgabe(undefined) }}
+            />
           </div>
         </div>
       )}
@@ -3449,7 +3450,7 @@ export default function Lager() {
 
       {/* BUCHUNG MODAL */}
       {showBuchungModal && (
-        <div className="lager-modal-overlay" onClick={() => setShowBuchungModal(false)}>
+        <div className="lager-modal-overlay" onClick={() => { if (!savingBuchung) setShowBuchungModal(false) }}>
           <div className="lager-modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 16 }}>
               {buchungType === 'ein' ? 'Artikel einbuchen' : 'Artikel ausbuchen'}
@@ -3493,7 +3494,11 @@ export default function Lager() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Menge *</label>
                 <input className="lager-input" type="number" value={buchungQty || ''} onChange={(e) => setBuchungQty(Number(e.target.value))} min="1" />
-                <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Wird zuerst von der Charge mit dem nächsten Ablaufdatum abgezogen (FIFO). Die entnommene Charge wird protokolliert.</span>
+                <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                  {buchungScanCharge
+                    ? `Gescannte Charge ${buchungScanCharge.batch} wird zuerst entnommen, danach die mit dem nächsten Ablaufdatum.`
+                    : 'Wird zuerst von der Charge mit dem nächsten Ablaufdatum abgezogen. Die entnommene Charge wird protokolliert.'}
+                </span>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginTop: 6 }}>Einsatz-Nr. (optional)</label>
                 <input className="lager-input" type="text" value={buchungEinsatz} onChange={(e) => setBuchungEinsatz(e.target.value)} placeholder="z.B. E-2026-0147" />
                 <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Damit ist bei einem Rückruf nachvollziehbar, wohin die Charge gegangen ist.</span>
@@ -3530,9 +3535,14 @@ export default function Lager() {
                 <div style={{ fontSize: 12, color: 'var(--warm-gray)', marginTop: 10 }}>Gesamt: <strong style={{ color: 'var(--lbf-text)' }}>{einChargen.reduce((s, r) => s + (r.menge || 0), 0)}</strong> {allItems.find(i => i.id === selectedBuchungItem)?.unit || 'Stück'}</div>
               </div>
             )}
+            {buchungFehler && (
+              <div role="alert" style={{ background: 'var(--lbf-fehler-grund)', borderLeft: '3px solid #dc2626', color: 'var(--lbf-fehler-text-2)', borderRadius: 8, padding: '9px 12px', fontSize: 13, marginBottom: 8 }}>
+                {buchungFehler}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
-              <button className="lager-btn" onClick={() => setShowBuchungModal(false)}>Abbrechen</button>
-              <button className="lager-btn primary" onClick={saveBuchung} disabled={savingBuchung}>{buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}</button>
+              <button className="lager-btn" onClick={() => setShowBuchungModal(false)} disabled={savingBuchung}>Abbrechen</button>
+              <button className="lager-btn primary" onClick={saveBuchung} disabled={savingBuchung}>{savingBuchung ? 'Bucht …' : buchungType === 'ein' ? 'Einbuchen' : 'Ausbuchen'}</button>
             </div>
           </div>
         </div>
@@ -3659,29 +3669,19 @@ export default function Lager() {
               </>
             )}
 
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Verlauf</div>
-            <div style={{ maxHeight: 200, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {detailLoadingData ? (
-                <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>Lade...</div>
-              ) : detailTransactions.length === 0 ? (
-                <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>Keine Transaktionen</div>
-              ) : (
-                detailTransactions.map(txn => (
-                  <div key={txn.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'var(--lbf-fuss)', borderRadius: 8, borderLeft: `3px solid ${txn.type === 'einbuchung' ? '#16a34a' : txn.type === 'ausbuchung' ? 'var(--lbf-akzent)' : '#d97706'}`, fontSize: 13 }}>
-                    <div>
-                      <div style={{ fontWeight: 700, color: 'var(--lbf-text)' }}>
-                        {txn.type === 'einbuchung' ? `+${txn.quantity}` : txn.type === 'ausbuchung' ? `${txn.quantity}` : `Korrektur ${txn.quantity > 0 ? '+' : ''}${txn.quantity}`} {detailItem.unit}
-                      </div>
-                      {txn.note && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{txn.note}</div>}
-                    </div>
-                    <div style={{ textAlign: 'right', fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>
-                      <div>{txn.user}</div>
-                      <div>{new Date(txn.created).toLocaleDateString('de-DE')}</div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            {/* Verlauf: nur dieser Standort, aus dem Logbuch */}
+            <LagerLogbuch
+              orgId={user?.organization_id || ''}
+              ich={{ id: user?.id || '', email: user?.email, name: user?.name }}
+              items={allItems}
+              locations={locations}
+              startLocationId={currentLocationId}
+              modus="artikel"
+              vorgabe={{ itemId: detailItem.id }}
+              wartend={wartend}
+              aktualisiert={logStand}
+              onGanzerVerlauf={(itemId) => { setLogVorgabe({ itemId }); setShowItemDetailModal(false); setShowLogModal(true) }}
+            />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginTop: 16 }}>
               {(() => {
                 const raw = allItems.find(i => i.id === detailItem.id)
@@ -3772,7 +3772,7 @@ export default function Lager() {
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <button className="lager-btn" onClick={() => { setShowMultiBuchungModal(false); setMultiBuchungItems([]) }}>Abbrechen</button>
-              <button className="lager-btn primary" onClick={saveMultiBuchung} disabled={multiBuchungItems.length === 0}>Alle {multiBuchungType === 'ein' ? 'einbuchen' : 'ausbuchen'}</button>
+              <button className="lager-btn primary" onClick={saveMultiBuchung} disabled={multiBuchungItems.length === 0 || savingMulti}>Alle {multiBuchungType === 'ein' ? 'einbuchen' : 'ausbuchen'}</button>
             </div>
           </div>
         </div>
@@ -4500,8 +4500,14 @@ export default function Lager() {
             {/* Bereits ausgegeben — der eigentliche Zweck der Chargenführung */}
             {recallResults !== null && (
               <div style={{ marginTop: 18 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>
-                  Bereits ausgegeben
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>
+                    Bereits ausgegeben
+                  </div>
+                  <button onClick={() => { setLogVorgabe({ q: recallQuery.trim(), alleStandorte: true, zeitraum: 'alle' }); setShowRecallModal(false); setShowLogModal(true) }}
+                    style={{ background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', color: 'var(--lbf-akzent)' }}>
+                    Chargenspur im Logbuch ›
+                  </button>
                 </div>
                 {recallAusgaben.length === 0 ? (
                   <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
@@ -4541,6 +4547,8 @@ export default function Lager() {
       )}
 
       <style>{`
+        /* Mittig über left/right + margin auto — transform gehört der Animation. Vorher setzte
+           die Animation transform: none und schob die Meldung halb aus dem Bild. */
         @keyframes lagerToastIn {
           from { opacity: 0; transform: translateY(16px); }
           to   { opacity: 1; transform: none; }
@@ -4607,18 +4615,48 @@ export default function Lager() {
         .lager-toast {
           position: fixed;
           bottom: calc(70px + env(safe-area-inset-bottom));
-          left: 50%;
-          transform: translateX(-50%);
+          left: 0;
+          right: 0;
+          margin: 0 auto;
+          width: fit-content;
+          max-width: min(calc(100% - 32px), 480px);
+          box-sizing: border-box;
+          text-align: center;
+          line-height: 1.35;
           z-index: 9999;
-          padding: 10px 20px;
-          border-radius: 20px;
+          padding: 10px 18px;
+          border-radius: 12px;
           font-weight: 600;
           font-size: 13px;
           box-shadow: 0 4px 16px rgba(0,0,0,0.12);
           animation: lagerToastIn 0.2s ease both;
-          white-space: nowrap;
         }
         .lager-toast-success { background: var(--lbf-ok-grund); border: 1px solid #bbf7d0; color: var(--lbf-ok-text); }
+        .lager-rueck {
+          position: fixed;
+          bottom: calc(70px + env(safe-area-inset-bottom));
+          left: 0;
+          right: 0;
+          margin: 0 auto;
+          z-index: 9999;
+          width: min(calc(100% - 32px), 480px);
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 4px 4px 4px 14px;
+          background: var(--lbf-card);
+          border-radius: 12px;
+          border-left: 3px solid var(--lbf-akzent);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.14);
+          animation: lagerToastIn 0.2s ease both;
+        }
+        .lager-rueck-text { flex: 1; min-width: 0; font-size: 13px; color: var(--lbf-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lager-rueck-knopf {
+          flex-shrink: 0; min-height: 44px; padding: 0 12px; border: none; background: none; cursor: pointer;
+          font-family: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--lbf-akzent);
+        }
+        .lager-rueck-knopf:disabled { color: var(--warm-gray); cursor: default; }
         .lager-toast-error   { background: var(--lbf-fehler-grund); border: 1px solid #fecaca; color: var(--lbf-fehler-text-2); }
 
         .lager-search {
@@ -4881,7 +4919,7 @@ export default function Lager() {
 
       {/* CSV IMPORT MODAL */}
       {showImportModal && (
-        <div className="lager-modal-overlay" onClick={() => setShowImportModal(false)}>
+        <div className="lager-modal-overlay" onClick={() => { if (!importLoading) setShowImportModal(false) }}>
           <div className="lager-modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>CSV-Import</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>
@@ -4929,7 +4967,7 @@ export default function Lager() {
               })}
             </div>
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button className="lager-btn" onClick={() => setShowImportModal(false)}>Abbrechen</button>
+              <button className="lager-btn" onClick={() => setShowImportModal(false)} disabled={importLoading}>Abbrechen</button>
               <button className="lager-btn primary" onClick={confirmImport} disabled={importLoading || !importItems.some(r => r.included || r.createNew)}>
                 {importLoading ? 'Importiere…' : `${importItems.filter(r => r.included || r.createNew).length} Artikel importieren`}
               </button>

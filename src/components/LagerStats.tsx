@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList } from 'recharts'
 import { pb } from '../lib/pocketbase'
+import { journalSummen } from '../lib/lagerRechnung'
 
 interface TxRow { item_id: string; type: string; quantity: number; note?: string; created: string }
 interface Props { orgId: string; items: { id: string; name: string; unit?: string }[]; onChanged?: () => void }
@@ -68,24 +69,19 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
   }, [orgId, months])
 
   const { top, monthly, totalOut, totalIn } = useMemo(() => {
-    // Umlagerungen sind kein echter Verbrauch/Zugang — ausklammern
-    const real = (txns || []).filter(t => !(t.note || '').startsWith('Umlagerung'))
-    const byItem: Record<string, number> = {}
-    const byMonth: Record<string, { ein: number; aus: number }> = {}
-    let totalOut = 0
-    let totalIn = 0
-    for (const t of real) {
-      const q = Math.abs(t.quantity || 0)
-      const m = (t.created || '').slice(0, 7)
-      if (!byMonth[m]) byMonth[m] = { ein: 0, aus: 0 }
-      if (t.type === 'ausbuchung') { byItem[t.item_id] = (byItem[t.item_id] || 0) + q; byMonth[m].aus += q; totalOut += q }
-      else if (t.type === 'einbuchung') { byMonth[m].ein += q; totalIn += q }
-    }
+    // Mit Vorzeichen gerechnet: Eine zurückgenommene Buchung („Rückgängig“) gleicht sich
+    // aus, statt doppelt zu zählen. Umlagerungen sind weder Verbrauch noch Zugang.
+    const s = journalSummen(txns || [])
+    const byItem = s.ausJeArtikel
+    const byMonth = s.jeMonat
+    const totalOut = Math.max(0, s.aus)
+    const totalIn = Math.max(0, s.ein)
     const nameOf = (id: string) => {
       const n = items.find(i => i.id === id)?.name || 'Unbekannt'
       return n.length > 24 ? n.slice(0, 23) + '…' : n
     }
     const top = Object.entries(byItem)
+      .filter(([, qty]) => qty > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([id, qty]) => ({ name: nameOf(id), qty }))
@@ -96,8 +92,8 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
       const key = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}`
       monthly.push({
         monat: dt.toLocaleDateString('de-DE', { month: 'short', ...(months > 6 ? { year: '2-digit' } : {}) }),
-        ein: byMonth[key]?.ein || 0,
-        aus: byMonth[key]?.aus || 0,
+        ein: Math.max(0, byMonth[key]?.ein || 0),
+        aus: Math.max(0, byMonth[key]?.aus || 0),
       })
     }
     return { top, monthly, totalOut, totalIn }

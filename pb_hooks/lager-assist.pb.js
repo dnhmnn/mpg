@@ -21,6 +21,7 @@ function loadSnapshot(orgId) {
 
   const qty = {}, exp = {}, batches = {}
   for (const s of stock) {
+    if ((s.get("quantity") || 0) <= 0) continue   // leere Zeilen: kein Bestand, kein MHD
     const id = s.get("item_id")
     qty[id] = (qty[id] || 0) + (s.get("quantity") || 0)
     const ed = s.get("expiry_date")
@@ -33,8 +34,10 @@ function loadSnapshot(orgId) {
     if (t.get("type") !== "ausbuchung") continue
     const created = new Date(t.get("created")).getTime()
     if (created < since) continue
+    // Umlagerungen sind kein Verbrauch; Rücknahmen („Rückgängig“, positiv) gleichen aus
+    if (/^(Rückgängig · )?Umlagerung/.test(t.getString("note"))) continue
     const id = t.get("item_id")
-    verbrauch[id] = (verbrauch[id] || 0) + Math.abs(t.get("quantity") || 0)
+    verbrauch[id] = (verbrauch[id] || 0) - (t.get("quantity") || 0)
   }
 
   const lines = []

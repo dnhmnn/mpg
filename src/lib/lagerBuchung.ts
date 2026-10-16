@@ -18,7 +18,7 @@
 // Die Planung ist reine Rechnung (planeBuchung, planeRueckgaengig) und hat
 // Prüffälle in src/lib/__tests__/lagerBuchung.test.ts.
 
-import { entnahmeReihenfolge, summe } from './lagerRechnung'
+import { NOTIZ, entnahmeReihenfolge, summe } from './lagerRechnung'
 import { newId } from './eks/ids'
 import { pbFehlerText } from './pbFehler'
 
@@ -56,8 +56,10 @@ export interface Zugang extends Gemeinsam {
 export interface Abgang extends Gemeinsam {
   art: 'abgang'
   typ?: 'ausbuchung' | 'korrektur'
-  /** Diese Bestandszeile zuerst (gescannte oder gewählte Charge), danach zuerst ablaufend zuerst. */
+  /** Diese Bestandszeile zuerst (gewählte Charge), danach zuerst ablaufend zuerst. */
   bevorzugt?: string
+  /** Gescannte Charge (GS1): die Zeile mit dieser Chargen-Nr. zuerst — bei mehreren die mit passendem MHD. */
+  charge?: { batch: string; mhd?: string | null }
   /** Nur aus dieser Bestandszeile (Rückruf einer Charge). */
   nurZeile?: string
   /** Mit nurZeile: die ganze Zeile, egal wie viel gerade darin ist. */
@@ -99,6 +101,7 @@ export interface Posten {
   batch?: string | null
   expiry_date?: string | null
   notiz: string
+  einsatz?: string
 }
 
 export interface Plan {
@@ -121,16 +124,26 @@ export interface Ergebnis {
 
 export type FehlerArt = 'netz' | 'bestand' | 'abgelehnt'
 
+/** Was zu tun ist, wenn eine Buchung ohne Sammelbuchung mittendrin abbrach. */
+export const TEXT_TEILWEISE = 'Verbindung während der Buchung abgebrochen — der Bestand kann schon geändert sein, ohne dass es im Journal steht. Bitte NICHT erneut buchen, sondern den Bestand zählen und notfalls per Inventur korrigieren.'
+
 export class BuchungsFehler extends Error {
   art: FehlerArt
   /** Nur bei 'netz': Die Anfrage war schon unterwegs — vielleicht ist sie angekommen. */
   vielleichtGebucht: boolean
+  /**
+   * Nur bei 'netz' ohne Sammelbuchung (Batch in PocketBase aus): Die Einzelanfragen
+   * brachen mittendrin ab — die Buchung kann TEILWEISE angekommen sein. Dann darf
+   * sie nicht automatisch wiederholt werden; ein Mensch muss im Logbuch nachsehen.
+   */
+  teilweise: boolean
   ursache?: unknown
-  constructor(text: string, art: FehlerArt, vielleichtGebucht = false, ursache?: unknown) {
+  constructor(text: string, art: FehlerArt, vielleichtGebucht = false, ursache?: unknown, teilweise = false) {
     super(text)
     this.name = 'BuchungsFehler'
     this.art = art
     this.vielleichtGebucht = vielleichtGebucht
+    this.teilweise = teilweise
     this.ursache = ursache
   }
 }
@@ -178,10 +191,13 @@ export function planeBuchung(
         id: tx_id, item_id: p.item_id, location_id: p.location_id, type: p.typ, quantity: p.menge,
         batch: p.batch || null, expiry_date: p.expiry_date || null, stock_id: p.stock_id || null,
         einsatz: (einsatz || '').trim() || null, note: p.notiz,
+        // Alle Zeilen einer Buchung tragen dieselbe Vorgangs-Nummer — so fasst das Logbuch
+        // sie exakt zusammen. Gibt es das Feld in PocketBase nicht, wird es ignoriert.
+        vorgang: clientId,
         user: wer.user, organization_id: wer.organization_id,
       },
     })
-    posten.push({ tx_id, ...p })
+    posten.push({ tx_id, ...p, ...((einsatz || '').trim() ? { einsatz: (einsatz || '').trim() } : {}) })
   }
 
   const neueZeile = (item_id: string, location_id: string, menge: number, batch: string | null, expiry: string | null) => {
@@ -192,6 +208,14 @@ export function planeBuchung(
     })
     zeilen.push({ id, item_id, location_id, quantity: menge, expiry_date: expiry, batch })
     return id
+  }
+
+  /** Bestandszeile zu einer gescannten Charge: gleiche Chargen-Nr., bei mehreren die mit gleichem MHD. */
+  const zeileZurCharge = (item_id: string, location_id: string, c: { batch: string; mhd?: string | null }) => {
+    const lot = c.batch.trim().toLowerCase()
+    const passend = zeilen.filter(z => z.item_id === item_id && z.location_id === location_id && z.quantity > 0 && (z.batch || '').trim().toLowerCase() === lot)
+    const mhd = (c.mhd || '').slice(0, 10)
+    return (passend.find(z => mhd && (z.expiry_date || '').slice(0, 10) === mhd) ?? passend[0])?.id
   }
 
   /** Nimmt `menge` aus den Zeilen eines Artikels an einem Standort. */
@@ -235,10 +259,11 @@ export function planeBuchung(
       }
       pruefeMenge(menge)
       const typ = b.typ ?? 'ausbuchung'
-      const { teile, rest } = entnimm(b.item_id, b.location_id, menge, b.bevorzugt, b.nurZeile)
+      const bevorzugt = b.bevorzugt ?? (b.charge ? zeileZurCharge(b.item_id, b.location_id, b.charge) : undefined)
+      const { teile, rest } = entnimm(b.item_id, b.location_id, menge, bevorzugt, b.nurZeile)
       if (b.sammel) {
         rueckgaengigMoeglich = false
-        const gewaehlt = b.bevorzugt ? teile.find(t => t.zeile.id === b.bevorzugt) : undefined
+        const gewaehlt = bevorzugt ? teile.find(t => t.zeile.id === bevorzugt) : undefined
         let zusatz: string | null = null
         if (gewaehlt) {
           const charge = gewaehlt.zeile.batch || 'ohne Charge'
@@ -262,7 +287,7 @@ export function planeBuchung(
           // Physisch entnommen, aber im System nicht (mehr) vorhanden — ehrlich festhalten
           journalZeile({
             item_id: b.item_id, location_id: b.location_id, typ, menge: -rest,
-            notiz: bemerkung(b.notiz, 'ohne Chargenzuordnung', b.einsatz && `Einsatz ${b.einsatz.trim()}`),
+            notiz: bemerkung(b.notiz, NOTIZ.ohneCharge, b.einsatz && `Einsatz ${b.einsatz.trim()}`),
           }, b.einsatz)
         }
       }
@@ -282,13 +307,13 @@ export function planeBuchung(
         journalZeile({
           item_id: b.item_id, location_id: b.von, typ: 'ausbuchung', menge: -take,
           stock_id: zeile.id, batch, expiry_date: expiry,
-          notiz: bemerkung(`Umlagerung → ${b.nachName}`, batch && `Charge ${batch}`),
+          notiz: bemerkung(`${NOTIZ.umlagerungNach} ${b.nachName}`, batch && `Charge ${batch}`),
         })
         const ziel = neueZeile(b.item_id, b.nach, take, batch, expiry)
         journalZeile({
           item_id: b.item_id, location_id: b.nach, typ: 'einbuchung', menge: take,
           stock_id: ziel, batch, expiry_date: expiry,
-          notiz: bemerkung(`Umlagerung ← ${b.vonName}`, batch && `Charge ${batch}`),
+          notiz: bemerkung(`${NOTIZ.umlagerungVon} ${b.vonName}`, batch && `Charge ${batch}`),
         })
       }
     }
@@ -340,13 +365,14 @@ export function planeRueckgaengig(
     }
     // Abgang ohne Bestand: nur die Gegenzeile im Journal
     const tx_id = journal.length === 0 ? clientId : neueId()
-    const notiz = bemerkung('Rückgängig', p.notiz)
+    const notiz = bemerkung(NOTIZ.rueckgaengig, p.notiz)
     journal.push({
       collection: 'inventory_transactions', aktion: 'create', id: tx_id,
       body: {
         id: tx_id, item_id: p.item_id, location_id: p.location_id, type: p.typ, quantity: -p.menge,
         batch: p.batch || null, expiry_date: p.expiry_date || null, stock_id: p.stock_id || null,
-        note: notiz, storno_von: p.tx_id, user: wer.user, organization_id: wer.organization_id,
+        einsatz: p.einsatz || null, note: notiz, storno_von: p.tx_id, vorgang: clientId,
+        user: wer.user, organization_id: wer.organization_id,
       },
     })
     posten.push({ ...p, tx_id, menge: -p.menge, notiz })
@@ -414,7 +440,11 @@ async function sendeEinzeln(server: Server, anfragen: Anfrage[]): Promise<unknow
     for (const a of anfragen) erledigt.push({ a, antwort: await server.sende(a) })
     return erledigt.map(x => x.antwort)
   } catch (e) {
-    if (istNetz(e) && erledigt.length > 0) throw e
+    // Netz weg: Was davon angekommen ist, weiß niemand — auch die gerade laufende Anfrage
+    // kann der Server ausgeführt haben. Nicht zurückdrehen (das ginge ebenso ins Ungewisse),
+    // sondern als „teilweise“ melden: Diese Buchung darf nicht automatisch wiederholt werden.
+    if (istNetz(e)) throw Object.assign(new Error('teilweise übertragen'), { status: 0, teilweise: true, ursache: e })
+    let zurueck = true
     for (const { a } of erledigt.reverse()) {
       try {
         if (a.collection === 'inventory_stock' && a.aktion === 'update') {
@@ -423,8 +453,10 @@ async function sendeEinzeln(server: Server, anfragen: Anfrage[]): Promise<unknow
         } else if (a.aktion === 'create') {
           await server.loesche(a.collection, a.id)
         }
-      } catch { /* bestmöglich */ }
+      } catch { zurueck = false }
     }
+    // Ließ sich nicht alles zurückdrehen, ist die Buchung teilweise angekommen
+    if (!zurueck) throw Object.assign(new Error('teilweise übertragen'), { status: 0, teilweise: true, ursache: e })
     throw e
   }
 }
@@ -501,6 +533,9 @@ async function fuehreAus(
   } catch (e) {
     if (e instanceof BuchungsFehler) throw e
     if (istNetz(e)) {
+      if ((e as { teilweise?: boolean }).teilweise) {
+        throw new BuchungsFehler(TEXT_TEILWEISE, 'netz', true, e, true)
+      }
       throw new BuchungsFehler(
         gesendet ? 'Keine Antwort vom Server — ob gebucht wurde, ist unklar.' : 'Keine Verbindung zum Server.',
         'netz', gesendet, e)
@@ -523,6 +558,9 @@ export interface BuchOptionen {
 
 /** Bucht Bewegungen genau einmal: alles oder nichts, nacheinander mit anderen Buchungen dieses Geräts. */
 export function buche(server: Server, bewegungen: Bewegung[], o: BuchOptionen): Promise<Ergebnis> {
+  if (!o.wer.organization_id || !o.wer.user) {
+    return Promise.reject(new BuchungsFehler('Nicht angemeldet — es wurde nichts gebucht.', 'abgelehnt'))
+  }
   const clientId = o.clientId ?? newId()
   return nacheinander(() => fuehreAus(server, clientId, !!o.pruefeVorher, paareVon(bewegungen),
     bestand => planeBuchung(bewegungen, bestand, o.wer, clientId, { ueberzug: o.ueberzug, zusatz: o.zusatz })))
@@ -530,6 +568,9 @@ export function buche(server: Server, bewegungen: Bewegung[], o: BuchOptionen): 
 
 /** Nimmt eine Buchung als Gegenbuchung zurück. clientId wiederverwenden, falls der erste Versuch unklar endete. */
 export function macheRueckgaengig(server: Server, e: Ergebnis, wer: Wer, clientId = newId(), pruefeVorher = false): Promise<Ergebnis> {
+  if (!wer.organization_id || !wer.user) {
+    return Promise.reject(new BuchungsFehler('Nicht angemeldet — es wurde nichts zurückgenommen.', 'abgelehnt'))
+  }
   const paare = new Map(e.posten.map(p => [`${p.item_id}|${p.location_id}`, { item_id: p.item_id, location_id: p.location_id }]))
   return nacheinander(() => fuehreAus(server, clientId, pruefeVorher, [...paare.values()],
     bestand => planeRueckgaengig(e, bestand, wer, clientId)))

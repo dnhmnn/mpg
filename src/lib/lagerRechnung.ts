@@ -134,7 +134,29 @@ export interface JournalZeile {
   stock_id?: string | null
   batch?: string | null
   created?: string
+  user?: string | null
+  /** Rücknahme: ID der zurückgenommenen Zeile (wenn das Feld in PocketBase existiert) */
+  storno_von?: string | null
 }
+
+/**
+ * Feste Bausteine der Journal-Notizen. Schreiber (lagerBuchung.ts, Lager.tsx) und
+ * Leser (Logbuch, Statistik, Rückruf) nutzen dieselben Texte — ändert sich einer,
+ * fällt es in den Prüffällen auf, statt dass Buchungen still falsch eingeordnet werden.
+ */
+export const NOTIZ = {
+  umlagerungNach: 'Umlagerung →',
+  umlagerungVon: 'Umlagerung ←',
+  rueckgaengig: 'Rückgängig',
+  produktausgabe: 'Produktausgabe',
+  rueckruf: 'Rückruf',
+  inventur: 'Inventur-Korrektur',
+  csvImport: 'CSV-Import',
+  offline: 'offline erfasst',
+  ohneCharge: 'ohne Chargenzuordnung',
+  ki: 'KI-Assistent',
+  mehrfach: 'Mehrfachbuchung',
+} as const
 
 /** Umlagerungen sind kein Verbrauch und kein Zugang — auch nicht ihre Rücknahme. */
 export function istUmlagerung(note?: string | null): boolean {
@@ -174,17 +196,24 @@ export function journalSummen(zeilen: JournalZeile[]): Summen {
 
 /**
  * Ausbuchungen, die nicht zurückgenommen wurden — für die Rückruf-Suche:
- * Wohin ist die Charge WIRKLICH gegangen? Jede Gegenbuchung hebt die
- * ursprüngliche Zeile derselben Bestandszeile und Menge auf.
+ * Wohin ist die Charge WIRKLICH gegangen? Eine Rücknahme hebt ihre Originalzeile
+ * auf: zuerst über storno_von; ohne das Feld die jüngste passende Zeile DERSELBEN
+ * Person (gleiche Bestandszeile, Charge, Gegenmenge), bevorzugt mit gleichlautender
+ * Notiz. Zurückgenommen wird immer nur die eigene letzte Buchung — so landet eine
+ * Rücknahme nie bei jemand anderem, der dieselbe Charge noch in der Hand hat.
  */
 export function wirklichAusgegeben<T extends JournalZeile>(zeilen: T[]): T[] {
+  const aufgehoben = new Set<string>()
+  for (const t of zeilen) if (t.storno_von) aufgehoben.add(t.storno_von)
   const nachZeit = [...zeilen].sort((a, b) => (a.created || '').localeCompare(b.created || ''))
   const offen: T[] = []
   for (const t of nachZeit) {
     if (t.type !== 'ausbuchung') continue
     if (t.quantity < 0) { offen.push(t); continue }
-    // Die Gegenbuchung gehört zur jüngsten passenden Ausgabe, am liebsten zur gleichlautenden
-    const passt = (o: T) => (o.stock_id || '') === (t.stock_id || '') && (o.batch || '') === (t.batch || '') && o.quantity === -t.quantity
+    if (t.storno_von) continue   // schon über das Feld zugeordnet
+    const wer = (t.user || '').toLowerCase()
+    const passt = (o: T) => (o.stock_id || '') === (t.stock_id || '') && (o.batch || '') === (t.batch || '')
+      && o.quantity === -t.quantity && (o.user || '').toLowerCase() === wer && !aufgehoben.has(o.id || '')
     const original = (t.note || '').replace(/^Rückgängig( · )?/, '')
     let i = -1
     for (let k = offen.length - 1; k >= 0; k--) {
@@ -194,5 +223,20 @@ export function wirklichAusgegeben<T extends JournalZeile>(zeilen: T[]): T[] {
     }
     if (i >= 0) offen.splice(i, 1)
   }
-  return zeilen.filter(t => offen.includes(t))
+  return zeilen.filter(t => offen.includes(t) && !aufgehoben.has(t.id || ''))
+}
+
+/**
+ * Welche Artikel an einem Standort geführt werden — aus dem Journal: Es muss eine
+ * Buchung übrig bleiben, die nicht zurückgenommen wurde. Eine versehentliche und
+ * sofort zurückgenommene Buchung macht einen Artikel nicht für ein Jahr zum
+ * „geführten“ (sonst: falsche Fehlmengen in Liste, Bestellliste und Warn-Mail).
+ */
+export function gefuehrteArtikel(zeilen: { item_id: string; note?: string | null; storno_von?: string | null }[]): Set<string> {
+  const zaehler = new Map<string, number>()
+  for (const z of zeilen) {
+    const ruecknahme = !!z.storno_von || (z.note || '').startsWith(NOTIZ.rueckgaengig)
+    zaehler.set(z.item_id, (zaehler.get(z.item_id) || 0) + (ruecknahme ? -1 : 1))
+  }
+  return new Set([...zaehler].filter(([, n]) => n > 0).map(([id]) => id))
 }

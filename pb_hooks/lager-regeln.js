@@ -58,7 +58,16 @@ function lagerWarnungen(app, orgId, leadDays, jetztMs) {
   if (locs.length > 1) {
     const seit = new Date(heute - 365 * 86400000).toISOString().slice(0, 10) + " 00:00:00"
     const tx = app.findRecordsByFilter("inventory_transactions", "organization_id = {:o} && created >= {:s}", "", 100000, 0, { o: orgId, s: seit })
-    for (const t of tx) gefuehrt[t.get("item_id") + "|" + t.get("location_id")] = true
+    // Zurückgenommene Fehlbuchungen zählen nicht: geführt nur, wenn eine Buchung übrig bleibt
+    const zaehler = {}
+    for (const t of tx) {
+      const k = t.get("item_id") + "|" + t.get("location_id")
+      let storno = ""
+      try { storno = t.getString("storno_von") } catch (e) { /* Feld fehlt */ }
+      const ruecknahme = !!storno || t.getString("note").indexOf("Rückgängig") === 0
+      zaehler[k] = (zaehler[k] || 0) + (ruecknahme ? -1 : 1)
+    }
+    for (const k of Object.keys(zaehler)) if (zaehler[k] > 0) gefuehrt[k] = true
   }
 
   const menge = {}, frueh = {}

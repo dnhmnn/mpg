@@ -70,3 +70,32 @@ ISO-Format (`2026-10-15T07:00:00.000Z`), `@now` aber mit Leerzeichen
 (`2026-10-15 08:00:00.000Z`). Ein am selben Tag abgelaufenes Recht gilt so bis
 Mitternacht (UTC) weiter. Befristete Rechte deshalb nicht in Regeln prüfen,
 sondern in einem Hook (dort lassen sich die Daten richtig vergleichen).
+
+## Lager: Buchungen (inventory_transactions, inventory_stock)
+
+Jede Lagerbuchung läuft über `src/lib/lagerBuchung.ts`: Bestand und Journal
+gehen als **eine** Sammelbuchung (Batch) an PocketBase — alles oder nichts —,
+die erste Journalzeile trägt eine im Gerät vergebene ID. Kommt nach einem
+Abbruch dieselbe Buchung noch einmal, lehnt der Server die doppelte ID ab:
+gebucht wird genau einmal.
+
+**Einstellungen → Application → Batch API einschalten** (Max. Anfragen 50 oder
+mehr). Ohne Batch bucht die App Anfrage für Anfrage; reißt dabei mittendrin die
+Verbindung ab, kann eine Buchung teilweise ankommen. Die App meldet das dann
+(„Bestand zählen, notfalls per Inventur korrigieren“) und wiederholt nicht.
+
+Felder an `inventory_transactions` (Typ *Plain text*, nicht Pflicht):
+
+- `vorgang` — alle Zeilen einer Buchung tragen dieselbe Nummer; das Logbuch
+  fasst sie damit exakt zusammen.
+- `storno_von` — eine Rücknahme („Rückgängig“) verweist auf ihre Originalzeile.
+
+Fehlen die Felder, verwirft PocketBase die Werte ohne Fehler; das Logbuch
+fasst dann nach Zeitnähe zusammen und ordnet Rücknahmen derselben Person zu.
+
+Empfohlen an `inventory_stock.quantity`: **Min 0**. Dann scheitert eine
+Entnahme, die gleichzeitig ein anderes Gerät schon vorgenommen hat, als Ganzes,
+und die App plant mit dem frischen Bestand neu, statt ins Minus zu buchen.
+
+Indizes für das Logbuch (optional): `organization_id, created` und
+`organization_id, location_id, created`, dazu `vorgang`.

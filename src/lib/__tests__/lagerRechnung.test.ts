@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { ablaufStatus, entnahmeReihenfolge, fefo, fehltAmStandort, inventurBasis, inventurDifferenz, journalSummen, summe, tageBisMhd, unterSoll, wirklichAusgegeben, type JournalZeile } from '../lagerRechnung'
+import { ablaufStatus, entnahmeReihenfolge, fefo, fehltAmStandort, gefuehrteArtikel, inventurBasis, inventurDifferenz, journalSummen, summe, tageBisMhd, unterSoll, wirklichAusgegeben, type JournalZeile } from '../lagerRechnung'
 
 const z = (id: string, expiry_date: string | null, quantity = 1, created = '2026-01-01 00:00:00.000Z') => ({ id, expiry_date, quantity, created })
 
@@ -139,5 +139,50 @@ describe('Lager: Journal mit Gegenbuchungen auswerten', () => {
       t('ausbuchung', -1, 'Charge L1', { id: 'd', stock_id: 's2', batch: 'L1', created: '2026-10-03' }),
     ]
     expect(wirklichAusgegeben(zeilen).map(x => x.id)).toEqual(['a', 'd'])
+  })
+})
+
+describe('Lager: Rückruf-Suche ordnet Rücknahmen der richtigen Person zu', () => {
+  const t = (id: string, created: string, quantity: number, user: string, note: string, extra: Partial<JournalZeile> = {}): JournalZeile =>
+    ({ id, item_id: 'hand', type: 'ausbuchung', quantity, note, created, stock_id: 's1', batch: 'B7', user, ...extra })
+
+  it('ohne storno_von: die Rücknahme von A hebt A auf, nicht B mit gleicher Notiz', () => {
+    const zeilen = [
+      t('a', '2026-10-16 10:00:00', -1, 'anna@x.de', 'Charge B7'),
+      t('b', '2026-10-16 10:00:04', -1, 'ben@x.de', 'Charge B7'),
+      t('r', '2026-10-16 10:00:08', 1, 'anna@x.de', 'Rückgängig · Charge B7'),
+    ]
+    expect(wirklichAusgegeben(zeilen).map(x => x.id)).toEqual(['b'])
+  })
+
+  it('mit storno_von gilt das Feld, nicht die Zeitnähe', () => {
+    const zeilen = [
+      t('a', '2026-10-16 10:00:00', -1, 'anna@x.de', 'Charge B7'),
+      t('b', '2026-10-16 10:00:04', -1, 'anna@x.de', 'Charge B7'),
+      t('r', '2026-10-16 10:00:08', 1, 'anna@x.de', 'Rückgängig · Charge B7', { storno_von: 'a' }),
+    ]
+    expect(wirklichAusgegeben(zeilen).map(x => x.id)).toEqual(['b'])
+  })
+
+  it('Rücknahme einer anderen Person hebt nichts auf', () => {
+    const zeilen = [
+      t('a', '2026-10-16 10:00:00', -1, 'anna@x.de', 'Charge B7'),
+      t('r', '2026-10-16 10:00:08', 1, 'ben@x.de', 'Rückgängig · Charge B7'),
+    ]
+    expect(wirklichAusgegeben(zeilen).map(x => x.id)).toEqual(['a'])
+  })
+})
+
+describe('Lager: geführt nur mit Buchung, die nicht zurückgenommen wurde', () => {
+  it('Fehlbuchung + Rückgängig → nicht geführt; echte Entnahme → geführt', () => {
+    const g = gefuehrteArtikel([
+      { item_id: 'larynx', note: '' },
+      { item_id: 'larynx', note: 'Rückgängig' },
+      { item_id: 'beutel', note: 'Charge B1' },
+      { item_id: 'filter', note: 'Charge F' },
+      { item_id: 'filter', note: 'Charge F', storno_von: 'x' },
+      { item_id: 'filter', note: 'Charge F' },
+    ])
+    expect([...g].sort()).toEqual(['beutel', 'filter'])
   })
 })
