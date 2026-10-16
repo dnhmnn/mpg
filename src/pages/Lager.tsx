@@ -5,6 +5,8 @@ import { pb } from '../lib/pocketbase'
 import { parseGs1, sameCode, beschreibeGs1, type Gs1Daten } from '../lib/gs1'
 import { queueBuchung, queueCount, flushQueue, snapshotSet, snapshotGet, speicherSichern, type PendingBuchung } from '../lib/lagerOffline'
 import { useAuth } from '../hooks/useAuth'
+import { ablaufStatus, entnahmeReihenfolge, fefo, fehltAmStandort, inventurBasis, inventurDifferenz, summe, type Zaehlzeitpunkt } from '../lib/lagerRechnung'
+import { pbFehlerText } from '../lib/pbFehler'
 import StatusBar from '../components/StatusBar'
 
 // Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
@@ -83,6 +85,10 @@ interface DisplayItem {
   expiry?: string
   notes?: string
   status: 'ok' | 'warn' | 'exp'
+  /** Wird an diesem Standort geführt — dann zählt auch das leere Fach als fehlend. */
+  gefuehrt?: boolean
+  /** Menge ohne MHD, wenn andere Chargen eines hat — MHD unbekannt, warnt nie von selbst. */
+  ohneMhd?: number
 }
 
 interface Transaction {
@@ -434,8 +440,8 @@ export default function Lager() {
   // Aus einem GS1-DataMatrix gelesene Charge/MHD — belegt die Buchungsmaske vor
   const [scanGs1, setScanGs1] = useState<Gs1Daten | null>(null)
   const [detailNote, setDetailNote] = useState('')
-  const [detailSoll, setDetailSoll] = useState(0)
-  const [detailExpiry, setDetailExpiry] = useState('')
+  // Leer = kein eigenes Soll, es gilt das Standard-Soll
+  const [detailSoll, setDetailSoll] = useState('')
   const [detailLoadingData, setDetailLoadingData] = useState(false)
 
   // Multi-buchung state
@@ -455,9 +461,13 @@ export default function Lager() {
   // Artikel direkt aus der Inventur bearbeiten
   const [auditEdit, setAuditEdit] = useState<AuditItem | null>(null)
   const [auditEditStocks, setAuditEditStocks] = useState<StockItem[]>([])
-  const [auditEditForm, setAuditEditForm] = useState({ name: '', unit: '', soll: 0 })
+  const [auditEditForm, setAuditEditForm] = useState({ name: '', unit: '', soll: '' })
   const [auditStockEdit, setAuditStockEdit] = useState<{ id: string; batch: string; expiry: string } | null>(null)
-  const [auditChargeDialog, setAuditChargeDialog] = useState<{ auditItem: AuditItem; actual: number; diff: number; stocks: StockItem[] } | null>(null)
+  const [auditChargeDialog, setAuditChargeDialog] = useState<{ auditItem: AuditItem; actual: number; diff: number; basis: number; stocks: StockItem[] } | null>(null)
+  // Seit Start der Inventur gebucht: fragen, ob vor oder nach diesen Buchungen gezählt wurde
+  const [auditZeitpunktFrage, setAuditZeitpunktFrage] = useState<{ auditItem: AuditItem; actual: number; aktuell: number } | null>(null)
+  // Artikel, die an einem Standort geführt werden (dort gebucht oder Bestand gesehen) — je Standort
+  const gefuehrtJeStandort = useRef<Record<string, Set<string> | null>>({})
   const [auditAddOpen, setAuditAddOpen] = useState(false)
 
   // CSV Import state
@@ -538,7 +548,7 @@ export default function Lager() {
       })
     } else {
       let rest = Math.abs(b.delta)
-      for (const st of stockList) {
+      for (const st of fefo(stockList)) {
         if (rest <= 0) break
         const take = Math.min(st.quantity, rest)
         const neuQ = st.quantity - take
@@ -663,7 +673,7 @@ export default function Lager() {
           sort: 'expiry_date',
         })
         let remaining = pos.qty
-        for (const stock of stockList) {
+        for (const stock of fefo(stockList)) {
           if (remaining <= 0) break
           const take = Math.min(stock.quantity, remaining)
           const newQty = stock.quantity - take
@@ -706,6 +716,27 @@ export default function Lager() {
     }
   }
 
+  /**
+   * Welche Artikel an diesem Standort geführt werden: dort im letzten Jahr gebucht
+   * oder in dieser Sitzung mit Bestand gesehen. Nur dann gilt ein leeres Fach mit
+   * Standard-Soll als fehlend. null = unbekannt (dann zählt jedes leere Fach).
+   */
+  async function ladeGefuehrt(locId: string): Promise<Set<string> | null> {
+    if (locations.length <= 1) return null
+    if (locId in gefuehrtJeStandort.current) return gefuehrtJeStandort.current[locId]
+    try {
+      const seit = new Date(Date.now() - 365 * 86_400_000).toISOString().slice(0, 10)
+      const txns = await pb.collection('inventory_transactions').getFullList<{ item_id: string }>({
+        filter: pb.filter('location_id = {:l} && organization_id = {:o} && created >= {:s}', { l: locId, o: user?.organization_id, s: `${seit} 00:00:00` }),
+        fields: 'item_id', requestKey: null,
+      })
+      gefuehrtJeStandort.current[locId] = new Set(txns.map(t => t.item_id))
+    } catch {
+      return null
+    }
+    return gefuehrtJeStandort.current[locId]
+  }
+
   async function loadStock() {
     if (!currentLocationId) return
 
@@ -714,7 +745,8 @@ export default function Lager() {
       const snap = await snapshotGet(currentLocationId)
       if (snap) {
         setAllItems(snap.daten.items || [])
-        setDisplayItems(snap.daten.display || [])
+        // Status neu berechnen: Der Stand kann Tage alt sein, und alte Stände kannten die Regeln noch nicht
+        setDisplayItems((snap.daten.display || []).map((d: DisplayItem) => ({ ...d, status: ablaufStatus(d.expiry) })))
         setOfflineStand(snap.ts)
         setError(null)
       } else {
@@ -741,6 +773,8 @@ export default function Lager() {
       })
       
       const itemMap = new Map<string, DisplayItem>()
+      const gefuehrt = await ladeGefuehrt(currentLocationId)
+      const ohneMhd = new Map<string, number>()
       
       for (const item of items) {
         const locMinStock = getMinStock(item, currentLocationId)
@@ -752,24 +786,31 @@ export default function Lager() {
           qty: 0,
           expiry: undefined,
           notes: item.notes,
-          status: 'ok'
+          status: 'ok',
+          gefuehrt: !gefuehrt || gefuehrt.has(item.id) || item.location_min_stocks?.[currentLocationId] !== undefined,
         })
       }
 
       for (const stock of stockData) {
         const item = itemMap.get(stock.item_id)
-        if (item) {
+        // Leere Zeilen (z. B. nach einem Abzug, dessen Aufräumen scheiterte) zählen nicht — auch nicht ihr MHD
+        if (item && (stock.quantity || 0) > 0) {
           item.qty += stock.quantity || 0
           if (stock.expiry_date && (!item.expiry || stock.expiry_date < item.expiry)) {
             item.expiry = stock.expiry_date
           }
+          if (!stock.expiry_date) ohneMhd.set(item.id, (ohneMhd.get(item.id) || 0) + stock.quantity)
         }
       }
 
-      const items_list = Array.from(itemMap.values()).map(item => ({
-        ...item,
-        status: computeStatus(item.expiry, item.qty, item.min_stock)
-      }))
+      const items_list = Array.from(itemMap.values()).map(item => {
+        if (item.qty > 0) { item.gefuehrt = true; gefuehrt?.add(item.id) }
+        return {
+          ...item,
+          status: ablaufStatus(item.expiry),
+          ohneMhd: item.expiry ? ohneMhd.get(item.id) || 0 : 0,
+        }
+      })
 
       setDisplayItems(items_list)
       // Für den Offline-Fall vorhalten
@@ -782,7 +823,8 @@ export default function Lager() {
       const snap = await snapshotGet(currentLocationId)
       if (snap) {
         setAllItems(snap.daten.items || [])
-        setDisplayItems(snap.daten.display || [])
+        // Status neu berechnen: Der Stand kann Tage alt sein, und alte Stände kannten die Regeln noch nicht
+        setDisplayItems((snap.daten.display || []).map((d: DisplayItem) => ({ ...d, status: ablaufStatus(d.expiry) })))
         setOfflineStand(snap.ts)
       } else {
         setError('Fehler beim Laden: ' + e.message)
@@ -790,18 +832,6 @@ export default function Lager() {
     } finally {
       setLoading(false)
     }
-  }
-
-  function computeStatus(expiry?: string, qty?: number, min_stock?: number): 'ok' | 'warn' | 'exp' {
-    if (expiry) {
-      const today = new Date()
-      const expiryDate = new Date(expiry)
-      const diffDays = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-      if (diffDays < 0) return 'exp'
-      if (diffDays < 30) return 'warn'
-    }
-    if (min_stock && min_stock > 0 && qty !== undefined && qty < min_stock) return 'warn'
-    return 'ok'
   }
 
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
@@ -901,10 +931,8 @@ export default function Lager() {
         // Vorher gab es nur eine Sammelbuchung ohne Charge — dadurch war bei einem
         // Rückruf nicht nachvollziehbar, wohin die betroffene Charge gegangen ist.
         let remaining = Math.abs(delta)
-        // Optional bevorzugte Charge zuerst, danach FIFO nach Ablaufdatum
-        const bevorzugt = stockList.filter(s => s.id === bevorzugteStockId)
-        const uebrige = stockList.filter(s => s.id !== bevorzugteStockId)
-        const reihenfolge = [...bevorzugt, ...uebrige]
+        // Optional bevorzugte Charge zuerst, danach zuerst ablaufend zuerst (ohne MHD zuletzt)
+        const reihenfolge = entnahmeReihenfolge(stockList, bevorzugteStockId)
 
         for (const stock of reihenfolge) {
           if (remaining <= 0) break
@@ -1182,7 +1210,7 @@ export default function Lager() {
     for (const d of displayItems) {
       const raw = allItems.find(i => i.id === d.id)
       if (raw?.nicht_bestellen) continue
-      const autoNeed = d.min_stock > 0 && d.qty < d.min_stock ? d.min_stock - d.qty : 0
+      const autoNeed = fehltAmStandort(d.qty, d.min_stock, d.gefuehrt !== false) ? d.min_stock - d.qty : 0
       const manuell = raw ? getBedarf(raw, currentLocationId) : 0
       const need = autoNeed + manuell
       if (need > 0) out.push({ display: d, raw, need, autoNeed, manuell })
@@ -1391,7 +1419,7 @@ export default function Lager() {
       })
 
       let remaining = transferQty
-      for (const stock of stockList) {
+      for (const stock of fefo(stockList)) {
         if (remaining <= 0) break
         const take = Math.min(stock.quantity, remaining)
 
@@ -1893,11 +1921,12 @@ export default function Lager() {
   // Chargenscharfe Korrektur: Mehrmengen bekommen eine Charge/MHD mit, Fehlmengen
   // werden von der ausgewählten Charge abgezogen. Sonst wäre der Chargenbestand
   // nach jeder Inventur wertlos — und damit die Rückruf-Suche.
+  // `diff` und `basis` kommen aus saveAuditRow (inventurDifferenz) — hier wird nicht
+  // neu gerechnet, damit gebucht wird, was im Dialog stand.
   async function applyAuditCorrection(
-    auditItem: AuditItem, actual: number, locId: string,
+    auditItem: AuditItem, actual: number, locId: string, diff: number, basis: number,
     charge?: { batch?: string; expiry?: string; abzugVonStockId?: string },
   ) {
-    const diff = actual - auditItem.expected_quantity
     if (diff === 0) return
 
     const stockList = await pb.collection('inventory_stock').getFullList<StockItem>({
@@ -1905,7 +1934,9 @@ export default function Lager() {
       sort: 'expiry_date',
     })
 
-    let notiz = `Inventur-Korrektur: ${auditItem.expected_quantity} → ${actual}`
+    let notiz = basis === auditItem.expected_quantity
+      ? `Inventur-Korrektur: ${basis} → ${actual}`
+      : `Inventur-Korrektur: ${basis} → ${actual} (nach den Buchungen seit Start gezählt, beim Start ${auditItem.expected_quantity})`
 
     if (diff > 0) {
       const batch = (charge?.batch || '').trim()
@@ -1922,7 +1953,7 @@ export default function Lager() {
       let remaining = Math.abs(diff)
       // Gewählte Charge zuerst, danach die übrigen nach Ablaufdatum
       const gewaehlt = stockList.filter(s => s.id === charge?.abzugVonStockId)
-      const rest = stockList.filter(s => s.id !== charge?.abzugVonStockId)
+      const rest = fefo(stockList.filter(s => s.id !== charge?.abzugVonStockId))
       const reihenfolge = [...gewaehlt, ...rest]
       let ausGewaehlter = 0
       for (const stock of reihenfolge) {
@@ -1958,36 +1989,54 @@ export default function Lager() {
   // die Inventur kann aber für einen anderen Standort laufen.
   async function loadAuditStocks(itemId: string, locId: string): Promise<StockItem[]> {
     try {
-      return await pb.collection('inventory_stock').getFullList<StockItem>({
+      return fefo(await pb.collection('inventory_stock').getFullList<StockItem>({
         filter: `item_id = "${itemId}" && location_id = "${locId}"`,
         sort: 'expiry_date',
-      })
+      }))
     } catch { return [] }
   }
 
-  // Bestätigen einer Position. Weicht die Zählung ab, wird zuerst die Charge geklärt.
-  async function saveAuditRow(auditItem: AuditItem, actual: number) {
+  // Bestätigen einer Position. Wurde seit dem Start gebucht, wird zuerst gefragt,
+  // wann gezählt wurde; weicht die Zählung ab, wird danach die Charge geklärt.
+  async function saveAuditRow(auditItem: AuditItem, actual: number, wann?: Zaehlzeitpunkt) {
     if (!currentAudit || auditSaving) return
     const locId = auditLocationId || currentLocationId
     if (!locId) return
-    const diff = actual - auditItem.expected_quantity
-    if (diff !== 0) {
-      const stocks = await loadAuditStocks(auditItem.item_id, locId)
-      // Bei Fehlmenge ohne vorhandene Charge gibt es nichts zu wählen
-      if (!(diff < 0 && stocks.length === 0)) {
-        setAuditChargeDialog({ auditItem, actual, diff, stocks })
-        return
-      }
+    let stocks: StockItem[]
+    try {
+      stocks = fefo(await pb.collection('inventory_stock').getFullList<StockItem>({
+        filter: pb.filter('item_id = {:i} && location_id = {:l}', { i: auditItem.item_id, l: locId }),
+        requestKey: null,
+      }))
+    } catch (e) {
+      // Nicht als „Bestand 0“ weiterrechnen — das ergäbe eine falsche Korrektur
+      showMsg('Bestand konnte nicht geladen werden: ' + pbFehlerText(e), 'error')
+      return
     }
-    await buchePosition(auditItem, actual, locId)
+    const aktuell = summe(stocks)
+    const diff = inventurDifferenz(actual, auditItem.expected_quantity, aktuell, wann)
+    if (diff === null) {
+      setAuditZeitpunktFrage({ auditItem, actual, aktuell })
+      return
+    }
+    const basis = inventurBasis(auditItem.expected_quantity, aktuell, wann)
+    // Bei Fehlmenge ohne vorhandene Charge gibt es nichts zu wählen
+    if (diff !== 0 && !(diff < 0 && stocks.length === 0)) {
+      setAuditChargeDialog({ auditItem, actual, diff, basis, stocks })
+      return
+    }
+    await buchePosition(auditItem, actual, locId, diff, basis)
   }
 
-  async function buchePosition(auditItem: AuditItem, actual: number, locId: string, charge?: { batch?: string; expiry?: string; abzugVonStockId?: string }) {
+  async function buchePosition(auditItem: AuditItem, actual: number, locId: string, diff: number, basis: number, charge?: { batch?: string; expiry?: string; abzugVonStockId?: string }) {
     if (!currentAudit) return
     setAuditSaving(auditItem.id)
     try {
-      await pb.collection('inventory_audit_items').update(auditItem.id, { actual_quantity: actual, checked: true })
-      await applyAuditCorrection(auditItem, actual, locId, charge)
+      // Erst die Korrektur, dann „geprüft“ — schlägt die Buchung fehl, bleibt die Position offen.
+      // Als Soll der Position gilt der Bestand, gegen den gezählt wurde: So zeigen Liste und
+      // Verlauf genau die Abweichung, die auch gebucht wurde.
+      await applyAuditCorrection(auditItem, actual, locId, diff, basis, charge)
+      await pb.collection('inventory_audit_items').update(auditItem.id, { actual_quantity: actual, expected_quantity: basis, checked: true })
       const updatedItems = await loadAuditItems(currentAudit.id, locId)
       await loadStock()
       if (updatedItems.length && updatedItems.every(ai => ai.checked)) {
@@ -2014,7 +2063,7 @@ export default function Lager() {
     setAuditStockEdit(null)
     setAuditEditForm({
       name: it?.name || '', unit: it?.unit || 'Stück',
-      soll: it ? getMinStock(it, locId) : 0,
+      soll: it?.location_min_stocks?.[locId] !== undefined ? String(it.location_min_stocks[locId]) : '',
     })
     setAuditEditStocks(await loadAuditStocks(ai.item_id, locId))
   }
@@ -2026,15 +2075,18 @@ export default function Lager() {
     if (!locId) return
     try {
       const bestehend = allItems.find(i => i.id === auditEdit.item_id)
-      const locMins = { ...(bestehend?.location_min_stocks || {}), [locId]: auditEditForm.soll }
+      // Leer = kein eigenes Soll für diesen Standort, es gilt das Standard-Soll
+      const locMins: Record<string, number> = { ...(bestehend?.location_min_stocks || {}) }
+      if (auditEditForm.soll.trim() === '') delete locMins[locId]
+      else locMins[locId] = Math.max(0, parseInt(auditEditForm.soll) || 0)
       await pb.collection('inventory_items').update(auditEdit.item_id, {
         name: auditEditForm.name.trim(),
         unit: auditEditForm.unit.trim() || 'Stück',
-        min_stock: auditEditForm.soll,
+        // Nur das Soll dieses Standorts — das Standard-Soll der übrigen bleibt
         location_min_stocks: locMins,
       })
       setAllItems(prev => prev.map(i => i.id === auditEdit.item_id
-        ? { ...i, name: auditEditForm.name.trim(), unit: auditEditForm.unit.trim() || 'Stück', min_stock: auditEditForm.soll, location_min_stocks: locMins }
+        ? { ...i, name: auditEditForm.name.trim(), unit: auditEditForm.unit.trim() || 'Stück', location_min_stocks: locMins }
         : i))
       if (currentAudit) await loadAuditItems(currentAudit.id, locId)   // Zeile war sonst veraltet
       await loadStock()
@@ -2210,8 +2262,8 @@ export default function Lager() {
     setStockEdit(null)
     setDetailItem(item)
     setDetailNote(item.notes || '')
-    setDetailSoll(rawItem ? getMinStock(rawItem, currentLocationId) : item.min_stock)
-    setDetailExpiry(item.expiry ? item.expiry.slice(0, 10) : '')
+    const eigenesSoll = currentLocationId ? rawItem?.location_min_stocks?.[currentLocationId] : undefined
+    setDetailSoll(eigenesSoll !== undefined ? String(eigenesSoll) : '')
     setDetailTransactions([])
     setDetailStockEntries([])
     setShowItemDetailModal(true)
@@ -2229,7 +2281,7 @@ export default function Lager() {
         })
       ])
       setDetailTransactions(txns)
-      setDetailStockEntries(stocks)
+      setDetailStockEntries(fefo(stocks))
     } catch(e: any) {
       console.error('Error loading item detail:', e)
     } finally {
@@ -2263,38 +2315,39 @@ export default function Lager() {
       filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`,
       sort: 'expiry_date'
     })
-    setDetailStockEntries(stocks)
-    // Sync qty back to detailItem
-    const newQty = stocks.reduce((s, st) => s + (st.quantity || 0), 0)
-    setDetailItem(prev => prev ? { ...prev, qty: newQty } : null)
-    setDisplayItems(prev => prev.map(i => i.id === detailItem.id ? { ...i, qty: newQty } : i))
+    setDetailStockEntries(fefo(stocks))
+    // Menge, frühestes MHD und Kennzeichen zurück ins Detail — sonst bleibt das Kennzeichen
+    // nach einer MHD-Änderung oder nach dem Verbrauch der abgelaufenen Charge stehen
+    const mitBestand = stocks.filter(st => (st.quantity || 0) > 0)
+    const newQty = summe(mitBestand)
+    const expiry = mitBestand.map(st => st.expiry_date).filter((d): d is string => !!d).sort()[0]
+    const neu = { qty: newQty, expiry, status: ablaufStatus(expiry) }
+    setDetailItem(prev => prev ? { ...prev, ...neu } : null)
+    setDisplayItems(prev => prev.map(i => i.id === detailItem.id ? { ...i, ...neu } : i))
   }
 
   async function saveItemDetail() {
     if (!detailItem || !currentLocationId) return
     try {
       const existingItem = allItems.find(i => i.id === detailItem.id)
-      const updatedLocationMinStocks = {
-        ...(existingItem?.location_min_stocks || {}),
-        [currentLocationId]: detailSoll
-      }
+      // Leeres Feld = kein eigenes Soll: Es gilt das Standard-Soll. Sonst würde schon
+      // das Speichern einer Bemerkung das Standard-Soll hier still festschreiben.
+      const updatedLocationMinStocks: Record<string, number> = { ...(existingItem?.location_min_stocks || {}) }
+      if (detailSoll.trim() === '') delete updatedLocationMinStocks[currentLocationId]
+      else updatedLocationMinStocks[currentLocationId] = Math.max(0, parseInt(detailSoll) || 0)
+      // Nur das Soll dieses Standorts — das Standard-Soll gilt für die übrigen weiter.
+      // Das MHD wird hier nicht mehr angefasst: Es gehört zur einzelnen Charge
+      // (unten je Bestandszeile). Früher schrieb dieser Knopf ein MHD in ALLE
+      // Chargen des Standorts — auch wenn nur die Bemerkung geändert wurde.
       await pb.collection('inventory_items').update(detailItem.id, {
-        min_stock: detailSoll,
         location_min_stocks: updatedLocationMinStocks,
         notes: detailNote
       })
       setAllItems(prev => prev.map(i => i.id === detailItem.id
-        ? { ...i, min_stock: detailSoll, location_min_stocks: updatedLocationMinStocks }
+        ? { ...i, location_min_stocks: updatedLocationMinStocks, notes: detailNote }
         : i))
-      // Save expiry date on all stock entries for this item/location
-      const stocks = await pb.collection('inventory_stock').getFullList({
-        filter: `item_id = "${detailItem.id}" && location_id = "${currentLocationId}"`
-      })
-      for (const s of stocks) {
-        await pb.collection('inventory_stock').update(s.id, { expiry_date: detailExpiry || null })
-      }
       await loadStock()
-      setDetailItem(prev => prev ? { ...prev, notes: detailNote, min_stock: detailSoll, expiry: detailExpiry || undefined } : null)
+      setDetailItem(prev => prev && existingItem ? { ...prev, notes: detailNote, min_stock: getMinStock({ ...existingItem, location_min_stocks: updatedLocationMinStocks }, currentLocationId) } : prev)
       showMsg('✅ Gespeichert!', 'success')
     } catch(e: any) {
       const detail = e?.data ? JSON.stringify(e.data) : e.message
@@ -2440,7 +2493,9 @@ export default function Lager() {
   }
 
   const filteredItems = displayItems.filter(item => {
-    if (item.qty === 0 && !showZeroOnly) return false
+    // Leere Fächer sind sonst ausgeblendet — unter "Einbestellen" gehören die mit Soll aber gerade dazu
+    const fehlt = fehltAmStandort(item.qty, item.min_stock, item.gefuehrt !== false)
+    if (item.qty === 0 && !showZeroOnly && !(showLowOnly && fehlt)) return false
 
     if (searchQuery) {
       const needle = searchQuery.toLowerCase()
@@ -2451,7 +2506,7 @@ export default function Lager() {
 
     if (statusFilter === 'expired' && item.status !== 'exp') return false
     if (statusFilter === 'warning' && item.status !== 'warn') return false
-    if (showLowOnly && item.qty >= item.min_stock) return false
+    if (showLowOnly && !fehlt) return false
     if (showZeroOnly && item.qty !== 0) return false
 
     return true
@@ -2459,7 +2514,8 @@ export default function Lager() {
 
   const activeItems = displayItems.filter(i => i.qty > 0)
   const stats = {
-    ok: activeItems.filter(i => i.status === 'ok').length,
+    // „In Ordnung“ heißt: nichts zu tun — weder Ablauf noch Soll
+    ok: activeItems.filter(i => i.status === 'ok' && !fehltAmStandort(i.qty, i.min_stock, true)).length,
     warn: activeItems.filter(i => i.status === 'warn').length,
     exp: activeItems.filter(i => i.status === 'exp').length,
     total: activeItems.length
@@ -2639,9 +2695,11 @@ export default function Lager() {
             </div>
           ) : (
             filteredItems.map(item => {
-              const isLow = item.min_stock > 0 && item.qty < item.min_stock
+              const isLow = fehltAmStandort(item.qty, item.min_stock, item.gefuehrt !== false)
               const isZero = item.qty === 0
-              const borderColor = isZero ? 'rgba(var(--lbf-grau-rgb),0.4)' : item.status === 'ok' ? '#16a34a' : item.status === 'warn' ? '#d97706' : 'var(--lbf-akzent)'
+              // Ablauf vor Soll: abgelaufen rot, bald ablaufend oder unter Soll gelb.
+              // Das leere Fach mit Soll ist der dringendste Fall — gelb und nicht abgeblendet.
+              const borderColor = isZero && !isLow ? 'rgba(var(--lbf-grau-rgb),0.4)' : item.status === 'exp' ? 'var(--lbf-akzent)' : (item.status === 'warn' || isLow) ? '#d97706' : '#16a34a'
               const expiryColor = item.status === 'exp' ? 'var(--lbf-akzent)' : item.status === 'warn' ? '#d97706' : 'var(--warm-gray)'
 
               return (
@@ -2655,7 +2713,7 @@ export default function Lager() {
                     borderLeft: `3px solid ${borderColor}`,
                     padding: '12px 14px',
                     cursor: 'pointer',
-                    opacity: isZero ? 0.65 : 1,
+                    opacity: isZero && !isLow ? 0.65 : 1,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 10,
@@ -2666,7 +2724,8 @@ export default function Lager() {
                     {item.notes && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{item.notes}</div>}
                     {item.expiry && (
                       <div style={{ fontStyle: 'italic', fontSize: 11, color: expiryColor, marginTop: 2 }}>
-                        Ablauf: {new Date(item.expiry).toLocaleDateString('de-DE')}
+                        Ablauf: {new Date(item.expiry.replace(' ', 'T')).toLocaleDateString('de-DE')}
+                        {!!item.ohneMhd && <span style={{ color: '#d97706' }}> · {item.ohneMhd} ohne MHD</span>}
                       </div>
                     )}
                   </div>
@@ -2775,7 +2834,7 @@ export default function Lager() {
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{item.name}</div>
                       <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
-                        {item.unit || 'Stück'} · SOLL: {item.min_stock || 0}
+                        {item.unit || 'Stück'} · Standard-Soll: {item.min_stock || 0}
                         {item.supplier ? ` · ${item.supplier}` : ''}
                         {getBarcodes(item).length ? ` · ${getBarcodes(item).length} Code${getBarcodes(item).length > 1 ? 's' : ''}` : ''}
                       </div>
@@ -3234,8 +3293,9 @@ export default function Lager() {
                     <input className="lager-input" value={auditEditForm.unit} onChange={e => setAuditEditForm(f => ({ ...f, unit: e.target.value }))} />
                   </div>
                   <div style={{ flex: 1 }}>
-                    <label style={lbl}>Mindestbestand</label>
-                    <input className="lager-input" type="number" min="0" value={auditEditForm.soll} onChange={e => setAuditEditForm(f => ({ ...f, soll: Number(e.target.value) }))} />
+                    <label style={lbl}>Soll hier</label>
+                    <input className="lager-input" type="number" inputMode="numeric" min="0" value={auditEditForm.soll} onChange={e => setAuditEditForm(f => ({ ...f, soll: e.target.value }))}
+                      placeholder={`Standard: ${allItems.find(i => i.id === auditEdit.item_id)?.min_stock ?? 0}`} />
                   </div>
                 </div>
                 <button className="lager-btn primary" onClick={saveAuditItemStamm} style={{ alignSelf: 'flex-start' }}>Stammdaten speichern</button>
@@ -3313,6 +3373,42 @@ export default function Lager() {
         )
       })()}
 
+      {/* SEIT START GEBUCHT: WANN WURDE GEZÄHLT? */}
+      {auditZeitpunktFrage && (() => {
+        const q = auditZeitpunktFrage
+        const start = q.auditItem.expected_quantity
+        const einheit = q.auditItem.expand?.item_id?.unit || 'Stk.'
+        const gebucht = q.aktuell - start
+        const option = (wann: Zaehlzeitpunkt, titel: string, danach: number) => (
+          <button key={wann} className="lager-btn" style={{ textAlign: 'left', padding: '12px 14px', display: 'block', width: '100%' }}
+            onClick={async () => { setAuditZeitpunktFrage(null); await saveAuditRow(q.auditItem, q.actual, wann) }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{titel}</div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>Bestand danach: {danach} {einheit}</div>
+          </button>
+        )
+        return (
+          <div className="lager-modal-overlay" style={{ zIndex: 1100 }} onClick={e => { if (e.target === e.currentTarget) setAuditZeitpunktFrage(null) }}>
+            <div className="lager-modal" style={{ maxWidth: 480 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>
+                Während der Inventur gebucht
+              </div>
+              <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 6, lineHeight: 1.45 }}>
+                <b>{q.auditItem.expand?.item_id?.name}</b>: Seit Beginn der Inventur wurden {gebucht > 0 ? '+' : ''}{gebucht} {einheit} gebucht
+                (beim Start {start}, jetzt {q.aktuell}). Du hast {q.actual} gezählt.
+              </div>
+              <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 14 }}>Wann hast du gezählt?</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {option('vorher', 'Vor diesen Buchungen', q.aktuell + q.actual - start)}
+                {option('nachher', 'Nach diesen Buchungen', q.actual)}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+                <button className="lager-btn" onClick={() => setAuditZeitpunktFrage(null)}>Abbrechen</button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* CHARGE BEIM BUCHEN EINER ABWEICHUNG */}
       {auditChargeDialog && (() => {
         const d = auditChargeDialog
@@ -3325,16 +3421,16 @@ export default function Lager() {
                 {d.diff > 0 ? 'Mehrmenge einbuchen' : 'Fehlmenge abbuchen'}
               </div>
               <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginBottom: 14 }}>
-                {d.auditItem.expand?.item_id?.name} · gezählt {d.actual} statt {d.auditItem.expected_quantity} →
+                {d.auditItem.expand?.item_id?.name} · gezählt {d.actual} statt {d.basis} →
                 <b style={{ color: d.diff > 0 ? '#16a34a' : '#dc2626' }}> {d.diff > 0 ? '+' : ''}{d.diff} {einheit}</b>
               </div>
 
               {d.diff > 0 ? (
                 <ChargeNeu stocks={d.stocks} onAbbrechen={() => setAuditChargeDialog(null)}
-                  onBuchen={async (batch, expiry) => { const x = d; setAuditChargeDialog(null); await buchePosition(x.auditItem, x.actual, locId, { batch, expiry }) }} />
+                  onBuchen={async (batch, expiry) => { const x = d; setAuditChargeDialog(null); await buchePosition(x.auditItem, x.actual, locId, x.diff, x.basis, { batch, expiry }) }} />
               ) : (
                 <ChargeAbzug stocks={d.stocks} menge={Math.abs(d.diff)} einheit={einheit} onAbbrechen={() => setAuditChargeDialog(null)}
-                  onBuchen={async (stockId) => { const x = d; setAuditChargeDialog(null); await buchePosition(x.auditItem, x.actual, locId, { abzugVonStockId: stockId }) }} />
+                  onBuchen={async (stockId) => { const x = d; setAuditChargeDialog(null); await buchePosition(x.auditItem, x.actual, locId, x.diff, x.basis, { abzugVonStockId: stockId }) }} />
               )}
             </div>
           </div>
@@ -3448,13 +3544,19 @@ export default function Lager() {
           <div className="lager-modal" onClick={(e) => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
               <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--lbf-text)' }}>{detailItem.name}</div>
+              {(() => {
+                const niedrig = fehltAmStandort(detailItem.qty, detailItem.min_stock, detailItem.gefuehrt !== false)
+                const art = detailItem.status === 'exp' ? 'exp' : (detailItem.status === 'warn' || niedrig) ? 'warn' : 'ok'
+                return (
               <span style={{
-                background: detailItem.status === 'exp' ? 'var(--lbf-fehler-grund-2)' : detailItem.status === 'warn' ? 'var(--lbf-warn-grund-2)' : 'var(--lbf-ok-grund-2)',
-                color: detailItem.status === 'exp' ? 'var(--lbf-akzent)' : detailItem.status === 'warn' ? 'var(--lbf-warn-text)' : 'var(--lbf-ok-text-2)',
+                background: art === 'exp' ? 'var(--lbf-fehler-grund-2)' : art === 'warn' ? 'var(--lbf-warn-grund-2)' : 'var(--lbf-ok-grund-2)',
+                color: art === 'exp' ? 'var(--lbf-akzent)' : art === 'warn' ? 'var(--lbf-warn-text)' : 'var(--lbf-ok-text-2)',
                 padding: '4px 10px', borderRadius: 999, fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const
               }}>
-                {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Achtung' : 'In Ordnung'}
+                {detailItem.status === 'exp' ? 'Abgelaufen' : detailItem.status === 'warn' ? 'Läuft bald ab' : niedrig ? 'Unter Soll' : 'In Ordnung'}
               </span>
+                )
+              })()}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
               <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>
@@ -3469,16 +3571,16 @@ export default function Lager() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 12 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>SOLL für {locations.find(l => l.id === currentLocationId)?.name || 'diesen Standort'}</label>
-                <input className="lager-input" type="number" value={detailSoll || ''} onChange={(e) => setDetailSoll(e.target.value === '' ? 0 : (parseInt(e.target.value) || 0))} min="0" />
+                <input className="lager-input" type="number" inputMode="numeric" value={detailSoll} onChange={(e) => setDetailSoll(e.target.value)} min="0"
+                  placeholder={`Standard: ${allItems.find(i => i.id === detailItem.id)?.min_stock ?? 0}`} />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Bemerkung</label>
                 <input className="lager-input" type="text" value={detailNote} onChange={(e) => setDetailNote(e.target.value)} placeholder="Freitext..." />
               </div>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Ablaufdatum</label>
-              <input className="lager-input" type="date" value={detailExpiry} onChange={(e) => setDetailExpiry(e.target.value)} />
+            <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 14, lineHeight: 1.45 }}>
+              MHD und Charge änderst du unten je Bestandszeile — so bleibt jede Charge mit ihrem eigenen Datum stehen.
             </div>
             <button className="lager-btn primary" style={{ width: '100%', marginBottom: 20 }} onClick={saveItemDetail}>Speichern</button>
 
@@ -3735,8 +3837,9 @@ export default function Lager() {
               <input className="lager-input" type="text" value={itemFormData.unit} onChange={(e) => setItemFormData({...itemFormData, unit: e.target.value})} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
-              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Mindestbestand</label>
+              <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Standard-Soll</label>
               <input className="lager-input" type="number" value={itemFormData.min_stock} onChange={(e) => setItemFormData({...itemFormData, min_stock: parseInt(e.target.value) || 0})} min="0" />
+              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Gilt an jedem Standort ohne eigenes Soll. Das Soll eines Standorts stellst du im Artikel dort ein.</div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Barcode / QR-Code</label>
