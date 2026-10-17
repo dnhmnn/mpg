@@ -39,7 +39,22 @@ export function hatRecht(user: User | null | undefined, recht: string, jetzt = D
   if (user.supervisor) return true
   if (user.permissions?.[recht]) return true
   const bis = user.temp_permissions?.[recht]?.until
-  return !!bis && new Date(bis).getTime() > jetzt
+  return !!bis && zeitpunktBefristung(bis) > jetzt
+}
+
+/**
+ * Ablaufdatum einer Befristung, wie es gespeichert wird: im PocketBase-Format
+ * „2026-10-18 07:00:00.000Z“ (Leerzeichen statt „T“). Nur so vergleichen die
+ * API-Regeln es richtig mit @now (docs/pocketbase-regeln.md, „Befristete Rechte“).
+ */
+export function befristungBis(ms: number): string {
+  return new Date(ms).toISOString().replace('T', ' ')
+}
+
+/** Ablaufdatum lesen — neues Format und das alte ISO-Format. NaN → 0 (abgelaufen). */
+export function zeitpunktBefristung(bis: string): number {
+  const t = new Date(bis.replace(' ', 'T')).getTime()
+  return Number.isFinite(t) ? t : 0
 }
 
 // Vorlagen zur Vorbefüllung der individuellen Rechte beim Anlegen/Ändern eines Benutzers.

@@ -61,7 +61,7 @@ onRecordsListRequest((e) => {
     let rechte = {}, befristet = {}
     try { rechte = JSON.parse(nutzer.getString("permissions") || "{}") || {} } catch (err) { rechte = {} }
     try { befristet = JSON.parse(nutzer.getString("temp_permissions") || "{}") || {} } catch (err) { befristet = {} }
-    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(befristet.dokumente.until).getTime() : 0
+    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(String(befristet.dokumente.until).replace(" ", "T")).getTime() : 0
     darf = nutzer.getBool("supervisor") || rechte.dokumente === true || bis > Date.now()
   }
   if (!darf) throw new ForbiddenError("CIRS-Meldungen sind nur mit dem Recht für Vorgänge einsehbar.")
@@ -76,7 +76,7 @@ onRecordViewRequest((e) => {
     let rechte = {}, befristet = {}
     try { rechte = JSON.parse(nutzer.getString("permissions") || "{}") || {} } catch (err) { rechte = {} }
     try { befristet = JSON.parse(nutzer.getString("temp_permissions") || "{}") || {} } catch (err) { befristet = {} }
-    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(befristet.dokumente.until).getTime() : 0
+    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(String(befristet.dokumente.until).replace(" ", "T")).getTime() : 0
     darf = nutzer.getBool("supervisor") || rechte.dokumente === true || bis > Date.now()
   }
   if (!darf) throw new ForbiddenError("CIRS-Meldungen sind nur mit dem Recht für Vorgänge einsehbar.")
@@ -92,7 +92,7 @@ onRecordUpdateRequest((e) => {
     let rechte = {}, befristet = {}
     try { rechte = JSON.parse(nutzer.getString("permissions") || "{}") || {} } catch (err) { rechte = {} }
     try { befristet = JSON.parse(nutzer.getString("temp_permissions") || "{}") || {} } catch (err) { befristet = {} }
-    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(befristet.dokumente.until).getTime() : 0
+    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(String(befristet.dokumente.until).replace(" ", "T")).getTime() : 0
     darf = nutzer.getBool("supervisor") || rechte.dokumente === true || bis > Date.now()
   }
   if (!darf) throw new ForbiddenError("CIRS-Meldungen dürfen nur mit dem Recht für Vorgänge bearbeitet werden.")
@@ -154,7 +154,7 @@ onRealtimeMessageSend((e) => {
     let rechte = {}, befristet = {}
     try { rechte = JSON.parse(nutzer.getString("permissions") || "{}") || {} } catch (err) { rechte = {} }
     try { befristet = JSON.parse(nutzer.getString("temp_permissions") || "{}") || {} } catch (err) { befristet = {} }
-    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(befristet.dokumente.until).getTime() : 0
+    const bis = befristet && befristet.dokumente && befristet.dokumente.until ? new Date(String(befristet.dokumente.until).replace(" ", "T")).getTime() : 0
     darf = nutzer.getBool("supervisor") || rechte.dokumente === true || bis > Date.now()
   }
   // Ohne Recht: die Nachricht nicht weitergeben

@@ -81,7 +81,7 @@ routerAdd("POST", "/willkommen/senden", (e) => {
     let befristet = {}
     try { rechte = JSON.parse(ich.getString("permissions") || "{}") || {} } catch (err) { rechte = {} }
     try { befristet = JSON.parse(ich.getString("temp_permissions") || "{}") || {} } catch (err) { befristet = {} }
-    const bis = befristet.unitarii && befristet.unitarii.until ? new Date(befristet.unitarii.until).getTime() : 0
+    const bis = befristet.unitarii && befristet.unitarii.until ? new Date(String(befristet.unitarii.until).replace(" ", "T")).getTime() : 0
     const verwalter = rechte.unitarii === true || bis > Date.now()
     const org = ich.getString("organization_id")
     if (!verwalter || !org || org !== ziel.getString("organization_id")) {

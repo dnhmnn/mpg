@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { EMPTY_PERMS, ROLLEN, getRoleTemplate, isPlaceholderEmail, rollenName, vergebbareRechte } from '../lib/apps'
+import { EMPTY_PERMS, ROLLEN, befristungBis, getRoleTemplate, isPlaceholderEmail, rollenName, vergebbareRechte, zeitpunktBefristung } from '../lib/apps'
 import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
 import { zufallsPasswort } from '../lib/passwort'
@@ -76,7 +76,7 @@ function fmtDateTimeLocal(iso?: string): string {
 
 function fmtCountdown(iso?: string): string {
   if (!iso) return ''
-  const ms = new Date(iso).getTime() - Date.now()
+  const ms = zeitpunktBefristung(iso) - Date.now()
   if (ms <= 0) return 'abgelaufen'
   const mins = Math.floor(ms / 60000)
   if (mins < 60) return `${mins}min`
@@ -195,7 +195,10 @@ export default function Unitarii() {
     if (u?.temp_permissions) {
       const now = Date.now()
       for (const [k, v] of Object.entries(u.temp_permissions)) {
-        if (v?.until && new Date(v.until).getTime() > now) cleanTemp[k] = v
+        // Noch gültige Befristungen ins PocketBase-Format bringen — erst dann prüfen
+        // die Server-Regeln sie (altes ISO-Format zählt dort nicht)
+        const t = v?.until ? zeitpunktBefristung(v.until) : 0
+        if (t > now) cleanTemp[k] = { ...v, until: befristungBis(t) }
       }
     }
     setUserForm(u ? {
@@ -217,7 +220,7 @@ export default function Unitarii() {
 
   function addTempPerm(key: string, hours: number) {
     if (!key) return
-    const until = new Date(Date.now() + hours * 3600 * 1000).toISOString()
+    const until = befristungBis(Date.now() + hours * 3600 * 1000)
     const von = user?.name || user?.email || ''
     setUserForm(p => {
       const temp = { ...p.temp_permissions, [key]: { until, granted_by: von } }
@@ -225,7 +228,7 @@ export default function Unitarii() {
       for (const z of mitgebracht(key, orgVerkn, org)) {
         if (p.permissions[z]) continue
         const bisher = temp[z]?.until
-        if (bisher && new Date(bisher).getTime() >= new Date(until).getTime()) continue
+        if (bisher && zeitpunktBefristung(bisher) >= zeitpunktBefristung(until)) continue
         temp[z] = { until, granted_by: von }
       }
       return { ...p, temp_permissions: temp }
@@ -1042,7 +1045,7 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
           {u.role && <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(var(--lbf-rot-rgb),0.06)', borderRadius: 4 }}>{rollenName(u.role)}</span>}
           {u.supervisor && <span style={{ fontSize: 9, fontWeight: 700, color: '#d97706', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Supervisor</span>}
           {(() => {
-            const tempActive = Object.values(u.temp_permissions || {}).filter(v => v?.until && new Date(v.until).getTime() > Date.now()).length
+            const tempActive = Object.values(u.temp_permissions || {}).filter(v => v?.until && zeitpunktBefristung(v.until) > Date.now()).length
             return tempActive > 0
               ? <span style={{ fontSize: 9, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em', padding: '2px 7px', background: 'rgba(22,163,74,0.08)', borderRadius: 4 }}>+{tempActive} temp</span>
               : null

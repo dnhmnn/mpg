@@ -12,7 +12,7 @@ import WidgetsModal from '../components/WidgetsModal'
 import NotificationModal from '../components/NotificationModal'
 import Einfuehrung, { EinfuehrungAutomatisch, useEinfuehrungStand } from '../components/Einfuehrung'
 import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
-import { ALL_APPS, hatRecht } from '../lib/apps'
+import { ALL_APPS, hatRecht, zeitpunktBefristung } from '../lib/apps'
 import { appFrei } from '../lib/freigabe'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
@@ -174,7 +174,7 @@ export default function Hub() {
     if (!tempPerms) return []
     const now = Date.now()
     const activePerms = Object.entries(tempPerms)
-      .filter(([, v]) => new Date(v.until).getTime() > now)
+      .filter(([, v]) => zeitpunktBefristung(v.until) > now)
       .map(([k]) => k)
     return Object.keys(ALL_APPS).filter(id => activePerms.includes(ALL_APPS[id].permission) && appFrei(user?.organization, id))
   }

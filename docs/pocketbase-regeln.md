@@ -62,14 +62,24 @@ organization_id != ""
 Befristete Vorgänge-Rechte sind hier bewusst nicht drin (siehe unten); wer
 das Recht nur befristet hat, sieht CIRS-Meldungen über die API nicht.
 
-## Vorsicht bei befristeten Rechten in Regeln
+## Befristete Rechte in Regeln
 
-`@request.auth.temp_permissions.<recht>.until > @now` ist **unzuverlässig**:
-PocketBase vergleicht das Ablaufdatum als Text, und die App speichert es im
-ISO-Format (`2026-10-15T07:00:00.000Z`), `@now` aber mit Leerzeichen
-(`2026-10-15 08:00:00.000Z`). Ein am selben Tag abgelaufenes Recht gilt so bis
-Mitternacht (UTC) weiter. Befristete Rechte deshalb nicht in Regeln prüfen,
-sondern in einem Hook (dort lassen sich die Daten richtig vergleichen).
+PocketBase vergleicht das Ablaufdatum (`temp_permissions.<recht>.until`) als
+**Text** mit `@now`. Das stimmt nur, wenn beide dasselbe Format haben:
+`2026-10-15 08:00:00.000Z` — mit Leerzeichen, nicht mit „T“. Früher speicherte
+die App das ISO-Format (`2026-10-15T07:00:00.000Z`); ein am selben Tag
+abgelaufenes Recht hätte dann bis Mitternacht (UTC) weiter gegolten.
+
+Seit dem Lager-Paket 4 speichert die Benutzerverwaltung das Ablaufdatum im
+PocketBase-Format. Regeln prüfen befristete Rechte deshalb so — nur Einträge im
+neuen Format zählen, alte (mit „T“) werden sicher abgelehnt, bis sie neu
+vergeben werden:
+```
+(@request.auth.temp_permissions.<recht>.until ~ " " && @request.auth.temp_permissions.<recht>.until > @now)
+```
+Geprüft auf PocketBase 0.28.4 und 0.40.5: gültig → erlaubt, eine Minute
+abgelaufen → abgelehnt, altes Format → abgelehnt. Die Lager-Regeln unten nutzen
+das bereits; für andere Bereiche (z. B. CIRS oben) lässt es sich genauso ergänzen.
 
 ## Lager: Buchungen (inventory_transactions, inventory_stock)
 
@@ -119,7 +129,7 @@ Geprüft gegen **PocketBase 0.28.4 und 0.40.5**, mit zwei Organisationen und
 Admin, Lagerwart, MPG-Beauftragtem, Helfer (nur Lager), Benutzer ohne Lager,
 Supervisor, Ausbildungs-Verwalter, Teilnehmer und einem Admin der anderen
 Organisation. Jede Regel wurde mit Einzelanfragen und als Sammelbuchung (Batch)
-geprüft: 1080 Prüfungen je Version, alle bestanden.
+geprüft: 1278 Prüfungen je Version (auch mit befristeten Rechten), alle bestanden.
 
 Eintragen: *Collections → Sammlung → Zahnrad → API Rules*. **Gesperrt** heißt:
 Schloss stehen lassen (null), nicht leeren Text eintragen — leer heißt
@@ -149,39 +159,40 @@ Schloss stehen lassen (null), nicht leeren Text eintragen — leer heißt
 
 Recht **Lager**:
 ```
-(@request.auth.permissions.lager = true || @request.auth.supervisor = true)
+(@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now))
 ```
 
 Recht **Lager verwalten** (Regeln verlangen es immer zusätzlich zu „Lager“):
 ```
-(@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true)
+(@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now))
 ```
 
 Daraus die vier Regeln, die sich unten wiederholen:
 
 **L — Lesen** (Organisation + Lager)
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true)
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now))
 ```
 
 **A — Anlegen** (nur in der eigenen Organisation)
 ```
-@request.auth.id != "" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true)
+@request.auth.id != "" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now))
 ```
 
 **Ä — Ändern** (Organisation + Lager, nicht in eine andere Organisation verschieben)
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)
 ```
 
 **V — Verwalten** (Organisation + Lager + Lager verwalten)
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true)
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now))
 ```
 
-Befristete Rechte (`temp_permissions`) wirken in diesen Regeln nicht (siehe
-„Vorsicht bei befristeten Rechten“ oben): Wer Lager nur befristet hat, sieht
-die Kachel, bekommt aber keine Daten. Lager dafür dauerhaft vergeben.
+Befristete Rechte zählen mit (siehe „Befristete Rechte in Regeln“ oben): Wer
+„Lager“ oder „Lager verwalten“ befristet bekommen hat, darf bis zum Ablauf —
+auf die Sekunde. Befristungen von vor Paket 4 (altes Datumsformat) zählen nicht;
+einfach neu vergeben.
 
 ### Übersicht
 
@@ -202,7 +213,7 @@ die Kachel, bekommt aber keine Daten. Lager dafür dauerhaft vergeben.
 mit Lager-Recht ändern; wer `archiviert` mitschickt (archivieren oder
 wiederherstellen), braucht „Lager verwalten“.
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && (@request.body.archiviert:isset = false || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true))
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && (@request.body.archiviert:isset = false || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now)))
 ```
 
 **² Bestand — Delete.** Die App löscht nach einer Entnahme Zeilen, die auf 0
@@ -210,7 +221,7 @@ stehen; das darf jeder mit Lager-Recht. Eine Zeile mit Bestand löschen nur
 „Lager verwalten“. PocketBase prüft die Regel gegen den gespeicherten Stand —
 auch im selben Batch direkt nach dem Abbuchen auf 0 (geprüft).
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (quantity <= 0 || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true))
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (quantity <= 0 || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now)))
 ```
 
 **³ Buchungen — Create.** Nur in der eigenen Organisation. Wer schreibt, setzt
@@ -221,7 +232,7 @@ ihrem nächsten Update, lange offene Tabs) schicken es nicht mit und würden son
 nicht mehr buchen können. Überträgt jemand eine fremde Offline-Buchung, steht in
 `user` die Person, die erfasst hat, in `user_id` die, die überträgt.
 ```
-@request.auth.id != "" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true)
+@request.auth.id != "" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now))
 ```
 Update und Delete bleiben gesperrt; zusätzlich sperrt der Hook (unten).
 
@@ -232,10 +243,10 @@ Lager-Recht. Sie steht mit Namen im Logbuch.
 **⁴ Einstellungen — Create/Update** (Inventur-Plan, Statistik ab Datum): nur
 „Lager verwalten“.
 ```
-@request.auth.id != "" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true)
+@request.auth.id != "" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now))
 ```
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now)) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)
 ```
 
 **⁵ Inventuren — Update/Delete.** Eine offene Inventur darf jeder mit
@@ -243,10 +254,10 @@ Lager-Recht abschließen, abbrechen oder neu starten. Eine abgeschlossene darf
 nur „Lager verwalten“ ändern oder löschen („Zurücksetzen“) — sonst ließe sie
 sich wieder öffnen und dann löschen.
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && (status != "abgeschlossen" || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true))
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && (status != "abgeschlossen" || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now)))
 ```
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && (status != "abgeschlossen" || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true))
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && (status != "abgeschlossen" || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now)))
 ```
 
 **⁶ Inventurpositionen — Delete.** Positionen einer offenen Inventur
@@ -254,7 +265,7 @@ sich wieder öffnen und dann löschen.
 abgeschlossenen oder verwaisten nur „Lager verwalten“. Funktioniert, ob
 `audit_id` Text oder Relation ist.
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true) && ((@collection.inventory_audits.id ?= audit_id && @collection.inventory_audits.status ?!= "abgeschlossen") || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true))
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now)) && ((@collection.inventory_audits.id ?= audit_id && @collection.inventory_audits.status ?!= "abgeschlossen") || (@request.auth.permissions.lager_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "lager" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager_verwalten.until ~ " " && @request.auth.temp_permissions.lager_verwalten.until > @now)))
 ```
 
 ### Öffentliches Formular Produktausgabe
@@ -266,7 +277,7 @@ Artikel- und Standortlisten aller Organisationen abfragen. Das schließt
 Paket 5, indem die öffentliche Ausgabe über einen Hook läuft. Danach für beide
 Collections List und View auf **L**:
 ```
-@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true)
+@request.auth.id != "" && organization_id = @request.auth.organization_id && (@request.auth.permissions.lager = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.lager.until ~ " " && @request.auth.temp_permissions.lager.until > @now))
 ```
 
 Das Formular legt einen Standort „Lager“ an, wenn die Organisation keinen hat.
