@@ -89,6 +89,8 @@ Felder an `inventory_transactions` (Typ *Plain text*, nicht Pflicht):
 - `vorgang` — alle Zeilen einer Buchung tragen dieselbe Nummer; das Logbuch
   fasst sie damit exakt zusammen.
 - `storno_von` — eine Rücknahme („Rückgängig“) verweist auf ihre Originalzeile.
+- `erfasst_am` (Typ *Date*) — bei offline erfassten Buchungen der echte Zeitpunkt
+  der Entnahme; `created` ist dann der Zeitpunkt der Übertragung.
 
 Fehlen die Felder, verwirft PocketBase die Werte ohne Fehler; das Logbuch
 fasst dann nach Zeitnähe zusammen und ordnet Rücknahmen derselben Person zu.

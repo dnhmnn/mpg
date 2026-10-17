@@ -49,17 +49,50 @@ export interface PendingBuchung extends PendingPosition {
   gesperrt?: boolean
   /** Vom Server mehrfach abgelehnt (z. B. Artikel gelöscht) — wird nicht mehr automatisch wiederholt. */
   abgelehnt?: boolean
+  /**
+   * Wer offline gebucht hat. Übertragen wird automatisch nur für diese Person —
+   * auf einem geteilten Fahrzeug-Tablet bucht sonst der nächste Angemeldete unter
+   * seinem Namen. Fehlt (Einträge von vor diesem Stand): gilt als eigener.
+   */
+  user_id?: string
+  /** Kennung fürs Journal (E-Mail, sonst ID) und Anzeigename */
+  user?: string
+  user_name?: string
+  organization_id?: string
   created_at: number
   tries: number
   last_error?: string
 }
 
-/** Zustand eines Eintrags für die Anzeige im Logbuch. */
-export function eintragStatus(b: PendingBuchung): 'wartet' | 'unklar' | 'teilweise' | 'abgelehnt' {
+const UEBERTRAGUNG_MAX_MS = 60_000
+
+/** Wird der Eintrag gerade (vor weniger als einer Minute begonnen) übertragen? */
+export function laeuftGerade(b: Pick<PendingBuchung, 'in_uebertragung'>, jetzt = Date.now()): boolean {
+  return !!b.in_uebertragung && jetzt - b.in_uebertragung < UEBERTRAGUNG_MAX_MS
+}
+
+/**
+ * Zustand eines Eintrags. Eine Übertragung, die vor mehr als einer Minute begann und nie
+ * zu Ende kam (App beendet, Seite neu geladen), gilt als unklar: Sie kann angekommen sein.
+ */
+export function eintragStatus(b: PendingBuchung, jetzt = Date.now()): 'wartet' | 'laeuft' | 'unklar' | 'teilweise' | 'abgelehnt' {
   if (b.gesperrt) return 'teilweise'
   if (b.abgelehnt) return 'abgelehnt'
-  if (b.unklar) return 'unklar'
+  if (laeuftGerade(b, jetzt)) return 'laeuft'
+  if (b.unklar || b.in_uebertragung) return 'unklar'
   return 'wartet'
+}
+
+/** Gehört der Eintrag der angemeldeten Person (und ihrer Organisation)? Nur dann automatisch übertragen. */
+export function istEigener(b: Pick<PendingBuchung, 'user_id' | 'organization_id'>, ich: { id?: string; organization_id?: string } | null | undefined): boolean {
+  if (!ich?.id) return false
+  if (b.organization_id && b.organization_id !== ich.organization_id) return false
+  return !b.user_id || b.user_id === ich.id
+}
+
+/** Darf die angemeldete Person diesen fremden Eintrag ausdrücklich übertragen? Nur innerhalb der eigenen Organisation. */
+export function darfFremdenUebertragen(b: Pick<PendingBuchung, 'organization_id'>, ich: { organization_id?: string } | null | undefined): boolean {
+  return !!ich?.organization_id && (!b.organization_id || b.organization_id === ich.organization_id)
 }
 
 /** Alle Positionen eines Eintrags, die erste zuerst. */
@@ -109,8 +142,6 @@ export async function queueCount(): Promise<number> {
   try { return (await queueAll()).length } catch { return 0 }
 }
 
-const UEBERTRAGUNG_MAX_MS = 60_000
-
 /**
  * Streicht einen Eintrag — nur, wenn er noch wartet. false, wenn er schon weg ist oder
  * gerade übertragen wird: Dann wäre „zurückgenommen“ gelogen.
@@ -119,9 +150,9 @@ export async function queueRemove(id: string): Promise<boolean> {
   const d = await db()
   const tx = d.transaction('queue', 'readwrite')
   const rec = (await tx.store.get(id)) as PendingBuchung | undefined
-  const laeuft = !!rec?.in_uebertragung && Date.now() - rec.in_uebertragung < UEBERTRAGUNG_MAX_MS
+  const laeuft = !!rec && laeuftGerade(rec)
   // Unklare oder teilweise übertragene Einträge können schon (teils) auf dem Server sein
-  const darf = !!rec && !laeuft && !rec.unklar && !rec.gesperrt
+  const darf = !!rec && !laeuft && !rec.unklar && !rec.gesperrt && !rec.in_uebertragung
   if (darf) await tx.store.delete(id)
   await tx.done
   await meldeAnzahl()
@@ -132,6 +163,47 @@ export async function queueRemove(id: string): Promise<boolean> {
 async function queueErledigt(id: string): Promise<void> {
   const d = await db()
   await d.delete('queue', id)
+}
+
+/**
+ * Bewusst verwerfen (aus der Liste, nach Rückfrage) — auch unklare oder teilweise
+ * übertragene Einträge, aber nie einen, der gerade übertragen wird.
+ */
+export async function queueVerwerfen(id: string): Promise<'ok' | 'weg' | 'laeuft'> {
+  const d = await db()
+  const tx = d.transaction('queue', 'readwrite')
+  const rec = (await tx.store.get(id)) as PendingBuchung | undefined
+  const laeuft = !!rec && laeuftGerade(rec)
+  if (rec && !laeuft) await tx.store.delete(id)
+  await tx.done
+  await meldeAnzahl()
+  return !rec ? 'weg' : laeuft ? 'laeuft' : 'ok'
+}
+
+/** Übertragungen, die nie zu Ende kamen (App beendet), werden „unklar“ — die Übertragung prüft sie dann zuerst. */
+export async function queueAufraeumen(): Promise<void> {
+  try {
+    const d = await db()
+    const jetzt = Date.now()
+    for (const b of (await d.getAll('queue')) as PendingBuchung[]) {
+      if (b.in_uebertragung && !laeuftGerade(b, jetzt)) await d.put('queue', { ...b, in_uebertragung: undefined, unklar: true })
+    }
+  } catch { /* nicht verfügbar */ }
+}
+
+/** Abgelehnten Eintrag erneut zur Übertragung freigeben (nicht: teilweise übertragene). */
+export async function queueErneut(id: string): Promise<void> {
+  const d = await db()
+  const rec = (await d.get('queue', id)) as PendingBuchung | undefined
+  if (rec && !rec.gesperrt) await d.put('queue', { ...rec, abgelehnt: undefined, tries: 0, last_error: undefined })
+}
+
+/** Zwischengespeicherten Bestand löschen (beim Abmelden). Die Warteschlange bleibt. */
+export async function snapshotLeeren(): Promise<void> {
+  try {
+    const d = await db()
+    await d.clear('snapshot')
+  } catch { /* nicht verfügbar */ }
 }
 
 const MAX_ABLEHNUNGEN = 3
@@ -166,7 +238,7 @@ async function nimmZurUebertragung(id: string, neueClientId: () => string): Prom
   const tx = d.transaction('queue', 'readwrite')
   const rec = (await tx.store.get(id)) as PendingBuchung | undefined
   let erg: (PendingBuchung & { client_id: string }) | null = null
-  const laeuft = !!rec?.in_uebertragung && Date.now() - rec.in_uebertragung < UEBERTRAGUNG_MAX_MS
+  const laeuft = !!rec && laeuftGerade(rec)
   if (rec && !rec.gesperrt && !rec.abgelehnt && !laeuft) {
     erg = { ...rec, client_id: rec.client_id || neueClientId(), in_uebertragung: Date.now() }
     await tx.store.put(erg)
@@ -219,9 +291,14 @@ let uebertraegt = false
  * Ohne Netz wird abgebrochen, nicht als Fehlversuch gezählt. Teilweise übertragene
  * Einträge (ohne Sammelbuchung) werden gesperrt statt wiederholt.
  */
-/** Gibt es Einträge, die eine Übertragung versuchen würde? (Nicht: teilweise/abgelehnte) */
-export async function queueHatOffene(): Promise<boolean> {
-  try { return (await queueAll()).some(b => !b.gesperrt && !b.abgelehnt) } catch { return false }
+/** Gibt es Einträge, die eine automatische Übertragung versuchen würde? (eigene, nicht teilweise/abgelehnt) */
+export async function queueHatOffene(auswahl: (b: PendingBuchung) => boolean = () => true): Promise<boolean> {
+  try { return (await queueAll()).some(b => !b.gesperrt && !b.abgelehnt && auswahl(b)) } catch { return false }
+}
+
+/** Was die angemeldete Person sehen darf: eigene und die der eigenen Organisation. Fremde Organisationen nur als Zahl. */
+export function sichtbarFuer(b: Pick<PendingBuchung, 'user_id' | 'organization_id'>, ich: { id?: string; organization_id?: string } | null | undefined): boolean {
+  return istEigener(b, ich) || darfFremdenUebertragen(b, ich)
 }
 
 export async function flushQueue(
@@ -229,26 +306,30 @@ export async function flushQueue(
   neueClientId: () => string,
   /** Ist die Buchung mit dieser Client-ID vollständig auf dem Server? (für teilweise übertragene) */
   istAngekommen?: (clientId: string) => Promise<boolean>,
+  /** Welche Einträge diese Übertragung anfassen darf (Standard: alle) */
+  auswahl: (b: PendingBuchung) => boolean = () => true,
 ): Promise<{ ok: number; fehler: number }> {
   if (!navigator.onLine || uebertraegt) return { ok: 0, fehler: 0 }
   const locks = (navigator as Navigator & { locks?: { request: (name: string, opts: { ifAvailable: boolean }, cb: (lock: unknown) => Promise<{ ok: number; fehler: number }>) => Promise<{ ok: number; fehler: number }> } }).locks
   if (locks?.request) {
     // Ein anderer Tab überträgt gerade: nichts tun, der erledigt es
-    return locks.request('responda-lager-uebertragung', { ifAvailable: true }, async (lock) => lock ? uebertrage(ausfuehren, neueClientId, istAngekommen) : { ok: 0, fehler: 0 })
+    return locks.request('responda-lager-uebertragung', { ifAvailable: true }, async (lock) => lock ? uebertrage(ausfuehren, neueClientId, istAngekommen, auswahl) : { ok: 0, fehler: 0 })
   }
-  return uebertrage(ausfuehren, neueClientId, istAngekommen)
+  return uebertrage(ausfuehren, neueClientId, istAngekommen, auswahl)
 }
 
 async function uebertrage(
   ausfuehren: (b: PendingBuchung & { client_id: string }) => Promise<void>,
   neueClientId: () => string,
-  istAngekommen?: (clientId: string) => Promise<boolean>,
+  istAngekommen: ((clientId: string) => Promise<boolean>) | undefined,
+  auswahl: (b: PendingBuchung) => boolean,
 ): Promise<{ ok: number; fehler: number }> {
   if (uebertraegt) return { ok: 0, fehler: 0 }
   uebertraegt = true
   let ok = 0, fehler = 0
   try {
     for (const eintrag of await queueAll()) {
+      if (!auswahl(eintrag)) continue
       // Teilweise übertragen: Ist die Journalzeile mit der Client-ID da (sie wird zuletzt
       // gesendet), kam doch alles an — dann still austragen. Sonst nicht anfassen.
       if (eintrag.gesperrt) {

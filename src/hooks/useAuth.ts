@@ -121,7 +121,7 @@ export function useAuth() {
     document.body.classList.add('loaded')
   }
 
-  function logout() {
+  async function logout() {
     // EKS hält Einsatzdaten lokal. localStorage.clear() darf sie nicht stillschweigend vernichten.
     const pending = Number(localStorage.getItem('eks_pending_count') || '0')
     // Ohne Netz abgeschickte Protokolle warten im lokalen Speicher (offline_queue_<org>)
@@ -135,15 +135,39 @@ export function useAuth() {
         if (Array.isArray(q)) protokolle += q.length
       }
     } catch { /* unlesbar: nicht zählen */ }
+    // Offline vorgemerkte Lager-Buchungen (IndexedDB) bleiben auf dem Gerät und hängen an der
+    // Person, die sie erfasst hat. Gezählt wird nur, was die Abmeldende betrifft.
+    let lagerEigene = 0, lagerProbleme = 0, lagerKollegen = 0
+    let lagerModul: typeof import('../lib/lagerOffline') | null = null
+    try {
+      lagerModul = await import('../lib/lagerOffline')
+      const ich = pb.authStore.model as unknown as { id?: string; organization_id?: string } | null
+      for (const b of await lagerModul.queueAll()) {
+        if (lagerModul.istEigener(b, ich)) {
+          if (b.gesperrt || b.abgelehnt) lagerProbleme++
+          else lagerEigene++
+        } else if (lagerModul.darfFremdenUebertragen(b, ich)) lagerKollegen++
+      }
+    } catch { /* IndexedDB nicht verfügbar */ }
     const warnungen: string[] = []
     if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
     if (protokolle > 0) warnungen.push(`${protokolle} Protokoll${protokolle === 1 ? ' wartet' : 'e warten'} noch auf diesem Gerät auf die Übertragung.`)
+    const lagerTeile: string[] = []
+    if (lagerEigene > 0) lagerTeile.push(`${lagerEigene} deiner Lager-Buchungen ${lagerEigene === 1 ? 'ist' : 'sind'} noch nicht übertragen. Sie bleiben auf diesem Gerät und gehen raus, sobald du dich hier wieder anmeldest — oder jemand aus deiner Organisation sie unter deinem Namen überträgt. Besser vorher mit Netz übertragen (Lager → Abzeichen).`)
+    if (lagerProbleme > 0) lagerTeile.push(`${lagerProbleme} deiner Lager-Buchungen ${lagerProbleme === 1 ? 'braucht' : 'brauchen'} eine Entscheidung (teilweise übertragen oder abgelehnt) — siehe Lager → Abzeichen.`)
+    if (lagerKollegen > 0) lagerTeile.push(`Außerdem warten ${lagerKollegen} Lager-Buchung${lagerKollegen === 1 ? '' : 'en'} von Kolleginnen und Kollegen auf diesem Gerät.`)
+    const lagerHinweis = lagerTeile.length ? `\n\n${lagerTeile.join('\n')}` : ''
     const frage = warnungen.length
-      ? `Achtung: ${warnungen.join(' ')}\n\nBeim Abmelden gehen lokale Daten verloren. Wirklich abmelden?`
-      : 'Wirklich abmelden?'
+      ? `Achtung: ${warnungen.join(' ')}\n\nBeim Abmelden gehen lokale Daten verloren.${lagerHinweis}\n\nWirklich abmelden?`
+      : lagerHinweis ? `${lagerHinweis.trim()}\n\nWirklich abmelden?` : 'Wirklich abmelden?'
     if (confirm(frage)) {
+      const lager = localStorage.getItem('lager_pending_count')
       pb.authStore.clear()
       localStorage.clear()
+      // Der Zähler gehört zur Warteschlange, nicht zur Anmeldung — wieder hinschreiben
+      if (lager && lager !== '0') { try { localStorage.setItem('lager_pending_count', lager) } catch { /* egal */ } }
+      // Zwischengespeicherten Lagerbestand löschen (die Warteschlange selbst bleibt)
+      try { await lagerModul?.snapshotLeeren() } catch { /* egal */ }
       window.location.href = '/login'
     }
   }

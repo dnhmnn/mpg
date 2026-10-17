@@ -878,3 +878,12 @@ describe('Logbuch: Zeit und Personen', () => {
     expect(personKurz(undefined, new Map())).toEqual({ kurz: 'Unbekannt', voll: 'Unbekannt' })
   })
 })
+
+describe('Logbuch: Namen mit Titel', () => {
+  it('„Dr. Weber“ bleibt „Dr. Weber“, „Prof. Dr. Anna Becker“ wird „Prof. Dr. Becker“', () => {
+    const namen = new Map([['w@x.de', 'Dr. Weber'], ['a@x.de', 'Prof. Dr. Anna Becker'], ['j@x.de', 'Julia Becker']])
+    expect(personKurz('w@x.de', namen).kurz).toBe('Dr. Weber')
+    expect(personKurz('a@x.de', namen).kurz).toBe('Prof. Dr. Becker')
+    expect(personKurz('j@x.de', namen).kurz).toBe('J. Becker')
+  })
+})

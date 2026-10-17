@@ -43,6 +43,8 @@ export interface LagerLogbuchProps {
   wartend?: {
     id: string; item_id: string; location_id: string; delta: number; created_at: number; einsatz?: string
     client_id?: string; status?: WartendStatus; fehler?: string
+    /** Nur bei fremden Einträgen: wer erfasst hat (geteiltes Tablet) */
+    user_name?: string
   }[]
   /** Zähler; ändert er sich, wird neu geladen (nach eigener Buchung) */
   aktualisiert?: number
@@ -490,6 +492,15 @@ function beschreibe(v: Vorgang, u: Umfeld): Beschreibung {
     zeit += tagSchluessel(a) === tagSchluessel(b) ? ` – ${uhrzeitSek(b)}` : ` – ${datumZeitLang(b)}`
   }
   meta.push(zeit)
+  // Offline erfasst: wann wirklich entnommen wurde (created ist die Übertragung)
+  const erfasst = v.zeilen.map(z => z.erfasst_am).filter((x): x is string => !!x).sort()[0]
+  if (erfasst) {
+    const e = pbZeit(erfasst)
+    const ue = pbZeit(a)
+    if (gueltig(e) && gueltig(ue) && Math.abs(ue.getTime() - e.getTime()) > 60_000) {
+      meta.push(`erfasst ${datumZeitLang(erfasst)} · übertragen ${tagSchluessel(erfasst) === tagSchluessel(a) ? uhrzeitSek(a) : datumZeitLang(a)}`)
+    }
+  }
   if (einsaetze.length) meta.push(`Einsatz ${einsaetze.join(', ')}`)
   if (v.art === 'inventur' || v.art === 'korrektur') {
     if (!inventurKarte) for (const n of eindeutig<string>(infos.map(i => (i.z.note || '').trim()))) meta.push(`Notiz: ${n}`)
@@ -933,7 +944,9 @@ export default function LagerLogbuch(p: LagerLogbuchProps): JSX.Element {
     const einheit = einheitKurz(artikelMap.get(w.item_id)?.unit)
     const status: WartendStatus = w.status === 'unklar' || w.status === 'teilweise' || w.status === 'abgelehnt' ? w.status : 'wartet'
     const unten = [`erfasst ${erfasst}`]
-    if (status === 'wartet') unten.push('wartet auf Netz')
+    if (w.user_name) unten.push(`von ${w.user_name}`)
+    // Fremde Einträge (geteiltes Tablet) gehen nicht automatisch — nur auf Wunsch aus der Liste
+    if (status === 'wartet') unten.push(w.user_name ? 'wartet — wird nur auf Wunsch übertragen' : 'wartet auf Netz')
     else if (status === 'unklar') unten.push('Ausgang unklar — wird beim Übertragen geprüft, nicht doppelt gebucht')
     if (w.einsatz) unten.push(`Einsatz ${w.einsatz}`)
     if (!eff.standort) unten.push(ortName(w.location_id))

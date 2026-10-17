@@ -3,7 +3,7 @@ import QRCode from 'qrcode'
 import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
 import { parseGs1, sameCode, beschreibeGs1, type Gs1Daten } from '../lib/gs1'
-import { queueBuchung, queueCount, queueAll, queueRemove, queueHatOffene, flushQueue, positionen, eintragStatus, snapshotSet, snapshotGet, speicherSichern, type PendingBuchung } from '../lib/lagerOffline'
+import { queueBuchung, queueAll, queueRemove, queueHatOffene, queueVerwerfen, queueErneut, queueAufraeumen, flushQueue, positionen, eintragStatus, istEigener, darfFremdenUebertragen, sichtbarFuer, snapshotSet, snapshotGet, speicherSichern, type PendingBuchung } from '../lib/lagerOffline'
 import { useAuth } from '../hooks/useAuth'
 import { NOTIZ, ablaufStatus, fefo, fehltAmStandort, gefuehrteArtikel, inventurBasis, inventurDifferenz, istUmlagerung, summe, wirklichAusgegeben, type Zaehlzeitpunkt } from '../lib/lagerRechnung'
 import { BuchungsFehler, buche, macheRueckgaengig, neueBuchungsId, pbServer, type Bewegung, type Ergebnis } from '../lib/lagerBuchung'
@@ -353,11 +353,11 @@ export default function Lager() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
   // „Rückgängig“ nach einer Buchung, 10 Sekunden lang
-  const [rueckgaengig, setRueckgaengig] = useState<{ text: string; ergebnis?: Ergebnis; queueId?: string; bestellungen?: Promise<string[]>; bis: number; undoId: string; versuch: number; laeuft?: boolean } | null>(null)
+  const [rueckgaengig, setRueckgaengig] = useState<{ text: string; ergebnis?: Ergebnis; queueId?: string; clientId?: string; bestellungen?: Promise<string[]>; bis: number; undoId: string; versuch: number; laeuft?: boolean } | null>(null)
   // Logbuch: zählt hoch nach jeder Buchung (lädt neu), Vorgabe beim Öffnen, wartende Offline-Buchungen
   const [logStand, setLogStand] = useState(0)
   const [logVorgabe, setLogVorgabe] = useState<{ itemId?: string; q?: string; alleStandorte?: boolean; zeitraum?: 'heute' | '24h' | '7t' | '30t' | 'alle' } | undefined>(undefined)
-  const [wartend, setWartend] = useState<{ id: string; item_id: string; location_id: string; delta: number; created_at: number; einsatz?: string; client_id?: string; status?: 'wartet' | 'unklar' | 'teilweise' | 'abgelehnt'; fehler?: string }[]>([])
+  const [wartend, setWartend] = useState<{ id: string; item_id: string; location_id: string; delta: number; created_at: number; einsatz?: string; client_id?: string; status?: 'wartet' | 'unklar' | 'teilweise' | 'abgelehnt'; fehler?: string; user_name?: string }[]>([])
   
   const [showLogModal, setShowLogModal] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
@@ -470,6 +470,10 @@ export default function Lager() {
   // Offline-Betrieb
   const [istOnline, setIstOnline] = useState(navigator.onLine)
   const [offlineOffen, setOfflineOffen] = useState(0)
+  // Liste der vorgemerkten Buchungen (Tipp aufs Offline-Abzeichen)
+  const [showWarteschlange, setShowWarteschlange] = useState(false)
+  const [warteschlange, setWarteschlange] = useState<PendingBuchung[]>([])
+  const [wsLaeuft, setWsLaeuft] = useState<string | null>(null)
   const [offlineStand, setOfflineStand] = useState<number | null>(null)
   // Einbuchung mit mehreren Chargen/MHD in einem Vorgang (je Zeile ein Bestandssatz)
   const [einChargen, setEinChargen] = useState<{ menge: number; mhd: string; charge: string }[]>([{ menge: 1, mhd: '', charge: '' }])
@@ -571,11 +575,16 @@ export default function Lager() {
   async function synchronisiereOffline() {
     // Erst übertragen, wenn klar ist, wer angemeldet ist — sonst stünde keine Organisation daran
     if (!navigator.onLine || !userRef.current?.organization_id) return
-    const offen = await queueCount()
-    if (offen === 0) { setOfflineOffen(0); return }
+    // Übertragungen, die nie zu Ende kamen (App beendet), werden „unklar“ und zuerst geprüft
+    await queueAufraeumen()
+    if ((await queueAll().catch(() => [])).length === 0) { await zaehleOffene(); return }
     const { ok, fehler } = await flushQueue(buchePendingGegenServer, neueBuchungsId,
-      (id) => lagerServer.gibtEs('inventory_transactions', id))
-    setOfflineOffen(await queueCount())
+      (id) => lagerServer.gibtEs('inventory_transactions', id),
+      // Automatisch nur die eigenen — fremde (geteiltes Tablet) bleiben, bis jemand sie ausdrücklich überträgt
+      (b) => istEigener(b, userRef.current))
+    await zaehleOffene()
+    // Immer — der Handler für „wieder online“ kennt den aktuellen Zustand des Fensters nicht
+    await ladeWarteschlange()
     await loadStock()
     if (ok > 0 || fehler > 0) {
       setLogStand(n => n + 1)
@@ -589,10 +598,80 @@ export default function Lager() {
    * Was physisch schon entnommen wurde, wird auch ohne Bestand festgehalten.
    */
   async function buchePendingGegenServer(b: PendingBuchung & { client_id: string }) {
-    const notiz = [NOTIZ.offline, b.notiz].filter(Boolean).join(' · ')
+    const ich = wer()
+    // Gebucht wird auf den, der offline erfasst hat — überträgt jemand anderes, steht das dabei
+    const fremd = !!b.user_id && b.user_id !== userRef.current?.id
+    const notiz = [NOTIZ.offline, fremd && `übertragen von ${userRef.current?.name || ich.user}`, b.notiz].filter(Boolean).join(' · ')
     await buche(lagerServer, positionen(b).map(p => zuBewegung(p, b.location_id, notiz)), {
-      wer: wer(), clientId: b.client_id, pruefeVorher: true, ueberzug: 'protokollieren',
+      wer: {
+        organization_id: b.organization_id || ich.organization_id,
+        user: b.user || ich.user,
+        erfasst_am: new Date(b.created_at).toISOString(),
+      },
+      clientId: b.client_id, pruefeVorher: true, ueberzug: 'protokollieren',
     })
+  }
+
+  async function ladeWarteschlange() {
+    try { setWarteschlange(await queueAll()) } catch { setWarteschlange([]) }
+  }
+
+  /** Abzeichen-Zahl: eigene und die der eigenen Organisation — fremde Organisationen gehen niemanden hier etwas an. */
+  async function zaehleOffene() {
+    try { setOfflineOffen((await queueAll()).filter(b => sichtbarFuer(b, userRef.current)).length) } catch { setOfflineOffen(0) }
+  }
+
+  /** Einen bestimmten Eintrag übertragen — auch einen fremden, ausdrücklich. */
+  async function uebertrageEintrag(b: PendingBuchung) {
+    if (!navigator.onLine) { showMsg('Ohne Verbindung — wird übertragen, sobald Netz da ist', 'error'); return }
+    setWsLaeuft(b.id)
+    try {
+      const { ok, fehler } = await flushQueue(buchePendingGegenServer, neueBuchungsId,
+        (id) => lagerServer.gibtEs('inventory_transactions', id),
+        (x) => x.id === b.id && (istEigener(x, userRef.current) || darfFremdenUebertragen(x, userRef.current)))
+      showMsg(ok ? 'Übertragen' : fehler ? 'Nicht übertragen — Grund steht in der Liste' : 'Gerade nicht möglich — bitte gleich noch einmal', ok ? 'success' : 'error')
+      if (ok && rueckRef.current?.queueId === b.id) setRueckgaengig(null)
+      await zaehleOffene()
+      setLogStand(n => n + 1)
+      await loadStock()
+    } finally {
+      setWsLaeuft(null)
+      await ladeWarteschlange()
+    }
+  }
+
+  async function verwerfeEintrag(b: PendingBuchung) {
+    const status = eintragStatus(b)
+    if (status === 'laeuft') { showMsg('Wird gerade übertragen — bitte gleich noch einmal', 'error'); return }
+    // Kann schon angekommen sein (unklar, abgebrochene Übertragung): erst nachsehen
+    let angekommen: boolean | null = null
+    if (b.client_id && (status === 'unklar' || b.tries > 0) && navigator.onLine) {
+      try { angekommen = await lagerServer.gibtEs('inventory_transactions', b.client_id) } catch { angekommen = null }
+    }
+    if (angekommen) {
+      await queueVerwerfen(b.id)
+      showMsg('War schon gebucht — Eintrag ausgetragen', 'success')
+    } else {
+      const text = b.gesperrt
+        ? 'Diese Buchung ist teilweise übertragen. Erst den Bestand zählen und notfalls per Inventur korrigieren. Danach austragen?'
+        : status === 'unklar' && angekommen === null
+          ? 'Ob diese Buchung schon angekommen ist, ist unklar (ohne Verbindung nicht prüfbar). Erst im Logbuch nachsehen, bevor neu gebucht wird. Trotzdem verwerfen?'
+          : 'Diese Buchung wird nicht übertragen; der Bestand im System bleibt, wie er ist. Wirklich verwerfen?'
+      if (!confirm(text)) return
+      const erg = await queueVerwerfen(b.id)
+      if (erg === 'laeuft') showMsg('Wird gerade übertragen — bitte gleich noch einmal', 'error')
+      else if (erg === 'weg') showMsg('Schon übertragen — steht im Logbuch', 'error')
+    }
+    // Die „Rückgängig“-Leiste derselben Buchung ist damit hinfällig
+    if (rueckRef.current?.queueId === b.id) setRueckgaengig(null)
+    await zaehleOffene()
+    await ladeWarteschlange()
+    await loadStock()
+  }
+
+  async function erneutEintrag(b: PendingBuchung) {
+    await queueErneut(b.id)
+    await uebertrageEintrag({ ...b, abgelehnt: undefined })
   }
 
   const userRef = useRef(user)
@@ -617,17 +696,18 @@ export default function Lager() {
     let aktiv = true
     queueAll().then(alle => {
       if (!aktiv) return
-      setWartend(alle.flatMap(b => positionen(b).map((p, i) => ({
+      setWartend(alle.filter(b => sichtbarFuer(b, userRef.current)).flatMap(b => positionen(b).map((p, i) => ({
         id: `${b.id}:${i}`, item_id: p.item_id, location_id: b.location_id, delta: p.delta, created_at: b.created_at, einsatz: p.einsatz,
-        client_id: b.client_id, status: eintragStatus(b), fehler: b.last_error,
+        client_id: b.client_id, status: (s => s === 'laeuft' ? 'unklar' as const : s)(eintragStatus(b)), fehler: b.last_error,
+        user_name: b.user_id && b.user_id !== userRef.current?.id ? (b.user_name || b.user) : undefined,
       }))))
     }).catch(() => { /* IndexedDB nicht verfügbar */ })
     return () => { aktiv = false }
-  }, [offlineOffen])
+  }, [offlineOffen, user?.id])
 
   useEffect(() => {
     speicherSichern()
-    queueCount().then(setOfflineOffen)
+    void zaehleOffene()
     const an = () => { setIstOnline(true); synchronisiereOffline() }
     const aus = () => setIstOnline(false)
     window.addEventListener('online', an)
@@ -967,10 +1047,15 @@ export default function Lager() {
       try {
         const name = (id: string) => displayItems.find(d => d.id === id)?.name || allItems.find(i => i.id === id)?.name || 'Artikel'
         const [erste, ...weitere] = gueltig.map(a => ({ item_id: a.item_id, item_name: name(a.item_id), delta: a.delta, expiry: a.expiry, batch: a.batch, einsatz: a.einsatz, charge: a.charge }))
-        const queueId = await queueBuchung({ ...erste, location_id: locId, client_id: clientId, weitere: weitere.length ? weitere : undefined, notiz, unklar: unklar || undefined })
-        setOfflineOffen(await queueCount())
+        const u = userRef.current
+        const queueId = await queueBuchung({
+          ...erste, location_id: locId, client_id: clientId, weitere: weitere.length ? weitere : undefined, notiz, unklar: unklar || undefined,
+          // Wer gebucht hat — übertragen wird automatisch nur für diese Person
+          user_id: u?.id, user: u?.email || u?.id, user_name: u?.name || u?.email, organization_id: u?.organization_id,
+        })
+        await zaehleOffene()
         if (unklar) showMsg(`Keine Antwort vom Server — ${text} wird geprüft und nicht doppelt gebucht`, 'success')
-        else zeigeRueckgaengig(`Offline gespeichert — ${text}`, { queueId })
+        else zeigeRueckgaengig(`Offline gespeichert — ${text}`, { queueId, clientId })
         return null
       } catch {
         await loadStock()
@@ -991,7 +1076,7 @@ export default function Lager() {
       setLogStand(n => n + 1)
       void loadStock()
       // Wartet noch etwas aus einem Funkloch, jetzt mit übertragen
-      if (offlineOffen > 0) void queueHatOffene().then(ja => { if (ja) synchronisiereOffline() })
+      if (offlineOffen > 0) void queueHatOffene(b => istEigener(b, userRef.current)).then(ja => { if (ja) synchronisiereOffline() })
       return null
     } catch (e) {
       // Teilweise angekommen (ohne Sammelbuchung): nicht wiederholen — ein Mensch muss nachsehen
@@ -1022,7 +1107,7 @@ export default function Lager() {
     } catch { return null /* keine offene Bestellung oder Collection fehlt */ }
   }
 
-  function zeigeRueckgaengig(text: string, quelle: { ergebnis?: Ergebnis; queueId?: string; bestellungen?: Promise<string[]> }) {
+  function zeigeRueckgaengig(text: string, quelle: { ergebnis?: Ergebnis; queueId?: string; clientId?: string; bestellungen?: Promise<string[]> }) {
     if (quelle.ergebnis && !quelle.ergebnis.rueckgaengigMoeglich) {
       showMsg(quelle.ergebnis.schonGebucht ? 'War bereits gebucht' : text, 'success')
       return
@@ -1040,9 +1125,16 @@ export default function Lager() {
       if (r.queueId) {
         // Streichen geht nur, solange der Eintrag noch wartet — nicht, wenn er schon (oder gerade) übertragen wird
         if (!(await queueRemove(r.queueId))) {
-          throw new BuchungsFehler('Wird gerade übertragen oder ist schon übertragen — bitte im Logbuch prüfen und die Menge dann normal zurückbuchen.', 'abgelehnt')
+          // Nicht mehr streichbar: noch da (läuft gerade/unklar) oder weg — dann angekommen oder verworfen?
+          const noch = (await queueAll().catch(() => [])).some(x => x.id === r.queueId)
+          let angekommen: boolean | null = null
+          if (!noch && r.clientId && navigator.onLine) { try { angekommen = await lagerServer.gibtEs('inventory_transactions', r.clientId) } catch { angekommen = null } }
+          if (!noch && angekommen === false) throw new BuchungsFehler('Diese Buchung wurde schon verworfen — nichts zu tun.', 'abgelehnt')
+          throw new BuchungsFehler(noch
+            ? 'Wird gerade übertragen — gleich im Logbuch prüfen und die Menge dann normal zurückbuchen.'
+            : 'Schon übertragen — bitte im Logbuch prüfen und die Menge dann normal zurückbuchen.', 'abgelehnt')
         }
-        setOfflineOffen(await queueCount())
+        await zaehleOffene()
       } else if (r.ergebnis) {
         // Gleiche ID bei jedem Versuch: Eine schon angekommene Rücknahme wird erkannt
         await macheRueckgaengig(lagerServer, r.ergebnis, wer(), r.undoId, r.versuch > 0)
@@ -2548,9 +2640,14 @@ export default function Lager() {
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
               Lager
               {(!istOnline || offlineOffen > 0) && (
-                <span onClick={() => istOnline && synchronisiereOffline()} title={istOnline ? 'Jetzt übertragen' : 'Ohne Verbindung — Buchungen werden lokal gespeichert'}
-                  style={{ border: '1px solid #d97706', background: 'rgba(217,119,6,0.12)', color: '#d97706', borderRadius: 999, padding: '2px 9px', fontSize: 10.5, fontWeight: 700, cursor: istOnline ? 'pointer' : 'default', whiteSpace: 'nowrap' }}>
+                <span role="button" tabIndex={0} onClick={() => { ladeWarteschlange(); setShowWarteschlange(true) }}
+                  onKeyDown={e => { if (e.key === 'Enter') { ladeWarteschlange(); setShowWarteschlange(true) } }}
+                  title="Vorgemerkte Buchungen anzeigen"
+                  // Tippfläche 44 px hoch (auch mit Handschuhen), sichtbar bleibt das kleine Abzeichen
+                  style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, margin: '-12px 0', padding: '0 4px', cursor: 'pointer' }}>
+                  <span style={{ border: '1px solid #d97706', background: 'rgba(217,119,6,0.12)', color: '#d97706', borderRadius: 6, padding: '2px 8px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
                   {istOnline ? `${offlineOffen} zu übertragen` : `Offline${offlineOffen ? ` · ${offlineOffen}` : ''}`}
+                  </span>
                 </span>
               )}
             </div>
@@ -2810,6 +2907,84 @@ export default function Lager() {
               aktualisiert={logStand}
               onClose={() => { setShowLogModal(false); setLogVorgabe(undefined) }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* VORGEMERKTE BUCHUNGEN (Offline-Warteschlange) */}
+      {showWarteschlange && (
+        <div className="lager-modal-overlay" onClick={() => setShowWarteschlange(false)}>
+          <div className="lager-modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em' }}>Vorgemerkte Buchungen</div>
+              <button onClick={() => setShowWarteschlange(false)} style={{ background: 'none', border: 'none', padding: '8px 0', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--lbf-akzent)' }}>Schließen</button>
+            </div>
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 12 }}>
+              Auf diesem Gerät erfasst, noch nicht im Lager gebucht.{istOnline ? '' : ' Ohne Verbindung — wird übertragen, sobald Netz da ist.'}
+            </div>
+            {istOnline && warteschlange.some(b => istEigener(b, user) && !b.gesperrt && !b.abgelehnt) && (
+              <button className="lager-btn primary" style={{ width: '100%', marginBottom: 12 }} disabled={wsLaeuft !== null}
+                onClick={async () => { setWsLaeuft('alle'); try { await synchronisiereOffline() } finally { setWsLaeuft(null); await ladeWarteschlange() } }}>
+                {wsLaeuft === 'alle' ? 'Überträgt …' : 'Eigene jetzt übertragen'}
+              </button>
+            )}
+            {(() => {
+              const fremdeOrg = warteschlange.filter(b => !sichtbarFuer(b, user)).length
+              return fremdeOrg > 0 ? (
+                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
+                  Dazu {fremdeOrg} Buchung{fremdeOrg === 1 ? '' : 'en'} einer anderen Organisation auf diesem Gerät — nicht einsehbar.
+                </div>
+              ) : null
+            })()}
+            {warteschlange.filter(b => sichtbarFuer(b, user)).length === 0 ? (
+              <div style={{ textAlign: 'center', padding: 24, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Nichts vorgemerkt.</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: '55vh', overflowY: 'auto' }}>
+                {warteschlange.filter(b => sichtbarFuer(b, user)).map(b => {
+                  const status = eintragStatus(b)
+                  const eigen = istEigener(b, user)
+                  const fremdOk = !eigen && darfFremdenUebertragen(b, user)
+                  const ort = locations.find(l => l.id === b.location_id)?.name || 'Standort'
+                  const farbe = status === 'teilweise' ? '#d97706' : status === 'abgelehnt' ? '#dc2626' : 'rgba(var(--lbf-grau-rgb),0.4)'
+                  const knopf = { background: 'none', border: 'none', padding: '10px 0', minHeight: 44, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--lbf-akzent)' }
+                  return (
+                    <div key={b.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)', borderLeft: `3px solid ${farbe}`, overflow: 'hidden' }}>
+                      <div style={{ padding: '10px 12px' }}>
+                        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
+                          erfasst {new Date(b.created_at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · {ort} · {eigen ? 'von dir' : `von ${b.user_name || b.user || 'unbekannt'}`}
+                        </div>
+                        {positionen(b).map((p, i) => (
+                          <div key={i} style={{ fontSize: 14, color: 'var(--lbf-text)', marginTop: 3 }}>
+                            <b style={{ fontVariantNumeric: 'tabular-nums' as const }}>{p.delta > 0 ? '+' : '−'}{Math.abs(p.delta)}</b> <span style={{ fontStyle: 'italic', fontWeight: 700 }}>{p.item_name}</span>
+                            {p.einsatz ? <span style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}> · Einsatz {p.einsatz}</span> : null}
+                          </div>
+                        ))}
+                        <div style={{ fontStyle: 'italic', fontSize: 12, marginTop: 4, color: status === 'teilweise' ? '#d97706' : status === 'abgelehnt' ? 'var(--lbf-fehler-text-2)' : 'var(--warm-gray)' }}>
+                          {status === 'teilweise' ? 'Teilweise übertragen — Bestand zählen, notfalls per Inventur korrigieren. Wird nicht wiederholt.'
+                            : status === 'abgelehnt' ? `Vom Server abgelehnt: ${b.last_error || 'unbekannter Grund'}`
+                            : status === 'laeuft' ? 'Wird gerade übertragen …'
+                            : status === 'unklar' ? 'Ausgang unklar — wird beim Übertragen geprüft, nicht doppelt gebucht.'
+                            : eigen ? 'Wird automatisch übertragen, sobald Netz da ist.'
+                            : 'Wartet — wird nur auf ausdrücklichen Wunsch übertragen (gebucht auf den, der erfasst hat).'}
+                          {b.tries > 0 && status !== 'teilweise' && status !== 'abgelehnt' && b.last_error ? ` Zuletzt: ${b.last_error}` : ''}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 16, justifyContent: 'flex-end', borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', background: 'var(--lbf-fuss)', padding: '0 12px' }}>
+                        {status === 'abgelehnt' && (eigen || fremdOk) && istOnline && (
+                          <button style={knopf} disabled={wsLaeuft !== null} onClick={() => erneutEintrag(b)}>{wsLaeuft === b.id ? 'Überträgt …' : 'Erneut versuchen'}</button>
+                        )}
+                        {fremdOk && status !== 'teilweise' && status !== 'abgelehnt' && status !== 'laeuft' && istOnline && (
+                          <button style={knopf} disabled={wsLaeuft !== null} onClick={() => uebertrageEintrag(b)}>{wsLaeuft === b.id ? 'Überträgt …' : `Für ${(b.user_name || b.user || 'Kollegen').split('@')[0]} übertragen`}</button>
+                        )}
+                        <button style={{ ...knopf, color: status === 'teilweise' ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} disabled={wsLaeuft !== null} onClick={() => verwerfeEintrag(b)}>
+                          {status === 'teilweise' ? 'Bestand geprüft — austragen' : 'Verwerfen'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

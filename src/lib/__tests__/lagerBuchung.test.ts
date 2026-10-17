@@ -358,3 +358,13 @@ describe('Lager: ohne Sammelbuchung (Batch aus) und Netzabbruch mittendrin', () 
     expect(s.menge()).toBe(9)
   })
 })
+
+describe('Lager: offline erfasste Buchung trägt den echten Zeitpunkt', () => {
+  it('erfasst_am steht auf jeder Journalzeile, wenn angegeben', () => {
+    const plan = planeBuchung([{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 3 }], bestand(), { ...WER, erfasst_am: '2026-10-16T22:17:00.000Z' }, 'c', { neueId: id })
+    const journal = plan.anfragen.filter(a => a.collection === 'inventory_transactions')
+    expect(journal.every(a => a.body.erfasst_am === '2026-10-16T22:17:00.000Z')).toBe(true)
+    const online = planeBuchung([{ art: 'abgang', item_id: 'hand', location_id: 'rtw1', menge: 1 }], bestand(), WER, 'c', { neueId: id })
+    expect(online.anfragen.some(a => 'erfasst_am' in a.body)).toBe(false)
+  })
+})

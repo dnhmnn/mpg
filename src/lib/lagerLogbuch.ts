@@ -23,6 +23,8 @@ export interface LogZeile {
   id: string; created: string; item_id: string; location_id: string; type: string; quantity: number
   batch?: string | null; expiry_date?: string | null; stock_id?: string | null; einsatz?: string | null
   note?: string | null; user?: string | null; vorgang?: string | null; storno_von?: string | null
+  /** Offline erfasst: echter Zeitpunkt der Entnahme (created ist der der Übertragung) */
+  erfasst_am?: string | null
 }
 
 /**
@@ -599,8 +601,12 @@ const gross = (w: string) => w.split('-').map(t => t.charAt(0).toLocaleUpperCase
 
 function kurzName(name: string): string {
   const w = name.split(/\s+/).filter(Boolean)
-  if (w.length < 2) return name
-  return `${w[0].charAt(0).toLocaleUpperCase('de-DE')}. ${w[w.length - 1]}`
+  // Titel wie „Dr.“ oder „Prof. Dr.“ bleiben stehen: „Dr. Weber“, nicht „D. Weber“
+  const titel: string[] = []
+  while (w.length > 1 && /^(Dr|Prof|PD|Dipl)\.?$/i.test(w[0].replace(/\.$/, '')) && /\.$/.test(w[0])) titel.push(w.shift()!)
+  if (w.length < 2) return [...titel, ...w].join(' ')
+  const kurz = `${w[0].charAt(0).toLocaleUpperCase('de-DE')}. ${w[w.length - 1]}`
+  return titel.length ? `${titel.join(' ')} ${w[w.length - 1]}` : kurz
 }
 
 /**

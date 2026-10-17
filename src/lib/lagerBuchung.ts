@@ -35,7 +35,12 @@ export interface Bestandszeile {
   created?: string
 }
 
-export interface Wer { organization_id: string; user: string }
+export interface Wer {
+  organization_id: string
+  user: string
+  /** Wann die Buchung erfasst wurde, wenn das nicht jetzt war (offline vorgemerkt), ISO-Zeit */
+  erfasst_am?: string
+}
 
 interface Gemeinsam {
   item_id: string
@@ -195,6 +200,8 @@ export function planeBuchung(
         // sie exakt zusammen. Gibt es das Feld in PocketBase nicht, wird es ignoriert.
         vorgang: clientId,
         user: wer.user, organization_id: wer.organization_id,
+        // Offline erfasst: der echte Zeitpunkt der Entnahme (created ist der der Übertragung)
+        ...(wer.erfasst_am ? { erfasst_am: wer.erfasst_am } : {}),
       },
     })
     posten.push({ tx_id, ...p, ...((einsatz || '').trim() ? { einsatz: (einsatz || '').trim() } : {}) })
