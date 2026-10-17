@@ -156,11 +156,17 @@ export const NOTIZ = {
   ohneCharge: 'ohne Chargenzuordnung',
   ki: 'KI-Assistent',
   mehrfach: 'Mehrfachbuchung',
+  archiviert: 'Archiviert',
 } as const
 
 /** Umlagerungen sind kein Verbrauch und kein Zugang — auch nicht ihre Rücknahme. */
 export function istUmlagerung(note?: string | null): boolean {
   return /^(Rückgängig · )?Umlagerung/.test(note || '')
+}
+
+/** Abschreibung beim Archivieren eines Artikels — kein Verbrauch. */
+export function istArchivAbschreibung(note?: string | null): boolean {
+  return /^(Rückgängig · )?Archiviert/.test(note || '')
 }
 
 /** Ist das die Gegenbuchung zu einer Fehlbuchung? */
@@ -179,7 +185,7 @@ export interface Summen {
 export function journalSummen(zeilen: JournalZeile[]): Summen {
   const s: Summen = { ein: 0, aus: 0, ausJeArtikel: {}, jeMonat: {} }
   for (const t of zeilen) {
-    if (istUmlagerung(t.note)) continue
+    if (istUmlagerung(t.note) || istArchivAbschreibung(t.note)) continue
     const q = t.quantity || 0
     const m = (t.created || '').slice(0, 7)
     const monat = s.jeMonat[m] ?? (s.jeMonat[m] = { ein: 0, aus: 0 })

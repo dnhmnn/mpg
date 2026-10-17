@@ -47,11 +47,11 @@ export function hatRecht(user: User | null | undefined, recht: string, jetzt = D
 // (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
   // Verwalter: alle Rechte samt Benutzerverwaltung. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
-  admin:     { permissions: { dashboard: true, einsaetze: true, eks: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true, notizen: true } },
+  admin:     { permissions: { dashboard: true, einsaetze: true, eks: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true, notizen: true } },
   // Normale Benutzer: Unitas, Chat, Notizen, Einstellungen
   benutzer:  { permissions: { dashboard: true, lernbar: true, chat: true, notizen: true } },
-  mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
-  lager:     { permissions: { dashboard: true, lager: true, produktausgabe: true, dateien: true, chat: true } },
+  mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
+  lager:     { permissions: { dashboard: true, lager: true, lager_verwalten: true, produktausgabe: true, dateien: true, chat: true } },
   ausbildung:{ permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, chat: true } },
   qm:        { permissions: { dashboard: true, dokumente: true, dateien: true, chat: true } },
 }
@@ -85,6 +85,7 @@ export const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'eks',                label: 'Einsatzführung (EKS)' },
   { key: 'dokumente',          label: 'Vorgänge' },
   { key: 'lager',              label: 'Lager' },
+  { key: 'lager_verwalten',    label: 'Lager verwalten' },
   { key: 'dateien',            label: 'Dateien' },
   { key: 'qr',                 label: 'QR-Codes' },
   { key: 'ausbildungen_manage',label: 'Ausbildungen' },

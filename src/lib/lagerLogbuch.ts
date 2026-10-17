@@ -1,6 +1,7 @@
 // Das Lager-Logbuch lesen: Journalzeilen (inventory_transactions) einordnen,
-// zu Vorgängen zusammenfassen, Rücknahmen ihren Originalen zuordnen und den
-// Abfragefilter bauen. Reine Rechnung, ohne React und ohne Netz — die Anzeige
+// zu Vorgängen zusammenfassen, Rücknahmen ihren Originalen zuordnen, einen
+// Vorgang fürs Stornieren aufbereiten und die Abfragefilter bauen. Reine
+// Rechnung, ohne React und ohne Netz — die Anzeige
 // steht in src/components/LagerLogbuch.tsx, die Prüffälle in
 // src/lib/__tests__/lagerLogbuch.test.ts.
 //
@@ -18,6 +19,7 @@
 // Schreiber und Leser dieselben Texte benutzen.
 
 import { NOTIZ, istUmlagerung } from './lagerRechnung'
+import type { Ergebnis, Posten } from './lagerBuchung'
 
 export interface LogZeile {
   id: string; created: string; item_id: string; location_id: string; type: string; quantity: number
@@ -25,6 +27,8 @@ export interface LogZeile {
   note?: string | null; user?: string | null; vorgang?: string | null; storno_von?: string | null
   /** Offline erfasst: echter Zeitpunkt der Entnahme (created ist der der Übertragung) */
   erfasst_am?: string | null
+  /** Wer die Zeile geschrieben hat (angemeldetes Konto), wenn es das Feld in PocketBase gibt */
+  user_id?: string | null
 }
 
 /**
@@ -593,6 +597,161 @@ export function findeRuecknahmen(zeilen: LogZeile[]): { original: Map<string, st
     }
   })
   return { original, vermutlich }
+}
+
+// ── Stornieren ───────────────────────────────────────────────────────────────
+//
+// Buchungen werden nie geändert oder gelöscht, sondern durch eine Gegenbuchung
+// aufgehoben (planeRueckgaengig / macheRueckgaengig in lagerBuchung.ts). Die
+// braucht das Ergebnis der Buchung — im Logbuch steht nur das Journal. Hier wird
+// es aus den Journalzeilen EINES Vorgangs wieder zusammengesetzt, und zwar nur,
+// wenn das genau geht. Sonst lieber gar nicht: Eine ungenaue Gegenbuchung ließe
+// Bestand und Journal auseinanderlaufen.
+
+/** Warum sich ein Vorgang nicht stornieren lässt — als Text für die Anzeige. */
+export const STORNO_GRUND = {
+  leer: 'Keine Buchung zum Stornieren.',
+  ohneVorgang: 'Nur Buchungen mit Vorgangs-Nummer lassen sich stornieren.',
+  ruecknahme: 'Das ist selbst eine Gegenbuchung — sie lässt sich nicht stornieren. Bitte normal neu buchen.',
+  korrektur: 'Inventur-Korrekturen bitte über eine neue Inventur berichtigen.',
+  art: 'Diese Buchungsart lässt sich nicht stornieren.',
+  unvollstaendig: 'Die Buchung ist nicht vollständig geladen — bitte erneut versuchen.',
+  menge: 'Die Buchung hat keine gültige Menge und lässt sich nicht stornieren.',
+  ohneBestandszeile: 'Diese Buchung ist keiner Bestandszeile zugeordnet und lässt sich nicht genau zurücknehmen — bitte normal gegenbuchen.',
+  feldFehlt: 'Stornieren braucht in PocketBase das Feld storno_von an inventory_transactions.',
+  schonStorniert: 'Diese Buchung ist schon storniert.',
+} as const
+
+export type ErgebnisOderGrund = { ergebnis: Ergebnis; grund?: undefined } | { ergebnis?: undefined; grund: string }
+
+const bestandsId = (z: LogZeile) => (z.stock_id || '').trim()
+
+/**
+ * Die Reihenfolge, in der planeBuchung die Zeilen geplant hat (Ergebnis.posten) —
+ * planeRueckgaengig nimmt sie rückwärts zurück.
+ * - Die Zeile mit der Client-ID (id = vorgang) ist die erste, wird aber als
+ *   letzte geschrieben (jüngstes created) — sie kommt nach vorn.
+ * - Die übrigen aufsteigend nach (created, id). In derselben Millisekunde
+ *   entscheidet die (zufällige) ID; für unabhängige Bestandszeilen ist die
+ *   Reihenfolge gleichgültig.
+ * - Nicht gleichgültig ist sie, wenn eine Buchung aus einer Bestandszeile
+ *   entnimmt, die sie selbst angelegt hat (Mehrfachbuchung: +5 neue Charge,
+ *   −2 daraus). Eine Einbuchung legt ihre Bestandszeile immer neu an — die
+ *   Entnahme daraus kam also danach.
+ */
+function buchungsReihenfolge(zeilen: LogZeile[], clientId: string): LogZeile[] {
+  const sortiert = [...zeilen.filter(z => z.id === clientId), ...zeilen.filter(z => z.id !== clientId)]
+  const angelegt = new Set(sortiert.filter(z => bestandsId(z) && z.quantity > 0).map(bestandsId))
+  const aus: LogZeile[] = []
+  const wartet = new Map<string, LogZeile[]>()
+  const da = new Set<string>()
+  for (const z of sortiert) {
+    const s = bestandsId(z)
+    if (s && z.quantity < 0 && angelegt.has(s) && !da.has(s)) {
+      wartet.set(s, [...(wartet.get(s) ?? []), z])
+      continue
+    }
+    aus.push(z)
+    if (s && z.quantity > 0) {
+      da.add(s)
+      aus.push(...(wartet.get(s) ?? []))
+      wartet.delete(s)
+    }
+  }
+  for (const rest of wartet.values()) aus.push(...rest)
+  return aus
+}
+
+/**
+ * Setzt aus den Journalzeilen EINES Vorgangs das Ergebnis zusammen, das
+ * macheRueckgaengig braucht. Reine Rechnung.
+ *
+ * Abgelehnt (grund) wird, was sich nicht genau zurücknehmen lässt:
+ * - Zeilen ohne gemeinsame Vorgangs-Nummer (nach Zeitnähe zusammengefasst),
+ * - Gegenbuchungen selbst (storno_von oder Notiz „Rückgängig“),
+ * - Inventur-Korrekturen (Sammelzeilen über mehrere Chargen; berichtigt wird per Inventur),
+ * - andere Buchungsarten als Ein- und Ausbuchung,
+ * - ein unvollständiger Vorgang (die Zeile mit der Client-ID fehlt),
+ * - Zeilen ohne Bestandszeile — außer dem Abgang „ohne Chargenzuordnung“, der
+ *   nie Bestand hatte (dessen Gegenzeile steht nur im Journal).
+ */
+export function ergebnisAusJournal(zeilen: LogZeile[]): ErgebnisOderGrund {
+  const alle = eindeutig(zeilen).sort(aufsteigend)
+  if (!alle.length) return { grund: STORNO_GRUND.leer }
+  const vorgang = (alle[0].vorgang || '').trim()
+  if (!vorgang || alle.some(z => (z.vorgang || '').trim() !== vorgang)) return { grund: STORNO_GRUND.ohneVorgang }
+  if (alle.some(z => (z.storno_von || '').trim() || (z.note || '').trim().startsWith(NOTIZ.rueckgaengig))) {
+    return { grund: STORNO_GRUND.ruecknahme }
+  }
+  if (alle.some(z => z.type === 'korrektur')) return { grund: STORNO_GRUND.korrektur }
+  if (alle.some(z => z.type !== 'einbuchung' && z.type !== 'ausbuchung')) return { grund: STORNO_GRUND.art }
+  // Die erste Journalzeile jeder Buchung trägt die Client-ID — fehlt sie, fehlen vielleicht noch mehr
+  if (!alle.some(z => z.id === vorgang)) return { grund: STORNO_GRUND.unvollstaendig }
+
+  let ohneBestand = 0
+  for (const z of alle) {
+    const q = z.quantity
+    if (typeof q !== 'number' || !Number.isFinite(q) || q === 0) return { grund: STORNO_GRUND.menge }
+    if (bestandsId(z)) continue
+    // Physisch entnommen, im System nicht vorhanden: zurück geht nur die Journalzeile
+    if (q < 0 && einordnen(z).ohneCharge) { ohneBestand += -q; continue }
+    return { grund: STORNO_GRUND.ohneBestandszeile }
+  }
+
+  const posten: Posten[] = buchungsReihenfolge(alle, vorgang).map(z => ({
+    tx_id: z.id,
+    item_id: z.item_id,
+    location_id: z.location_id,
+    typ: z.type,
+    menge: z.quantity,
+    stock_id: bestandsId(z) || undefined,
+    batch: z.batch || null,
+    expiry_date: z.expiry_date || null,
+    notiz: z.note || '',
+    einsatz: (z.einsatz || '').trim() || undefined,
+  }))
+  return { ergebnis: { client_id: vorgang, posten, ohneBestand, rueckgaengigMoeglich: true } }
+}
+
+/**
+ * Letzte Prüfung vor dem Stornieren, gegen frisch vom Server geladene Zeilen:
+ * zeilen = alle Zeilen des Vorgangs (vorgangFilter), ruecknahmen = mögliche
+ * Gegenbuchungen dazu (ruecknahmenFilter). Wie ergebnisAusJournal, dazu:
+ * - Ohne das Feld storno_von in PocketBase (dann fehlt es in den Datensätzen
+ *   ganz) bekäme die Gegenbuchung keinen Verweis aufs Original — ein zweites
+ *   Stornieren durch eine andere Person ließe sich nicht sicher erkennen.
+ * - Schon (auch nur teilweise) zurückgenommen: nicht noch einmal.
+ */
+export function pruefeStorno(zeilen: LogZeile[], ruecknahmen: LogZeile[]): ErgebnisOderGrund {
+  const r = ergebnisAusJournal(zeilen)
+  if (!r.ergebnis) return r
+  if (!zeilen.every(z => 'storno_von' in z)) return { grund: STORNO_GRUND.feldFehlt }
+  const { original } = findeRuecknahmen([...zeilen, ...ruecknahmen])
+  if (zeilen.some(z => original.has(z.id))) return { grund: STORNO_GRUND.schonStorniert }
+  return r
+}
+
+/** Alle Zeilen eines Vorgangs. Sortierung dazu: 'created,id'. */
+export function vorgangFilter(orgId: string, vorgang: string, pbFilter: (raw: string, params?: Record<string, unknown>) => string): string {
+  return [pbFilter('organization_id = {:o}', { o: orgId }), pbFilter('vorgang = {:v}', { v: vorgang })].join(' && ')
+}
+
+/**
+ * Mögliche Gegenbuchungen zu diesen Zeilen: ab der ältesten, Notiz „Rückgängig“
+ * (so beginnt jede Rücknahme), dieselben Artikel — bei mehr als SUCHE_MAX.artikel
+ * Artikeln ohne Artikelfilter (Länge des Filters). Genau zugeordnet wird danach
+ * mit findeRuecknahmen (pruefeStorno).
+ */
+export function ruecknahmenFilter(orgId: string, zeilen: LogZeile[], pbFilter: (raw: string, params?: Record<string, unknown>) => string): string {
+  const teile = [pbFilter('organization_id = {:o}', { o: orgId })]
+  const erste = eindeutig(zeilen).sort(aufsteigend)[0]
+  if (erste?.created) teile.push(pbFilter('created >= {:c}', { c: erste.created }))
+  teile.push(pbFilter('note ~ {:r}', { r: NOTIZ.rueckgaengig }))
+  const artikel = [...new Set(zeilen.map(z => z.item_id).filter(Boolean))]
+  if (artikel.length > 0 && artikel.length <= SUCHE_MAX.artikel) {
+    teile.push(`(${artikel.map((id, n) => pbFilter(`item_id = {:i${n}}`, { [`i${n}`]: id })).join(' || ')})`)
+  }
+  return teile.join(' && ')
 }
 
 // ── Personen ─────────────────────────────────────────────────────────────────

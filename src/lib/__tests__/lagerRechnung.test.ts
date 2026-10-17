@@ -186,3 +186,14 @@ describe('Lager: geführt nur mit Buchung, die nicht zurückgenommen wurde', () 
     expect([...g].sort()).toEqual(['beutel', 'filter'])
   })
 })
+
+describe('Lager: Abschreibung beim Archivieren ist kein Verbrauch', () => {
+  it('„Archiviert“ und seine Rücknahme zählen nicht', () => {
+    const s = journalSummen([
+      { item_id: 'a', type: 'ausbuchung', quantity: -800, note: 'Archiviert · Charge X', created: '2026-10-05' },
+      { item_id: 'a', type: 'ausbuchung', quantity: 800, note: 'Rückgängig · Archiviert · Charge X', created: '2026-10-05' },
+      { item_id: 'a', type: 'ausbuchung', quantity: -2, note: 'Charge X', created: '2026-10-05' },
+    ])
+    expect([s.aus, s.ausJeArtikel.a]).toEqual([2, 2])
+  })
+})

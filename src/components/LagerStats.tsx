@@ -4,52 +4,35 @@ import { pb } from '../lib/pocketbase'
 import { journalSummen } from '../lib/lagerRechnung'
 
 interface TxRow { item_id: string; type: string; quantity: number; note?: string; created: string }
-interface Props { orgId: string; items: { id: string; name: string; unit?: string }[]; onChanged?: () => void }
+interface Props {
+  orgId: string
+  items: { id: string; name: string; unit?: string }[]
+  /** Zählt erst ab diesem Tag (PocketBase-Datum) — statt Buchungen zu löschen */
+  statistikAb?: string | null
+  /** Nur mit „Lager verwalten“: neuen Beginn setzen (YYYY-MM-DD) oder aufheben (null) */
+  onStatistikAb?: (datum: string | null) => Promise<void>
+}
 
 // Validierte Chart-Farben (hell + dunkel geprüft): Ausbuchung Rot, Einbuchung Grün
 const RED = '#b91c1c'
 const GREEN = '#16a34a'
 const AXIS = { fontSize: 11, fill: 'var(--warm-gray)', fontFamily: 'inherit' }
 
-interface TxRowId extends TxRow { id: string }
-
-export default function LagerStats({ orgId, items, onChanged }: Props) {
+export default function LagerStats({ orgId, items, statistikAb, onStatistikAb }: Props) {
   const [months, setMonths] = useState(6)
   const [txns, setTxns] = useState<TxRow[] | null>(null)
   const [error, setError] = useState('')
-  const [resetting, setResetting] = useState(false)
+  const [abEingabe, setAbEingabe] = useState('')
+  const [abSpeichert, setAbSpeichert] = useState(false)
 
-  // Buchungshistorie der Organisation löschen — Statistik & Verlauf werden geleert,
-  // die aktuellen Bestände (inventory_stock) bleiben unverändert.
-  async function resetBuchungen() {
-    if (resetting) return
-    if (!confirm('Alle Buchungen (Ein-/Ausbuchungen, Korrekturen) dieser Organisation löschen?\n\nDie Statistik und der Verlauf werden geleert. Die aktuellen Bestände bleiben unverändert. Das lässt sich NICHT rückgängig machen.')) return
-    if (!confirm('Wirklich sicher? Die komplette Buchungshistorie wird endgültig gelöscht.')) return
-    setResetting(true)
-    try {
-      let total = 0
-      // In Blöcken laden und löschen, bis nichts mehr übrig ist
-      // (getFullList kann viele Datensätze liefern — batchweise abarbeiten)
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        const batch = await pb.collection('inventory_transactions').getList<TxRowId>(1, 200, {
-          filter: `organization_id = "${orgId}"`,
-          fields: 'id',
-          requestKey: `lager-reset-${Date.now()}`,
-        })
-        if (!batch.items.length) break
-        for (const t of batch.items) await pb.collection('inventory_transactions').delete(t.id)
-        total += batch.items.length
-        if (batch.items.length < 200) break
-      }
-      setTxns([])
-      onChanged?.()
-      alert(`${total} Buchung(en) gelöscht. Die Statistik ist zurückgesetzt.`)
-    } catch (e: any) {
-      alert('Fehler beim Zurücksetzen: ' + (e?.message || e))
-    } finally {
-      setResetting(false)
-    }
+  // Buchungen werden nicht mehr gelöscht (das Journal ist der Nachweis). Wer die
+  // Statistik neu beginnen will, setzt „ab Datum“ — ältere Buchungen bleiben im Logbuch.
+  async function setzeAb(datum: string | null) {
+    if (!onStatistikAb || abSpeichert) return
+    setAbSpeichert(true)
+    try { await onStatistikAb(datum); setAbEingabe('') }
+    catch (e: any) { alert('Nicht gespeichert: ' + (e?.message || e)) }
+    finally { setAbSpeichert(false) }
   }
 
   useEffect(() => {
@@ -58,15 +41,18 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
     setError('')
     const since = new Date()
     since.setMonth(since.getMonth() - months)
+    let ab = `${since.toISOString().slice(0, 10)} 00:00:00`
+    // Statistik ab Datum: der spätere der beiden Anfänge
+    if (statistikAb && statistikAb.slice(0, 19).replace('T', ' ') > ab) ab = statistikAb.slice(0, 19).replace('T', ' ')
     pb.collection('inventory_transactions').getFullList<TxRow>({
-      filter: `organization_id = "${orgId}" && created >= "${since.toISOString().slice(0, 10)} 00:00:00"`,
+      filter: pb.filter('organization_id = {:o} && created >= {:ab}', { o: orgId, ab }),
       fields: 'item_id,type,quantity,note,created',
       requestKey: `lager-stats-${months}-${Date.now()}`,
     })
       .then(list => { if (!cancelled) setTxns(list) })
       .catch(e => { if (!cancelled) setError(e?.message || 'Fehler beim Laden') })
     return () => { cancelled = true }
-  }, [orgId, months])
+  }, [orgId, months, statistikAb])
 
   const { top, monthly, totalOut, totalIn } = useMemo(() => {
     // Mit Vorzeichen gerechnet: Eine zurückgenommene Buchung („Rückgängig“) gleicht sich
@@ -176,18 +162,23 @@ export default function LagerStats({ orgId, items, onChanged }: Props) {
         </>
       )}
 
-      {/* Zurücksetzen */}
-      {txns !== null && txns.length > 0 && (
-        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--lbf-border)' }}>
-          <button onClick={resetBuchungen} disabled={resetting}
-            style={{ width: '100%', padding: '11px', borderRadius: 10, border: '1px solid rgba(220,38,38,0.35)', background: 'transparent', color: '#dc2626', fontWeight: 700, fontSize: 13, cursor: resetting ? 'default' : 'pointer', fontFamily: 'inherit', opacity: resetting ? 0.6 : 1 }}>
-            {resetting ? 'Wird zurückgesetzt…' : 'Buchungen zurücksetzen'}
-          </button>
-          <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6, textAlign: 'center' as const }}>
-            Löscht die komplette Buchungshistorie. Die aktuellen Bestände bleiben unverändert.
-          </div>
+      {/* Statistik ab Datum (statt Buchungen löschen) */}
+      <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--lbf-border)' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Statistik ab Datum</div>
+        <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 10 }}>
+          {statistikAb ? `Gezählt wird ab ${new Date(statistikAb.replace(' ', 'T')).toLocaleDateString('de-DE')}. ` : 'Gezählt wird der gewählte Zeitraum. '}
+          Buchungen werden nie gelöscht — ältere bleiben im Logbuch.
         </div>
-      )}
+        {onStatistikAb ? (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
+            <input className="lager-input" type="date" value={abEingabe} onChange={e => setAbEingabe(e.target.value)} style={{ flex: '1 1 160px' }} />
+            <button className="lager-btn primary" disabled={!abEingabe || abSpeichert} onClick={() => setzeAb(abEingabe)}>Ab diesem Tag zählen</button>
+            {statistikAb && <button className="lager-btn" disabled={abSpeichert} onClick={() => setzeAb(null)}>Aufheben</button>}
+          </div>
+        ) : (
+          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>Ändern kann das, wer „Lager verwalten“ hat.</div>
+        )}
+      </div>
     </div>
   )
 }

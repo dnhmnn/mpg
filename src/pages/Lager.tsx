@@ -9,6 +9,8 @@ import { NOTIZ, ablaufStatus, fefo, fehltAmStandort, gefuehrteArtikel, inventurB
 import { BuchungsFehler, buche, macheRueckgaengig, neueBuchungsId, pbServer, type Bewegung, type Ergebnis } from '../lib/lagerBuchung'
 import LagerLogbuch from '../components/LagerLogbuch'
 import { pbFehlerText } from '../lib/pbFehler'
+import { darfLager, darfLagerVerwalten, darfStornieren } from '../lib/lagerRechte'
+import { ergebnisAusJournal, type LogZeile } from '../lib/lagerLogbuch'
 import StatusBar from '../components/StatusBar'
 
 // Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
@@ -32,6 +34,8 @@ interface InventoryItem {
   auto_order?: boolean
   bedarf?: Record<string, number>
   nicht_bestellen?: boolean
+  /** Archiviert: aus allen Listen verschwunden, im Logbuch weiter mit Namen (Paket 4) */
+  archiviert?: boolean
   organization_id: string
   created: string
 }
@@ -113,6 +117,7 @@ interface Location {
   name: string
   icon: string
   organization_id: string
+  archiviert?: boolean
 }
 
 interface DisplayItem {
@@ -432,6 +437,8 @@ export default function Lager() {
   // Inventur-Korrektur und Import: je Position eine feste Buchungs-ID, bis der Ausgang bestätigt ist
   const auditIdsRef = useRef<Record<string, { id: string; diff: number }>>({})
   const importIdsRef = useRef<Record<string, string>>({})
+  // Stornieren aus dem Logbuch: je Vorgang dieselbe ID, solange der Ausgang unklar ist
+  const stornoIdsRef = useRef<Record<string, string>>({})
   
   const [newLocationName, setNewLocationName] = useState('')
 
@@ -470,6 +477,11 @@ export default function Lager() {
   // Offline-Betrieb
   const [istOnline, setIstOnline] = useState(navigator.onLine)
   const [offlineOffen, setOfflineOffen] = useState(0)
+  // Alle Artikel und Standorte einschließlich archivierter — für Namen im Logbuch und in der Rückruf-Suche
+  const [alleArtikel, setAlleArtikel] = useState<InventoryItem[]>([])
+  const [alleStandorte, setAlleStandorte] = useState<Location[]>([])
+  const [zeigeArchiv, setZeigeArchiv] = useState(false)
+  const [statistikAb, setStatistikAb] = useState<string | null>(null)
   // Liste der vorgemerkten Buchungen (Tipp aufs Offline-Abzeichen)
   const [showWarteschlange, setShowWarteschlange] = useState(false)
   const [warteschlange, setWarteschlange] = useState<PendingBuchung[]>([])
@@ -599,6 +611,11 @@ export default function Lager() {
    */
   async function buchePendingGegenServer(b: PendingBuchung & { client_id: string }) {
     const ich = wer()
+    // Zugang auf Archiviertes wäre unsichtbarer Bestand — ablehnen, der Eintrag zeigt den Grund
+    const zugang = positionen(b).filter(p => p.delta > 0)
+    if (zugang.length && (alleStandorte.find(l => l.id === b.location_id)?.archiviert || zugang.some(p => alleArtikel.find(i => i.id === p.item_id)?.archiviert))) {
+      throw new BuchungsFehler('Artikel oder Standort ist inzwischen archiviert — erst wiederherstellen, dann erneut versuchen.', 'abgelehnt')
+    }
     // Gebucht wird auf den, der offline erfasst hat — überträgt jemand anderes, steht das dabei
     const fremd = !!b.user_id && b.user_id !== userRef.current?.id
     const notiz = [NOTIZ.offline, fremd && `übertragen von ${userRef.current?.name || ich.user}`, b.notiz].filter(Boolean).join(' · ')
@@ -606,10 +623,35 @@ export default function Lager() {
       wer: {
         organization_id: b.organization_id || ich.organization_id,
         user: b.user || ich.user,
+        user_id: ich.user_id,
         erfasst_am: new Date(b.created_at).toISOString(),
       },
       clientId: b.client_id, pruefeVorher: true, ueberzug: 'protokollieren',
     })
+  }
+
+  /** Stornieren aus dem Logbuch: Gegenbuchung zu einem ganzen Vorgang. Das Original bleibt stehen. */
+  async function storniereVorgang(zeilen: LogZeile[]): Promise<string | null> {
+    const r = ergebnisAusJournal(zeilen)
+    if (!r.ergebnis) return r.grund
+    // Ware, die zurückkäme, läge sonst auf einem archivierten Artikel oder Standort — unsichtbar
+    if (zeilen.some(z => alleArtikel.find(i => i.id === z.item_id)?.archiviert)) return 'Der Artikel ist archiviert — erst wiederherstellen (Artikel-Datenbank → Archiv), dann stornieren.'
+    if (zeilen.some(z => alleStandorte.find(l => l.id === z.location_id)?.archiviert)) return 'Ein Standort dieser Buchung ist archiviert — erst wiederherstellen (Einstellungen), dann stornieren.'
+    const vorgang = r.ergebnis.client_id
+    const vorher = stornoIdsRef.current[vorgang]
+    const clientId = vorher ?? (stornoIdsRef.current[vorgang] = neueBuchungsId())
+    try {
+      await macheRueckgaengig(lagerServer, r.ergebnis, wer(), clientId, !!vorher)
+      delete stornoIdsRef.current[vorgang]
+      setLogStand(n => n + 1)
+      void loadStock()
+      showMsg('Storniert — die Gegenbuchung steht im Logbuch', 'success')
+      return null
+    } catch (e) {
+      // Nur nach unklarem Ausgang dieselbe ID behalten
+      if (!(e instanceof BuchungsFehler && e.art === 'netz' && !e.teilweise)) delete stornoIdsRef.current[vorgang]
+      return buchungsFehlerText(e, true)
+    }
   }
 
   async function ladeWarteschlange() {
@@ -727,17 +769,21 @@ export default function Lager() {
         sort: 'created'
       })
       
-      if (!locs.length) {
+      setAlleStandorte(locs)
+      const aktiv = locs.filter(l => !l.archiviert)
+      if (!aktiv.length) {
         const defaultLoc = await pb.collection('inventory_locations').create<Location>({
           name: 'Lager',
           icon: 'box',
           organization_id: user?.organization_id
         })
         setLocations([defaultLoc])
+        setAlleStandorte([...locs, defaultLoc])
         setCurrentLocationId(defaultLoc.id)
       } else {
-        setLocations(locs)
-        setCurrentLocationId(locs[0].id)
+        setLocations(aktiv)
+        // Der gewählte Standort bleibt, solange es ihn (aktiv) gibt
+        setCurrentLocationId(cur => cur && aktiv.some(l => l.id === cur) ? cur : aktiv[0].id)
       }
     } catch(e: any) {
       console.error('Error loading locations:', e)
@@ -899,10 +945,13 @@ export default function Lager() {
       setLoading(true)
       setError(null)
       
-      const items = await pb.collection('inventory_items').getFullList<InventoryItem>({
+      const alle = await pb.collection('inventory_items').getFullList<InventoryItem>({
         filter: `organization_id = "${user?.organization_id}"`,
         sort: 'name'
       })
+      setAlleArtikel(alle)
+      // Archivierte Artikel verschwinden aus Liste, Suche, Bestellliste und Inventur
+      const items = alle.filter(i => !i.archiviert)
       
       setAllItems(items)
       
@@ -1005,7 +1054,7 @@ export default function Lager() {
   // Öffnen laufen sonst womöglich mit dem Stand, bevor der Benutzer geladen war.
   function wer() {
     const u = userRef.current
-    return { organization_id: u?.organization_id || '', user: u?.email || u?.id || '' }
+    return { organization_id: u?.organization_id || '', user: u?.email || u?.id || '', user_id: u?.id }
   }
 
   function buchungsText(absichten: Absicht[]): string {
@@ -1205,25 +1254,77 @@ export default function Lager() {
     }
   }
 
+  /**
+   * Artikel entfernen. Wurde er je gebucht, wird er ARCHIVIERT: aus allen Listen weg,
+   * im Logbuch und in der Rückruf-Suche mit Namen da, wiederherstellbar. Restbestand
+   * geht dabei mit einer Buchung („Archiviert“) ab, nicht still. Wirklich gelöscht
+   * wird nur ein Artikel, der nie gebucht wurde (versehentlich oder doppelt angelegt).
+   */
   async function deleteItem(itemId: string) {
-    if (!confirm('Artikel wirklich löschen? Alle Bestände gehen verloren!')) return
-    
+    if (!darfLagerVerwalten(user)) { showMsg('Dafür braucht es das Recht „Lager verwalten“.', 'error'); return }
+    const artikel = alleArtikel.find(i => i.id === itemId)
+    const name = artikel?.name || 'Artikel'
+    const filter = pb.filter('item_id = {:i} && organization_id = {:o}', { i: itemId, o: user?.organization_id })
+    const ladeBestand = () => pb.collection('inventory_stock').getFullList<StockItem>({ filter, requestKey: null })
+    let ausgebucht = false
     try {
-      const stockList = await pb.collection('inventory_stock').getFullList({
-        filter: `item_id = "${itemId}"`
-      })
-      
-      for (const stock of stockList) {
-        await pb.collection('inventory_stock').delete(stock.id)
+      const [buchungen, bestand] = await Promise.all([
+        pb.collection('inventory_transactions').getList(1, 1, { filter, fields: 'id', requestKey: null }),
+        ladeBestand(),
+      ])
+      const mitBestand = bestand.filter(z => (z.quantity || 0) > 0)
+      if (buchungen.totalItems === 0 && mitBestand.length === 0) {
+        if (!confirm(`„${name}“ wurde nie gebucht und wird endgültig gelöscht. Fortfahren?`)) return
+        for (const z of bestand) await pb.collection('inventory_stock').delete(z.id)   // leere Zeilen
+        await pb.collection('inventory_items').delete(itemId)
+        showMsg(`„${name}“ gelöscht`, 'success')
+        await loadStock()
+        return
       }
-      
-      await pb.collection('inventory_items').delete(itemId)
+      // Fehlt das Feld in PocketBase, würde „archiviert“ still verworfen — dann gar nicht erst anfangen
+      if (artikel && !('archiviert' in artikel)) {
+        showMsg('In PocketBase fehlt das Feld „archiviert“ an inventory_items — bitte erst anlegen (docs/pocketbase-regeln.md).', 'error')
+        return
+      }
+      const ortName = (id: string) => alleStandorte.find(l => l.id === id)?.name || 'Standort'
+      const summen = (zeilen: StockItem[]) => {
+        const m = new Map<string, number>()
+        for (const z of zeilen) if ((z.quantity || 0) > 0) m.set(z.location_id, (m.get(z.location_id) || 0) + z.quantity)
+        return m
+      }
+      const rest = [...summen(mitBestand)].map(([loc, n]) => `${ortName(loc)}: ${n}`).join(', ')
+      const frage = rest
+        ? `„${name}“ archivieren?\n\nRestbestand (${rest}) wird dabei ausgebucht — als Buchung „Archiviert“ im Logbuch.\n\nDer Artikel verschwindet aus Listen, Bestellliste und Inventur; im Logbuch bleibt er mit Namen. Wiederherstellen: Artikel-Datenbank → Archiv.`
+        : `„${name}“ archivieren?\n\nEr verschwindet aus Listen, Bestellliste und Inventur; im Logbuch bleibt er mit Namen. Wiederherstellen: Artikel-Datenbank → Archiv.`
+      if (!confirm(frage)) return
+      // Nach der Rückfrage frisch lesen und genau das ausbuchen, was jetzt da ist
+      for (const [loc, n] of summen(await ladeBestand())) {
+        await buche(lagerServer, [{ art: 'abgang', item_id: itemId, location_id: loc, menge: n, notiz: NOTIZ.archiviert }], { wer: wer(), ueberzug: 'ablehnen' })
+        ausgebucht = true
+      }
+      // Kam inzwischen etwas dazu, nicht archivieren — sonst läge Bestand unsichtbar herum
+      if ((await ladeBestand()).some(z => (z.quantity || 0) > 0)) {
+        throw new Error('Inzwischen wurde wieder eingebucht. Bitte noch einmal „Entfernen“ tippen.')
+      }
+      const gespeichert = await pb.collection('inventory_items').update<InventoryItem>(itemId, { archiviert: true }, { requestKey: null })
+      if (gespeichert.archiviert !== true) throw new Error('PocketBase hat „archiviert“ nicht gespeichert (Feld fehlt?).')
+      showMsg(`„${name}“ archiviert`, 'success')
+    } catch (e) {
+      const grund = e instanceof Error && !(e instanceof BuchungsFehler) && !('status' in e) ? e.message : buchungsFehlerText(e)
+      showMsg(ausgebucht ? `Restbestand ist ausgebucht, Archivieren aber nicht: ${grund}` : grund, 'error')
+    } finally {
+      if (ausgebucht) setLogStand(n => n + 1)
       await loadStock()
-      showMsg('Artikel gelöscht!', 'success')
-      
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
     }
+  }
+
+  async function artikelWiederherstellen(itemId: string) {
+    if (!darfLagerVerwalten(user)) return
+    try {
+      await pb.collection('inventory_items').update(itemId, { archiviert: false })
+      showMsg('Wiederhergestellt', 'success')
+      await loadStock()
+    } catch (e) { showMsg(pbFehlerText(e), 'error') }
   }
 
   async function addLocation() {
@@ -1248,30 +1349,55 @@ export default function Lager() {
     }
   }
 
+  /**
+   * Standort entfernen: wurde dort je gebucht, wird er archiviert (Logbuch behält den
+   * Namen). Liegt noch Bestand dort, erst umlagern oder ausbuchen — ein Standort
+   * verschwindet nie mit Ware darin.
+   */
   async function deleteLocation(locId: string) {
-    if (locations.length <= 1) {
-      alert('Der letzte Standort kann nicht gelöscht werden')
-      return
-    }
-    
-    if (!confirm('Standort löschen? Alle Bestände gehen verloren!')) return
-    
+    if (!darfLagerVerwalten(user)) { showMsg('Dafür braucht es das Recht „Lager verwalten“.', 'error'); return }
+    if (locations.length <= 1) { showMsg('Der letzte Standort bleibt — es braucht mindestens einen.', 'error'); return }
+    const name = alleStandorte.find(l => l.id === locId)?.name || 'Standort'
     try {
-      const stockList = await pb.collection('inventory_stock').getFullList({
-        filter: `location_id = "${locId}"`
-      })
-      
-      for (const stock of stockList) {
-        await pb.collection('inventory_stock').delete(stock.id)
+      const [buchungen, bestand] = await Promise.all([
+        pb.collection('inventory_transactions').getList(1, 1, { filter: pb.filter('location_id = {:l} && organization_id = {:o}', { l: locId, o: user?.organization_id }), fields: 'id', requestKey: null }),
+        pb.collection('inventory_stock').getFullList<StockItem>({ filter: pb.filter('location_id = {:l} && organization_id = {:o}', { l: locId, o: user?.organization_id }), requestKey: null }),
+      ])
+      const mitBestand = bestand.filter(z => (z.quantity || 0) > 0)
+      if (mitBestand.length > 0) {
+        const artikel = new Set(mitBestand.map(z => z.item_id)).size
+        showMsg(`An „${name}“ liegt noch Bestand (${artikel} Artikel). Bitte erst umlagern oder ausbuchen.`, 'error')
+        return
       }
-      
-      await pb.collection('inventory_locations').delete(locId)
+      if (buchungen.totalItems === 0) {
+        if (!confirm(`An „${name}“ wurde nie gebucht. Standort endgültig löschen?`)) return
+        for (const z of bestand) await pb.collection('inventory_stock').delete(z.id)   // leere Zeilen
+        await pb.collection('inventory_locations').delete(locId)
+        showMsg(`„${name}“ gelöscht`, 'success')
+      } else {
+        const ort = alleStandorte.find(l => l.id === locId)
+        if (ort && !('archiviert' in ort)) {
+          showMsg('In PocketBase fehlt das Feld „archiviert“ an inventory_locations — bitte erst anlegen (docs/pocketbase-regeln.md).', 'error')
+          return
+        }
+        if (!confirm(`„${name}“ archivieren?\n\nDer Standort verschwindet aus der Auswahl; im Logbuch bleiben seine Buchungen mit Namen. Wiederherstellen: Einstellungen → Archivierte Standorte.`)) return
+        const gespeichert = await pb.collection('inventory_locations').update<Location>(locId, { archiviert: true }, { requestKey: null })
+        if (gespeichert.archiviert !== true) { showMsg('PocketBase hat „archiviert“ nicht gespeichert (Feld fehlt?).', 'error'); return }
+        showMsg(`„${name}“ archiviert`, 'success')
+      }
       await loadLocations()
-      showMsg('Standort gelöscht!', 'success')
-      
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
+    } catch (e) {
+      showMsg(pbFehlerText(e), 'error')
     }
+  }
+
+  async function standortWiederherstellen(locId: string) {
+    if (!darfLagerVerwalten(user)) return
+    try {
+      await pb.collection('inventory_locations').update(locId, { archiviert: false })
+      showMsg('Wiederhergestellt', 'success')
+      await loadLocations()
+    } catch (e) { showMsg(pbFehlerText(e), 'error') }
   }
 
   // SCANNER & BESTELL-FUNKTIONEN
@@ -1773,6 +1899,7 @@ export default function Lager() {
   }
 
   async function deleteKit(kitId: string) {
+    if (!darfLagerVerwalten(user)) { showMsg('Dafür braucht es das Recht „Lager verwalten“.', 'error'); return }
     if (!confirm('Diese Sollausstattung wirklich löschen?')) return
     try {
       await pb.collection('inventory_kits').delete(kitId)
@@ -1899,11 +2026,25 @@ export default function Lager() {
     }
   }
 
+  /** „Statistik ab Datum“ statt Buchungen löschen — das Journal bleibt vollständig (nur mit „Lager verwalten“). */
+  async function setzeStatistikAb(datum: string | null) {
+    // Mitternacht in Ortszeit — sonst fielen die Nachtstunden des ersten Tages heraus
+    const wert = datum ? new Date(`${datum}T00:00:00`).toISOString().replace('T', ' ') : null
+    const existing = await pb.collection('lager_settings').getFullList({ filter: pb.filter('organization_id = {:o}', { o: user?.organization_id }), requestKey: null })
+    const gespeichert = existing.length > 0
+      ? await pb.collection('lager_settings').update(existing[0].id, { statistik_ab: wert }, { requestKey: null })
+      : await pb.collection('lager_settings').create({ organization_id: user?.organization_id, statistik_ab: wert }, { requestKey: null })
+    // Fehlt das Feld in PocketBase, verwirft es den Wert ohne Fehler — dann ehrlich sagen
+    if (!('statistik_ab' in gespeichert)) throw new Error('In PocketBase fehlt das Feld statistik_ab an lager_settings.')
+    setStatistikAb((gespeichert.statistik_ab as string) || null)
+  }
+
   async function loadLagerSettings() {
     try {
       const s = await pb.collection('lager_settings').getFirstListItem(
         `organization_id = "${user?.organization_id}"`
       )
+      setStatistikAb((s?.statistik_ab as string) || null)
       const raw = (s?.inventur_interval || '').toString()
       if (!raw) return
       // Neues Format: JSON {interval, perLocation}; Altbestand: einfacher Intervall-String
@@ -2023,7 +2164,7 @@ export default function Lager() {
         organization_id: user?.organization_id
       })
 
-      const itemsToAudit = itemsList.filter(item => (qtyMap.get(item.id) || 0) > 0)
+      const itemsToAudit = itemsList.filter(item => !item.archiviert && (qtyMap.get(item.id) || 0) > 0)
       for (const item of itemsToAudit) {
         await pb.collection('inventory_audit_items').create({
           audit_id: audit.id,
@@ -2627,6 +2768,19 @@ export default function Lager() {
   if (authLoading) {
     return null
   }
+  // Wie EKS: Das Lager öffnet nur, wer das Recht „Lager“ hat (die API-Regeln setzen es durch)
+  if (user && !darfLager(user)) {
+    return (
+      <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ textAlign: 'center', maxWidth: 360 }}>
+          <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)' }}>Kein Zugriff</div>
+          <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 6 }}>Für das Lager fehlt dir die Berechtigung. Sie vergibt die Benutzerverwaltung deiner Organisation.</div>
+          <a href="/hub" style={{ display: 'inline-block', marginTop: 16, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '12px 0' }}>Zurück zur Übersicht</a>
+        </div>
+      </div>
+    )
+  }
+  const verwalten = darfLagerVerwalten(user)
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
 
@@ -2898,11 +3052,12 @@ export default function Lager() {
             <LagerLogbuch
               orgId={user?.organization_id || ''}
               ich={{ id: user?.id || '', email: user?.email, name: user?.name }}
-              items={allItems}
-              locations={locations}
+              items={alleArtikel}
+              locations={alleStandorte}
               startLocationId={currentLocationId}
               modus="voll"
               vorgabe={logVorgabe}
+              stornieren={{ darf: (v) => darfStornieren(user, v), los: storniereVorgang }}
               wartend={wartend}
               aktualisiert={logStand}
               onClose={() => { setShowLogModal(false); setLogVorgabe(undefined) }}
@@ -2944,7 +3099,7 @@ export default function Lager() {
                   const status = eintragStatus(b)
                   const eigen = istEigener(b, user)
                   const fremdOk = !eigen && darfFremdenUebertragen(b, user)
-                  const ort = locations.find(l => l.id === b.location_id)?.name || 'Standort'
+                  const ort = alleStandorte.find(l => l.id === b.location_id)?.name || 'Standort'
                   const farbe = status === 'teilweise' ? '#d97706' : status === 'abgelehnt' ? '#dc2626' : 'rgba(var(--lbf-grau-rgb),0.4)'
                   const knopf = { background: 'none', border: 'none', padding: '10px 0', minHeight: 44, cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--lbf-akzent)' }
                   return (
@@ -3018,12 +3173,33 @@ export default function Lager() {
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => showQrLabel(item)} title="QR-Etikett erzeugen">QR</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => { setItemFormData({ name: item.name, unit: item.unit, min_stock: item.min_stock, barcode: '', supplier: item.supplier || '', supplier_item_no: item.supplier_item_no || '', supplier_email: item.supplier_email || '', order_url: item.order_url || '', auto_order: !!item.auto_order }); setEditingItemId(item.id); setShowAddItemModal(true) }}>Bearbeiten</button>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: 'var(--lbf-akzent)', borderColor: 'rgba(var(--lbf-rot-rgb),0.2)' }} onClick={() => deleteItem(item.id)}>Löschen</button>
+                      {verwalten && (
+                        <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: 'var(--lbf-akzent)', borderColor: 'rgba(var(--lbf-rot-rgb),0.2)' }} onClick={() => deleteItem(item.id)} title="Archivieren — wurde der Artikel nie gebucht: löschen">Entfernen</button>
+                      )}
                     </div>
                   </div>
                 ))
               )}
             </div>
+            {/* Archivierte Artikel — im Logbuch weiter sichtbar, hier wiederherstellbar */}
+            {alleArtikel.some(i => i.archiviert) && (
+              <div style={{ marginTop: 14 }}>
+                <button onClick={() => setZeigeArchiv(z => !z)}
+                  style={{ background: 'none', border: 'none', padding: '10px 0', cursor: 'pointer', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em', color: 'var(--lbf-akzent)' }}>
+                  Archiv ({alleArtikel.filter(i => i.archiviert).length}) {zeigeArchiv ? '▴' : '▾'}
+                </button>
+                {zeigeArchiv && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
+                    {alleArtikel.filter(i => i.archiviert).map(item => (
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '8px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.08)', borderRadius: 8, opacity: 0.8 }}>
+                        <div style={{ fontStyle: 'italic', fontSize: 14, color: 'var(--warm-gray)' }}>{item.name}</div>
+                        {verwalten && <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => artikelWiederherstellen(item.id)}>Wiederherstellen</button>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setShowItemsModal(false)}>Schließen</button>
             </div>
@@ -3040,10 +3216,23 @@ export default function Lager() {
               {locations.map(loc => (
                 <div key={loc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 8 }}>
                   <div style={{ fontWeight: 600, color: 'var(--lbf-text)' }}>{loc.name}</div>
-                  <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: 'var(--lbf-akzent)', borderColor: 'rgba(var(--lbf-rot-rgb),0.2)' }} onClick={() => deleteLocation(loc.id)} disabled={locations.length <= 1}>Löschen</button>
+                  {verwalten && (
+                    <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px', color: 'var(--lbf-akzent)', borderColor: 'rgba(var(--lbf-rot-rgb),0.2)' }} onClick={() => deleteLocation(loc.id)} disabled={locations.length <= 1} title="Archivieren — wurde dort nie gebucht: löschen">Entfernen</button>
+                  )}
                 </div>
               ))}
             </div>
+            {alleStandorte.some(l => l.archiviert) && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 6 }}>Archivierte Standorte</div>
+                {alleStandorte.filter(l => l.archiviert).map(loc => (
+                  <div key={loc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', border: '1px solid rgba(var(--lbf-rot-rgb),0.08)', borderRadius: 8, marginBottom: 6 }}>
+                    <div style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>{loc.name}</div>
+                    {verwalten && <button className="lager-btn" style={{ fontSize: 12, padding: '5px 10px' }} onClick={() => standortWiederherstellen(loc.id)}>Wiederherstellen</button>}
+                  </div>
+                ))}
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>Neuer Standort</label>
               <input className="lager-input" type="text" placeholder="Standort-Name" value={newLocationName} onChange={(e) => setNewLocationName(e.target.value)} />
@@ -3307,7 +3496,7 @@ export default function Lager() {
                               Abbrechen
                             </button>
                           )}
-                          {(lastAudit || openAudit) && (
+                          {verwalten && (lastAudit || openAudit) && (
                             <button className="lager-btn" style={{ color: 'var(--warm-gray)' }} title="Alle Inventuren dieses Standorts löschen — Fälligkeit beginnt von vorn"
                               onClick={() => resetInventurForLocation(loc.id)}>
                               Zurücksetzen
@@ -3328,7 +3517,7 @@ export default function Lager() {
                   <div>
                     <button className="lager-btn" style={{ marginBottom: 16 }} onClick={() => { setSelectedHistoryAudit(null); setHistoryAuditItems([]) }}>Zurueck zur Liste</button>
                     <div style={{ fontWeight: 700, marginBottom: 2, color: 'var(--lbf-text)' }}>{new Date(selectedHistoryAudit.audit_date).toLocaleString('de-DE')}</div>
-                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 2 }}>{locations.find(l => l.id === selectedHistoryAudit.location_id)?.name || 'Unbekannter Standort'}</div>
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 2 }}>{alleStandorte.find(l => l.id === selectedHistoryAudit.location_id)?.name || 'Unbekannter Standort'}</div>
                     <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>von {selectedHistoryAudit.user}</div>
                     {historyAuditItems.length === 0 ? (
                       <div style={{ color: 'var(--warm-gray)', fontSize: 13, textAlign: 'center', padding: 24, fontStyle: 'italic' }}>Keine Einträge gefunden</div>
@@ -3366,7 +3555,7 @@ export default function Lager() {
                             <span style={{ fontSize: 10, background: 'var(--lbf-ok-grund-2)', color: 'var(--lbf-ok-text)', padding: '2px 8px', borderRadius: 4, fontWeight: 700 }}>Abgeschlossen</span>
                           </div>
                           <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>
-                            <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{locations.find(l => l.id === audit.location_id)?.name || 'Standort'}</strong>
+                            <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{alleStandorte.find(l => l.id === audit.location_id)?.name || 'Standort'}</strong>
                             {' · '}{audit.user}
                           </div>
                         </div>
@@ -3436,7 +3625,9 @@ export default function Lager() {
                     )
                   })}
                 </div>
-                <button className="lager-btn primary" style={{ width: '100%' }} onClick={saveSchedule}>Speichern</button>
+                {verwalten
+                  ? <button className="lager-btn primary" style={{ width: '100%' }} onClick={saveSchedule}>Speichern</button>
+                  : <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', textAlign: 'center' }}>Den Zeitplan ändert, wer „Lager verwalten“ hat.</div>}
               </div>
             )}
 
@@ -3848,8 +4039,8 @@ export default function Lager() {
             <LagerLogbuch
               orgId={user?.organization_id || ''}
               ich={{ id: user?.id || '', email: user?.email, name: user?.name }}
-              items={allItems}
-              locations={locations}
+              items={alleArtikel}
+              locations={alleStandorte}
               startLocationId={currentLocationId}
               modus="artikel"
               vorgabe={{ itemId: detailItem.id }}
@@ -4382,7 +4573,7 @@ export default function Lager() {
                       <button className="lager-btn primary" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => startKitCheck(kit)} disabled={kit.positionen.length === 0}>Prüfen</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => openKitHistory(kit)}>Verlauf</button>
                       <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => setKitEditor({ id: kit.id, name: kit.name, positionen: [...kit.positionen] })}>Bearbeiten</button>
-                      <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px', color: 'var(--lbf-akzent)' }} onClick={() => deleteKit(kit.id)}>Löschen</button>
+                      {verwalten && <button className="lager-btn" style={{ fontSize: 12, padding: '6px 12px', color: 'var(--lbf-akzent)' }} onClick={() => deleteKit(kit.id)}>Löschen</button>}
                     </div>
                   </div>
                 ))}
@@ -4527,7 +4718,7 @@ export default function Lager() {
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Statistik</div>
             <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 16 }}>Verbrauch und Buchungen über alle Standorte (ohne Umlagerungen)</div>
             <Suspense fallback={<div style={{ textAlign: 'center', padding: 32, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Statistik…</div>}>
-              {user?.organization_id && <LagerStats orgId={user.organization_id} items={allItems} onChanged={() => loadStock()} />}
+              {user?.organization_id && <LagerStats orgId={user.organization_id} items={alleArtikel} statistikAb={statistikAb} onStatistikAb={verwalten ? setzeStatistikAb : undefined} />}
             </Suspense>
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
               <button className="lager-btn" onClick={() => setShowStatsModal(false)}>Schließen</button>
@@ -4650,8 +4841,8 @@ export default function Lager() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 340, overflowY: 'auto' }}>
                     {recallResults.map(s => {
-                      const item = allItems.find(i => i.id === s.item_id)
-                      const loc = locations.find(l => l.id === s.location_id)
+                      const item = alleArtikel.find(i => i.id === s.item_id)
+                      const loc = alleStandorte.find(l => l.id === s.location_id)
                       return (
                         <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', border: '1px solid rgba(220,38,38,0.25)', borderLeft: '3px solid #dc2626', borderRadius: 10 }}>
                           <div style={{ flex: 1 }}>
@@ -4695,8 +4886,8 @@ export default function Lager() {
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>
                     {recallAusgaben.map(t => {
-                      const item = allItems.find(i => i.id === t.item_id)
-                      const loc = locations.find(l => l.id === t.location_id)
+                      const item = alleArtikel.find(i => i.id === t.item_id)
+                      const loc = alleStandorte.find(l => l.id === t.location_id)
                       return (
                         <div key={t.id} style={{ padding: '9px 12px', background: 'rgba(217,119,6,0.07)', borderLeft: '3px solid #d97706', borderRadius: '0 8px 8px 0' }}>
                           <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--lbf-text)' }}>

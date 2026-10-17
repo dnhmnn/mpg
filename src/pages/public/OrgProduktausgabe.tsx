@@ -176,7 +176,8 @@ export default function OrgProduktausgabe() {
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-    }).then(items => setInventoryItems(items)).catch(e => console.error('inventory_items:', e))
+    // Archivierte Artikel und Standorte (Lager, Paket 4) nicht mehr anbieten
+    }).then(items => setInventoryItems(items.filter(i => !(i as { archiviert?: boolean }).archiviert))).catch(e => console.error('inventory_items:', e))
     pb.collection('inventory_locations').getFullList<Location>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
@@ -188,8 +189,9 @@ export default function OrgProduktausgabe() {
         setLocations([defaultLoc as unknown as Location])
         setSelectedLagerId(defaultLoc.id)
       } else {
-        setLocations(locs)
-        if (locs.length === 1) setSelectedLagerId(locs[0].id)
+        const aktiv = locs.filter(l => !(l as { archiviert?: boolean }).archiviert)
+        setLocations(aktiv)
+        if (aktiv.length === 1) setSelectedLagerId(aktiv[0].id)
       }
     }).catch(e => console.error('inventory_locations:', e))
   }, [org.id])

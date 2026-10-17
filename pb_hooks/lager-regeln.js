@@ -41,14 +41,27 @@ function jsonFeld(record, feld) {
   } catch (e) { return null }
 }
 
+/** Archiviert? Ohne das Feld (vor Paket 4) nie. */
+function istArchiviert(record) {
+  try { return record.getBool("archiviert") === true } catch (e) { return false }
+}
+
+/** Datensätze ohne archivierte — als echtes JS-Array (die JSVM liefert Go-Listen) */
+function ohneArchiv(records) {
+  const aus = []
+  for (const r of records) if (!istArchiviert(r)) aus.push(r)
+  return aus
+}
+
 /**
  * Warnungen einer Organisation als Textzeilen: { low, expired, expiring }.
  * leadDays: ab wie vielen Tagen vor dem MHD „läuft bald ab“.
  */
 function lagerWarnungen(app, orgId, leadDays, jetztMs) {
-  const items = app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 5000, 0, { o: orgId })
+  // Archivierte Artikel und Standorte warnen nicht mehr (Feld „archiviert“, Paket 4)
+  const items = ohneArchiv(app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 5000, 0, { o: orgId }))
   const stock = app.findRecordsByFilter("inventory_stock", "organization_id = {:o}", "", 20000, 0, { o: orgId })
-  const locs = app.findRecordsByFilter("inventory_locations", "organization_id = {:o}", "created", 500, 0, { o: orgId })
+  const locs = ohneArchiv(app.findRecordsByFilter("inventory_locations", "organization_id = {:o}", "created", 500, 0, { o: orgId }))
   const heute = heuteBerlin(jetztMs)
   const name = {}
   for (const l of locs) name[l.id] = l.get("name") || l.id
@@ -107,4 +120,4 @@ function lagerWarnungen(app, orgId, leadDays, jetztMs) {
   return { low: low, expired: expired, expiring: expiring }
 }
 
-module.exports = { lagerWarnungen, jsonFeld, tageBisMhd, heuteBerlin }
+module.exports = { lagerWarnungen, jsonFeld, tageBisMhd, heuteBerlin, ohneArchiv }

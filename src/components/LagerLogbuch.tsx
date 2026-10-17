@@ -7,13 +7,19 @@
 // Abfragefilter) steht in src/lib/lagerLogbuch.ts und hat dort ihre Prüffälle.
 // Hier wird nur geladen und dargestellt. Alles als Text (React escapt), alle
 // Zeitangaben aus PocketBase über pbZeit (ältere iOS-Versionen).
+//
+// „Stornieren“ (Prop stornieren): Ob und was, entscheidet lagerLogbuch.ts
+// (ergebnisAusJournal, pruefeStorno); gebucht wird in Lager.tsx (stornieren.los).
+// Vor dem Buchen lädt diese Anzeige den Vorgang frisch und vollständig vom Server —
+// die geladene Liste kann gefiltert oder an der Seitengrenze abgeschnitten sein.
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { CSSProperties, KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { pb } from '../lib/pocketbase'
 import { pbFehlerText } from '../lib/pbFehler'
 import {
-  SUCHE_MAX, amSeitenende, bildeVorgaenge, einordnen, findeRuecknahmen, logbuchFilter, passtKontext, pbZeit, personKurz, tagSchluessel,
+  STORNO_GRUND, SUCHE_MAX, amSeitenende, bildeVorgaenge, einordnen, ergebnisAusJournal, findeRuecknahmen, logbuchFilter, passtKontext,
+  pbZeit, personKurz, pruefeStorno, ruecknahmenFilter, tagSchluessel, vorgangFilter,
 } from '../lib/lagerLogbuch'
 import type { Einordnung, LogArt, LogFilter, LogKontext, LogZeile, Vorgang } from '../lib/lagerLogbuch'
 
@@ -51,6 +57,20 @@ export interface LagerLogbuchProps {
   onClose?: () => void
   /** nur modus 'artikel': "Ganzer Verlauf ›" */
   onGanzerVerlauf?: (itemId: string) => void
+  /**
+   * „Stornieren“ im aufgeklappten Vorgang (nur modus 'voll'). Angeboten nur für
+   * Vorgänge mit Vorgangs-Nummer, die nicht selbst Gegenbuchung und nicht schon
+   * zurückgenommen sind und sich genau zurücknehmen lassen (ergebnisAusJournal).
+   * darf: Darf die angemeldete Person diesen Vorgang stornieren (eigene Buchung,
+   * Recht „Lager verwalten“)? user/zeit wie im Vorgang (erste Zeile / jüngste Zeile).
+   * los: bucht die Gegenbuchung (ergebnisAusJournal → macheRueckgaengig). Die Zeilen
+   * sind frisch und vollständig vom Server geladen und mit pruefeStorno geprüft.
+   * Rückgabe null = gelungen (dann aktualisiert erhöhen), sonst der Fehlertext.
+   */
+  stornieren?: {
+    darf: (v: { zeilen: LogZeile[]; user?: string | null; zeit: string }) => boolean
+    los: (zeilen: LogZeile[]) => Promise<string | null>
+  }
 }
 
 type Zeitraum = 'heute' | '24h' | '7t' | '30t' | 'alle'
@@ -560,6 +580,25 @@ function holeSeite(f: LogFilter, anzahl: number): Promise<LogZeile[]> {
     .then(r => r.items)
 }
 
+/**
+ * Vor dem Stornieren: der ganze Vorgang frisch vom Server und die Gegenbuchungen,
+ * die ihn schon aufheben könnten. Die geladene Liste reicht dafür nicht — sie kann
+ * gefiltert sein (Standort, Charge, „Nur meine“) oder an der Seitengrenze enden.
+ */
+async function ladeZumStornieren(orgId: string, vorgang: string): Promise<{ zeilen: LogZeile[]; ruecknahmen: LogZeile[] }> {
+  const pbFilter = (raw: string, params?: Record<string, unknown>) => pb.filter(raw, params)
+  const zeilen = await pb.collection('inventory_transactions').getFullList<LogZeile>({
+    filter: vorgangFilter(orgId, vorgang, pbFilter), sort: 'created,id', requestKey: null,
+  })
+  if (!zeilen.length) return { zeilen, ruecknahmen: [] }
+  const ruecknahmen = await pb.collection('inventory_transactions').getFullList<LogZeile>({
+    filter: ruecknahmenFilter(orgId, zeilen, pbFilter), sort: 'created,id', requestKey: null,
+  })
+  return { zeilen, ruecknahmen }
+}
+
+const STORNO_FRAGE = 'Diese Buchung stornieren? Es entsteht eine Gegenbuchung; das Original bleibt im Logbuch sichtbar.'
+
 interface Person { id: string; name: string; email: string }
 
 // ── Stile ────────────────────────────────────────────────────────────────────
@@ -654,6 +693,11 @@ export default function LagerLogbuch(p: LagerLogbuchProps): JSX.Element {
   const [versuch, setVersuch] = useState(0)
   const [offen, setOffen] = useState<string | null>(null)
   const [personen, setPersonen] = useState<Person[]>([])
+  // Stornieren: höchstens eines zugleich; fehler bleibt an seiner Karte stehen
+  const [storno, setStorno] = useState<{ schluessel: string; laeuft: boolean; fehler: string | null } | null>(null)
+  // Gerade storniert — bis die neu geladene Liste die Gegenbuchung zeigt, nicht noch einmal anbieten
+  const [storniert, setStorniert] = useState<ReadonlySet<string>>(() => new Set())
+  const stornoLaeuftRef = useRef(false)
 
   const genRef = useRef(0)
   /** Zählt "Ältere laden"-Anfragen; eine frisch geladene Seite 1 macht laufende ungültig. */
@@ -916,6 +960,52 @@ export default function LagerLogbuch(p: LagerLogbuchProps): JSX.Element {
     setKontext(null); setItemId(null); setEingabe(''); setQ('')
     setStandort(std.standort); setZeitraum(std.zeitraum); setOffen(null)
   }
+  /** Was die Karte zum Stornieren zeigt: den Knopf, einen Hinweis (Inventur) oder nichts. */
+  const stornoAnzeige = (v: Vorgang): { knopf: boolean; hinweis?: string } => {
+    const s = p.stornieren
+    if (!s || storniert.has(v.schluessel)) return { knopf: false }
+    // Gegenbuchungen und schon (auch nur teilweise) zurückgenommene Vorgänge: nichts anbieten
+    if (v.art === 'rueckgaengig') return { knopf: false }
+    if (v.zeilen.some(z => ansicht.original.has(z.id) || (ansicht.einordnung.get(z.id) ?? einordnen(z)).ruecknahme)) return { knopf: false }
+    let darf = false
+    try { darf = s.darf({ zeilen: v.zeilen, user: v.user, zeit: v.zeit }) } catch { darf = false }
+    if (!darf) return { knopf: false }
+    if (v.zeilen.some(z => z.type === 'korrektur')) return { knopf: false, hinweis: STORNO_GRUND.korrektur }
+    if (!v.sicher) return { knopf: false }
+    const r = ergebnisAusJournal(v.zeilen)
+    // Nur teilweise geladen (Filter, Seitengrenze): beim Stornieren wird der ganze Vorgang nachgeladen und geprüft
+    return { knopf: !!r.ergebnis || r.grund === STORNO_GRUND.unvollstaendig }
+  }
+
+  const storniere = async (v: Vorgang) => {
+    const s = p.stornieren
+    const vorgang = (v.zeilen[0]?.vorgang || '').trim()
+    if (!s || !vorgang || stornoLaeuftRef.current) return
+    if (!window.confirm(STORNO_FRAGE)) return
+    stornoLaeuftRef.current = true
+    setStorno({ schluessel: v.schluessel, laeuft: true, fehler: null })
+    let fehlerText: string | null = null
+    try {
+      const geladen = await ladeZumStornieren(p.orgId, vorgang)
+      const pruefung = pruefeStorno(geladen.zeilen, geladen.ruecknahmen)
+      const z = geladen.zeilen
+      if (pruefung.grund) fehlerText = pruefung.grund
+      else if (!s.darf({ zeilen: z, user: z[0]?.user ?? null, zeit: z[z.length - 1]?.created || v.zeit })) fehlerText = 'Diese Buchung darfst du nicht stornieren.'
+      else fehlerText = await s.los(z)
+    } catch (e) {
+      const f = fehlerVon(e, 'Nicht storniert')
+      fehlerText = f.grund ? `${f.text} ${f.grund}` : f.text
+    } finally {
+      stornoLaeuftRef.current = false
+    }
+    if (fehlerText) {
+      setStorno({ schluessel: v.schluessel, laeuft: false, fehler: fehlerText })
+    } else {
+      setStorno(null)
+      setStorniert(alt => new Set(alt).add(v.schluessel))
+    }
+  }
+
   const waehleStandort = (s: string) => { setStandort(s); merkeWahl({ alleStandorte: s === '' }) }
   const waehleZeitraum = (z: Zeitraum) => { setZeitraum(z); merkeWahl({ zeitraum: z }) }
   const erneut = () => setVersuch(n => n + 1)
@@ -1120,6 +1210,12 @@ export default function LagerLogbuch(p: LagerLogbuchProps): JSX.Element {
             if (b.einsatz) { const x = b.einsatz; aktionen.push({ text: 'Einsatz zeigen', los: () => zeigeEinsatz(x) }) }
             if (b.charge) { const x = b.charge; aktionen.push({ text: 'Charge verfolgen', los: () => verfolgeCharge(x) }) }
             if (b.artikelId && b.artikelId !== itemId) { const x = b.artikelId; aktionen.push({ text: 'Artikelverlauf', los: () => zeigeArtikel(x) }) }
+            const sAnzeige = istOffen ? stornoAnzeige(v) : { knopf: false }
+            const sHier = storno && storno.schluessel === v.schluessel ? storno : null
+            const sKnopf = sAnzeige.knopf || !!sHier?.laeuft
+            const sGesperrt = !!storno?.laeuft
+            const mitKnoepfen = aktionen.length > 0 || sKnopf
+            const zeigeStreifen = mitKnoepfen || !!sAnzeige.hinweis || !!sHier?.fehler
             return (
               <div key={v.schluessel} style={{
                 background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)',
@@ -1174,7 +1270,7 @@ export default function LagerLogbuch(p: LagerLogbuchProps): JSX.Element {
                     </div>
                   </div>
                 )}
-                {istOffen && aktionen.length > 0 && (
+                {istOffen && zeigeStreifen && (
                   <div style={{
                     borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', background: 'var(--lbf-fuss)',
                     padding: '8px 12px', display: 'flex', flexWrap: 'wrap', columnGap: 16,
@@ -1184,6 +1280,29 @@ export default function LagerLogbuch(p: LagerLogbuchProps): JSX.Element {
                         {a.text}
                       </button>
                     ))}
+                    {sKnopf && (
+                      <button
+                        type="button" className="lager-logbuch-knopf"
+                        style={{
+                          // Rechts abgesetzt von den Sprung-Knöpfen: Stornieren bucht
+                          ...textKnopf, marginTop: -8, marginBottom: -8, marginLeft: 'auto', marginRight: 0,
+                          opacity: sGesperrt ? 0.5 : 1, cursor: sGesperrt ? 'default' : 'pointer',
+                        }}
+                        disabled={sGesperrt}
+                        onClick={() => { void storniere(v) }}
+                      >
+                        {sHier?.laeuft ? 'Storniert …' : 'Stornieren'}
+                      </button>
+                    )}
+                    {sAnzeige.hinweis && !sHier?.fehler && (
+                      <div style={{ ...kursivGrau, flexBasis: '100%', marginTop: mitKnoepfen ? 8 : 0, overflowWrap: 'anywhere' }}>{sAnzeige.hinweis}</div>
+                    )}
+                    {sHier?.fehler && (
+                      <div role="alert" style={{
+                        flexBasis: '100%', marginTop: mitKnoepfen ? 8 : 0, fontStyle: 'italic', fontWeight: 700, fontSize: 12,
+                        color: FEHLERFARBE, overflowWrap: 'anywhere',
+                      }}>{sHier.fehler}</div>
+                    )}
                   </div>
                 )}
               </div>

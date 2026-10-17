@@ -38,6 +38,8 @@ export interface Bestandszeile {
 export interface Wer {
   organization_id: string
   user: string
+  /** Wer die Buchung schreibt (angemeldetes Konto) — Feld user_id, wenn es in PocketBase existiert */
+  user_id?: string
   /** Wann die Buchung erfasst wurde, wenn das nicht jetzt war (offline vorgemerkt), ISO-Zeit */
   erfasst_am?: string
 }
@@ -202,6 +204,7 @@ export function planeBuchung(
         user: wer.user, organization_id: wer.organization_id,
         // Offline erfasst: der echte Zeitpunkt der Entnahme (created ist der der Übertragung)
         ...(wer.erfasst_am ? { erfasst_am: wer.erfasst_am } : {}),
+        ...(wer.user_id ? { user_id: wer.user_id } : {}),
       },
     })
     posten.push({ tx_id, ...p, ...((einsatz || '').trim() ? { einsatz: (einsatz || '').trim() } : {}) })
@@ -380,6 +383,7 @@ export function planeRueckgaengig(
         batch: p.batch || null, expiry_date: p.expiry_date || null, stock_id: p.stock_id || null,
         einsatz: p.einsatz || null, note: notiz, storno_von: p.tx_id, vorgang: clientId,
         user: wer.user, organization_id: wer.organization_id,
+        ...(wer.user_id ? { user_id: wer.user_id } : {}),
       },
     })
     posten.push({ ...p, tx_id, menge: -p.menge, notiz })

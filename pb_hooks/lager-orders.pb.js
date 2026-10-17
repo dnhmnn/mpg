@@ -90,8 +90,12 @@ cronAdd("lager-auto-order", "30 7 * * *", () => {
   for (const org of orgs) {
     try {
       const orgId = org.id
-      const items = $app.findRecordsByFilter("inventory_items", "organization_id = {:o} && auto_order = true", "", 2000, 0, { o: orgId })
+      // Archivierte Artikel nie bestellen; Soll nur für aktive Standorte (Paket 4)
+      const { ohneArchiv, jsonFeld } = require(`${__hooks}/lager-regeln.js`)
+      const items = ohneArchiv($app.findRecordsByFilter("inventory_items", "organization_id = {:o} && auto_order = true", "", 2000, 0, { o: orgId }))
       if (!items.length) continue
+      const aktiveOrte = {}
+      for (const l of ohneArchiv($app.findRecordsByFilter("inventory_locations", "organization_id = {:o}", "", 500, 0, { o: orgId }))) aktiveOrte[l.id] = true
       const stock = $app.findRecordsByFilter("inventory_stock", "organization_id = {:o}", "", 10000, 0, { o: orgId })
       const qty = {}
       const qtyByLoc = {}   // Bestand je Artikel UND Standort
@@ -109,11 +113,11 @@ cronAdd("lager-auto-order", "30 7 * * *", () => {
         const globalMin = it.get("min_stock") || 0
         const gesamt = qty[it.id] || 0
         let fehl = globalMin > 0 && gesamt < globalMin ? globalMin - gesamt : 0
-        let locMins = it.get("location_min_stocks")
-        if (typeof locMins === "string") { try { locMins = JSON.parse(locMins) } catch (e) { locMins = null } }
+        const locMins = jsonFeld(it, "location_min_stocks")
         if (locMins && typeof locMins === "object") {
           let summe = 0
           for (const locId of Object.keys(locMins)) {
+            if (!aktiveOrte[locId]) continue
             const min = locMins[locId] || 0
             if (min <= 0) continue
             const have = (qtyByLoc[it.id] && qtyByLoc[it.id][locId]) || 0

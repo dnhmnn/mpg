@@ -13,7 +13,8 @@
 // Benötigt MISTRAL_API_KEY. Keine Personen-/Patientendaten an die KI.
 
 function loadSnapshot(orgId) {
-  const items = $app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 3000, 0, { o: orgId })
+  const items = []   // archivierte nicht
+  for (const it of $app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 3000, 0, { o: orgId })) { let a = false; try { a = it.getBool("archiviert") } catch (e) {} if (!a) items.push(it) }
   const stock = $app.findRecordsByFilter("inventory_stock", "organization_id = {:o}", "", 10000, 0, { o: orgId })
   const now = Date.now(), since = now - 90 * 86400000
   let txns = []
@@ -109,7 +110,8 @@ routerAdd("POST", "/lager/parse-buchung", (e) => {
   const text = (body.text || "").toString().trim().slice(0, 600)
   if (!text) return e.json(400, { success: false, error: "Text erforderlich" })
 
-  const items = $app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 3000, 0, { o: orgId })
+  const items = []   // archivierte nicht
+  for (const it of $app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 3000, 0, { o: orgId })) { let a = false; try { a = it.getBool("archiviert") } catch (e) {} if (!a) items.push(it) }
   if (!items.length) return e.json(200, { success: true, buchungen: [] })
   const liste = items.map(it => it.id + " = " + it.get("name") + " (" + (it.get("unit") || "Stück") + ")").join("\n")
 

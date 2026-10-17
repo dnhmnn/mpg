@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import PocketBase from 'pocketbase'
-import { planeBuchung, planeRueckgaengig, type Bestandszeile, type Plan } from '../lagerBuchung'
+import { planeBuchung, planeRueckgaengig, type Anfrage, type Bestandszeile, type Bewegung, type Ergebnis, type Plan } from '../lagerBuchung'
 import {
-  amSeitenende, bildeVorgaenge, einordnen, findeRuecknahmen, logbuchFilter, passtKontext, pbZeit, personKurz, tagSchluessel,
+  STORNO_GRUND, amSeitenende, bildeVorgaenge, einordnen, ergebnisAusJournal, findeRuecknahmen, logbuchFilter, passtKontext, pbZeit,
+  personKurz, pruefeStorno, ruecknahmenFilter, tagSchluessel, vorgangFilter,
   type Einordnung, type LogFilter, type LogZeile,
 } from '../lagerLogbuch'
 
@@ -885,5 +886,283 @@ describe('Logbuch: Namen mit Titel', () => {
     expect(personKurz('w@x.de', namen).kurz).toBe('Dr. Weber')
     expect(personKurz('a@x.de', namen).kurz).toBe('Prof. Dr. Becker')
     expect(personKurz('j@x.de', namen).kurz).toBe('J. Becker')
+  })
+})
+
+// ── Stornieren aus dem Logbuch ───────────────────────────────────────────────
+
+/** Was der Server mit dem Bestand macht: Anfragen der Reihe nach (Min 0), leere Zeilen danach entfernt (wie sendePlan). */
+function wendeAn(bestand: Bestandszeile[], anfragen: Anfrage[]): Bestandszeile[] {
+  const m = new Map(bestand.map(z => [z.id, { ...z }]))
+  for (const a of anfragen) {
+    if (a.collection !== 'inventory_stock') continue
+    const b = a.body as Record<string, any>
+    if (a.aktion === 'create') {
+      if (m.has(a.id)) throw new Error(`Bestandszeile ${a.id} gibt es schon`)
+      m.set(a.id, { id: a.id, item_id: b.item_id, location_id: b.location_id, quantity: b.quantity, expiry_date: b.expiry_date ?? null, batch: b.batch ?? null })
+      continue
+    }
+    const z = m.get(a.id)
+    if (!z) throw new Error(`Bestandszeile ${a.id} fehlt`)
+    z.quantity += 'quantity+' in b ? b['quantity+'] : -b['quantity-']
+    if (z.quantity < 0) throw new Error(`Bestandszeile ${a.id} unter 0`)
+  }
+  return [...m.values()].filter(z => z.quantity > 0)
+}
+
+/** Bestand zum Vergleichen: ohne created, sortiert nach ID. */
+const bestandVergleich = (b: Bestandszeile[]) => b
+  .map(z => ({ id: z.id, item_id: z.item_id, location_id: z.location_id, quantity: z.quantity, batch: z.batch || null, expiry_date: z.expiry_date || null }))
+  .sort((x, y) => (x.id < y.id ? -1 : 1))
+
+const bestandsAnfragen = (p: Plan) => p.anfragen.filter(a => a.collection === 'inventory_stock')
+
+/**
+ * Die Journalzeilen eines Plans, wie PocketBase sie liefert: in Schreibreihenfolge
+ * (die Client-ID-Zeile zuletzt), created je Zeile aus zeit(n), leere Felder als ''
+ * (auch storno_von — das Feld gibt es).
+ */
+function vomServer(plan: Plan, zeit: (n: number) => string = () => T('14:32:07.120')): LogZeile[] {
+  return plan.anfragen
+    .filter(a => a.collection === 'inventory_transactions')
+    .map((a, n) => {
+      const z: Record<string, unknown> = { storno_von: '', ...a.body, created: zeit(n) }
+      for (const k of ['batch', 'expiry_date', 'stock_id', 'einsatz', 'note', 'storno_von']) if (z[k] === null || z[k] === undefined) z[k] = ''
+      return z as unknown as LogZeile
+    })
+}
+
+/** Schreibreihenfolge mit je 1 ms Abstand — die Client-ID-Zeile ist die jüngste. */
+const nacheinander = (n: number) => T(`14:32:07.${String(120 + n).padStart(3, '0')}`)
+
+/** IDs, die absteigend vergeben werden — dann stimmt (created, id) nicht mit der Planung überein. */
+const absteigend = (praefix: string) => { let n = 10_000; return () => `${praefix}${String(--n).padStart(15 - praefix.length, '0')}` }
+
+const ergebnisVon = (plan: Plan, clientId: string): Ergebnis =>
+  ({ client_id: clientId, posten: plan.posten, ohneBestand: plan.ohneBestand, rueckgaengigMoeglich: plan.rueckgaengigMoeglich })
+
+/**
+ * Rundlauf: Buchung planen → Journal wie vom Server → ergebnisAusJournal → planeRueckgaengig.
+ * Muss genau dieselbe Gegenbuchung ergeben wie das Ergebnis im Speicher, und der
+ * Bestand muss danach wieder wie vor der Buchung sein.
+ */
+function rundlauf(bewegungen: Bewegung[], clientId: string, opts: { zeit?: (n: number) => string; neueId?: () => string; genau?: boolean } = {}) {
+  const plan = planeBuchung(bewegungen, BESTAND, WER, clientId, { neueId: opts.neueId ?? idFolge('a'), ueberzug: 'protokollieren' })
+  const nachher = wendeAn(BESTAND, plan.anfragen)
+  // Das Logbuch lädt '-created,-id' — neueste zuerst
+  const zeilen = vomServer(plan, opts.zeit).reverse()
+  const r = ergebnisAusJournal(zeilen)
+  expect(r.grund).toBeUndefined()
+  const e = r.ergebnis!
+  expect(e.client_id).toBe(clientId)
+  expect(e.ohneBestand).toBe(plan.ohneBestand)
+  expect(e.rueckgaengigMoeglich).toBe(true)
+  expect(e.posten.map(p => p.tx_id).sort()).toEqual(plan.posten.map(p => p.tx_id).sort())
+  expect(e.posten[0].tx_id).toBe(clientId)
+
+  const aus = planeRueckgaengig(e, nachher, WER, 'neu000000000001', { neueId: idFolge('n') })
+  if (opts.genau !== false) {
+    const erwartet = planeRueckgaengig(ergebnisVon(plan, clientId), nachher, WER, 'neu000000000001', { neueId: idFolge('n') })
+    expect(e.posten.map(p => p.tx_id)).toEqual(plan.posten.map(p => p.tx_id))
+    expect(bestandsAnfragen(aus)).toEqual(bestandsAnfragen(erwartet))
+    expect(aus.anfragen).toEqual(erwartet.anfragen)
+  }
+  // Wirklich invers: nach der Gegenbuchung ist der Bestand wie vor der Buchung
+  expect(bestandVergleich(wendeAn(nachher, aus.anfragen))).toEqual(bestandVergleich(BESTAND))
+  return { plan, zeilen, e, aus, nachher }
+}
+
+const AUSBUCHUNG_6: Bewegung[] = [{ art: 'abgang', item_id: 'handschuhe', location_id: 'rtw1', menge: 6, einsatz: 'E-2026-0412' }]
+const EINBUCHUNG_2: Bewegung[] = [
+  { art: 'zugang', item_id: 'handschuhe', location_id: 'rtw1', menge: 50, batch: 'L1', expiry: '2028-08-31 00:00:00.000Z', notiz: 'Lieferung Meditrade' },
+  { art: 'zugang', item_id: 'handschuhe', location_id: 'rtw1', menge: 20, batch: 'L2', expiry: '2029-02-28 00:00:00.000Z', notiz: 'Lieferung Meditrade' },
+]
+const UMLAGERUNG_4: Bewegung[] = [{ art: 'umlagerung', item_id: 'handschuhe', von: 'rtw1', nach: 'hauptlager', menge: 4, vonName: 'RTW 1', nachName: 'Hauptlager' }]
+
+describe('Logbuch: Stornieren — ergebnisAusJournal im Rundlauf mit planeRueckgaengig', () => {
+  it('Ausbuchung über zwei Chargen und Rest ohne Chargenzuordnung', () => {
+    const { e, aus } = rundlauf(AUSBUCHUNG_6, 'ausgabe00000001')
+    expect(e.ohneBestand).toBe(1)
+    expect(e.posten.map(p => [p.menge, p.stock_id, p.batch, p.einsatz])).toEqual([
+      [-3, 'stockb700000001', 'B7', 'E-2026-0412'],
+      [-2, 'stockb800000001', 'B8', 'E-2026-0412'],
+      [-1, undefined, null, 'E-2026-0412'],
+    ])
+    // Beide Chargen waren leer und entfernt — sie kommen mit derselben ID, Charge und MHD zurück
+    expect(bestandsAnfragen(aus).map(a => [a.aktion, a.id, a.body.quantity, a.body.batch, a.body.expiry_date])).toEqual([
+      ['create', 'stockb800000001', 2, 'B8', '2027-09-30 00:00:00.000Z'],
+      ['create', 'stockb700000001', 3, 'B7', '2027-03-31 00:00:00.000Z'],
+    ])
+    // Der Rest ohne Bestand: nur die Gegenzeile im Journal
+    expect(aus.anfragen.filter(a => a.collection === 'inventory_transactions')).toHaveLength(3)
+  })
+
+  it('Einbuchung mit zwei Chargen', () => {
+    const { aus } = rundlauf(EINBUCHUNG_2, 'einbuch00000001')
+    expect(bestandsAnfragen(aus).map(a => [a.aktion, a.body])).toEqual([
+      ['update', { 'quantity-': 20 }],
+      ['update', { 'quantity-': 50 }],
+    ])
+  })
+
+  it('Umlagerung über zwei Chargen: Ziel geleert, Quelle wieder aufgefüllt', () => {
+    const { aus } = rundlauf(UMLAGERUNG_4, 'umlager00000001')
+    expect(bestandsAnfragen(aus).map(a => [a.aktion, a.id, a.body])).toEqual([
+      ['update', 'a00000000000004', { 'quantity-': 1 }],
+      ['update', 'stockb800000001', { 'quantity+': 1 }],
+      ['update', 'a00000000000001', { 'quantity-': 3 }],
+      ['create', 'stockb700000001', { id: 'stockb700000001', item_id: 'handschuhe', location_id: 'rtw1', quantity: 3, expiry_date: '2027-03-31 00:00:00.000Z', batch: 'B7', organization_id: 'org1' }],
+    ])
+  })
+
+  it.each([
+    ['alle Zeilen in derselben Millisekunde', () => T('14:32:07.120')],
+    ['je 1 ms nacheinander, Client-ID-Zeile zuletzt', nacheinander],
+  ] as const)('gleiches Ergebnis, wie PocketBase die Zeilen auch stempelt: %s', (_name, zeit) => {
+    rundlauf(AUSBUCHUNG_6, 'ausgabe00000002', { zeit })
+    rundlauf(EINBUCHUNG_2, 'einbuch00000002', { zeit })
+    rundlauf(UMLAGERUNG_4, 'umlager00000002', { zeit })
+  })
+
+  it('zufällige IDs in derselben Millisekunde: andere Reihenfolge, dieselbe Wirkung', () => {
+    for (const [b, id] of [[AUSBUCHUNG_6, 'ausgabe00000003'], [EINBUCHUNG_2, 'einbuch00000003'], [UMLAGERUNG_4, 'umlager00000003']] as const) {
+      const { plan, nachher, aus } = rundlauf(b, id, { neueId: absteigend('z'), genau: false })
+      const erwartet = planeRueckgaengig(ergebnisVon(plan, id), nachher, WER, 'neu000000000001', { neueId: idFolge('n') })
+      const sortiert = (p: Plan) => bestandsAnfragen(p).map(a => JSON.stringify(a)).sort()
+      expect(sortiert(aus)).toEqual(sortiert(erwartet))
+    }
+  })
+
+  it('Entnahme aus einer Charge, die dieselbe Buchung angelegt hat: erst zurück entnehmen, dann die Einbuchung', () => {
+    // Mehrfachbuchung: +1 Kompressen, +5 Handschuhe neue Charge N1 (läuft zuerst ab), −2 Handschuhe — die kommen aus N1
+    const b: Bewegung[] = [
+      { art: 'zugang', item_id: 'kompressen', location_id: 'rtw1', menge: 1, batch: 'K9', expiry: '2029-01-31 00:00:00.000Z' },
+      { art: 'zugang', item_id: 'handschuhe', location_id: 'rtw1', menge: 5, batch: 'N1', expiry: '2026-12-31 00:00:00.000Z' },
+      { art: 'abgang', item_id: 'handschuhe', location_id: 'rtw1', menge: 2 },
+    ]
+    // Absteigende IDs: nach (created, id) stünde die Entnahme vor der Einbuchung — die Gegenbuchung schlüge fehl
+    const { e } = rundlauf(b, 'mehrfac00000001', { neueId: absteigend('m') })
+    expect(e.posten.map(p => [p.item_id, p.menge, p.batch])).toEqual([['kompressen', 1, 'K9'], ['handschuhe', 5, 'N1'], ['handschuhe', -2, 'N1']])
+  })
+
+  it('Werte so, wie das Ergebnis im Speicher sie hat', () => {
+    const plan = planeBuchung(AUSBUCHUNG_6, BESTAND, WER, 'ausgabe00000004', { neueId: idFolge('a'), ueberzug: 'protokollieren' })
+    const e = ergebnisAusJournal(vomServer(plan)).ergebnis!
+    expect(e.posten[0]).toEqual({
+      tx_id: 'ausgabe00000004', item_id: 'handschuhe', location_id: 'rtw1', typ: 'ausbuchung', menge: -3,
+      stock_id: 'stockb700000001', batch: 'B7', expiry_date: '2027-03-31 00:00:00.000Z', notiz: 'Charge B7 · Einsatz E-2026-0412', einsatz: 'E-2026-0412',
+    })
+    // Ohne Einsatz und ohne Bestandszeile: undefined statt ''
+    expect(e.posten[2]).toMatchObject({ stock_id: undefined, batch: null, expiry_date: null, notiz: 'ohne Chargenzuordnung · Einsatz E-2026-0412' })
+  })
+})
+
+describe('Logbuch: Stornieren — was sich nicht genau zurücknehmen lässt', () => {
+  const ausbuchung = () => vomServer(planeBuchung(AUSBUCHUNG_6, BESTAND, WER, 'ausgabe00000009', { neueId: idFolge('a'), ueberzug: 'protokollieren' }))
+
+  it('nichts übergeben', () => {
+    expect(ergebnisAusJournal([])).toEqual({ grund: STORNO_GRUND.leer })
+  })
+
+  it('ohne gemeinsame Vorgangs-Nummer (nach Zeitnähe zusammengefasst)', () => {
+    const ohne = ausbuchung().map(z => ({ ...z, vorgang: undefined }))
+    expect(bildeVorgaenge(ohne)[0].sicher).toBe(false)
+    expect(ergebnisAusJournal(ohne)).toEqual({ grund: STORNO_GRUND.ohneVorgang })
+    expect(ergebnisAusJournal(ausbuchung().map(z => ({ ...z, vorgang: '' })))).toEqual({ grund: STORNO_GRUND.ohneVorgang })
+    const gemischt = ausbuchung().map((z, n) => (n === 0 ? { ...z, vorgang: 'andere00000001' } : z))
+    expect(ergebnisAusJournal(gemischt)).toEqual({ grund: STORNO_GRUND.ohneVorgang })
+    expect(ergebnisAusJournal(ausbuchung()).ergebnis).toBeDefined()
+  })
+
+  it('eine Gegenbuchung — mit storno_von oder nur an der Notiz erkannt', () => {
+    const plan = planeBuchung(AUSBUCHUNG_6, BESTAND, WER, 'ausgabe00000010', { neueId: idFolge('a'), ueberzug: 'protokollieren' })
+    const gegen = vomServer(planeRueckgaengig(ergebnisVon(plan, 'ausgabe00000010'), wendeAn(BESTAND, plan.anfragen), WER, 'storno000000010', { neueId: idFolge('s') }))
+    expect(bildeVorgaenge(gegen)[0].sicher).toBe(true)
+    expect(ergebnisAusJournal(gegen)).toEqual({ grund: STORNO_GRUND.ruecknahme })
+    expect(ergebnisAusJournal(gegen.map(z => ({ ...z, storno_von: '' })))).toEqual({ grund: STORNO_GRUND.ruecknahme })
+    const nurEine = ausbuchung().map((z, n) => (n === 1 ? { ...z, storno_von: 'tx9999999999991' } : z))
+    expect(ergebnisAusJournal(nurEine)).toEqual({ grund: STORNO_GRUND.ruecknahme })
+  })
+
+  it('Inventur-Korrektur — Sammelzeile und Zugang', () => {
+    const sammel = vomServer(planeBuchung([{ art: 'abgang', typ: 'korrektur', sammel: true, item_id: 'handschuhe', location_id: 'rtw1', menge: 4, notiz: 'Inventur-Korrektur: 5 → 1', bevorzugt: 'stockb800000001' }],
+      BESTAND, WER, 'inventu00000009', { neueId: idFolge('i') }))
+    expect(ergebnisAusJournal(sammel)).toEqual({ grund: STORNO_GRUND.korrektur })
+    const zugang = vomServer(planeBuchung([{ art: 'zugang', typ: 'korrektur', item_id: 'handschuhe', location_id: 'rtw1', menge: 2, notiz: 'Inventur-Korrektur: 5 → 7' }],
+      BESTAND, WER, 'inventu00000010', { neueId: idFolge('j') }))
+    expect(ergebnisAusJournal(zugang)).toEqual({ grund: STORNO_GRUND.korrektur })
+  })
+
+  it('andere Buchungsart', () => {
+    const z = ausbuchung().map((x, n) => (n === 0 ? { ...x, type: 'verbrauch' } : x))
+    expect(ergebnisAusJournal(z)).toEqual({ grund: STORNO_GRUND.art })
+  })
+
+  it('unvollständig: die Zeile mit der Client-ID fehlt (z. B. andere Seite einer Umlagerung, anderer Standort)', () => {
+    const umlagerung = vomServer(planeBuchung(UMLAGERUNG_4, BESTAND, WER, 'umlager00000009', { neueId: idFolge('u') }))
+    const nurZiel = umlagerung.filter(z => z.location_id === 'hauptlager')
+    expect(bildeVorgaenge(nurZiel)[0].sicher).toBe(true)
+    expect(ergebnisAusJournal(nurZiel)).toEqual({ grund: STORNO_GRUND.unvollstaendig })
+  })
+
+  it('Abgang ohne Bestandszeile, der nicht „ohne Chargenzuordnung“ ist', () => {
+    const z = (p: Partial<LogZeile>) => zeile({ id: 'einzel000000001', vorgang: 'einzel000000001', storno_von: '', ...p })
+    expect(ergebnisAusJournal([z({ quantity: -2, batch: 'B7', note: 'Charge B7' })])).toEqual({ grund: STORNO_GRUND.ohneBestandszeile })
+    // Zugang ohne Bestandszeile ebenso — der Bestand bliebe stehen
+    expect(ergebnisAusJournal([z({ type: 'einbuchung', quantity: 5 })])).toEqual({ grund: STORNO_GRUND.ohneBestandszeile })
+    // „ohne Chargenzuordnung“ geht: nur die Journalzeile wird gegengebucht
+    const ohne = ergebnisAusJournal([z({ quantity: -2, note: 'offline erfasst · ohne Chargenzuordnung' })])
+    expect(ohne.ergebnis?.ohneBestand).toBe(2)
+  })
+
+  it('ungültige Menge', () => {
+    const z = zeile({ id: 'einzel000000002', vorgang: 'einzel000000002', stock_id: 'stockb700000001', quantity: 0 })
+    expect(ergebnisAusJournal([z])).toEqual({ grund: STORNO_GRUND.menge })
+    expect(ergebnisAusJournal([{ ...z, quantity: Number.NaN }])).toEqual({ grund: STORNO_GRUND.menge })
+  })
+})
+
+describe('Logbuch: Stornieren — letzte Prüfung gegen den Server (pruefeStorno)', () => {
+  const plan = planeBuchung(AUSBUCHUNG_6, BESTAND, WER, 'ausgabe00000020', { neueId: idFolge('a'), ueberzug: 'protokollieren' })
+  const original = vomServer(plan)
+  const gegen = vomServer(planeRueckgaengig(ergebnisVon(plan, 'ausgabe00000020'), wendeAn(BESTAND, plan.anfragen), WER, 'storno000000020', { neueId: idFolge('s') }),
+    () => T('14:40:00.000'))
+
+  it('nicht zurückgenommen: das Ergebnis', () => {
+    expect(pruefeStorno(original, []).ergebnis).toEqual(ergebnisAusJournal(original).ergebnis)
+  })
+
+  it('schon storniert — auch nur teilweise, auch von einer anderen Person', () => {
+    expect(pruefeStorno(original, gegen)).toEqual({ grund: STORNO_GRUND.schonStorniert })
+    expect(pruefeStorno(original, gegen.slice(0, 1))).toEqual({ grund: STORNO_GRUND.schonStorniert })
+    expect(pruefeStorno(original, gegen.map(z => ({ ...z, user: TOM })))).toEqual({ grund: STORNO_GRUND.schonStorniert })
+  })
+
+  it('alte Rücknahme ohne storno_von derselben Person wird erkannt', () => {
+    expect(pruefeStorno(original, gegen.map(z => ({ ...z, storno_von: '', vorgang: '' })))).toEqual({ grund: STORNO_GRUND.schonStorniert })
+  })
+
+  it('eine Rücknahme einer anderen Buchung hält nicht auf', () => {
+    const fremd = gegen.map(z => ({ ...z, storno_von: 'tx9999999999991' }))
+    expect(pruefeStorno(original, fremd).ergebnis).toBeDefined()
+  })
+
+  it('ohne das Feld storno_von in PocketBase: nicht stornieren', () => {
+    const ohneFeld = original.map(({ storno_von: _weg, ...rest }) => rest as LogZeile)
+    expect(pruefeStorno(ohneFeld, [])).toEqual({ grund: STORNO_GRUND.feldFehlt })
+  })
+
+  it('Gründe aus ergebnisAusJournal gehen durch', () => {
+    expect(pruefeStorno(gegen, [])).toEqual({ grund: STORNO_GRUND.ruecknahme })
+    expect(pruefeStorno([], [])).toEqual({ grund: STORNO_GRUND.leer })
+  })
+
+  it('Filter: der ganze Vorgang, und die möglichen Gegenbuchungen dazu (echtes pb.filter)', () => {
+    expect(vorgangFilter('org1', 'ausgabe00000020', pbFilter)).toBe("organization_id = 'org1' && vorgang = 'ausgabe00000020'")
+    const mehrere = [...original, zeile({ item_id: 'kompressen', created: T('14:32:07.125') })]
+    expect(ruecknahmenFilter('org1', mehrere, pbFilter))
+      .toBe("organization_id = 'org1' && created >= '2026-10-16 14:32:07.120Z' && note ~ 'Rückgängig' && (item_id = 'handschuhe' || item_id = 'kompressen')")
+    const viele = Array.from({ length: 31 }, (_, n) => zeile({ item_id: `artikel${n}` }))
+    expect(ruecknahmenFilter('org1', viele, pbFilter)).toBe("organization_id = 'org1' && created >= '2026-10-16 14:32:07.120Z' && note ~ 'Rückgängig'")
   })
 })
