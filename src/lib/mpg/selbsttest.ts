@@ -8,7 +8,7 @@ import {
   naechsteStk, plusMonate, tageZwischen, VORWARNUNG,
 } from './fristen'
 import { pruefungNichtBestanden, zustandVon, zaehleStufen } from './zustand'
-import { ergebnisVon, moeglicheErgebnisse, MANGEL_VERMERK, type Pruefpunkt } from './pruefung'
+import { ergebnisVon, moeglicheErgebnisse, restInOrdnung, setzePunkt, MANGEL_VERMERK, type PunktStatus, type Pruefpunkt } from './pruefung'
 import { anker, planeBeheben, planeBestaetigung, planeDefekt, planePruefung, restNachAnker } from './aktionen'
 
 export interface TestErgebnis { name: string; ok: boolean; erwartet: string; erhalten: string }
@@ -113,6 +113,21 @@ export function laufeMpgSelbsttest(): TestErgebnis[] {
   r.push(eq('ein Punkt offen, ohne Bemerkung: nichts speicherbar', [moeglicheErgebnisse(punkte(true, false), '')].map(w => [w.bestanden, w.mangel, w.nicht_bestanden])[0], [false, false, false]))
   r.push(eq('ein Punkt offen, mit Bemerkung: Mangel oder nicht bestanden', [moeglicheErgebnisse(punkte(true, false), 'Akku 20 %')].map(w => [w.bestanden, w.mangel, w.nicht_bestanden])[0], [false, true, true]))
   r.push(eq('ohne Prüfpunkte kein Bestanden', moeglicheErgebnisse([], '').bestanden, false))
+  // Je Punkt entschieden (Prüfseite)
+  const jp = (...st: PunktStatus[]): Pruefpunkt[] => st.map((x, i) => setzePunkt({ item: `P${i + 1}`, checked: false, note: '' }, x))
+  const wahl = (pk: Pruefpunkt[], b = '') => { const w = moeglicheErgebnisse(pk, b); return [w.bestanden, w.mangel, w.nicht_bestanden] }
+  r.push(eq('je Punkt: alle i.O. → nur Bestanden', wahl(jp('ok', 'ok')), [true, false, false]))
+  r.push(eq('je Punkt: ein Punkt noch offen → nichts speicherbar', wahl(jp('ok', 'offen'), 'Bemerkung'), [false, false, false]))
+  r.push(eq('je Punkt: Mangel ohne Notiz → nichts speicherbar', wahl(jp('ok', 'mangel')), [false, false, false]))
+  const mitNotiz = jp('ok', 'mangel'); mitNotiz[1] = { ...mitNotiz[1], note: 'Akku 20 %' }
+  r.push(eq('je Punkt: Mangel mit Notiz → Mangel oder nicht bestanden, ohne Bemerkung', wahl(mitNotiz), [false, true, true]))
+  r.push(eq('je Punkt: alle i.O., Problem außerhalb der Liste → mit Bemerkung', [wahl(jp('ok'), ''), wahl(jp('ok'), 'Gehäuse nass')], [[true, false, false], [true, true, true]]))
+  const teilweise = jp('offen', 'mangel', 'offen'); teilweise[1] = { ...teilweise[1], note: 'Gehäuse gerissen' }
+  r.push(eq('„Übrige in Ordnung“ lässt einen erfassten Mangel samt Notiz stehen', restInOrdnung(teilweise).map(p => [p.status, p.note]), [['ok', ''], ['mangel', 'Gehäuse gerissen'], ['ok', '']]))
+  r.push(eq('„Übrige in Ordnung“ macht „Bestanden“ bei einem Mangel nicht möglich', moeglicheErgebnisse(restInOrdnung(teilweise), '').bestanden, false))
+  r.push(eq('je Punkt: i.O. hält „abgehakt“ für ältere Leser stimmig', [setzePunkt(jp('offen')[0], 'ok').checked, setzePunkt(jp('ok')[0], 'mangel').checked], [true, false]))
+  r.push(eq('je Punkt: Protokoll ohne Bemerkung nennt die Mängel', planePruefung({ geraet: { id: 'g', name: 'G', type: 'AED', interval: 'monthly' }, punkte: mitNotiz, bemerkung: '', ergebnis: 'mangel', wer: { organization_id: 'o', name: 'A' }, jetzt: new Date(2026, 0, 1), ids: { pruefung: 'p', defekt: 'd' } }).find(a => a.collection === 'mpg_inspections')?.body.notes, MANGEL_VERMERK + 'P2: Akku 20 %'))
+  r.push(eq('je Punkt: Defekt ohne Bemerkung', planePruefung({ geraet: { id: 'g', name: 'G', type: 'AED', interval: 'monthly' }, punkte: mitNotiz, bemerkung: '', ergebnis: 'nicht_bestanden', wer: { organization_id: 'o', name: 'A' }, jetzt: new Date(2026, 0, 1), ids: { pruefung: 'p', defekt: 'd' } }).find(a => a.collection === 'mpg_defects')?.body.description, 'Prüfung nicht bestanden\nNicht in Ordnung: P2 (Akku 20 %)'))
   r.push(eq('gespeichert: nicht bestanden', ergebnisVon({ passed: false, checklist_results: punkte(true) }), 'nicht_bestanden'))
   r.push(eq('gespeichert: bestanden', ergebnisVon({ passed: true, checklist_results: punkte(true, true) }), 'bestanden'))
   r.push(eq('gespeichert früher: bestanden mit offenen Punkten → Mangel', ergebnisVon({ passed: true, checklist_results: punkte(true, false) }), 'mangel'))

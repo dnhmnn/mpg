@@ -272,13 +272,13 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
                 ) : (
                   users.map((u) => {
                     const roleLabels: Record<string, string> = {
-                      mpg: '👑 MPG',
-                      lager: '📦 Lager',
-                      ausbildung: '🎓 Ausbildung',
-                      qm: '📋 QM',
-                      benutzer: '👤 Benutzer'
+                      mpg: 'MPG',
+                      lager: 'Lager',
+                      ausbildung: 'Ausbildung',
+                      qm: 'QM',
+                      benutzer: 'Benutzer'
                     }
-                    const roleLabel = roleLabels[u.role] || '👤 Benutzer'
+                    const roleLabel = roleLabels[u.role] || 'Benutzer'
                     
                     return (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--lbf-border)' }}>

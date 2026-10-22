@@ -24,7 +24,7 @@ const Ausbildungen = lazy(() => import('./pages/ausbildungen/Ausbildungen'))
 const Einladung = lazy(() => import('./pages/ausbildungen/Einladung'))
 const Files = lazy(() => import('./pages/Files'))
 const Lager = lazy(() => import('./pages/Lager'))
-const MPG = lazy(() => import('./pages/MPG'))
+const MPG = lazy(() => import('./pages/mpg'))
 const Lernbar = lazy(() => import('./pages/Lernbar'))
 const Unitas = lazy(() => import('./pages/Unitas'))
 const Unitarii = lazy(() => import('./pages/Unitarii'))
@@ -105,7 +105,7 @@ function App() {
         <Route path="/ausbildungen" element={<Ausbildungen />} />
         <Route path="/lager" element={<Lager />} />
         <Route path="/files" element={<Files />} />
-        <Route path="/mpg" element={<MPG />} />
+        <Route path="/mpg/*" element={<MPG />} />
         <Route path="/einladung/:token" element={<Einladung />} />
         <Route path="/lernbar" element={<Lernbar />} />
         <Route path="/unitas" element={<Unitas />} />

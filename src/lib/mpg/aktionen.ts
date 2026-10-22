@@ -14,7 +14,7 @@
 // Prüffälle: src/lib/mpg/selbsttest.ts
 
 import { faelligFeld, tagVonDatum, type FristFelder } from './fristen'
-import { defektText, MANGEL_VERMERK, type PruefErgebnis, type Pruefpunkt } from './pruefung'
+import { defektText, maengelText, MANGEL_VERMERK, type PruefErgebnis, type Pruefpunkt } from './pruefung'
 import type { Anfrage } from './schreiben'
 import type { Schwere } from './zustand'
 
@@ -71,8 +71,9 @@ export function planePruefung(o: {
     body: {
       device_id: geraet.id, device_name: geraet.name, device_type: geraet.type,
       user_name: wer.name, inspection_date: zeit, passed: bestanden,
-      notes: ergebnis === 'mangel' ? MANGEL_VERMERK + bemerkung : bemerkung,
-      checklist_results: o.punkte, organization_id: wer.organization_id,
+      notes: ergebnis === 'mangel' ? MANGEL_VERMERK + (bemerkung || maengelText(o.punkte)) : bemerkung,
+      checklist_results: o.punkte.map(({ item, checked, note, status }) => status ? { item, checked, note, status } : { item, checked, note }),
+      organization_id: wer.organization_id,
     },
   })
   // 4. Zuletzt der Prüfstand am Gerät — außer eine neuere Prüfung steht schon dort
