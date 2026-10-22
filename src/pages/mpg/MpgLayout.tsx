@@ -1,7 +1,7 @@
-// Rahmen des MPG-Moduls: Kopf im Masthead-Stil, auf dem Telefon die Tab-Leiste unten
+// Rahmen des MPG-Moduls: Kopf oben, auf dem Telefon die Tab-Leiste unten
 // (HEUTE · GERÄTE · MELDUNGEN · MEHR), ab 960 px eine Seitenleiste. Darunter die Seite.
 
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { Blaetter } from './blaetter'
 import { useMpg } from './MpgDaten'
 import { ICON, SCHRIFT, abschnittKopf, pik, useBreit } from './teile'
@@ -27,38 +27,27 @@ function istAktiv(z: Ziel, pfad: string): boolean {
   return (z.auch ?? []).some(a => pfad.startsWith(a))
 }
 
-function initialen(name: string): string {
-  return name.split(/\s+/).filter(w => /^[A-Za-zÄÖÜäöü]/.test(w) && !/^(Dr|Prof)\.?$/.test(w)).map(w => w[0]).slice(0, 2).join('').toUpperCase() || 'R'
-}
-
 export default function MpgLayout() {
   const m = useMpg()
   const breit = useBreit()
   const { pathname } = useLocation()
+  const navigate = useNavigate()
   if (m.authLoading) return null
 
   const eingang = m.externalReports.filter(r => r.status === 'pending').length
   const datum = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
-  const name = m.user?.name || m.user?.email || ''
 
+  // Kopf wie vor dem Umbau: zurück zum Hub, Modulname, Datum
   const kopf = (
-    <header style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)' }}>
-      <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12, padding: '0 max(16px, env(safe-area-inset-left))' }}>
-        <Link to="/hub" aria-label="Zum Hub" title="Zum Hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', padding: 6, margin: -6 }}>{pik(ICON.hub, 20)}</Link>
-        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#600812', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          {pik(ICON.mpg, 18)}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Medizinprodukte</div>
-          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {[m.user?.organization_name, datum].filter(Boolean).join(' · ')}
-          </div>
-        </div>
-        <div title={name} style={{ width: 32, height: 32, borderRadius: '50%', border: '1.5px solid var(--lbf-akzent)', color: 'var(--lbf-akzent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
-          {initialen(name)}
-        </div>
+    <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
+      <button onClick={() => navigate('/hub')} aria-label="Zum Hub" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex' }}>
+        {pik(<><polyline points="15 18 9 12 15 6"/></>)}
+      </button>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Medizinprodukte</div>
+        <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{datum}</div>
       </div>
-    </header>
+    </div>
   )
 
   const zaehler = (z: Ziel) => z.pfad === '/mpg/meldungen' && eingang > 0 ? eingang : 0

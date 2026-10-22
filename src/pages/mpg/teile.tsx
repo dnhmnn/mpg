@@ -107,8 +107,6 @@ export const ICON = {
   plus: <><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></>,
   haken: <polyline points="20 6 9 17 4 12" />,
   kreuz: <><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>,
-  mpg: <><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></>,
-  hub: <><rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" /></>,
 }
 
 // ── Zeit ──────────────────────────────────────────────────────────────────
