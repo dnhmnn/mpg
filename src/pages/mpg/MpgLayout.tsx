@@ -1,7 +1,7 @@
 // Rahmen des MPG-Moduls: Kopf oben, auf dem Telefon die Tab-Leiste unten
 // (HEUTE · GERÄTE · MELDUNGEN · MEHR), ab 960 px eine Seitenleiste. Darunter die Seite.
 
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { Blaetter } from './blaetter'
 import { useMpg } from './MpgDaten'
 import { ICON, SCHRIFT, abschnittKopf, pik, useBreit } from './teile'
@@ -31,21 +31,21 @@ export default function MpgLayout() {
   const m = useMpg()
   const breit = useBreit()
   const { pathname } = useLocation()
-  const navigate = useNavigate()
   if (m.authLoading) return null
 
   const eingang = m.externalReports.filter(r => r.status === 'pending').length
-  const datum = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
-  // Kopf wie vor dem Umbau: zurück zum Hub, Modulname, Datum
+  // Kopf wie in allen Modulen (Lager, Lernbar, Patienten …): zurück zum Hub, Modulname, Organisation
   const kopf = (
-    <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
-      <button onClick={() => navigate('/hub')} aria-label="Zum Hub" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex' }}>
-        {pik(<><polyline points="15 18 9 12 15 6"/></>)}
-      </button>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Medizinprodukte</div>
-        <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{datum}</div>
+    <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
+      <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <Link to="/hub" aria-label="Zurück zur Übersicht" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </Link>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Medizinprodukte</div>
+          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{m.user?.organization_name || 'Responda'}</div>
+        </div>
       </div>
     </div>
   )
