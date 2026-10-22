@@ -1,15 +1,21 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { faelligFeld, intervallVon, kalendertag, tagText, tagVonDatum, INTERVALL_TEXT, type Intervall } from '../lib/mpg/fristen'
+import { pruefungNichtBestanden, zustandVon, sperrtDefekt, STUFE_TEXT, type Stufe, type Zustand } from '../lib/mpg/zustand'
+import { ergebnisVon, moeglicheErgebnisse, offenePunkte, ERGEBNIS_TEXT, type PruefErgebnis } from '../lib/mpg/pruefung'
+import { planeBeheben, planeBestaetigung, planeDefekt, planePruefung, restNachAnker } from '../lib/mpg/aktionen'
+import { neueId, pbOptionen, pbSchreiber, schreibeZusammen, SchreibFehler } from '../lib/mpg/schreiben'
+import { pbFehlerText } from '../lib/pbFehler'
+import { entwurfSchluessel, unklarSchluessel } from '../lib/mpg/lokal'
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type Tab = 'geraete' | 'defekte' | 'logbuch' | 'vorlagen'
-type DeviceInterval = 'daily' | 'weekly' | 'monthly' | 'yearly'
+type DeviceInterval = Intervall
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 type DefectStatus = 'open' | 'in_progress' | 'resolved'
-type DeviceStatus = 'ok' | 'warning' | 'overdue' | 'defect'
 type ExternalReportStatus = 'pending' | 'confirmed' | 'rejected'
 
 interface Device {
@@ -99,12 +105,42 @@ const SEVERITY_CFG: Record<Severity, { label: string; color: string; bg: string 
   critical: { label: 'Kritisch',  color: 'rgb(var(--lbf-defekt-rgb))', bg: 'rgba(var(--lbf-defekt-rgb),0.12)'  },
 }
 
-const STATUS_BORDER: Record<DeviceStatus, string> = {
-  ok: '#16a34a', warning: '#d97706', overdue: '#dc2626', defect: 'rgb(var(--lbf-defekt-rgb))',
+// Linke Kartenlinie und Marken je Zustand (Farben nach CLAUDE.md)
+const STUFE_FARBE: Record<Stufe, string> = {
+  gesperrt: '#dc2626', handlung: 'var(--lbf-akzent)', bald: 'var(--lbf-akzent)', ok: '#16a34a',
 }
 
-const INTERVAL_LABELS: Record<DeviceInterval, string> = {
-  daily: 'Täglich', weekly: 'Wöchentlich', monthly: 'Monatlich', yearly: 'Jährlich',
+const ERGEBNIS_FARBE: Record<PruefErgebnis, string> = {
+  bestanden: '#16a34a', mangel: 'var(--lbf-akzent)', nicht_bestanden: '#dc2626',
+}
+
+const INTERVAL_LABELS = INTERVALL_TEXT
+
+
+type DefektFormular = { description: string; severity: Severity; sperren: boolean; id: string; unklar: boolean; seit?: string }
+interface Unklar {
+  /** je Geräte-ID die gesendete Defektmeldung */
+  defekte: Record<string, DefektFormular>
+  /** je Meldungs-ID die gesendete Bestätigung */
+  bestaetigungen: Record<string, { anmerkung: string; sperren: boolean; seit?: string }>
+}
+
+/**
+ * Wird ein unklarer Versuch erst nach längerer Zeit erneut gesendet, kann sich am Gerät
+ * inzwischen etwas geändert haben (z. B. repariert und freigegeben) — vorher nachfragen.
+ */
+function altenVersuchSenden(seit: string | undefined): boolean {
+  const t = seit ? new Date(seit).getTime() : NaN
+  if (!Number.isFinite(t) || Date.now() - t < 30 * 60_000) return true
+  const wann = new Date(t).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return confirm(`Dieser Speicherversuch ist vom ${wann}. Seitdem kann sich am Gerät etwas geändert haben (z. B. repariert und freigegeben) — eine Sperre darin würde erneut gesetzt.\n\nTrotzdem erneut senden?`)
+}
+const KEIN_UNKLAR: Unklar = { defekte: {}, bestaetigungen: {} }
+
+const schreiber = pbSchreiber(pb)
+
+function fehlerText(e: unknown): string {
+  return e instanceof SchreibFehler ? e.message : pbFehlerText(e)
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -134,21 +170,10 @@ function relativeDate(s?: string | null): string {
   const d = parseDate(s)
   if (!d) return ''
   const days = Math.floor((Date.now() - d.getTime()) / 86400000)
-  if (days === 0) return 'heute'
+  if (days <= 0) return 'heute'   // auch bei leicht vorgehender Uhr eines anderen Geräts
   if (days === 1) return 'gestern'
   if (days < 7) return `vor ${days} Tagen`
   return fmtDate(s)
-}
-
-function calcPeriodicStatus(lastDate: string | null | undefined, intervalMonths: number): 'ok' | 'warning' | 'overdue' {
-  const d = parseDate(lastDate)
-  if (!d) return 'overdue'
-  const next = new Date(d)
-  next.setMonth(next.getMonth() + intervalMonths)
-  const daysLeft = Math.floor((next.getTime() - Date.now()) / 86400000)
-  if (daysLeft < 0) return 'overdue'
-  if (daysLeft <= 30) return 'warning'
-  return 'ok'
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -166,20 +191,34 @@ export default function MPG() {
   const [checklists, setChecklists] = useState<Checklist[]>([])
   const [defects, setDefects] = useState<Defect[]>([])
   const [loading, setLoading] = useState(true)
+  const [ladefehler, setLadefehler] = useState('')
 
   // UI
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const msgTimer = useRef<ReturnType<typeof setTimeout>>()
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<'all' | DeviceStatus>('all')
+  const [statusFilter, setStatusFilter] = useState<'all' | Stufe>('all')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  // Läuft gerade ein Schreibvorgang? Sperrt die Knöpfe gegen Doppeltippen.
+  const [busy, setBusy] = useState(false)
+  const laeuft = useRef(false)
 
   // Add/Edit Device sheet
-  const [deviceSheet, setDeviceSheet] = useState<null | { id?: string; name: string; type: string; serial_number: string; location: string; interval: DeviceInterval; operational: boolean; has_stk: boolean; last_stk: string; stk_interval_months: number; has_mtk: boolean; last_mtk: string; mtk_interval_months: number }>(null)
+  const [deviceSheet, setDeviceSheet] = useState<null | { id?: string; name: string; type: string; serial_number: string; location: string; interval: DeviceInterval; has_stk: boolean; last_stk: string; stk_interval_months: number; has_mtk: boolean; last_mtk: string; mtk_interval_months: number }>(null)
 
-  // Inspection overlay
+  // Inspection overlay — die IDs werden beim Start vergeben, damit ein erneuter
+  // Speicherversuch nach Verbindungsabbruch nichts doppelt anlegt. Ist ein Versuch
+  // unklar ausgegangen (versucht), wird nur noch genau dieser Stand erneut gesendet.
   const [inspState, setInspState] = useState<null | {
     device: Device; items: string[]; results: ChecklistResult[]; step: number; notes: string
+    ids: { pruefung: string; defekt: string }
+    versucht?: { ergebnis: PruefErgebnis; zeit: string }
   }>(null)
+  const entwurfGeprueft = useRef(false)
+  const [geraeteGeladen, setGeraeteGeladen] = useState(false)
+  // Begonnene Prüfung und unklare Speicherungen liegen je Person und Organisation (src/lib/mpg/lokal.ts)
+  const entwurfKey = user?.id ? entwurfSchluessel(user.id, user.organization_id) : ''
+  const unklarKey = user?.id ? unklarSchluessel(user.id, user.organization_id) : ''
 
   // Device history sheet
   const [historyDevice, setHistoryDevice] = useState<Device | null>(null)
@@ -187,11 +226,16 @@ export default function MPG() {
 
   // Report defect sheet
   const [defectDevice, setDefectDevice] = useState<Device | null>(null)
-  const [defectForm, setDefectForm] = useState({ description: '', severity: 'medium' as Severity })
+  const [defectForm, setDefectForm] = useState<DefektFormular>({ description: '', severity: 'medium', sperren: false, id: '', unklar: false })
+  // Unklar ausgegangene Speicherungen — erneutes Öffnen sendet genau denselben Stand mit derselben ID.
+  // In localStorage, damit auch Neuladen oder ein Wechsel ins Hub nichts verliert.
+  const unklarRef = useRef<Unklar>(KEIN_UNKLAR)
+  const [, setUnklarStand] = useState(0)
 
   // Resolve defect sheet
   const [resolveTarget, setResolveTarget] = useState<Defect | null>(null)
   const [resolveNotes, setResolveNotes] = useState('')
+  const [wiederEinsatzbereit, setWiederEinsatzbereit] = useState(false)
 
   // Vorlagen (checklist template editor)
   const [showVorlagen, setShowVorlagen] = useState(false)
@@ -203,6 +247,8 @@ export default function MPG() {
   const [externalReports, setExternalReports] = useState<ExternalReport[]>([])
   const [confirmTarget, setConfirmTarget] = useState<ExternalReport | null>(null)
   const [confirmNotes, setConfirmNotes] = useState('')
+  const [confirmSperren, setConfirmSperren] = useState(true)
+  const [confirmVersuch, setConfirmVersuch] = useState<{ anmerkung: string; sperren: boolean; seit?: string } | null>(null)
   const [rejectTarget, setRejectTarget] = useState<ExternalReport | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
@@ -220,44 +266,133 @@ export default function MPG() {
     return () => document.removeEventListener('click', handler)
   }, [])
 
+  function schreibeEntwurf(st: typeof inspState) {
+    if (!entwurfKey) return
+    try {
+      if (st) {
+        const { device, ...rest } = st
+        localStorage.setItem(entwurfKey, JSON.stringify({ ...rest, device_id: device.id }))
+      } else {
+        localStorage.removeItem(entwurfKey)
+      }
+    } catch { /* ohne Speicher geht es auch */ }
+  }
+
+  // Begonnene Prüfung auf dem Gerät festhalten
+  useEffect(() => {
+    if (entwurfGeprueft.current) schreibeEntwurf(inspState)
+  }, [inspState, entwurfKey])
+
+  // … und nach dem Neuladen fortsetzen — erst, wenn die Geräteliste wirklich geladen ist.
+  // Scheitert das Laden (Funkloch), bleibt der Entwurf liegen bis „Erneut laden“.
+  useEffect(() => {
+    if (entwurfGeprueft.current || !entwurfKey) return
+    let e: any = null
+    try { const roh = localStorage.getItem(entwurfKey); e = roh ? JSON.parse(roh) : null } catch { e = { kaputt: true } }
+    if (e && (!Array.isArray(e.results) || !e.ids?.pruefung || !e.ids?.defekt)) {
+      try { localStorage.removeItem(entwurfKey) } catch { /* egal */ }
+      e = null
+    }
+    if (!e) { entwurfGeprueft.current = true; return }
+    if (!geraeteGeladen) return
+    entwurfGeprueft.current = true
+    const device = devices.find(d => d.id === e.device_id)
+    if (!device) {
+      try { localStorage.removeItem(entwurfKey) } catch { /* egal */ }
+      showMsg('Begonnene Prüfung verworfen — das Gerät gibt es nicht mehr.', 'error')
+      return
+    }
+    const results: ChecklistResult[] = e.results
+    setInspState({ device, items: e.items ?? results.map(r => r.item), results, step: Math.min(e.step ?? 0, results.length), notes: e.notes ?? '', ids: e.ids, versucht: e.versucht })
+    showMsg(e.versucht ? 'Prüfung wiederhergestellt — Speichern war unklar, bitte erneut senden' : 'Begonnene Prüfung wiederhergestellt')
+  }, [geraeteGeladen, devices, entwurfKey])
+
+  // Unklare Speicherungen der angemeldeten Person laden
+  useEffect(() => {
+    let u: Unklar = KEIN_UNKLAR
+    try { const roh = unklarKey && localStorage.getItem(unklarKey); if (roh) u = { ...KEIN_UNKLAR, ...JSON.parse(roh) } } catch { /* kaputt — leer */ }
+    unklarRef.current = u
+    setUnklarStand(n => n + 1)
+  }, [unklarKey])
+
+  function aendereUnklar(f: (u: Unklar) => Unklar) {
+    unklarRef.current = f(unklarRef.current)
+    try { if (unklarKey) localStorage.setItem(unklarKey, JSON.stringify(unklarRef.current)) } catch { /* ohne Speicher nur bis zum Neuladen */ }
+    setUnklarStand(n => n + 1)
+  }
+  const ohne = <T,>(o: Record<string, T>, k: string) => { const { [k]: _, ...rest } = o; return rest }
+
   // ── Data Loading ───────────────────────────────────────────────────────
 
+  // Nur das jeweils letzte Laden zählt (es kann nach dem Speichern mehrfach angestoßen werden)
+  const ladeNr = useRef(0)
   async function loadAll() {
     if (!user?.organization_id) return
+    const nr = ++ladeNr.current
     setLoading(true)
     try {
       await Promise.all([loadDevices(), loadInspections(), loadChecklists(), loadDefects(), loadExternalReports()])
+      if (nr === ladeNr.current) setLadefehler('')
+    } catch (e) {
+      if (nr === ladeNr.current && !(e as { isAbort?: boolean })?.isAbort) setLadefehler(pbFehlerText(e))
     } finally {
-      setLoading(false)
+      if (nr === ladeNr.current) setLoading(false)
     }
   }
 
+  // Je Liste zählt nur die Antwort der neuesten Anfrage — eine verspätete ältere
+  // Antwort (Funkloch) darf einen neueren Stand nicht überschreiben
+  const ladeGen = useRef({ geraete: 0, pruefungen: 0, defekte: 0, meldungen: 0, vorlagen: 0 })
+  function neuesteAnfrage(k: keyof typeof ladeGen.current) {
+    const n = ++ladeGen.current[k]
+    return () => n === ladeGen.current[k]
+  }
+
   async function loadDevices() {
-    const r = await pb.collection('mpg_devices').getFullList<Device>({ filter: `organization_id = "${user!.organization_id}"`, sort: 'name' })
+    const aktuell = neuesteAnfrage('geraete')
+    const r = await pb.collection('mpg_devices').getFullList<Device>({ filter: `organization_id = "${user!.organization_id}"`, sort: 'name', requestKey: null })
+    if (!aktuell()) return
     setDevices(r)
+    setGeraeteGeladen(true)
   }
 
   async function loadInspections() {
-    const r = await pb.collection('mpg_inspections').getFullList<Inspection>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-inspection_date' })
-    setInspections(r)
+    const aktuell = neuesteAnfrage('pruefungen')
+    const r = await pb.collection('mpg_inspections').getFullList<Inspection>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-inspection_date', requestKey: null })
+    if (aktuell()) setInspections(r)
   }
 
   async function loadDefects() {
+    const aktuell = neuesteAnfrage('defekte')
     try {
-      const r = await pb.collection('mpg_defects').getFullList<Defect>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-created' })
+      const r = await pb.collection('mpg_defects').getFullList<Defect>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-created', requestKey: null })
+      if (!aktuell()) return
       setDefects(r)
+      // Unklar gesendete Defektmeldungen, deren Anker (der Defekt) angekommen ist, sind erledigt
+      const da = new Set(r.map(d => d.id))
+      const erledigt = Object.entries(unklarRef.current.defekte).filter(([, f]) => da.has(f.id)).map(([g]) => g)
+      if (erledigt.length) aendereUnklar(u => ({ ...u, defekte: Object.fromEntries(Object.entries(u.defekte).filter(([g]) => !erledigt.includes(g))) }))
     } catch { /* collection not yet created */ }
   }
 
   async function loadExternalReports() {
+    const aktuell = neuesteAnfrage('meldungen')
     try {
-      const r = await pb.collection('mpg_defect_reports').getFullList<ExternalReport>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-created' })
+      const r = await pb.collection('mpg_defect_reports').getFullList<ExternalReport>({ filter: `organization_id = "${user!.organization_id}"`, sort: '-created', requestKey: null })
+      if (!aktuell()) return
       setExternalReports(r)
+      // Unklare Bestätigungen zu Meldungen, die nicht mehr offen sind, sind erledigt
+      const offen = new Set(r.filter(m => m.status === 'pending').map(m => m.id))
+      if (Object.keys(unklarRef.current.bestaetigungen).some(id => !offen.has(id))) {
+        aendereUnklar(u => ({ ...u, bestaetigungen: Object.fromEntries(Object.entries(u.bestaetigungen).filter(([id]) => offen.has(id))) }))
+      }
     } catch { /* collection not yet created */ }
   }
 
   async function loadChecklists() {
-    const records = await pb.collection('mpg_checklists').getFullList<Checklist>({ filter: `organization_id = "${user!.organization_id}"` })
+    const aktuell = neuesteAnfrage('vorlagen')
+    const records = await pb.collection('mpg_checklists').getFullList<Checklist>({ filter: `organization_id = "${user!.organization_id}"`, requestKey: null })
+    if (!aktuell()) return
     if (records.length === 0) {
       const created: Checklist[] = []
       for (const [type, items] of Object.entries(DEFAULT_CHECKLISTS)) {
@@ -274,195 +409,392 @@ export default function MPG() {
 
   function showMsg(text: string, type: 'success' | 'error' = 'success') {
     setMsg({ text, type })
-    setTimeout(() => setMsg(null), 3000)
+    clearTimeout(msgTimer.current)
+    // Fehler bleiben länger stehen — sie wollen gelesen werden
+    msgTimer.current = setTimeout(() => setMsg(null), type === 'error' ? 8000 : 3000)
   }
 
-  function calcNextDue(device: Device): Date | null {
-    const stored = parseDate(device.next_inspection_due)
-    if (stored) return stored
-    const base = parseDate(device.last_inspection) || parseDate(device.created)
-    if (!base) return null
-    const next = new Date(base)
-    switch (device.interval) {
-      case 'daily': next.setDate(next.getDate() + 1); break
-      case 'weekly': next.setDate(next.getDate() + 7); break
-      case 'monthly': next.setMonth(next.getMonth() + 1); break
-      case 'yearly': next.setFullYear(next.getFullYear() + 1); break
+  const wer = () => ({ organization_id: user!.organization_id, name: user?.name || user?.email || 'Unbekannt' })
+
+  const heute = tagVonDatum(new Date())
+  const offeneDefekteVon = (id: string) => defects.filter(d => d.device_id === id && d.status !== 'resolved')
+  const offeneMeldungenVon = (id: string) => externalReports.filter(r => r.device_id === id && r.status === 'pending')
+  const zustandCache = new Map<string, Zustand>()
+  function zustand(device: Device): Zustand {
+    let z = zustandCache.get(device.id)
+    if (!z) {
+      z = zustandVon(device, offeneDefekteVon(device.id), offeneMeldungenVon(device.id), heute)
+      zustandCache.set(device.id, z)
     }
-    return next
+    return z
   }
 
-  function getDeviceStatus(device: Device): DeviceStatus {
-    if (device.operational === false) return 'defect'
-    const hasOpenDefect = defects.some(d => d.device_id === device.id && d.status !== 'resolved')
-    if (hasOpenDefect) return 'defect'
-    if (device.last_inspection_passed === false) return 'overdue'
-    if (device.has_stk && calcPeriodicStatus(device.last_stk, device.stk_interval_months || 24) === 'overdue') return 'overdue'
-    if (device.has_mtk && calcPeriodicStatus(device.last_mtk, device.mtk_interval_months || 24) === 'overdue') return 'overdue'
-    const due = calcNextDue(device)
-    if (!due) return 'overdue'
-    const diff = Math.floor((due.getTime() - Date.now()) / 86400000)
-    if (diff < 0) return 'overdue'
-    if (device.has_stk && calcPeriodicStatus(device.last_stk, device.stk_interval_months || 24) === 'warning') return 'warning'
-    if (device.has_mtk && calcPeriodicStatus(device.last_mtk, device.mtk_interval_months || 24) === 'warning') return 'warning'
-    if (diff <= 7) return 'warning'
-    return 'ok'
-  }
-
-  const stats = {
-    ok: devices.filter(d => getDeviceStatus(d) === 'ok').length,
-    warning: devices.filter(d => getDeviceStatus(d) === 'warning').length,
-    overdue: devices.filter(d => getDeviceStatus(d) === 'overdue').length,
-    defect: devices.filter(d => getDeviceStatus(d) === 'defect').length,
-    total: devices.length,
-  }
+  const stats: Record<Stufe, number> = { gesperrt: 0, handlung: 0, bald: 0, ok: 0 }
+  for (const d of devices) stats[zustand(d).stufe]++
 
   const filteredDevices = devices.filter(d => {
-    const q = searchQuery.toLowerCase()
-    const matchSearch = !q || d.name.toLowerCase().includes(q) || d.type.toLowerCase().includes(q) || (d.location || '').toLowerCase().includes(q)
-    const matchStatus = statusFilter === 'all' || getDeviceStatus(d) === statusFilter
+    const q = searchQuery.trim().toLowerCase()
+    const matchSearch = !q || [d.name, d.type, d.location, d.serial_number].some(f => (f || '').toLowerCase().includes(q))
+    const matchStatus = statusFilter === 'all' || zustand(d).stufe === statusFilter
     return matchSearch && matchStatus
   })
+
+  /** Gibt es den Datensatz schon? (Anker eines unklaren Versuchs) — ohne 404 als Fehler. */
+  async function gibtEs(collection: string, id: string): Promise<boolean> {
+    const r = await pb.collection(collection).getList(1, 1, { filter: pb.filter('id = {:id}', { id }), fields: 'id', ...pbOptionen() })
+    return r.totalItems > 0
+  }
+
+  /**
+   * Führt einen mehrteiligen Schreibvorgang aus.
+   * 'unklar': keine Antwort oder nur teilweise geschrieben — mit DENSELBEN Anfragen erneut senden.
+   */
+  async function ausfuehren(anfragen: Parameters<typeof schreibeZusammen>[1], erfolg: string): Promise<'ok' | 'unklar' | 'fehler' | 'belegt'> {
+    if (busy || laeuft.current) return 'belegt'
+    laeuft.current = true
+    setBusy(true)
+    try {
+      const r = await schreibeZusammen(schreiber, anfragen)
+      showMsg(r === 'schon' ? 'War bereits gespeichert' : erfolg)
+      return 'ok'
+    } catch (e) {
+      showMsg(fehlerText(e), 'error')
+      const unklar = e instanceof SchreibFehler && (e.art === 'netz' || e.teilweise)
+      // Es kann etwas angekommen sein — Anzeige auf den Serverstand bringen
+      if (unklar) loadAll()
+      return unklar ? 'unklar' : 'fehler'
+    } finally {
+      laeuft.current = false
+      setBusy(false)
+    }
+  }
 
   // Device CRUD
   async function saveDevice() {
     if (!deviceSheet?.name.trim()) { showMsg('Bezeichnung fehlt', 'error'); return }
-    const nextDue = new Date()
-    switch (deviceSheet.interval) {
-      case 'daily': nextDue.setDate(nextDue.getDate() + 1); break
-      case 'weekly': nextDue.setDate(nextDue.getDate() + 7); break
-      case 'monthly': nextDue.setMonth(nextDue.getMonth() + 1); break
-      case 'yearly': nextDue.setFullYear(nextDue.getFullYear() + 1); break
+    if (busy) return
+    const { id, ...felder } = deviceSheet
+    const alt = id ? devices.find(d => d.id === id) : undefined
+    // Die Fälligkeit folgt aus der letzten Prüfung und dem Intervall — Speichern verschiebt sie nicht
+    const data = {
+      ...felder, name: felder.name.trim(),
+      next_inspection_due: faelligFeld({ interval: felder.interval, last_inspection: alt?.last_inspection }, heute),
+      organization_id: user!.organization_id,
     }
-    const data = { ...deviceSheet, next_inspection_due: nextDue.toISOString(), organization_id: user!.organization_id }
+    setBusy(true)
     try {
-      if (deviceSheet.id) {
-        await pb.collection('mpg_devices').update(deviceSheet.id, data)
+      if (id) {
+        await pb.collection('mpg_devices').update(id, data, pbOptionen())
         showMsg('Gerät aktualisiert')
       } else {
-        await pb.collection('mpg_devices').create(data)
-        showMsg('Gerät hinzugefügt')
+        await pb.collection('mpg_devices').create({ ...data, operational: true }, pbOptionen())
+        showMsg('Gerät hinzugefügt — Erstprüfung offen')
       }
       setDeviceSheet(null)
-      await loadDevices()
-    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
+    } catch (e: unknown) { showMsg('Fehler: ' + pbFehlerText(e), 'error') }
+    finally { setBusy(false) }
+    loadDevices().catch(() => undefined)
   }
 
-  async function deleteDevice(id: string, name: string) {
-    if (!confirm(`Gerät "${name}" wirklich löschen?`)) return
-    await pb.collection('mpg_devices').delete(id)
-    showMsg('Gerät gelöscht')
-    await loadDevices()
+  async function deleteDevice(device: Device) {
+    if (busy) return
+    setBusy(true)
+    try {
+      // Prüfungen und Defekte sind Nachweise — ein Gerät mit Verlauf bleibt stehen
+      const filter = pb.filter('device_id = {:id}', { id: device.id })
+      const [p, d] = await Promise.all([
+        pb.collection('mpg_inspections').getList(1, 1, { filter, fields: 'id', ...pbOptionen() }),
+        pb.collection('mpg_defects').getList(1, 1, { filter, fields: 'id', ...pbOptionen() }),
+      ])
+      if (p.totalItems > 0 || d.totalItems > 0) {
+        showMsg(`„${device.name}“ hat Prüfungen oder Defekte im Verlauf und bleibt als Nachweis erhalten. Bitte als nicht einsatzbereit markieren.`, 'error')
+        return
+      }
+      if (!confirm(`Gerät "${device.name}" wirklich löschen? Es hat noch keinen Verlauf.`)) return
+      await pb.collection('mpg_devices').delete(device.id, pbOptionen())
+      showMsg('Gerät gelöscht')
+      loadDevices().catch(() => undefined)
+    } catch (e) {
+      showMsg('Löschen nicht möglich: ' + pbFehlerText(e), 'error')
+    } finally {
+      setBusy(false)
+    }
   }
 
   // Inspection
   function startInspection(device: Device) {
     const template = checklists.find(c => c.device_type === device.type) || checklists.find(c => c.device_type === 'Sonstiges')
-    const items = template?.items || DEFAULT_CHECKLISTS['Sonstiges']
-    setInspState({ device, items, results: items.map(item => ({ item, checked: false, note: '' })), step: 0, notes: '' })
+    // Eine leere Vorlage hätte keinen Prüfpunkt — dann die Standardliste
+    const items = template?.items?.length ? template.items : (DEFAULT_CHECKLISTS[device.type] || DEFAULT_CHECKLISTS['Sonstiges'])
+    setInspState({ device, items, results: items.map(item => ({ item, checked: false, note: '' })), step: 0, notes: '', ids: { pruefung: neueId(), defekt: neueId() } })
   }
 
-  async function saveInspection(passed: boolean) {
-    if (!inspState) return
-    try {
-      await pb.collection('mpg_inspections').create({
-        device_id: inspState.device.id, device_name: inspState.device.name, device_type: inspState.device.type,
-        user_name: user?.name || user?.email || 'Unbekannt',
-        inspection_date: new Date().toISOString(), passed, notes: inspState.notes,
-        checklist_results: inspState.results, organization_id: user!.organization_id,
-      })
-      const nextDue = new Date()
-      switch (inspState.device.interval) {
-        case 'daily': nextDue.setDate(nextDue.getDate() + 1); break
-        case 'weekly': nextDue.setDate(nextDue.getDate() + 7); break
-        case 'monthly': nextDue.setMonth(nextDue.getMonth() + 1); break
-        case 'yearly': nextDue.setFullYear(nextDue.getFullYear() + 1); break
-        default: nextDue.setMonth(nextDue.getMonth() + 1)
+  function abbrechenPruefung() {
+    if (!inspState || busy) return
+    if (inspState.versucht) {
+      if (!confirm('Ob diese Prüfung gespeichert wurde, ist unklar. Trotzdem verwerfen?\n\nTeile können schon angekommen sein (Sperre, Defekt, Protokoll im Logbuch) — bitte danach den Stand des Geräts prüfen.')) return
+    } else {
+      const angefangen = inspState.notes.trim() || inspState.results.some(r => r.checked || r.note.trim())
+      if (angefangen && !confirm('Prüfung abbrechen? Die Eingaben gehen verloren.')) return
+    }
+    setInspState(null)
+  }
+
+  async function saveInspection(gewaehlt: PruefErgebnis) {
+    if (!inspState || busy || laeuft.current) return
+    // Nach unklarem Ausgang nur genau den gesendeten Stand wiederholen — sonst meldete der
+    // Server „schon da“ und ein geändertes Ergebnis ginge still verloren
+    const vorher = inspState.versucht
+    const ergebnis = vorher?.ergebnis ?? gewaehlt
+    const wahl = moeglicheErgebnisse(inspState.results, inspState.notes)
+    if (!wahl[ergebnis]) { showMsg(wahl.hinweis || 'Bitte eine Bemerkung eintragen', 'error'); return }
+    const zeit = vorher?.zeit ?? new Date().toISOString()
+
+    // Wiederholung eines unklaren Versuchs: Gerätestand lesen (ein älterer Versuch darf eine
+    // inzwischen neuere Prüfung nicht überschreiben) und nachsehen, ob der Anker — das
+    // Protokoll — schon da ist. Dann fehlt höchstens der Prüfstand am Gerät danach.
+    let serverLetzte: string | null = null
+    let ankerDa = false
+    if (vorher) {
+      if (!altenVersuchSenden(vorher.zeit)) return
+      laeuft.current = true
+      setBusy(true)
+      try {
+        ankerDa = await gibtEs('mpg_inspections', inspState.ids.pruefung)
+        const g = await pb.collection('mpg_devices').getOne<Device>(inspState.device.id, { fields: 'id,last_inspection', ...pbOptionen() })
+        serverLetzte = g.last_inspection || null
+      } catch (e) {
+        showMsg(pbFehlerText(e), 'error')
+        return
+      } finally {
+        laeuft.current = false
+        setBusy(false)
       }
-      await pb.collection('mpg_devices').update(inspState.device.id, {
-        last_inspection: new Date().toISOString(), last_inspection_passed: passed,
-        next_inspection_due: nextDue.toISOString(),
-      })
+    }
+
+    const plan = planePruefung({
+      geraet: inspState.device, punkte: inspState.results, bemerkung: inspState.notes,
+      ergebnis, wer: wer(), jetzt: new Date(zeit), ids: inspState.ids, serverLetzte,
+    })
+    const schonEingetragen = !!serverLetzte && new Date(serverLetzte.replace(' ', 'T')).getTime() === new Date(zeit).getTime()
+    const anfragen = ankerDa ? (schonEingetragen ? [] : restNachAnker(plan)) : plan
+    if (!anfragen.length) {
+      showMsg('War bereits gespeichert')
+      schreibeEntwurf(null)
       setInspState(null)
-      showMsg(passed ? 'Prüfung bestanden!' : 'Prüfung nicht bestanden', passed ? 'success' : 'error')
-      await loadAll()
-    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
+      loadAll()
+      return
+    }
+    const nachtrag = !plan.some(a => a.collection === 'mpg_devices' && 'last_inspection' in a.body)
+    const text = nachtrag ? 'Prüfung nachgetragen — es gibt eine neuere Prüfung, deren Stand gilt weiter'
+      : ergebnis === 'bestanden' ? 'Prüfung bestanden'
+      : ergebnis === 'mangel' ? 'Mangel festgehalten — Gerät bleibt einsatzbereit'
+      : 'Prüfung nicht bestanden — Gerät gesperrt, Defekt angelegt'
+    // Den Versuch VOR dem Senden festschreiben — auch im Entwurf, falls die App währenddessen
+    // beendet wird: nach dem Neuladen gibt es dann nur „erneut senden“, nichts Geändertes
+    const festgeschrieben = { ...inspState, versucht: { ergebnis, zeit } }
+    schreibeEntwurf(festgeschrieben)
+    setInspState(festgeschrieben)
+    const r = await ausfuehren(anfragen, text)
+    if (r === 'ok') {
+      schreibeEntwurf(null)   // auch wenn die Seite inzwischen verlassen wurde
+      setInspState(null)
+      loadAll()
+    } else if (r !== 'unklar' && !vorher) {
+      // Sicher abgelehnt, nichts geschrieben: wieder änderbar
+      const offen = { ...inspState, versucht: undefined }
+      schreibeEntwurf(offen)
+      setInspState(offen)
+    }
   }
 
   // Defects
+  /** Ist eine unklar gesendete Defektmeldung angekommen? Der Defekt ist der Anker — er wird zuletzt geschrieben. */
+  function defektAngekommen(f: DefektFormular): boolean {
+    return defects.some(d => d.id === f.id)
+  }
+
+  function openDefectSheet(device: Device) {
+    setDefectDevice(device)
+    const offen = unklarRef.current.defekte[device.id]
+    if (offen && !defektAngekommen(offen)) { setDefectForm(offen); return }
+    if (offen) aendereUnklar(u => ({ ...u, defekte: ohne(u.defekte, device.id) }))
+    setDefectForm({ description: '', severity: 'medium', sperren: false, id: neueId(), unklar: false })
+  }
+
+  function verwerfeUnklarenDefekt() {
+    const id = defectDevice?.id
+    if (id) aendereUnklar(u => ({ ...u, defekte: ohne(u.defekte, id) }))
+    setDefectDevice(null)
+  }
+
   async function reportDefect() {
     if (!defectDevice || !defectForm.description.trim()) { showMsg('Beschreibung fehlt', 'error'); return }
-    try {
-      await pb.collection('mpg_defects').create({
-        device_id: defectDevice.id, device_name: defectDevice.name,
-        reported_by: user?.name || user?.email || 'Unbekannt',
-        description: defectForm.description.trim(),
-        severity: defectForm.severity, status: 'open',
-        organization_id: user!.organization_id,
-      })
+    // Hoch/kritisch sperrt ohnehin — dann auch als nicht einsatzbereit markieren
+    const sperren = defectForm.sperren || sperrtDefekt(defectForm.severity)
+    const anfragen = planeDefekt({ geraet: defectDevice, beschreibung: defectForm.description, schwere: defectForm.severity, sperren, wer: wer(), id: defectForm.id })
+    const geraetId = defectDevice.id
+    // Wiederholung: ist der Defekt (Anker, zuletzt geschrieben) schon da, ist alles angekommen
+    if (defectForm.unklar) {
+      if (busy || laeuft.current) return
+      if (!altenVersuchSenden(defectForm.seit)) return
+      laeuft.current = true
+      setBusy(true)
+      let schonDa = false
+      try { schonDa = await gibtEs('mpg_defects', defectForm.id) }
+      catch (e) { showMsg(pbFehlerText(e), 'error'); return }
+      finally { laeuft.current = false; setBusy(false) }
+      if (schonDa) {
+        aendereUnklar(u => ({ ...u, defekte: ohne(u.defekte, geraetId) }))
+        showMsg('War bereits gespeichert')
+        setDefectDevice(null)
+        Promise.all([loadDefects(), loadDevices()]).catch(() => undefined)
+        return
+      }
+    }
+    // Inhalt vor dem Senden festschreiben: erneut gesendet wird genau diese Meldung mit derselben ID
+    const f = { ...defectForm, unklar: true, seit: defectForm.seit ?? new Date().toISOString() }
+    aendereUnklar(u => ({ ...u, defekte: { ...u.defekte, [geraetId]: f } }))
+    const r = await ausfuehren(anfragen, sperren ? 'Defekt gemeldet — Gerät gesperrt' : 'Defekt gemeldet')
+    if (r === 'ok') {
+      aendereUnklar(u => ({ ...u, defekte: ohne(u.defekte, geraetId) }))
       setDefectDevice(null)
-      setDefectForm({ description: '', severity: 'medium' })
-      showMsg('Defekt gemeldet')
-      await loadDefects()
-    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
+      Promise.all([loadDefects(), loadDevices()]).catch(() => undefined)
+    } else if (r === 'unklar') {
+      setDefectForm(f)
+    } else if (!defectForm.unklar) {
+      // Sicher abgelehnt: nichts geschrieben, Formular bleibt änderbar
+      aendereUnklar(u => ({ ...u, defekte: ohne(u.defekte, geraetId) }))
+    }
+  }
+
+  function openResolveSheet(def: Defect) {
+    setResolveTarget(def)
+    setResolveNotes('')
+    setWiederEinsatzbereit(false)
   }
 
   async function resolveDefect() {
     if (!resolveTarget) return
-    try {
-      await pb.collection('mpg_defects').update(resolveTarget.id, {
-        status: 'resolved', resolved_by: user?.name || user?.email || 'Unbekannt',
-        resolved_notes: resolveNotes.trim(),
-      })
+    const anfragen = planeBeheben({ defekt: resolveTarget, notiz: resolveNotes, wer: wer(), wiederEinsatzbereit })
+    if (await ausfuehren(anfragen, wiederEinsatzbereit ? 'Defekt behoben — Gerät wieder einsatzbereit' : 'Defekt als behoben markiert') === 'ok') {
       setResolveTarget(null)
       setResolveNotes('')
-      showMsg('Defekt als behoben markiert')
-      await loadDefects()
-    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
-  }
-
-  async function deleteDefect(id: string) {
-    if (!confirm('Defekt-Eintrag löschen?')) return
-    await pb.collection('mpg_defects').delete(id)
-    showMsg('Eintrag gelöscht')
-    await loadDefects()
+      Promise.all([loadDefects(), loadDevices()]).catch(() => undefined)
+    }
   }
 
   async function toggleOperational(device: Device) {
-    const newVal = device.operational !== false ? false : true
-    await pb.collection('mpg_devices').update(device.id, { operational: newVal })
-    showMsg(newVal ? 'Gerät als einsatzbereit markiert' : 'Gerät als nicht einsatzbereit markiert', newVal ? 'success' : 'error')
-    await loadDevices()
+    if (busy) return
+    const freigeben = device.operational === false
+    if (freigeben) {
+      const offen = offeneDefekteVon(device.id)
+      const sperrend = offen.filter(d => sperrtDefekt(d.severity))
+      if (sperrend.length) {
+        showMsg(`Noch ${sperrend.length === 1 ? 'ein Defekt' : `${sperrend.length} Defekte`} „hoch“ oder „kritisch“ offen. Erst beheben, dann freigeben.`, 'error')
+        return
+      }
+      const hinweise = [
+        offen.length ? `Es ${offen.length === 1 ? 'ist noch ein Mangel' : `sind noch ${offen.length} Mängel`} offen.` : '',
+        pruefungNichtBestanden(device) ? 'Die letzte Prüfung ist nicht bestanden — das Gerät bleibt gesperrt, bis eine Prüfung bestanden ist.' : '',
+      ].filter(Boolean)
+      if (hinweise.length && !confirm(`${hinweise.join('\n')}\n\n„${device.name}“ trotzdem als einsatzbereit markieren?`)) return
+    }
+    setBusy(true)
+    try {
+      await pb.collection('mpg_devices').update(device.id, { operational: freigeben }, pbOptionen())
+      showMsg(freigeben ? 'Gerät als einsatzbereit markiert' : 'Gerät als nicht einsatzbereit markiert', freigeben ? 'success' : 'error')
+    } catch (e) {
+      showMsg('Fehler: ' + pbFehlerText(e), 'error')
+    } finally {
+      setBusy(false)
+    }
+    loadDevices().catch(() => undefined)
+  }
+
+  function openConfirmSheet(r: ExternalReport) {
+    setConfirmTarget(r)
+    // Ging eine Bestätigung unklar aus, wird genau sie erneut gesendet
+    const v = unklarRef.current.bestaetigungen[r.id]
+    setConfirmVersuch(v ?? null)
+    setConfirmNotes(v ? v.anmerkung : '')
+    setConfirmSperren(v ? v.sperren : sperrtDefekt(r.severity))
+  }
+
+  /**
+   * Ist die Meldung noch unbearbeitet? Liest den Serverstand — ein anderer Admin oder ein
+   * früherer, unklar ausgegangener Versuch kann sie schon bestätigt oder abgelehnt haben.
+   */
+  async function meldungNochOffen(id: string): Promise<boolean> {
+    const r = await pb.collection('mpg_defect_reports').getOne<ExternalReport>(id, { fields: 'id,status', ...pbOptionen() })
+    if (r.status === 'pending') return true
+    showMsg(r.status === 'confirmed' ? 'Diese Meldung ist bereits bestätigt.' : 'Diese Meldung ist bereits abgelehnt.')
+    if (unklarRef.current.bestaetigungen[id]) aendereUnklar(u => ({ ...u, bestaetigungen: ohne(u.bestaetigungen, id) }))
+    setConfirmTarget(null)
+    setRejectTarget(null)
+    return false
   }
 
   async function confirmExternalReport() {
-    if (!confirmTarget) return
+    if (!confirmTarget || busy || laeuft.current) return
+    if (confirmVersuch && !altenVersuchSenden(confirmVersuch.seit)) return
+    const meldung = confirmTarget
+    laeuft.current = true
+    setBusy(true)
+    let offen = false
+    let geraetDa = true
     try {
-      await pb.collection('mpg_defects').create({
-        device_id: confirmTarget.device_id, device_name: confirmTarget.device_name,
-        reported_by: confirmTarget.reporter_name || 'Externe Meldung',
-        description: confirmTarget.description,
-        severity: confirmTarget.severity, status: 'open',
-        organization_id: user!.organization_id,
-      })
-      await pb.collection('mpg_devices').update(confirmTarget.device_id, { operational: false })
-      await pb.collection('mpg_defect_reports').update(confirmTarget.id, { status: 'confirmed' })
+      offen = await meldungNochOffen(meldung.id)
+      // Ob es das Gerät noch gibt, sagt der Server — die Liste ist vielleicht nicht geladen
+      if (offen) geraetDa = await gibtEs('mpg_devices', meldung.device_id)
+    }
+    catch (e) { offen = false; showMsg('Fehler: ' + pbFehlerText(e), 'error') }
+    finally { laeuft.current = false; setBusy(false) }
+    if (!offen) { Promise.all([loadExternalReports(), loadDefects(), loadDevices()]).catch(() => undefined); return }
+    // Nach unklarem Ausgang genau den gesendeten Stand wiederholen
+    const stand = confirmVersuch ?? { anmerkung: confirmNotes, sperren: confirmSperren || sperrtDefekt(meldung.severity), seit: new Date().toISOString() }
+    // Der Defekt trägt die ID der Meldung: Eine Meldung kann so nur einen Defekt erzeugen,
+    // auch nach Neuladen, erneutem Öffnen oder von einem zweiten Gerät aus
+    const anfragen = planeBestaetigung({
+      meldung, anmerkung: stand.anmerkung, sperren: stand.sperren,
+      geraetDa, wer: wer(), defektId: meldung.id,
+    })
+    aendereUnklar(u => ({ ...u, bestaetigungen: { ...u.bestaetigungen, [meldung.id]: stand } }))
+    const gesperrt = anfragen.some(a => a.collection === 'mpg_devices')
+    const r = await ausfuehren(anfragen, gesperrt ? 'Meldung bestätigt — Defekt angelegt, Gerät gesperrt' : 'Meldung bestätigt — Defekt angelegt')
+    if (r === 'ok' || (r !== 'unklar' && !confirmVersuch)) aendereUnklar(u => ({ ...u, bestaetigungen: ohne(u.bestaetigungen, meldung.id) }))
+    if (r === 'ok') {
       setConfirmTarget(null)
       setConfirmNotes('')
-      showMsg('Meldung bestätigt — Defekt angelegt, Gerät deaktiviert')
-      await loadAll()
-    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
+      setConfirmVersuch(null)
+      loadAll()
+    } else if (r === 'unklar') {
+      setConfirmVersuch(stand)
+    }
   }
 
   async function rejectExternalReport() {
-    if (!rejectTarget) return
+    if (!rejectTarget || busy || laeuft.current) return
+    const id = rejectTarget.id
+    laeuft.current = true
+    setBusy(true)
     try {
-      await pb.collection('mpg_defect_reports').update(rejectTarget.id, { status: 'rejected', rejected_reason: rejectReason.trim() })
-      setRejectTarget(null)
-      setRejectReason('')
-      showMsg('Meldung abgelehnt')
-      await loadExternalReports()
-    } catch (e: unknown) { showMsg('Fehler: ' + (e as Error).message, 'error') }
+      if (await meldungNochOffen(id)) {
+        // Eine Bestätigung kann schon teilweise angekommen sein (Defekt mit der ID der Meldung)
+        if (await gibtEs('mpg_defects', id)) {
+          showMsg('Zu dieser Meldung ist schon ein Defekt angelegt — die Bestätigung ist teilweise gespeichert. Bitte die Bestätigung erneut senden statt abzulehnen.', 'error')
+          setRejectTarget(null)
+        } else {
+          await pb.collection('mpg_defect_reports').update(id, { status: 'rejected', rejected_reason: rejectReason.trim() }, pbOptionen())
+          if (unklarRef.current.bestaetigungen[id]) aendereUnklar(u => ({ ...u, bestaetigungen: ohne(u.bestaetigungen, id) }))
+          setRejectTarget(null)
+          setRejectReason('')
+          showMsg('Meldung abgelehnt')
+        }
+      }
+    } catch (e: unknown) { showMsg('Fehler: ' + pbFehlerText(e), 'error') }
+    finally { laeuft.current = false; setBusy(false) }
+    Promise.all([loadExternalReports(), loadDefects(), loadDevices()]).catch(() => undefined)
   }
 
   // Vorlagen (checklist templates)
@@ -482,6 +814,7 @@ export default function MPG() {
   }
 
   async function saveVorlage() {
+    if (!vtItems.length) { showMsg('Eine Prüfvorlage braucht mindestens einen Prüfpunkt.', 'error'); return }
     try {
       const existing = checklists.find(c => c.device_type === vtType)
       if (existing?.id) {
@@ -501,16 +834,25 @@ export default function MPG() {
 
   const today = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
 
+  // Steht oben, solange ein Blatt oder die Prüfung offen ist — unten lägen ihre Knöpfe
+  const blattOffen = !!(inspState || deviceSheet || historyDevice || defectDevice || resolveTarget || confirmTarget || rejectTarget || showVorlagen)
+  const toast = msg && (
+    <div role="status" style={{ position: 'fixed', ...(blattOffen ? { top: 'calc(env(safe-area-inset-top) + 72px)' } : { bottom: 'calc(24px + env(safe-area-inset-bottom))' }), pointerEvents: 'none', left: 16, right: 16, margin: '0 auto', width: 'fit-content', maxWidth: 520, zIndex: 9999, padding: '10px 20px', borderRadius: 20, fontWeight: 600, fontSize: 13, lineHeight: 1.4, textAlign: 'center' as const, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', background: msg.type === 'success' ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)', border: `1px solid ${msg.type === 'success' ? '#bbf7d0' : '#fecaca'}`, color: msg.type === 'success' ? 'var(--lbf-ok-text)' : '#dc2626' }}>
+      {msg.text}
+    </div>
+  )
+
   // ── Inspection Overlay (full-screen) ────────────────────────────────────
 
   if (inspState) {
-    const { device, results, step, notes } = inspState
-    const isLastStep = step >= results.length
+    const { device, results, step, notes, versucht } = inspState
+    // Nach unklarem Speichern bleibt die Zusammenfassung stehen — der Stand ist festgeschrieben
+    const isLastStep = step >= results.length || !!versucht
     return (
       <div style={{ position: 'fixed', inset: 0, background: 'var(--warm-bg)', overflowY: 'auto', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif", zIndex: 500 }}>
         {/* Header */}
         <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: 'calc(env(safe-area-inset-top) + 14px) 20px 14px', display: 'flex', alignItems: 'center', gap: 14, position: 'sticky', top: 0, zIndex: 100 }}>
-          <button onClick={() => setInspState(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex' }}>
+          <button onClick={abbrechenPruefung} disabled={busy} aria-label="Prüfung abbrechen" style={{ background: 'none', border: 'none', cursor: busy ? 'wait' : 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex', opacity: busy ? 0.4 : 1 }}>
             {pik(<><polyline points="15 18 9 12 15 6"/></>)}
           </button>
           <div style={{ flex: 1 }}>
@@ -585,7 +927,8 @@ export default function MPG() {
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 12 }}>Zusammenfassung</div>
               <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', overflow: 'hidden', marginBottom: 20 }}>
                 {results.map((r, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderBottom: i < results.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' : 'none' }}>
+                  <button key={i} onClick={() => setInspState({ ...inspState, step: i })} disabled={!!versucht || busy} title="Zu diesem Prüfpunkt"
+                    style={{ display: 'flex', width: '100%', alignItems: 'flex-start', gap: 12, padding: '12px 14px', border: 'none', borderBottom: i < results.length - 1 ? '0.5px solid rgba(var(--lbf-rot-rgb),0.06)' : 'none', background: 'none', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
                     <span style={{ color: r.checked ? '#16a34a' : '#dc2626', flexShrink: 0, marginTop: 1 }}>
                       {pik(r.checked ? <><polyline points="20 6 9 17 4 12"/></> : <><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></>, 16)}
                     </span>
@@ -593,38 +936,68 @@ export default function MPG() {
                       <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>{r.item}</div>
                       {r.note && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>→ {r.note}</div>}
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
 
-              <div style={{ marginBottom: 20 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 8 }}>Anmerkungen / Mängel</div>
-                <textarea
-                  value={notes}
-                  onChange={e => setInspState({ ...inspState, notes: e.target.value })}
-                  placeholder="Besondere Vorkommnisse, festgestellte Mängel..."
-                  rows={4}
-                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const }}
-                />
-              </div>
+              {(() => {
+                const wahl = moeglicheErgebnisse(results, notes)
+                const offen = offenePunkte(results).length
+                const knopf = (ergebnis: PruefErgebnis, text: string, farbe: string, flex: number) => (
+                  <button key={ergebnis} onClick={() => saveInspection(ergebnis)} disabled={busy || !wahl[ergebnis]}
+                    style={{ flex, minWidth: 120, padding: '13px', borderRadius: 10, border: 'none', background: farbe, fontSize: 14, fontWeight: 700, color: '#fff', cursor: busy || !wahl[ergebnis] ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: busy || !wahl[ergebnis] ? 0.4 : 1 }}>
+                    {text}
+                  </button>
+                )
+                return (
+                  <>
+                    <div style={{ marginBottom: 20 }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 8 }}>
+                        {offen ? 'Mangel beschreiben (Pflicht)' : 'Anmerkungen'}
+                      </div>
+                      <textarea
+                        value={notes}
+                        readOnly={!!versucht || busy}
+                        onChange={e => setInspState({ ...inspState, notes: e.target.value })}
+                        placeholder={offen ? 'Was ist nicht in Ordnung? Was wurde veranlasst?' : 'Besondere Vorkommnisse (optional)'}
+                        rows={4}
+                        style={{ width: '100%', padding: '12px', borderRadius: 10, border: `1.5px solid ${offen && !notes.trim() ? 'rgba(220,38,38,0.45)' : 'rgba(var(--lbf-rot-rgb),0.15)'}`, background: 'var(--lbf-card)', fontSize: 14, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical', boxSizing: 'border-box' as const }}
+                      />
+                      {wahl.hinweis && <div style={{ fontSize: 12, fontStyle: 'italic', color: offen && !notes.trim() ? '#dc2626' : 'var(--warm-gray)', marginTop: 6 }}>{wahl.hinweis}</div>}
+                    </div>
 
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
-                <button onClick={() => setInspState({ ...inspState, step: results.length - 1 })}
-                  style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 14, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Zurück
-                </button>
-                <button onClick={() => saveInspection(false)}
-                  style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: 'none', background: '#dc2626', fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Nicht bestanden
-                </button>
-                <button onClick={() => saveInspection(true)}
-                  style={{ flex: 2, minWidth: 140, padding: '13px', borderRadius: 10, border: 'none', background: '#16a34a', fontSize: 14, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
-                  Bestanden
-                </button>
-              </div>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' as const }}>
+                      {versucht ? (
+                        knopf(versucht.ergebnis, busy ? 'Sendet…' : `Erneut senden: ${ERGEBNIS_TEXT[versucht.ergebnis]}`, 'var(--lbf-akzent-grund)', 1)
+                      ) : (
+                        <>
+                          <button onClick={() => setInspState({ ...inspState, step: Math.max(0, results.length - 1) })} disabled={busy || !results.length}
+                            style={{ flex: 1, minWidth: 120, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 14, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>
+                            Zurück
+                          </button>
+                          {offen === 0 && knopf('bestanden', busy ? 'Speichert…' : 'Bestanden', '#16a34a', 2)}
+                          {knopf('mangel', 'Mangel – bleibt einsatzbereit', 'var(--lbf-akzent-grund)', 2)}
+                          {knopf('nicht_bestanden', 'Nicht bestanden – sperren', '#dc2626', 2)}
+                        </>
+                      )}
+                    </div>
+                    {versucht && !busy && (
+                      <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-text)', marginTop: 10 }}>
+                        Ob „{ERGEBNIS_TEXT[versucht.ergebnis]}“ gespeichert wurde, ist unklar. Erneut senden legt nichts doppelt an. Zum Ändern die Prüfung verwerfen und neu beginnen.
+                      </div>
+                    )}
+                    {!versucht && offen === 0 && (
+                      <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 10 }}>
+                        Mangel oder „nicht bestanden“ verlangen eine Beschreibung.
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
             </>
           )}
         </div>
+        {toast}
       </div>
     )
   }
@@ -648,7 +1021,7 @@ export default function MPG() {
           <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{today}</div>
         </div>
         {activeTab === 'geraete' && (
-          <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', operational: true, has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
+          <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
             style={{ background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: 8, color: '#fff', cursor: 'pointer', padding: '7px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 6 }}>
             {pik(<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>, 14)}
             Gerät
@@ -687,34 +1060,42 @@ export default function MPG() {
           <>
             {/* Stats */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
-              {[
-                { key: 'ok', label: 'OK', color: '#16a34a', count: stats.ok },
-                { key: 'warning', label: 'Bald', color: '#d97706', count: stats.warning },
-                { key: 'overdue', label: 'Fällig', color: '#dc2626', count: stats.overdue },
-                { key: 'defect', label: 'Defekt', color: 'rgb(var(--lbf-defekt-rgb))', count: stats.defect },
-              ].map(s => (
-                <button key={s.key} onClick={() => setStatusFilter(statusFilter === s.key as DeviceStatus ? 'all' : s.key as DeviceStatus)}
-                  style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '12px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: statusFilter === s.key ? `1.5px solid ${s.color}` : '1.5px solid transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
-                  <div style={{ fontSize: 9, fontWeight: 700, color: s.color, textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: 3 }}>{s.label}</div>
-                  <div style={{ fontSize: 28, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.count}</div>
+              {(['ok', 'bald', 'handlung', 'gesperrt'] as Stufe[]).map(k => (
+                <button key={k} onClick={() => setStatusFilter(statusFilter === k ? 'all' : k)}
+                  style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '12px 8px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', border: statusFilter === k ? `1.5px solid ${STUFE_FARBE[k]}` : '1.5px solid transparent', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const, minWidth: 0 }}>
+                  <div style={{ fontSize: 9, fontWeight: 700, color: STUFE_FARBE[k], textTransform: 'uppercase' as const, letterSpacing: '0.08em', marginBottom: 3, whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis' }}>{k === 'handlung' ? 'Handeln' : k === 'ok' ? 'Bereit' : STUFE_TEXT[k]}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, color: STUFE_FARBE[k], lineHeight: 1 }}>{stats[k]}</div>
                 </button>
               ))}
             </div>
 
             {/* Search + filter */}
             <div style={{ marginBottom: 10 }}>
-              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Geräte durchsuchen…"
+              <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Name, Typ, Standort, Seriennummer…"
                 style={{ width: '100%', padding: '10px 14px', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', outline: 'none', boxSizing: 'border-box' as const }} />
             </div>
 
             {/* Device cards */}
-            {loading ? (
+            {/* Schon geladene Geräte bleiben sichtbar, wenn ein späteres Laden scheitert (Funkloch) */}
+            {ladefehler && geraeteGeladen && !loading && (
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #dc2626', padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ flex: 1, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-text)' }}>Stand nicht aktuell — {ladefehler}</div>
+                <button onClick={loadAll} style={{ padding: '8px 12px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Erneut laden</button>
+              </div>
+            )}
+            {loading && !geraeteGeladen ? (
               <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade Geräte…</div>
+            ) : ladefehler && !geraeteGeladen ? (
+              <div style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: '3px solid #dc2626', padding: '16px' }}>
+                <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', marginBottom: 4 }}>Geräte konnten nicht geladen werden</div>
+                <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12 }}>{ladefehler}</div>
+                <button onClick={loadAll} disabled={loading} style={{ padding: '9px 16px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>Erneut laden</button>
+              </div>
             ) : filteredDevices.length === 0 ? (
               <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--warm-gray)' }}>
                 <div style={{ fontStyle: 'italic', marginBottom: 8 }}>Keine Geräte gefunden</div>
                 {devices.length === 0 && (
-                  <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', operational: true, has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
+                  <button onClick={() => setDeviceSheet({ name: '', type: 'AED', serial_number: '', location: '', interval: 'monthly', has_stk: false, last_stk: '', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24 })}
                     style={{ padding: '12px 24px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                     Erstes Gerät anlegen
                   </button>
@@ -723,12 +1104,9 @@ export default function MPG() {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {filteredDevices.map(device => {
-                  const status = getDeviceStatus(device)
-                  const due = calcNextDue(device)
-                  const openDef = defects.filter(d => d.device_id === device.id && d.status !== 'resolved')
-                  const lastInsp = inspections.find(i => i.device_id === device.id)
+                  const z = zustand(device)
                   return (
-                    <div key={device.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${STATUS_BORDER[status]}`, overflow: 'hidden', position: 'relative' }}>
+                    <div key={device.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${STUFE_FARBE[z.stufe]}`, overflow: 'hidden', position: 'relative' }}>
                       {/* Card body */}
                       <div style={{ padding: '14px 46px 14px 16px' }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>{device.type}</div>
@@ -739,40 +1117,23 @@ export default function MPG() {
                           </div>
                         )}
 
-                        {/* Status badges */}
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const, marginBottom: 10 }}>
-                          {device.operational === false
-                            ? <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '3px 10px' }}>Nicht einsatzbereit</span>
-                            : <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>Einsatzbereit</span>
-                          }
-                          {status === 'warning' && <span style={{ fontSize: 11, fontWeight: 700, color: '#d97706', background: 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>Prüfung bald fällig</span>}
-                          {status === 'overdue' && device.operational !== false && <span style={{ fontSize: 11, fontWeight: 700, color: '#dc2626', background: 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '3px 10px' }}>Prüfung überfällig</span>}
-                          {openDef.length > 0 && (
-                            <span style={{ fontSize: 11, fontWeight: 700, color: 'rgb(var(--lbf-defekt-rgb))', background: 'rgba(var(--lbf-defekt-rgb),0.1)', borderRadius: 99, padding: '3px 10px' }}>
-                              {openDef.length} Defekt{openDef.length > 1 ? 'e' : ''} offen
-                            </span>
+                        {/* Zustand mit Gründen */}
+                        <div style={{ marginBottom: 8 }}>
+                          <span style={{ fontSize: 10, fontWeight: 700, color: STUFE_FARBE[z.stufe], textTransform: 'uppercase' as const, letterSpacing: '0.1em' }}>{STUFE_TEXT[z.stufe]}</span>
+                          {z.gruende.map((g, i) => (
+                            <div key={i} style={{ fontSize: 12, fontStyle: 'italic', color: g.stufe === 'gesperrt' ? '#dc2626' : 'var(--lbf-text)', marginTop: 2 }}>{g.text}</div>
+                          ))}
+                          {unklarRef.current.defekte[device.id] && !defektAngekommen(unklarRef.current.defekte[device.id]) && (
+                            <div style={{ fontSize: 12, fontStyle: 'italic', color: '#dc2626', marginTop: 2 }}>Defektmeldung nicht sicher gespeichert — unter „Defekt melden“ erneut senden</div>
                           )}
-                          {device.has_stk && (() => {
-                            const s = calcPeriodicStatus(device.last_stk, device.stk_interval_months || 24)
-                            return s !== 'ok' ? <span style={{ fontSize: 11, fontWeight: 700, color: s === 'overdue' ? '#dc2626' : '#d97706', background: s === 'overdue' ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>STK {s === 'overdue' ? 'überfällig' : 'bald fällig'}</span> : <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>STK OK</span>
-                          })()}
-                          {device.has_mtk && (() => {
-                            const s = calcPeriodicStatus(device.last_mtk, device.mtk_interval_months || 24)
-                            return s !== 'ok' ? <span style={{ fontSize: 11, fontWeight: 700, color: s === 'overdue' ? '#dc2626' : '#d97706', background: s === 'overdue' ? 'rgba(220,38,38,0.1)' : 'rgba(217,119,6,0.1)', borderRadius: 99, padding: '3px 10px' }}>MTK {s === 'overdue' ? 'überfällig' : 'bald fällig'}</span> : <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', background: 'rgba(22,163,74,0.1)', borderRadius: 99, padding: '3px 10px' }}>MTK OK</span>
-                          })()}
                         </div>
 
                         <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                          {due ? `Nächste Prüfung: ${due.toLocaleDateString('de-DE')}` : ''}
-                          {lastInsp ? ` · Zuletzt: ${relativeDate(lastInsp.inspection_date)}` : ''}
+                          {z.fristen.map(f => f.naechste
+                            ? `${f.art === 'pruefung' ? 'Nächste Prüfung' : f.bezeichnung}: ${tagText(f.naechste)}`
+                            : `${f.art === 'pruefung' ? 'Prüfung' : f.bezeichnung}: offen`).join(' · ')}
+                          {device.last_inspection ? ` · Zuletzt: ${relativeDate(device.last_inspection)}` : ''}
                         </div>
-                        {(device.has_stk || device.has_mtk) && (
-                          <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 3 }}>
-                            {device.has_stk && `STK: ${device.last_stk ? fmtDate(device.last_stk) : 'ausstehend'}`}
-                            {device.has_stk && device.has_mtk && ' · '}
-                            {device.has_mtk && `MTK: ${device.last_mtk ? fmtDate(device.last_mtk) : 'ausstehend'}`}
-                          </div>
-                        )}
                       </div>
 
                       {/* Action strip */}
@@ -781,7 +1142,7 @@ export default function MPG() {
                           style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Prüfung starten
                         </button>
-                        <button onClick={() => { setDefectDevice(device); setDefectForm({ description: '', severity: 'medium' }) }}
+                        <button onClick={() => openDefectSheet(device)}
                           style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: '0.5px solid rgba(220,38,38,0.3)', background: 'rgba(220,38,38,0.04)', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Defekt melden
                         </button>
@@ -800,9 +1161,9 @@ export default function MPG() {
                         {openMenu === device.id && (
                           <div style={{ position: 'absolute', top: 30, right: 0, background: 'var(--lbf-card)', border: '0.5px solid var(--lbf-border)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', minWidth: 160, zIndex: 200 }}>
                             {[
-                              { label: 'Bearbeiten', action: () => { setDeviceSheet({ id: device.id, name: device.name, type: device.type, serial_number: device.serial_number, location: device.location, interval: device.interval, operational: device.operational !== false, has_stk: !!device.has_stk, last_stk: device.last_stk || '', stk_interval_months: device.stk_interval_months || 24, has_mtk: !!device.has_mtk, last_mtk: device.last_mtk || '', mtk_interval_months: device.mtk_interval_months || 24 }); setOpenMenu(null) } },
+                              { label: 'Bearbeiten', action: () => { setDeviceSheet({ id: device.id, name: device.name, type: device.type, serial_number: device.serial_number || '', location: device.location || '', interval: intervallVon(device.interval), has_stk: !!device.has_stk, last_stk: kalendertag(device.last_stk) ?? '', stk_interval_months: device.stk_interval_months || 24, has_mtk: !!device.has_mtk, last_mtk: kalendertag(device.last_mtk) ?? '', mtk_interval_months: device.mtk_interval_months || 24 }); setOpenMenu(null) } },
                               { label: device.operational === false ? 'Als einsatzbereit markieren' : 'Als nicht einsatzbereit markieren', action: () => { toggleOperational(device); setOpenMenu(null) }, danger: device.operational !== false },
-                              { label: 'Löschen', action: () => { deleteDevice(device.id, device.name); setOpenMenu(null) }, danger: true },
+                              { label: 'Löschen', action: () => { deleteDevice(device); setOpenMenu(null) }, danger: true },
                             ].map(item => (
                               <button key={item.label} onClick={item.action}
                                 style={{ display: 'block', width: '100%', padding: '11px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, textAlign: 'left' as const, color: item.danger ? '#dc2626' : 'var(--lbf-text)', fontFamily: 'inherit' }}>
@@ -843,9 +1204,12 @@ export default function MPG() {
                         <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
                           {relativeDate(r.created)} · {r.reporter_name || 'Anonym'}
                         </div>
+                        {unklarRef.current.bestaetigungen[r.id] && (
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: '#dc2626', marginTop: 4 }}>Bestätigung nicht sicher gespeichert — bitte erneut senden</div>
+                        )}
                       </div>
                       <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '8px 14px', display: 'flex', gap: 8 }}>
-                        <button onClick={() => { setConfirmTarget(r); setConfirmNotes('') }}
+                        <button onClick={() => openConfirmSheet(r)}
                           style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                           Bestätigen
                         </button>
@@ -888,13 +1252,9 @@ export default function MPG() {
                             </div>
                           </div>
                           <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '8px 14px', display: 'flex', gap: 8 }}>
-                            <button onClick={() => { setResolveTarget(def); setResolveNotes('') }}
+                            <button onClick={() => openResolveSheet(def)}
                               style={{ flex: 1, padding: '8px 12px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                               Als behoben markieren
-                            </button>
-                            <button onClick={() => deleteDefect(def.id)}
-                              style={{ padding: '8px 10px', borderRadius: 8, border: '0.5px solid rgba(220,38,38,0.2)', background: 'none', color: '#dc2626', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                              {pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></>, 14)}
                             </button>
                           </div>
                         </div>
@@ -940,8 +1300,8 @@ export default function MPG() {
               <div style={{ padding: '48px 16px', textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Noch keine Prüfungen durchgeführt</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {inspections.map(insp => (
-                  <details key={insp.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${insp.passed ? '#16a34a' : '#dc2626'}`, overflow: 'hidden' }}>
+                {inspections.map(insp => { const erg = ergebnisVon(insp); return (
+                  <details key={insp.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${ERGEBNIS_FARBE[erg]}`, overflow: 'hidden' }}>
                     <summary style={{ padding: '14px 16px', cursor: 'pointer', listStyle: 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', marginBottom: 3 }}>{insp.device_name}</div>
@@ -950,8 +1310,8 @@ export default function MPG() {
                         </div>
                         {insp.notes && <div style={{ fontSize: 12, color: 'var(--lbf-text)', marginTop: 4, fontStyle: 'italic' }}>{insp.notes}</div>}
                       </div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: insp.passed ? '#16a34a' : '#dc2626', background: insp.passed ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.1)', borderRadius: 99, padding: '4px 10px', flexShrink: 0 }}>
-                        {insp.passed ? 'Bestanden' : 'Nicht bestanden'}
+                      <span style={{ fontSize: 10, fontWeight: 700, color: ERGEBNIS_FARBE[erg], textTransform: 'uppercase' as const, letterSpacing: '0.08em', flexShrink: 0 }}>
+                        {ERGEBNIS_TEXT[erg]}
                       </span>
                     </summary>
                     {insp.checklist_results?.length > 0 && (
@@ -970,7 +1330,7 @@ export default function MPG() {
                       </div>
                     )}
                   </details>
-                ))}
+                ) })}
               </div>
             )}
           </>
@@ -1000,12 +1360,7 @@ export default function MPG() {
         )}
       </div>
 
-      {/* ── Toast ── */}
-      {msg && (
-        <div style={{ position: 'fixed', bottom: 'calc(24px + env(safe-area-inset-bottom))', left: '50%', transform: 'translateX(-50%)', zIndex: 9999, padding: '10px 20px', borderRadius: 20, fontWeight: 600, fontSize: 13, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', whiteSpace: 'nowrap' as const, background: msg.type === 'success' ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)', border: `1px solid ${msg.type === 'success' ? '#bbf7d0' : '#fecaca'}`, color: msg.type === 'success' ? 'var(--lbf-ok-text)' : '#dc2626' }}>
-          {msg.text}
-        </div>
-      )}
+      {toast}
 
       {/* ── Add/Edit Device Sheet ── */}
       {deviceSheet !== null && (
@@ -1048,16 +1403,6 @@ export default function MPG() {
                   {el}
                 </label>
               ))}
-
-              {/* Einsatzbereit */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', cursor: 'pointer' }}>
-                <input type="checkbox" checked={deviceSheet.operational} onChange={e => setDeviceSheet({ ...deviceSheet, operational: e.target.checked })}
-                  style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>Einsatzbereit</div>
-                  <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Deaktivieren = Gerät vorübergehend außer Betrieb</div>
-                </div>
-              </label>
 
               {/* STK */}
               <div style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1107,7 +1452,7 @@ export default function MPG() {
 
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                 <button onClick={() => setDeviceSheet(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-                <button onClick={saveDevice} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                <button onClick={saveDevice} disabled={busy} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: busy ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1 }}>
                   {deviceSheet.id ? 'Speichern' : 'Hinzufügen'}
                 </button>
               </div>
@@ -1137,21 +1482,21 @@ export default function MPG() {
                 const di = inspections.filter(i => i.device_id === historyDevice.id)
                 return di.length === 0 ? (
                   <div style={{ textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic', padding: '24px 0' }}>Noch keine Prüfungen</div>
-                ) : di.map(insp => (
-                  <div key={insp.id} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px', marginBottom: 10, borderLeft: `3px solid ${insp.passed ? '#16a34a' : '#dc2626'}` }}>
+                ) : di.map(insp => { const erg = ergebnisVon(insp); return (
+                  <div key={insp.id} style={{ background: 'var(--warm-bg)', borderRadius: 10, padding: '12px', marginBottom: 10, borderLeft: `3px solid ${ERGEBNIS_FARBE[erg]}` }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                       <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{fmtDateTime(insp.inspection_date)} · {insp.user_name}</div>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: insp.passed ? '#16a34a' : '#dc2626' }}>{insp.passed ? 'Bestanden' : 'Nicht bestanden'}</span>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: ERGEBNIS_FARBE[erg], textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>{ERGEBNIS_TEXT[erg]}</span>
                     </div>
                     {insp.notes && <div style={{ fontSize: 13, color: 'var(--lbf-text)', fontStyle: 'italic' }}>{insp.notes}</div>}
                   </div>
-                ))
+                ) })
               })()}
               {historyTab === 'defekte' && (() => {
                 const dd = defects.filter(d => d.device_id === historyDevice.id)
                 return (
                   <>
-                    <button onClick={() => { setDefectDevice(historyDevice); setDefectForm({ description: '', severity: 'medium' }); setHistoryDevice(null) }}
+                    <button onClick={() => { openDefectSheet(historyDevice); setHistoryDevice(null) }}
                       style={{ width: '100%', marginBottom: 16, padding: '11px', borderRadius: 10, border: 'none', background: '#dc2626', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
                       Defekt melden
                     </button>
@@ -1180,7 +1525,7 @@ export default function MPG() {
       {/* ── Report Defect Sheet ── */}
       {defectDevice && (
         <>
-          <div onClick={() => setDefectDevice(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
+          <div onClick={() => !busy && setDefectDevice(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '80vh', overflowY: 'auto', fontFamily: 'inherit' }}>
             <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontSize: 10, fontWeight: 700, color: '#dc2626', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>{defectDevice.type}</div>
@@ -1188,25 +1533,44 @@ export default function MPG() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#dc2626' }}>Beschreibung *</span>
-                <textarea autoFocus value={defectForm.description} onChange={e => setDefectForm({ ...defectForm, description: e.target.value })} placeholder="Was genau ist defekt? Wie macht sich der Defekt bemerkbar?" rows={4}
+                <textarea autoFocus value={defectForm.description} readOnly={defectForm.unklar || busy} onChange={e => setDefectForm({ ...defectForm, description: e.target.value })} placeholder="Was genau ist defekt? Wie macht sich der Defekt bemerkbar?" rows={4}
                   style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(220,38,38,0.2)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
               </label>
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#dc2626' }}>Schweregrad</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {(Object.entries(SEVERITY_CFG) as [Severity, typeof SEVERITY_CFG[Severity]][]).map(([key, cfg]) => (
-                    <button key={key} onClick={() => setDefectForm({ ...defectForm, severity: key })} type="button"
+                    <button key={key} onClick={() => setDefectForm({ ...defectForm, severity: key })} disabled={defectForm.unklar} type="button"
                       style={{ padding: '10px', borderRadius: 10, border: `1.5px solid ${defectForm.severity === key ? cfg.color : 'rgba(var(--lbf-rot-rgb),0.1)'}`, background: defectForm.severity === key ? cfg.bg : 'transparent', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: cfg.color }}>
                       {cfg.label}
                     </button>
                   ))}
                 </div>
               </label>
+              {sperrtDefekt(defectForm.severity) ? (
+                <div style={{ fontSize: 12, fontStyle: 'italic', color: '#dc2626' }}>
+                  Bei „{SEVERITY_CFG[defectForm.severity].label}“ wird das Gerät gesperrt, bis der Defekt behoben ist.
+                </div>
+              ) : (
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={defectForm.sperren} disabled={defectForm.unklar} onChange={e => setDefectForm({ ...defectForm, sperren: e.target.checked })}
+                    style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>Gerät sperren</div>
+                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Als nicht einsatzbereit markieren</div>
+                  </div>
+                </label>
+              )}
+              {defectForm.unklar && (
+                <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-text)' }}>
+                  Ob diese Meldung gespeichert wurde, ist unklar. Erneut senden legt sie nicht doppelt an.
+                </div>
+              )}
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button onClick={() => setDefectDevice(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-                <button onClick={reportDefect} disabled={!defectForm.description.trim()}
-                  style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: !defectForm.description.trim() ? 'rgba(220,38,38,0.3)' : '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: !defectForm.description.trim() ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-                  Defekt melden
+                <button onClick={() => defectForm.unklar ? verwerfeUnklarenDefekt() : setDefectDevice(null)} disabled={busy} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>{defectForm.unklar ? 'Verwerfen' : 'Abbrechen'}</button>
+                <button onClick={reportDefect} disabled={!defectForm.description.trim() || busy}
+                  style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: !defectForm.description.trim() || busy ? 'rgba(220,38,38,0.3)' : '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: !defectForm.description.trim() ? 'not-allowed' : busy ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                  {busy ? 'Speichert…' : defectForm.unklar ? 'Erneut senden' : 'Defekt melden'}
                 </button>
               </div>
             </div>
@@ -1217,7 +1581,7 @@ export default function MPG() {
       {/* ── Resolve Defect Sheet ── */}
       {resolveTarget && (
         <>
-          <div onClick={() => setResolveTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
+          <div onClick={() => !busy && setResolveTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '70vh', overflowY: 'auto', fontFamily: 'inherit' }}>
             <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 6 }}>Defekt beheben</div>
@@ -1227,9 +1591,35 @@ export default function MPG() {
               <textarea value={resolveNotes} onChange={e => setResolveNotes(e.target.value)} placeholder="Was wurde gemacht? Ersatzteil, Reparatur, ..." rows={3}
                 style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
             </label>
+            {(() => {
+              const geraet = devices.find(d => d.id === resolveTarget.device_id)
+              if (!geraet || geraet.operational !== false) return null
+              const weitere = offeneDefekteVon(geraet.id).filter(d => d.id !== resolveTarget.id)
+              const weitereSperrend = weitere.filter(d => sperrtDefekt(d.severity)).length
+              if (weitereSperrend) return (
+                <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 16 }}>
+                  Das Gerät bleibt gesperrt: {weitereSperrend === 1 ? 'ein weiterer Defekt' : `${weitereSperrend} weitere Defekte`} „hoch“ oder „kritisch“ offen.
+                </div>
+              )
+              return (
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', marginBottom: 16 }}>
+                  <input type="checkbox" checked={wiederEinsatzbereit} onChange={e => setWiederEinsatzbereit(e.target.checked)}
+                    style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>Gerät wieder einsatzbereit</div>
+                    <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
+                      {[
+                        weitere.length ? `Noch ${weitere.length === 1 ? 'ein Mangel' : `${weitere.length} Mängel`} offen.` : '',
+                        pruefungNichtBestanden(geraet) ? 'Die letzte Prüfung ist nicht bestanden — gesperrt bleibt es, bis eine Prüfung bestanden ist.' : 'Hebt die Sperre auf.',
+                      ].filter(Boolean).join(' ')}
+                    </div>
+                  </div>
+                </label>
+              )
+            })()}
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setResolveTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-              <button onClick={resolveDefect} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#16a34a', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Als behoben markieren</button>
+              <button onClick={() => setResolveTarget(null)} disabled={busy} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={resolveDefect} disabled={busy} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#16a34a', fontSize: 15, fontWeight: 700, color: '#fff', cursor: busy ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1 }}>{busy ? 'Speichert…' : 'Als behoben markieren'}</button>
             </div>
           </div>
         </>
@@ -1238,7 +1628,7 @@ export default function MPG() {
       {/* ── Confirm External Report Sheet ── */}
       {confirmTarget && (
         <>
-          <div onClick={() => setConfirmTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
+          <div onClick={() => !busy && setConfirmTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '75vh', overflowY: 'auto', fontFamily: 'inherit' }}>
             <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meldung bestätigen</div>
@@ -1247,12 +1637,35 @@ export default function MPG() {
             <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 16 }}>
               Gemeldet von {confirmTarget.reporter_name || 'Anonym'} · {relativeDate(confirmTarget.created)}
             </div>
-            <div style={{ background: 'rgba(var(--lbf-defekt-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-defekt-rgb),0.15)', borderRadius: 10, padding: '12px 14px', marginBottom: 20, fontSize: 13, color: 'rgb(var(--lbf-defekt-rgb))', fontStyle: 'italic' }}>
-              Gerät wird als <strong style={{ fontStyle: 'normal' }}>nicht einsatzbereit</strong> markiert und ein Defekt-Eintrag angelegt.
-            </div>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+              <span style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Anmerkung (optional)</span>
+              <textarea value={confirmNotes} readOnly={!!confirmVersuch || busy} onChange={e => setConfirmNotes(e.target.value)} placeholder="z.B. Gerät gesichtet, Ersatz auf RTW 2 gelegt, …" rows={3}
+                style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
+            </label>
+            {geraeteGeladen && !devices.some(d => d.id === confirmTarget.device_id) ? (
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 20 }}>Das Gerät gibt es nicht mehr — es wird nur der Defekt-Eintrag angelegt.</div>
+            ) : sperrtDefekt(confirmTarget.severity) ? (
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: '#dc2626', marginBottom: 20 }}>
+                Ein Defekt-Eintrag wird angelegt. Bei „{SEVERITY_CFG[confirmTarget.severity].label}“ wird das Gerät gesperrt, bis der Defekt behoben ist.
+              </div>
+            ) : (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 20 }}>
+                <input type="checkbox" checked={confirmSperren} disabled={!!confirmVersuch || busy} onChange={e => setConfirmSperren(e.target.checked)}
+                  style={{ width: 20, height: 20, accentColor: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)' }}>Gerät sperren</div>
+                  <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Als nicht einsatzbereit markieren. Ein Defekt-Eintrag wird in jedem Fall angelegt.</div>
+                </div>
+              </label>
+            )}
+            {confirmVersuch && !busy && (
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-text)', marginBottom: 14 }}>
+                Ob diese Bestätigung gespeichert wurde, ist unklar. Erneut senden legt den Defekt nicht doppelt an.
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setConfirmTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-              <button onClick={confirmExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Bestätigen & Defekt anlegen</button>
+              <button onClick={() => setConfirmTarget(null)} disabled={busy} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>{confirmVersuch ? 'Schließen' : 'Abbrechen'}</button>
+              <button onClick={confirmExternalReport} disabled={busy} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: 'var(--lbf-akzent-grund)', fontSize: 15, fontWeight: 700, color: '#fff', cursor: busy ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1 }}>{busy ? 'Speichert…' : confirmVersuch ? 'Erneut senden' : 'Bestätigen & Defekt anlegen'}</button>
             </div>
           </div>
         </>
@@ -1261,7 +1674,7 @@ export default function MPG() {
       {/* ── Reject External Report Sheet ── */}
       {rejectTarget && (
         <>
-          <div onClick={() => setRejectTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
+          <div onClick={() => !busy && setRejectTarget(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 200 }} />
           <div style={{ position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 201, background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0', padding: '20px 20px calc(24px + env(safe-area-inset-bottom))', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)', maxHeight: '70vh', overflowY: 'auto', fontFamily: 'inherit' }}>
             <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.2)', margin: '0 auto 20px' }} />
             <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 18, color: 'var(--lbf-text)', marginBottom: 6 }}>Meldung ablehnen</div>
@@ -1272,8 +1685,8 @@ export default function MPG() {
                 style={{ padding: '11px 12px', borderRadius: 10, border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--warm-bg)', fontSize: 15, color: 'var(--lbf-text)', fontFamily: 'inherit', outline: 'none', resize: 'vertical' }} />
             </label>
             <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => setRejectTarget(null)} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
-              <button onClick={rejectExternalReport} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>Ablehnen</button>
+              <button onClick={() => setRejectTarget(null)} disabled={busy} style={{ flex: 1, padding: '13px', borderRadius: 10, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'none', fontSize: 15, fontWeight: 700, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}>Abbrechen</button>
+              <button onClick={rejectExternalReport} disabled={busy} style={{ flex: 2, padding: '13px', borderRadius: 10, border: 'none', background: '#dc2626', fontSize: 15, fontWeight: 700, color: '#fff', cursor: busy ? 'wait' : 'pointer', fontFamily: 'inherit', opacity: busy ? 0.6 : 1 }}>Ablehnen</button>
             </div>
           </div>
         </>

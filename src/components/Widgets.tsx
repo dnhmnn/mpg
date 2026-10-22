@@ -4,6 +4,8 @@ import { pb } from '../lib/pocketbase'
 import { hatRecht } from '../lib/apps'
 import { modulFrei } from '../lib/freigabe'
 import { fallAus, istUeberfaellig, type CirsDatensatz } from '../lib/cirs'
+import { zaehleStufen, type ZustandGeraet } from '../lib/mpg/zustand'
+import { tagVonDatum } from '../lib/mpg/fristen'
 import type { User } from '../types'
 
 interface NewsItem {
@@ -105,32 +107,35 @@ export default function Widgets({ user }: WidgetsProps) {
       })
     )
 
+    // MPG: dieselbe Zustandsregel wie im MPG selbst (src/lib/mpg/zustand.ts)
     if (enabled('mpg')) queries.push(
-      pb.collection('mpg_devices').getList(1, 1, {
-        filter: `organization_id="${org}"&&next_inspection_due<="${soonStr}"`,
-        fields: 'id,next_inspection_due',
-        requestKey: 'widget-mpg'
-      }).then(r => {
-        if (r.totalItems > 0) {
-          const today = new Date().toISOString().split('T')[0]
-          const overdueFilter = `organization_id="${org}"&&next_inspection_due<="${today}"`
-          return pb.collection('mpg_devices').getList(1, 1, {
-            filter: overdueFilter, fields: 'id', requestKey: 'widget-mpg-overdue'
-          }).then(o => {
-            const overdue = o.totalItems
-            const warning = r.totalItems - overdue
-            const parts: string[] = []
-            if (overdue > 0) parts.push(`${overdue} überfällig`)
-            if (warning > 0) parts.push(`${warning} bald fällig`)
-            items.push({
-              id: 'mpg',
-              label: `MPG: ${parts.join(', ')}`,
-              sub: 'Geräteprüfung',
-              url: '/mpg',
-              rgb: 'var(--lbf-rot-rgb)',
-            })
-          })
-        }
+      Promise.all([
+        pb.collection('mpg_devices').getFullList<ZustandGeraet & { id: string }>({
+          filter: pb.filter('organization_id = {:org}', { org }),
+          fields: 'id,interval,last_inspection,last_inspection_passed,operational,has_stk,last_stk,stk_interval_months,has_mtk,last_mtk,mtk_interval_months',
+          requestKey: 'widget-mpg',
+        }),
+        pb.collection('mpg_defects').getFullList<{ device_id: string; severity: string }>({
+          filter: pb.filter('organization_id = {:org} && status != "resolved"', { org }),
+          fields: 'device_id,severity', requestKey: 'widget-mpg-defekte',
+        }).catch(() => []),
+        pb.collection('mpg_defect_reports').getFullList<{ device_id: string; severity: string }>({
+          filter: pb.filter('organization_id = {:org} && status = "pending"', { org }),
+          fields: 'device_id,severity', requestKey: 'widget-mpg-meldungen',
+        }).catch(() => []),
+      ]).then(([geraete, defekte, meldungen]) => {
+        const z = zaehleStufen(geraete, defekte, meldungen, tagVonDatum(new Date()))
+        const parts: string[] = []
+        if (z.gesperrt > 0) parts.push(`${z.gesperrt} gesperrt`)
+        if (z.handlung > 0) parts.push(`${z.handlung} mit Handlungsbedarf`)
+        if (z.bald > 0) parts.push(`${z.bald} bald fällig`)
+        if (parts.length) items.push({
+          id: 'mpg',
+          label: `MPG: ${parts.join(', ')}`,
+          sub: 'Geräte und Prüfungen',
+          url: '/mpg',
+          rgb: 'var(--lbf-rot-rgb)',
+        })
       })
     )
 

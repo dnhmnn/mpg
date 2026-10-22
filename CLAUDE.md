@@ -193,8 +193,9 @@ npm run test:watch # beim Entwickeln
 - `npm run build` prüft die Typen mit. Der Bestand ist **fehlerfrei** — neue
   Typfehler blockieren ab sofort den Build und damit die Veröffentlichung.
 - Sicherheitskritische Rechenteile haben Prüffälle, die in der CI laufen:
-  `src/lib/eks/atemschutz.ts` (FwDV 7) und `src/lib/gs1.ts` (DataMatrix).
-  Die Prüffälle stehen in `*selbsttest.ts` und sind auch in der App aufrufbar;
+  `src/lib/eks/atemschutz.ts` (FwDV 7), `src/lib/gs1.ts` (DataMatrix) und
+  `src/lib/mpg/` (Prüffristen, Gerätezustand, Prüfergebnis — ob ein Medizinprodukt
+  als einsatzbereit gilt). Die Prüffälle stehen in `*selbsttest.ts` und sind auch in der App aufrufbar;
   `src/lib/__tests__/` bindet sie an vitest an.
 - **Neue Rechenlogik bekommt Prüffälle** — besonders alles, woran im Einsatz eine
   Entscheidung hängt.

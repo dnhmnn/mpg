@@ -149,8 +149,17 @@ export function useAuth() {
         } else if (lagerModul.darfFremdenUebertragen(b, ich)) lagerKollegen++
       }
     } catch { /* IndexedDB nicht verfügbar */ }
+    // MPG: begonnene Prüfung und unklar gespeicherte Prüfungen oder Defektmeldungen
+    let mpg = { unklar: 0, entwurf: false }
+    try {
+      const { offeneMpgDaten } = await import('../lib/mpg/lokal')
+      const ich = pb.authStore.model as unknown as { id?: string; organization_id?: string } | null
+      mpg = offeneMpgDaten(ich?.id, ich?.organization_id)
+    } catch { /* nicht zählen */ }
     const warnungen: string[] = []
     if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
+    if (mpg.unklar > 0) warnungen.push(`Im MPG ${mpg.unklar === 1 ? 'ist eine Speicherung' : `sind ${mpg.unklar} Speicherungen`} (Prüfung oder Defektmeldung) nicht sicher angekommen — bitte vorher im MPG erneut senden.`)
+    if (mpg.entwurf) warnungen.push('Eine begonnene MPG-Prüfung ist noch nicht gespeichert.')
     if (protokolle > 0) warnungen.push(`${protokolle} Protokoll${protokolle === 1 ? ' wartet' : 'e warten'} noch auf diesem Gerät auf die Übertragung.`)
     const lagerTeile: string[] = []
     if (lagerEigene > 0) lagerTeile.push(`${lagerEigene} deiner Lager-Buchungen ${lagerEigene === 1 ? 'ist' : 'sind'} noch nicht übertragen. Sie bleiben auf diesem Gerät und gehen raus, sobald du dich hier wieder anmeldest — oder jemand aus deiner Organisation sie unter deinem Namen überträgt. Besser vorher mit Netz übertragen (Lager → Abzeichen).`)
