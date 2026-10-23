@@ -108,11 +108,13 @@ export default function Widgets({ user }: WidgetsProps) {
     )
 
     // MPG: dieselbe Zustandsregel wie im MPG selbst (src/lib/mpg/zustand.ts)
-    if (enabled('mpg')) queries.push(
+    // Nur mit Zugang zum MPG — sonst liefern Defekte und Meldungen nichts und die Zahlen wären zu klein
+    if (enabled('mpg') && hatRecht(user, 'dashboard')) queries.push(
       Promise.all([
         pb.collection('mpg_devices').getFullList<ZustandGeraet & { id: string }>({
           filter: pb.filter('organization_id = {:org}', { org }),
-          fields: 'id,interval,last_inspection,last_inspection_passed,operational,has_stk,last_stk,stk_interval_months,has_mtk,last_mtk,mtk_interval_months',
+          // ausser_betrieb: außer Betrieb genommene zählen nicht mit (fehlt das Feld, liefert PocketBase es einfach nicht)
+          fields: 'id,interval,last_inspection,last_inspection_passed,operational,has_stk,last_stk,stk_interval_months,has_mtk,last_mtk,mtk_interval_months,ausser_betrieb',
           requestKey: 'widget-mpg',
         }),
         pb.collection('mpg_defects').getFullList<{ device_id: string; severity: string }>({

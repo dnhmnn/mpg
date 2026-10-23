@@ -1,5 +1,6 @@
 // Datensätze des MPG-Moduls (PocketBase-Collections mpg_*) und feste Vorgaben.
 
+import type { Aenderung, EreignisArt } from '../../lib/mpg/aktionen'
 import type { Intervall } from '../../lib/mpg/fristen'
 import type { Pruefpunkt } from '../../lib/mpg/pruefung'
 
@@ -19,6 +20,8 @@ export interface Device {
   next_inspection_due: string
   organization_id: string
   created: string
+  /** Serverzeit der letzten Änderung — zeigt, ob sich ein Gerät seit einem Versuch geändert hat */
+  updated?: string
   operational?: boolean
   has_stk?: boolean
   last_stk?: string
@@ -26,6 +29,23 @@ export interface Device {
   has_mtk?: boolean
   last_mtk?: string
   mtk_interval_months?: number
+  /** Außerbetriebnahme (Paket 3) — fehlen in PocketBase, solange die Felder nicht angelegt sind */
+  ausser_betrieb?: string
+  ausser_betrieb_grund?: string
+  verbleib?: string
+}
+
+/** Ein Eintrag im Gerätebuch (mpg_ereignisse) — wird nur angefügt, nie geändert. */
+export interface Ereignis {
+  id: string
+  device_id: string
+  device_name: string
+  art: EreignisArt
+  text: string
+  aenderungen?: Aenderung[] | null
+  bezug: string
+  user_name: string
+  created: string
 }
 
 export interface Inspection {

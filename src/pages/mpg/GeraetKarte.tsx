@@ -2,8 +2,9 @@
 
 import { Link } from 'react-router-dom'
 import { tagText } from '../../lib/mpg/fristen'
+import { istAusserBetrieb } from '../../lib/mpg/zustand'
 import { useMpg } from './MpgDaten'
-import { Aktionen, Karte, STUFE_FARBE, ZustandMarke, knopfLeise, kursivGrau, relativeDate } from './teile'
+import { Aktionen, Karte, Marke, STUFE_FARBE, ZustandMarke, knopfLeise, kursivGrau, relativeDate } from './teile'
 import type { Device } from './typen'
 
 export function naechsteFrist(z: ReturnType<ReturnType<typeof useMpg>['zustand']>): string {
@@ -16,8 +17,9 @@ export function GeraetKarte({ device, mitAktionen = true, zurueck, gruende = 3 }
   const m = useMpg()
   const z = m.zustand(device)
   const unklar = m.unklarerDefekt(device.id)
+  const ausser = istAusserBetrieb(device)
   return (
-    <Karte rand={STUFE_FARBE[z.stufe]}>
+    <Karte rand={ausser ? 'rgba(var(--lbf-grau-rgb),0.4)' : STUFE_FARBE[z.stufe]}>
       <Link to={`/mpg/geraete/${device.id}`} style={{ display: 'block', padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -27,7 +29,7 @@ export function GeraetKarte({ device, mitAktionen = true, zurueck, gruende = 3 }
               <div style={{ ...kursivGrau, marginTop: 2 }}>{[device.location, device.serial_number && `S/N ${device.serial_number}`].filter(Boolean).join(' · ')}</div>
             )}
           </div>
-          <ZustandMarke stufe={z.stufe} />
+          {ausser ? <Marke grund="rgba(var(--lbf-grau-rgb),0.12)" schrift="var(--warm-gray)">Außer Betrieb</Marke> : <ZustandMarke stufe={z.stufe} />}
         </div>
         {z.gruende.slice(0, gruende).map((g, i) => (
           <div key={i} style={{ fontSize: 13, fontStyle: 'italic', marginTop: i ? 1 : 8, color: g.stufe === 'gesperrt' ? 'var(--lbf-fehler-text)' : 'var(--lbf-text)' }}>{g.text}</div>
@@ -38,10 +40,16 @@ export function GeraetKarte({ device, mitAktionen = true, zurueck, gruende = 3 }
           {naechsteFrist(z)}{device.last_inspection ? ` · zuletzt ${relativeDate(device.last_inspection)}` : ''}
         </div>
       </Link>
-      {mitAktionen && (
+      {mitAktionen && !ausser && (
         <Aktionen>
           <Link to={`/mpg/geraete/${device.id}/pruefen`} state={zurueck ? { zurueck } : undefined} style={{ ...knopfLeise, background: 'var(--lbf-akzent-grund)', color: '#fff', textDecoration: 'none', flex: 1, textAlign: 'center' }}>Prüfen</Link>
           <button onClick={() => m.setBlatt({ art: 'defekt', device })} style={{ ...knopfLeise, flex: 1, color: unklar ? 'var(--lbf-fehler-text)' : 'var(--lbf-akzent)' }}>{unklar ? 'Erneut senden' : 'Mangel melden'}</button>
+        </Aktionen>
+      )}
+      {/* Außer Betrieb: nur noch eine unklar gesendete Meldung erneut senden */}
+      {mitAktionen && ausser && unklar && (
+        <Aktionen>
+          <button onClick={() => m.setBlatt({ art: 'defekt', device })} style={{ ...knopfLeise, flex: 1, color: 'var(--lbf-fehler-text)' }}>Erneut senden</button>
         </Aktionen>
       )}
     </Karte>

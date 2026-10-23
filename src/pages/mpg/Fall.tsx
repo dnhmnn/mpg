@@ -2,6 +2,7 @@
 
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { sperrtDefekt } from '../../lib/mpg/zustand'
+import { darfBeheben } from '../../lib/mpg/rechte'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
 import { Karte, Leer, SCHWERE_RAND, SchwereMarke, SeitenKopf, fmtDateTime, knopfRand, knopfVollWenn, kursivGrau, useBreit } from './teile'
@@ -18,6 +19,8 @@ export default function Fall() {
   if (!d) return <><SeitenKopf zurueck={zurueck} titel="Fall nicht gefunden" /><Leer>Diesen Defekt gibt es nicht (mehr).</Leer></>
 
   const offen = d.status !== 'resolved'
+  // Unklar gesendetes Beheben: auch wenn der Defekt schon behoben aussieht, erreichbar lassen
+  const versuchDa = !!m.blattVersuch(`beheben:${d.id}`)
   const zeilen: [string, string][] = [
     ['Gemeldet', `${fmtDateTime(d.created)} · ${d.reported_by}`],
     ...(offen ? [] : [['Behoben', `${d.resolved_by || '—'}${d.updated ? ` · ${fmtDateTime(d.updated)}` : ''}`] as [string, string]]),
@@ -25,7 +28,7 @@ export default function Fall() {
   ]
   return (
     <>
-      <SeitenKopf zurueck={zurueck} titel={d.device_name} unter={offen ? (sperrtDefekt(d.severity) ? 'Offener Defekt — Gerät gesperrt' : 'Offener Mangel') : 'Behoben'}
+      <SeitenKopf zurueck={zurueck} titel={m.geraeteName(d.device_id, d.device_name)} unter={offen ? (sperrtDefekt(d.severity) ? 'Offener Defekt — Gerät gesperrt' : 'Offener Mangel') : 'Behoben'}
         rechts={offen ? <SchwereMarke severity={d.severity} /> : undefined} />
       {!breit && banner}
       <Karte rand={offen ? SCHWERE_RAND[d.severity] : 'rgba(var(--lbf-grau-rgb),0.4)'} style={{ padding: '14px 16px', marginBottom: 16 }}>
@@ -40,10 +43,13 @@ export default function Fall() {
         ))}
       </Karte>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {offen && <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={knopfVollWenn(true, '#16a34a')}>Als behoben markieren</button>}
+        {versuchDa
+          ? <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={knopfVollWenn(true, '#dc2626')}>Beheben nicht sicher gespeichert — öffnen</button>
+          : offen && darfBeheben(m.user, d.severity) && <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={knopfVollWenn(true, '#16a34a')}>Als behoben markieren</button>}
         <Link to={`/mpg/geraete/${d.device_id}`} style={{ ...knopfRand, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Zum Gerät</Link>
       </div>
       {!m.devices.some(g => g.id === d.device_id) && <div style={{ ...kursivGrau, marginTop: 8 }}>Das Gerät gibt es nicht mehr.</div>}
+      {offen && !darfBeheben(m.user, d.severity) && <div style={{ ...kursivGrau, marginTop: 8 }}>Einen Defekt „{d.severity === 'critical' ? 'kritisch' : 'hoch'}“ schließt, wer „MPG verwalten“ hat — das Beheben hebt die Sperre auf.</div>}
     </>
   )
 }

@@ -3,10 +3,11 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubWrap, PubSendBar, inp, lbl, field, ta } from './pubStyles'
+import { istAusserBetrieb } from '../../lib/mpg/zustand'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
-interface DeviceSummary { id: string; name: string; type: string; location: string }
+interface DeviceSummary { id: string; name: string; type: string; location: string; ausser_betrieb?: string }
 interface UserHit { id: string; name: string; email: string }
 
 const SEVERITY_CFG: Record<Severity, { label: string; desc: string; color: string; bg: string }> = {
@@ -119,27 +120,46 @@ export default function OrgDefektmeldung() {
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const [liste, setListe] = useState<'laedt' | 'ok' | 'fehler'>('laedt')
+  const [gemeldet, setGemeldet] = useState('')
 
-  useEffect(() => {
+  function ladeGeraete() {
+    setListe('laedt')
     pb.collection('mpg_devices').getFullList<DeviceSummary>({
       filter: `organization_id = "${org.id}"`,
       sort: 'name',
-      fields: 'id,name,type,location',
-    }).then(setDevices).catch(() => {})
-  }, [org.id])
+      fields: 'id,name,type,location,ausser_betrieb',
+    }).then(ds => {
+      const aktiv = ds.filter(d => !istAusserBetrieb(d))
+      setDevices(aktiv)
+      setListe('ok')
+      // Ein Link (QR) auf ein außer Betrieb genommenes oder unbekanntes Gerät wählt nichts vor
+      setSelectedId(id => aktiv.some(d => d.id === id) ? id : '')
+    }).catch(() => setListe('fehler'))
+  }
+  useEffect(ladeGeraete, [org.id])
 
   const selectedDevice = devices.find(d => d.id === selectedId)
 
   async function submit() {
-    if (!selectedId) { setError('Bitte ein Gerät auswählen.'); return }
+    if (liste === 'laedt') { setError('Die Geräteliste lädt noch — bitte einen Moment.'); return }
+    // Ohne geladene Liste zählt das Gerät aus dem Link (QR) — die Meldung soll nicht am Netz scheitern
+    if (!selectedId || (liste === 'ok' && !selectedDevice)) { setError('Bitte ein Gerät auswählen.'); return }
     if (!description.trim()) { setError('Bitte eine Beschreibung eingeben.'); return }
     if (!selectedUser) { setError('Bitte einen Benutzer auswählen.'); return }
     setError('')
     setSending(true)
     try {
+      // Ohne Liste das eine Gerät nachschlagen: Name für die Meldung, außer Betrieb genommen → nein
+      let name = selectedDevice?.name || ''
+      if (!selectedDevice) {
+        const g = await pb.collection('mpg_devices').getOne<DeviceSummary>(selectedId, { fields: 'id,name,ausser_betrieb' }).catch(() => null)
+        if (g && istAusserBetrieb(g)) { setError('Dieses Gerät ist außer Betrieb genommen.'); return }
+        name = g?.name || ''
+      }
       await pb.collection('mpg_defect_reports').create({
         device_id: selectedId,
-        device_name: selectedDevice?.name || '',
+        device_name: name,
         organization_id: org.id,
         reporter_name: selectedUser.name,
         reporter_user_id: selectedUser.id,
@@ -147,6 +167,7 @@ export default function OrgDefektmeldung() {
         severity,
         status: 'pending',
       })
+      setGemeldet(name)
       setSuccess(true)
     } catch (e: any) {
       setError('Fehler: ' + (e?.message || 'Unbekannter Fehler'))
@@ -174,7 +195,7 @@ export default function OrgDefektmeldung() {
         </div>
         <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>Meldung eingegangen</div>
         <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24 }}>
-          Die Defektmeldung für <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{selectedDevice?.name}</strong> wurde übermittelt und wird geprüft.
+          {gemeldet ? <>Die Defektmeldung für <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>{gemeldet}</strong> wurde übermittelt und wird geprüft.</> : 'Die Defektmeldung wurde übermittelt und wird geprüft.'}
         </div>
         <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={reset}>
           Neue Meldung
@@ -202,8 +223,13 @@ export default function OrgDefektmeldung() {
         <Card title="Gerät *">
           <label style={lbl}>
             Medizinprodukt auswählen
-            {devices.length === 0 ? (
-              <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Keine Geräte gefunden</div>
+            {liste === 'fehler' ? (
+              <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+                <span>{selectedId ? 'Geräteliste nicht geladen — das Gerät aus dem Link wird gemeldet.' : 'Geräteliste konnte nicht geladen werden.'}</span>
+                <button type="button" onClick={ladeGeraete} style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', fontStyle: 'normal' }}>Erneut laden</button>
+              </div>
+            ) : devices.length === 0 ? (
+              <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{liste === 'laedt' ? 'Lädt …' : 'Keine Geräte gefunden'}</div>
             ) : (
               <select
                 value={selectedId}

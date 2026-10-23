@@ -1,9 +1,10 @@
 // GERÄTE: Bestand nach Standort, das Dringendste zuerst; Suche und Filter nach Zustand.
+// Außer Betrieb genommene Geräte stehen nur unter ihrem eigenen Filter.
 // Breit: Tabelle links, das gewählte Gerät rechts daneben (dieselbe Adresse wie auf dem Telefon).
 
 import { useMemo } from 'react'
 import { Link, useNavigate, useOutlet, useParams, useSearchParams } from 'react-router-dom'
-import { STUFEN, type Stufe } from '../../lib/mpg/zustand'
+import { STUFEN, istAusserBetrieb, type Stufe } from '../../lib/mpg/zustand'
 import { useMpg } from './MpgDaten'
 import { GeraetKarte, naechsteFrist } from './GeraetKarte'
 import { rundenVon } from './Heute'
@@ -11,11 +12,12 @@ import { useLadestand } from './Ladestand'
 import { Abschnitt, Karte, Leer, STUFE_FARBE, ZustandMarke, ICON, eingabe, knopfVoll, kursivGrau, pik, useBreit } from './teile'
 import { rundenPfad, type Device } from './typen'
 
-type Filter = 'alle' | 'gesperrt' | 'handlung' | 'bald' | 'bereit'
-const FILTER: [Filter, string][] = [['alle', 'Alle'], ['gesperrt', 'Gesperrt'], ['handlung', 'Handeln'], ['bald', 'Bald fällig'], ['bereit', 'Bereit']]
+type Filter = 'alle' | 'gesperrt' | 'handlung' | 'bald' | 'bereit' | 'ausser'
+const FILTER: [Filter, string][] = [['alle', 'Alle'], ['gesperrt', 'Gesperrt'], ['handlung', 'Handeln'], ['bald', 'Bald fällig'], ['bereit', 'Bereit'], ['ausser', 'Außer Betrieb']]
 
 function passt(f: Filter, s: Stufe): boolean {
   if (f === 'alle') return true
+  if (f === 'ausser') return false
   if (f === 'bereit') return s === 'ok' || s === 'bald'
   return s === f
 }
@@ -38,25 +40,28 @@ export default function Geraete() {
   }
 
   const rang = (d: Device) => STUFEN.indexOf(m.zustand(d).stufe)
+  const ausser = useMemo(() => m.devices.filter(istAusserBetrieb), [m.devices])
   const treffer = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return m.devices
+    return (filter === 'ausser' ? ausser : m.bestand)
       .filter(d => !t || [d.name, d.type, d.location, d.serial_number].some(f => (f || '').toLowerCase().includes(t)))
-      .filter(d => passt(filter, m.zustand(d).stufe))
+      .filter(d => filter === 'ausser' || passt(filter, m.zustand(d).stufe))
       .sort((a, b) => rang(a) - rang(b) || a.name.localeCompare(b.name, 'de'))
-  }, [m.devices, m.zustand, q, filter])
+  }, [m.bestand, ausser, m.zustand, q, filter])
 
-  const zahl = (f: Filter) => m.devices.filter(d => passt(f, m.zustand(d).stufe)).length
+  const zahl = (f: Filter) => f === 'ausser' ? ausser.length : m.bestand.filter(d => passt(f, m.zustand(d).stufe)).length
   const kopf = (
     <>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
         <input value={q} onChange={e => setze('q', e.target.value)} placeholder="Name, Typ, Standort, Seriennummer …" aria-label="Geräte durchsuchen" style={{ ...eingabe, flex: 1 }} />
-        <Link to="/mpg/geraete/neu" style={{ ...knopfVoll, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-          {pik(ICON.plus, 16)} Gerät
-        </Link>
+        {m.darfVerwalten && (
+          <Link to="/mpg/geraete/neu" style={{ ...knopfVoll, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+            {pik(ICON.plus, 16)} Gerät
+          </Link>
+        )}
       </div>
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, paddingBottom: 2 }}>
-        {FILTER.map(([f, name]) => {
+        {FILTER.filter(([f]) => f !== 'ausser' || ausser.length > 0 || filter === 'ausser').map(([f, name]) => {
           const an = filter === f
           return (
             <button key={f} onClick={() => setze('zustand', f)} aria-pressed={an} style={{
@@ -70,6 +75,7 @@ export default function Geraete() {
     </>
   )
   const leer = <Leer>{m.devices.length ? 'Keine Geräte gefunden' : 'Noch keine Geräte angelegt'}</Leer>
+  const aus = (d: Device) => istAusserBetrieb(d)
   const zelle = { padding: '10px 12px', borderBottom: '0.5px solid var(--lbf-border-light)' }
   const zuGeraet = (id: string) => `/mpg/geraete/${id}${such.toString() ? `?${such}` : ''}`
 
@@ -98,7 +104,7 @@ export default function Geraete() {
                 <td style={{ ...zelle, ...kursivGrau }}>{d.location || '—'}</td>
                 {!detail && <td style={{ ...zelle, ...kursivGrau }}>{d.serial_number || '—'}</td>}
                 {!detail && <td style={{ ...zelle, ...kursivGrau }}>{naechsteFrist(z)}</td>}
-                <td style={zelle}><ZustandMarke stufe={z.stufe} /></td>
+                <td style={zelle}>{aus(d) ? <span style={{ ...kursivGrau }}>außer Betrieb</span> : <ZustandMarke stufe={z.stufe} />}</td>
               </tr>
             )
           })}
@@ -110,7 +116,7 @@ export default function Geraete() {
   // Telefon: nach Standort gruppiert
   const gruppiert = treffer.length === 0 ? leer : rundenVon(treffer).map(g => (
     <Abschnitt key={g.schluessel} titel={`${g.name} (${g.geraete.length})`}
-      rechts={<Link to={rundenPfad(g.schluessel)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '10px 8px', margin: '-10px -8px', letterSpacing: '0.08em' }}>Prüfrunde</Link>}>
+      rechts={filter === 'ausser' ? undefined : <Link to={rundenPfad(g.schluessel)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '10px 8px', margin: '-10px -8px', letterSpacing: '0.08em' }}>Prüfrunde</Link>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {g.geraete
           .sort((a, b) => rang(a) - rang(b) || a.name.localeCompare(b.name, 'de'))

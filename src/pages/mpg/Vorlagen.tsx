@@ -1,10 +1,11 @@
-// Prüfvorlagen je Gerätetyp: Übersicht und Bearbeiten.
+// Prüfvorlagen je Gerätetyp: Übersicht und Bearbeiten (Bearbeiten braucht „MPG verwalten“).
+// Ohne eigene Vorlage gilt die Standardliste des Typs.
 
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
-import { ICON, Karte, Leer, SeitenKopf, eingabe, knopfLeise, knopfRand, knopfVollWenn, kursivGrau, pik, useBreit, useZurueck } from './teile'
+import { Hinweis, ICON, Karte, Leer, SeitenKopf, eingabe, knopfLeise, knopfRand, knopfVollWenn, kursivGrau, pik, useBreit, useZurueck } from './teile'
 import { DEFAULT_CHECKLISTS, DEVICE_TYPES } from './typen'
 
 export default function Vorlagen() {
@@ -25,22 +26,23 @@ export default function Vorlagen() {
       : <Leer>Lade Prüfvorlagen …</Leer>
   }
   if (typ) return <>{banner}<Editor key={typ} typ={typ} /></>
-  const typen = [...new Set([...DEVICE_TYPES, ...m.checklists.map(c => c.device_type), ...m.devices.map(d => d.type)].filter(Boolean))]
+  const typen = [...new Set([...DEVICE_TYPES, ...m.checklists.map(c => c.device_type), ...m.bestand.map(d => d.type)].filter(Boolean))]
   return (
     <>
       <SeitenKopf zurueck={breit ? undefined : '/mpg/mehr'} titel="Prüfvorlagen" unter="Prüfpunkte je Gerätetyp" />
       {banner}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 640 }}>
         {typen.map(t => {
-          const v = m.checklists.find(c => c.device_type === t)
-          const anzahl = v?.items?.length || (DEFAULT_CHECKLISTS[t] || DEFAULT_CHECKLISTS['Sonstiges']).length
-          const geraete = m.devices.filter(d => d.type === t).length
+          const { punkte, quelle } = m.vorlageMitQuelle({ type: t })
+          const anzahl = punkte.length
+          const herkunft = quelle === 'eigen' ? '' : quelle === 'sonstiges' ? ' (wie Sonstiges)' : ' (Standard)'
+          const geraete = m.bestand.filter(d => d.type === t).length
           return (
             <Karte key={t} rand="var(--lbf-akzent)">
               <Link to={`/mpg/vorlagen/${encodeURIComponent(t)}`} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontWeight: 700, fontSize: 15 }}>{t}</div>
-                  <div style={kursivGrau}>{anzahl} Prüfpunkte{v ? '' : ' (Standard)'} · {geraete} {geraete === 1 ? 'Gerät' : 'Geräte'}</div>
+                  <div style={kursivGrau}>{anzahl} Prüfpunkte{herkunft} · {geraete} {geraete === 1 ? 'Gerät' : 'Geräte'}</div>
                 </div>
                 <span style={{ color: 'var(--warm-gray)' }}>{pik(ICON.weiter, 16)}</span>
               </Link>
@@ -54,9 +56,9 @@ export default function Vorlagen() {
 
 function Editor({ typ }: { typ: string }) {
   const m = useMpg()
-  const navigate = useNavigate()
   const standard = DEFAULT_CHECKLISTS[typ] || DEFAULT_CHECKLISTS['Sonstiges']
-  const [punkte, setPunkte] = useState<string[]>(() => [...(m.checklists.find(c => c.device_type === typ)?.items ?? standard)])
+  // Beginnt mit dem, was eine Prüfung jetzt verwenden würde
+  const [punkte, setPunkte] = useState<string[]>(() => [...m.vorlageFuer({ type: typ })])
   const [neu, setNeu] = useState('')
   const geheZurueck = useZurueck('/mpg/vorlagen')
 
@@ -66,6 +68,18 @@ function Editor({ typ }: { typ: string }) {
     const a = [...punkte];[a[i], a[j]] = [a[j], a[i]]; setPunkte(a)
   }
   const hinzu = () => { if (neu.trim()) { setPunkte([...punkte, neu.trim()]); setNeu('') } }
+
+  if (!m.darfVerwalten) {
+    return (
+      <>
+        <SeitenKopf zurueck="/mpg/vorlagen" titel={typ} unter="Prüfvorlage" />
+        <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {punkte.map((p, i) => <Karte key={`${i}-${p}`} style={{ padding: '10px 12px', fontSize: 14 }}>{p}</Karte>)}
+          <div style={{ marginTop: 10 }}><Hinweis>Prüfvorlagen ändern braucht das Recht „MPG verwalten“.</Hinweis></div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>

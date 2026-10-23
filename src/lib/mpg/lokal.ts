@@ -1,6 +1,7 @@
 // Was das MPG lokal auf dem Gerät festhält — je Person und Organisation:
 // - die begonnene Prüfung (übersteht Neuladen und Beenden der App)
-// - Defektmeldungen und Bestätigungen, deren Speicherung unklar ausging
+// - Defektmeldungen, Bestätigungen und Vorgänge der Blätter (Sperre, Freigabe, Außerbetriebnahme,
+//   Beheben …), deren Speicherung unklar ausging
 // Beim Abmelden wird localStorage geleert; useAuth warnt vorher mit offeneMpgDaten.
 
 export const entwurfSchluessel = (userId: string, orgId: string) => `mpg_pruefung_entwurf:${userId}:${orgId}`
@@ -12,7 +13,7 @@ export function offeneMpgDaten(userId: string | undefined, orgId: string | undef
   if (!userId) return r
   try {
     const u = JSON.parse(localStorage.getItem(unklarSchluessel(userId, orgId ?? '')) || 'null')
-    if (u) r.unklar += Object.keys(u.defekte || {}).length + Object.keys(u.bestaetigungen || {}).length
+    if (u) r.unklar += Object.keys(u.defekte || {}).length + Object.keys(u.bestaetigungen || {}).length + Object.keys(u.blaetter || {}).length
   } catch { /* unlesbar: nicht zählen */ }
   try {
     const e = JSON.parse(localStorage.getItem(entwurfSchluessel(userId, orgId ?? '')) || 'null')

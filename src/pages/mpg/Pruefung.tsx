@@ -11,6 +11,7 @@ import { pb } from '../../lib/pocketbase'
 import { planePruefung, restNachAnker } from '../../lib/mpg/aktionen'
 import { ERGEBNIS_TEXT, moeglicheErgebnisse, restInOrdnung, setzePunkt, unentschiedenePunkte, type PruefErgebnis, type Pruefpunkt } from '../../lib/mpg/pruefung'
 import { neueId, pbOptionen } from '../../lib/mpg/schreiben'
+import { istAusserBetrieb } from '../../lib/mpg/zustand'
 import { altenVersuchSenden, useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
 import { Hinweis, Karte, Leer, SeitenKopf, eingabe, feldName, knopfRand, knopfVollWenn, kursivGrau, useZurueck } from './teile'
@@ -34,7 +35,27 @@ export default function Pruefung() {
   if (blocker) return blocker
   const device = m.devices.find(d => d.id === id)
   if (!device) return <><SeitenKopf zurueck="/mpg/geraete" titel="Gerät nicht gefunden" /><Leer>Dieses Gerät gibt es nicht (mehr).</Leer></>
+  // Ein Versuch mit unklarem Ausgang wird auch nach der Außerbetriebnahme noch erneut gesendet
+  // (genau dieser Stand) — sonst hinge er fest
+  const versuchHier = m.leseEntwurf()
+  if (istAusserBetrieb(device) && !(versuchHier?.device_id === device.id && versuchHier.versucht)) return <AusserBetriebGeprueft device={device} />
   return <PruefSeite key={device.id} device={device} />
+}
+
+/** Ein außer Betrieb genommenes Gerät wird nicht mehr geprüft — ein liegengebliebener Entwurf lässt sich verwerfen. */
+function AusserBetriebGeprueft({ device }: { device: Device }) {
+  const m = useMpg()
+  const entwurf = m.leseEntwurf()
+  const eigenerEntwurf = entwurf?.device_id === device.id && !entwurf.versucht
+  return (
+    <>
+      <SeitenKopf zurueck={`/mpg/geraete/${device.id}`} titel="Prüfung" unter={device.name} />
+      <Leer>
+        Dieses Gerät ist außer Betrieb genommen und wird nicht mehr geprüft.
+        {eigenerEntwurf && <div style={{ marginTop: 14 }}><button onClick={() => m.schreibeEntwurf(null)} style={knopfRand}>Begonnene Prüfung verwerfen</button></div>}
+      </Leer>
+    </>
+  )
 }
 
 function PruefSeite({ device }: { device: Device }) {
@@ -185,23 +206,27 @@ function PruefSeite({ device }: { device: Device }) {
     // Wiederholung: Gerätestand lesen (ein älterer Versuch darf eine inzwischen neuere Prüfung
     // nicht überschreiben) und nachsehen, ob der Anker — das Protokoll — schon da ist.
     // Dann fehlt höchstens der Prüfstand am Gerät danach.
-    let serverLetzte: string | null = null
+    // Schon beim ersten Versuch: Liegt am Gerät eine neuere Prüfung (anderes Gerät, dessen Uhr
+    // vorgeht), bleibt deren Stand stehen — dieses Protokoll wird nachgetragen
+    let serverLetzte: string | null = device.last_inspection || null
+    let serverBestanden: boolean | null = device.last_inspection ? !!device.last_inspection_passed : null
     let ankerDa = false
     if (vorher) {
       if (!altenVersuchSenden(vorher.zeit)) return
       const r = await m.mitSperre(async () => {
         const da = await m.gibtEs('mpg_inspections', stand.ids.pruefung)
-        const g = await pb.collection('mpg_devices').getOne<Device>(device.id, { fields: 'id,last_inspection', ...pbOptionen() })
-        return { da, letzte: g.last_inspection || null }
+        const g = await pb.collection('mpg_devices').getOne<Device>(device.id, { fields: 'id,last_inspection,last_inspection_passed', ...pbOptionen() })
+        return { da, letzte: g.last_inspection || null, bestanden: g.last_inspection ? !!g.last_inspection_passed : null }
       })
       if (!r.ok) return
       ankerDa = r.wert.da
       serverLetzte = r.wert.letzte
+      serverBestanden = r.wert.bestanden
     }
 
     const plan = planePruefung({
       geraet: device, punkte: stand.results, bemerkung: stand.notes,
-      ergebnis, wer: m.wer(), jetzt: new Date(zeit), ids: stand.ids, serverLetzte,
+      ergebnis, wer: m.wer(), jetzt: new Date(zeit), ids: stand.ids, serverLetzte, serverBestanden, sendezeit: new Date(), buch: m.buch,
     })
     const schonEingetragen = !!serverLetzte && new Date(serverLetzte.replace(' ', 'T')).getTime() === new Date(zeit).getTime()
     const anfragen = ankerDa ? (schonEingetragen ? [] : restNachAnker(plan)) : plan

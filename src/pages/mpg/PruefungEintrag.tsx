@@ -1,10 +1,11 @@
 // Ein Prüfprotokoll — im Gerätebuch und im Logbuch gleich. Aufklappbar mit den Punkten.
+// Ein Protokoll wird nie geändert; Vermerke dazu (Korrekturen) stehen darunter.
 
 import { ergebnisVon } from '../../lib/mpg/pruefung'
-import { ERGEBNIS_FARBE, ErgebnisMarke, ICON, Karte, fmtDateTime, kursivGrau, pik } from './teile'
-import type { Inspection } from './typen'
+import { ERGEBNIS_FARBE, ErgebnisMarke, ICON, Karte, fmtDateTime, knopfLeise, kursivGrau, pik } from './teile'
+import type { Ereignis, Inspection } from './typen'
 
-export function PruefungEintrag({ p, mitGeraet }: { p: Inspection; mitGeraet?: boolean }) {
+export function PruefungEintrag({ p, mitGeraet, vermerke = [], onVermerk }: { p: Inspection; mitGeraet?: boolean; vermerke?: Ereignis[]; onVermerk?: () => void }) {
   const erg = ergebnisVon(p)
   const punkte = Array.isArray(p.checklist_results) ? p.checklist_results : []
   return (
@@ -31,7 +32,19 @@ export function PruefungEintrag({ p, mitGeraet }: { p: Inspection; mitGeraet?: b
             ))}
           </div>
         )}
+        {onVermerk && (
+          <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', padding: '8px 14px' }}>
+            <button onClick={onVermerk} style={knopfLeise}>Vermerk dazu</button>
+          </div>
+        )}
       </details>
+      {vermerke.map(v => (
+        <div key={v.id} style={{ borderTop: '0.5px solid var(--lbf-border-light)', padding: '8px 14px', background: 'rgba(var(--lbf-rot-rgb),0.03)' }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>Vermerk</div>
+          <div style={{ fontSize: 13, whiteSpace: 'pre-line', marginTop: 2 }}>{v.text}</div>
+          <div style={{ ...kursivGrau, marginTop: 2 }}>{fmtDateTime(v.created)} · {v.user_name}</div>
+        </div>
+      ))}
     </Karte>
   )
 }

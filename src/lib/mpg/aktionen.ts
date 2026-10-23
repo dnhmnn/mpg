@@ -9,11 +9,16 @@
 // - Was ein Gerät „gut aussehen“ lässt (geprüft, bestanden, nächste Frist), kommt zuletzt.
 // Vor dem erneuten Senden eines unklaren Versuchs wird nach dem Anker gefragt; ist er da,
 // wird nur noch der Rest danach gesendet (restNachAnker).
-
+//
+// Gerätebuch (mpg_ereignisse): wird nur angefügt, nie geändert (Hook pb_hooks/mpg.pb.js).
+// Darin steht, wer wann gesperrt, freigegeben, Stammdaten geändert, außer Betrieb genommen
+// oder einen Vermerk geschrieben hat. Prüfungen und Defekte bleiben in ihren eigenen
+// Collections. Fehlt die Collection in PocketBase noch (buch: false), schreiben die Pläne
+// ohne Gerätebuch — nichts scheitert daran.
 //
 // Prüffälle: src/lib/mpg/selbsttest.ts
 
-import { faelligFeld, tagVonDatum, type FristFelder } from './fristen'
+import { faelligFeld, INTERVALL_TEXT, intervallVon, kalendertag, monateVon, tagText, tagVonDatum, type FristFelder, type Tag } from './fristen'
 import { defektText, maengelText, MANGEL_VERMERK, type PruefErgebnis, type Pruefpunkt } from './pruefung'
 import type { Anfrage } from './schreiben'
 import type { Schwere } from './zustand'
@@ -21,6 +26,149 @@ import type { Schwere } from './zustand'
 export interface Wer { organization_id: string; name: string }
 
 export interface GeraetKurz extends FristFelder { id: string; name: string; type: string }
+
+// ── Gerätebuch ───────────────────────────────────────────────────────────────
+
+export type EreignisArt = 'angelegt' | 'geaendert' | 'gesperrt' | 'freigegeben' | 'ausser_betrieb' | 'wieder_in_betrieb' | 'vermerk' | 'geloescht'
+
+export const EREIGNIS_TEXT: Record<EreignisArt, string> = {
+  angelegt: 'Angelegt', geaendert: 'Stammdaten geändert', gesperrt: 'Gesperrt', freigegeben: 'Freigegeben',
+  ausser_betrieb: 'Außer Betrieb genommen', wieder_in_betrieb: 'Wieder in Betrieb genommen', vermerk: 'Vermerk', geloescht: 'Gelöscht',
+}
+
+/** Was jede Person mit Zugang ins Gerätebuch schreiben darf — alles andere braucht „MPG verwalten“. */
+export const EREIGNISSE_FUER_ALLE: EreignisArt[] = ['gesperrt', 'vermerk']
+
+/** Eine Stammdatenänderung, lesbar festgehalten (alt → neu). */
+export interface Aenderung { feld: string; name: string; alt: string; neu: string }
+
+function ereignis(o: { id: string; geraet: { id: string; name: string }; art: EreignisArt; text?: string; aenderungen?: Aenderung[]; bezug?: string; wer: Wer }): Anfrage {
+  return {
+    collection: 'mpg_ereignisse', aktion: 'create', id: o.id,
+    body: {
+      organization_id: o.wer.organization_id, device_id: o.geraet.id, device_name: o.geraet.name,
+      art: o.art, text: (o.text ?? '').trim(), bezug: o.bezug ?? '', user_name: o.wer.name,
+      ...(o.aenderungen ? { aenderungen: o.aenderungen } : {}),
+    },
+  }
+}
+
+// ── Stammdaten ───────────────────────────────────────────────────────────────
+
+export interface Stammdaten {
+  name: string; type: string; serial_number: string; location: string; interval: string
+  has_stk: boolean; last_stk: string; stk_interval_months: number
+  has_mtk: boolean; last_mtk: string; mtk_interval_months: number
+}
+/** So kommen Stammdaten aus PocketBase: jedes Feld kann fehlen oder leer sein. */
+export type StammdatenRoh = { [K in keyof Stammdaten]?: Stammdaten[K] | null }
+
+function kontrolleText(an: boolean | null | undefined, letzte: string | null | undefined, monate: number | null | undefined): string {
+  return an ? `alle ${monateVon(monate)} Monate · zuletzt ${tagText(kalendertag(letzte))}` : 'nicht erforderlich'
+}
+
+/** Stammdaten lesbar, je Feld — so stehen sie im Gerätebuch und auf der Seite des Geräts. */
+export function stammdatenText(d: StammdatenRoh): { feld: string; name: string; wert: string }[] {
+  return [
+    { feld: 'name', name: 'Bezeichnung', wert: (d.name ?? '').trim() || '—' },
+    { feld: 'type', name: 'Gerätetyp', wert: (d.type ?? '').trim() || '—' },
+    { feld: 'serial_number', name: 'Seriennummer', wert: (d.serial_number ?? '').trim() || '—' },
+    { feld: 'location', name: 'Standort', wert: (d.location ?? '').trim() || '—' },
+    { feld: 'interval', name: 'Prüfintervall', wert: INTERVALL_TEXT[intervallVon(d.interval)] },
+    { feld: 'stk', name: 'STK', wert: kontrolleText(d.has_stk, d.last_stk, d.stk_interval_months) },
+    { feld: 'mtk', name: 'MTK', wert: kontrolleText(d.has_mtk, d.last_mtk, d.mtk_interval_months) },
+  ]
+}
+
+/** Was sich an den Stammdaten ändert — nur, was man auch sieht. */
+export function stammdatenAenderungen(alt: StammdatenRoh, neu: StammdatenRoh): Aenderung[] {
+  const vorher = stammdatenText(alt)
+  return stammdatenText(neu)
+    .map((n, i) => ({ feld: n.feld, name: n.name, alt: vorher[i].wert, neu: n.wert }))
+    .filter(a => a.alt !== a.neu)
+}
+
+/** Neues Gerät — mit ID vom Gerät (genau einmal), im Gerätebuch „angelegt“ mit allen Stammdaten. */
+export function planeNeuesGeraet(o: { id: string; daten: Stammdaten & { next_inspection_due: string }; wer: Wer; ereignisId: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = [{
+    collection: 'mpg_devices', aktion: 'create', id: o.id,
+    body: { ...o.daten, organization_id: o.wer.organization_id, operational: true },
+  }]
+  if (o.buch) {
+    anfragen.push(ereignis({
+      id: o.ereignisId, geraet: { id: o.id, name: o.daten.name }, art: 'angelegt', wer: o.wer,
+      aenderungen: stammdatenText(o.daten).map(f => ({ feld: f.feld, name: f.name, alt: '', neu: f.wert })),
+    }))
+  }
+  return anfragen
+}
+
+/** Stammdaten ändern; im Gerätebuch steht, was sich geändert hat. Nichts geändert → nichts zu schreiben. */
+export function planeGeraetAenderung(o: { id: string; alt: StammdatenRoh; daten: Stammdaten & { next_inspection_due: string }; wer: Wer; ereignisId: string; buch: boolean }): Anfrage[] {
+  const aenderungen = stammdatenAenderungen(o.alt, o.daten)
+  if (!aenderungen.length) return []
+  const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'update', id: o.id, body: { ...o.daten } }]
+  if (o.buch) anfragen.push(ereignis({ id: o.ereignisId, geraet: { id: o.id, name: o.daten.name }, art: 'geaendert', aenderungen, wer: o.wer }))
+  return anfragen
+}
+
+/** Ein Gerät ohne Nachweise löschen; das Gerätebuch hält fest, wer es gelöscht hat. */
+export function planeLoeschen(o: { geraet: { id: string; name: string }; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'delete', id: o.geraet.id, body: {} }]
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'geloescht', wer: o.wer }))
+  return anfragen
+}
+
+// ── Sperren, Freigeben, Außerbetriebnahme, Vermerk ─────────────────────────
+
+/** Sperren mit Grund — darf jeder. Die Sperre zuerst. */
+export function planeSperre(o: { geraet: { id: string; name: string }; grund: string; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { operational: false } }]
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'gesperrt', text: o.grund, wer: o.wer }))
+  return anfragen
+}
+
+/** Freigeben — braucht „MPG verwalten“. Die Freigabe selbst zuletzt. */
+export function planeFreigabe(o: { geraet: { id: string; name: string }; bemerkung: string; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = []
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'freigegeben', text: o.bemerkung, wer: o.wer }))
+  anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { operational: true } })
+  return anfragen
+}
+
+/** Grund, Verbleib und Datum der Außerbetriebnahme als ein Text fürs Gerätebuch. */
+export function ausserBetriebText(o: { datum: Tag; grund: string; verbleib: string }): string {
+  return [o.grund.trim(), o.verbleib.trim() && `Verbleib: ${o.verbleib.trim()}`, `Außer Betrieb seit ${tagText(o.datum)}`].filter(Boolean).join('\n')
+}
+
+/**
+ * Außer Betrieb nehmen statt löschen: Das Gerät verlässt den Bestand, sein Gerätebuch
+ * bleibt. Es wird zugleich gesperrt — kommt es wieder, muss es erst freigegeben werden.
+ */
+export function planeAusserBetrieb(o: { geraet: { id: string; name: string }; datum: Tag; grund: string; verbleib: string; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = [{
+    collection: 'mpg_devices', aktion: 'update', id: o.geraet.id,
+    body: { ausser_betrieb: o.datum, ausser_betrieb_grund: o.grund.trim(), verbleib: o.verbleib.trim(), operational: false },
+  }]
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'ausser_betrieb', text: ausserBetriebText(o), wer: o.wer }))
+  return anfragen
+}
+
+/** Wieder in Betrieb nehmen: zurück in den Bestand — gesperrt, bis jemand freigibt (auch wenn es inzwischen freigegeben wurde). */
+export function planeWiederInBetrieb(o: { geraet: { id: string; name: string }; bemerkung: string; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = []
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'wieder_in_betrieb', text: o.bemerkung, wer: o.wer }))
+  anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { ausser_betrieb: '', ausser_betrieb_grund: '', verbleib: '', operational: false } })
+  return anfragen
+}
+
+/**
+ * Vermerk ins Gerätebuch — auch als Korrektur: Ein gespeichertes Prüfprotokoll wird nie
+ * geändert, ein Fehler darin wird mit einem Vermerk dazu richtiggestellt (bezug).
+ */
+export function planeVermerk(o: { geraet: { id: string; name: string }; text: string; bezug?: string; wer: Wer; id: string }): Anfrage[] {
+  return [ereignis({ id: o.id, geraet: o.geraet, art: 'vermerk', text: o.text, bezug: o.bezug, wer: o.wer })]
+}
 
 /** Liegt der Zeitpunkt `a` (PocketBase- oder ISO-Format) nach `b`? */
 function spaeter(a: string | null | undefined, b: Date): boolean {
@@ -33,7 +181,12 @@ function spaeter(a: string | null | undefined, b: Date): boolean {
  * Prüfprotokoll + Gerätestand; bei Mangel oder „nicht bestanden“ dazu ein Defekt (und die Sperre).
  * @param serverLetzte last_inspection laut Server. Ist sie neuer als dieser Versuch (ein älterer
  *   Entwurf wird später erneut gesendet), bleibt der Gerätestand der neueren Prüfung stehen —
- *   Protokoll und Defekt werden trotzdem angelegt, eine Sperre trotzdem gesetzt.
+ *   Protokoll und Defekt werden trotzdem angelegt, eine Sperre trotzdem gesetzt. Wie im
+ *   Server-Hook (pb_hooks/mpg.pb.js) zwei Ausnahmen zur sicheren Seite: Ein Serverstand nach
+ *   `sendezeit` (Uhr ging vor) zählt nicht als neuer, und „nicht bestanden“ setzt sich gegen
+ *   ein gespeichertes „bestanden“ (oder unbekanntes) immer durch.
+ * @param serverBestanden last_inspection_passed laut Server
+ * @param sendezeit jetzt, beim Senden (Standard: die Uhr des Geräts)
  */
 export function planePruefung(o: {
   geraet: GeraetKurz
@@ -44,15 +197,23 @@ export function planePruefung(o: {
   jetzt: Date
   ids: { pruefung: string; defekt: string }
   serverLetzte?: string | null
+  serverBestanden?: boolean | null
+  sendezeit?: Date
+  /** Gerätebuch vorhanden: eine Sperre wird dort festgehalten (Eintrag mit der ID der Prüfung) */
+  buch?: boolean
 }): Anfrage[] {
   const { geraet, ergebnis, wer } = o
   const zeit = o.jetzt.toISOString()
   const bestanden = ergebnis !== 'nicht_bestanden'
   const bemerkung = o.bemerkung.trim()
-  const ueberholt = spaeter(o.serverLetzte, o.jetzt)
+  const ueberholt = spaeter(o.serverLetzte, o.jetzt) && !spaeter(o.serverLetzte, o.sendezeit ?? new Date())
+    && !(ergebnis === 'nicht_bestanden' && o.serverBestanden !== false)
   const anfragen: Anfrage[] = []
   // 1. Sperre zuerst
-  if (ergebnis === 'nicht_bestanden') anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: geraet.id, body: { operational: false } })
+  if (ergebnis === 'nicht_bestanden') {
+    anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: geraet.id, body: { operational: false } })
+    if (o.buch) anfragen.push(ereignis({ id: o.ids.pruefung, geraet, art: 'gesperrt', text: 'Prüfung nicht bestanden', bezug: o.ids.pruefung, wer }))
+  }
   // 2. Defekt
   if (ergebnis !== 'bestanden') {
     anfragen.push({
@@ -97,9 +258,13 @@ export function planeDefekt(o: {
   sperren: boolean
   wer: Wer
   id: string
+  buch?: boolean
 }): Anfrage[] {
   const anfragen: Anfrage[] = []
-  if (o.sperren) anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { operational: false } })
+  if (o.sperren) {
+    anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { operational: false } })
+    if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'gesperrt', text: `Defekt gemeldet: ${o.beschreibung.trim()}`, bezug: o.id, wer: o.wer }))
+  }
   // Anker: der Defekt
   anfragen.push({
     collection: 'mpg_defects', aktion: 'create', id: o.id,
@@ -112,18 +277,31 @@ export function planeDefekt(o: {
   return anfragen
 }
 
-/** Defekt als behoben schließen; nur auf ausdrücklichen Wunsch das Gerät wieder freigeben. */
+/**
+ * Defekt als behoben schließen; nur auf ausdrücklichen Wunsch das Gerät wieder freigeben
+ * (braucht „MPG verwalten“). Die Freigabe zuletzt.
+ */
 export function planeBeheben(o: {
-  defekt: { id: string; device_id: string }
+  defekt: { id: string; device_id: string; device_name: string }
   notiz: string
   wer: Wer
   wiederEinsatzbereit: boolean
+  /** Gerätebuch vorhanden: die Freigabe wird dort mit dieser ID festgehalten */
+  buch?: { ereignisId: string }
 }): Anfrage[] {
   const anfragen: Anfrage[] = [{
     collection: 'mpg_defects', aktion: 'update', id: o.defekt.id,
     body: { status: 'resolved', resolved_by: o.wer.name, resolved_notes: o.notiz.trim() },
   }]
-  if (o.wiederEinsatzbereit) anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.defekt.device_id, body: { operational: true } })
+  if (o.wiederEinsatzbereit) {
+    if (o.buch) {
+      anfragen.push(ereignis({
+        id: o.buch.ereignisId, geraet: { id: o.defekt.device_id, name: o.defekt.device_name }, art: 'freigegeben',
+        text: o.notiz.trim() ? `Defekt behoben: ${o.notiz.trim()}` : 'Defekt behoben', bezug: o.defekt.id, wer: o.wer,
+      }))
+    }
+    anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.defekt.device_id, body: { operational: true } })
+  }
   return anfragen
 }
 
@@ -141,6 +319,7 @@ export function planeBestaetigung(o: {
   geraetDa: boolean
   wer: Wer
   defektId: string
+  buch?: boolean
 }): Anfrage[] {
   const { meldung: m } = o
   const anmerkung = o.anmerkung.trim()
@@ -154,7 +333,10 @@ export function planeBestaetigung(o: {
       severity: m.severity, status: 'open', organization_id: o.wer.organization_id,
     },
   })
-  if (o.sperren && o.geraetDa) anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: m.device_id, body: { operational: false } })
+  if (o.sperren && o.geraetDa) {
+    anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: m.device_id, body: { operational: false } })
+    if (o.buch) anfragen.push(ereignis({ id: o.defektId, geraet: { id: m.device_id, name: m.device_name }, art: 'gesperrt', text: `Meldung von außen bestätigt: ${m.description}`, bezug: m.id, wer: o.wer }))
+  }
   anfragen.push({ collection: 'mpg_defect_reports', aktion: 'update', id: m.id, body: { status: 'confirmed' } })
   return anfragen
 }

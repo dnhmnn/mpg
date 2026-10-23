@@ -21,6 +21,11 @@ describe('MPG: lokal festgehaltene Daten (Warnung beim Abmelden)', () => {
     expect(offeneMpgDaten('u1', 'o1')).toEqual({ unklar: 3, entwurf: false })
   })
 
+  it('zählt unklare Vorgänge der Blätter (Sperre, Freigabe …)', () => {
+    speicher.set(unklarSchluessel('u1', 'o1'), JSON.stringify({ defekte: {}, bestaetigungen: {}, blaetter: { 'sperren:g1': {}, 'beheben:d1': {} } }))
+    expect(offeneMpgDaten('u1', 'o1')).toEqual({ unklar: 2, entwurf: false })
+  })
+
   it('begonnene Prüfung ist ein Entwurf, unklar gesendete zählt als unklar', () => {
     speicher.set(entwurfSchluessel('u1', 'o1'), JSON.stringify({ results: [] }))
     expect(offeneMpgDaten('u1', 'o1')).toEqual({ unklar: 0, entwurf: true })

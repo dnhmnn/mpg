@@ -5,7 +5,7 @@ import { ICON, Karte, kursivGrau, pik } from './teile'
 
 const ZIELE = [
   { pfad: '/mpg/vorlagen', name: 'Prüfvorlagen', text: 'Prüfpunkte je Gerätetyp', icon: ICON.vorlagen },
-  { pfad: '/mpg/logbuch', name: 'Logbuch', text: 'Alle Prüfungen, nach Gerät, Zeitraum und Prüfer', icon: ICON.logbuch },
+  { pfad: '/mpg/logbuch', name: 'Logbuch', text: 'Alle Prüfungen und Einträge im Gerätebuch, nach Gerät, Zeitraum und Person', icon: ICON.logbuch },
 ]
 
 export default function Mehr() {

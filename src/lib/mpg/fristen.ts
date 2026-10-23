@@ -14,9 +14,21 @@ export type Intervall = 'daily' | 'weekly' | 'monthly' | 'yearly'
 
 export const INTERVALLE: Intervall[] = ['daily', 'weekly', 'monthly', 'yearly']
 
-/** Unbekannte oder leere Intervalle zählen wie bisher als monatlich. */
-export function intervallVon(wert: string | null | undefined): Intervall {
-  return INTERVALLE.includes(wert as Intervall) ? (wert as Intervall) : 'monthly'
+const INTERVALL_NAMEN: Record<string, Intervall> = {
+  daily: 'daily', täglich: 'daily', taeglich: 'daily', tag: 'daily',
+  weekly: 'weekly', wöchentlich: 'weekly', woechentlich: 'weekly', woche: 'weekly',
+  monthly: 'monthly', monatlich: 'monthly', monat: 'monthly',
+  yearly: 'yearly', annually: 'yearly', jährlich: 'yearly', jaehrlich: 'yearly', jahr: 'yearly',
+}
+
+/**
+ * Prüfintervall aus PocketBase lesen. Ist das Feld dort eine Auswahl mit Mehrfachwahl, kommt
+ * es als Liste; ältere Daten können das deutsche Wort tragen. Unbekannte oder leere
+ * Intervalle zählen wie bisher als monatlich.
+ */
+export function intervallVon(wert: unknown): Intervall {
+  const roh = Array.isArray(wert) ? wert[0] : wert
+  return INTERVALL_NAMEN[String(roh ?? '').trim().toLowerCase()] ?? 'monthly'
 }
 
 /**
@@ -144,7 +156,7 @@ export function lageVon(naechste: Tag | null, heute: Tag, vorwarnung: number): {
 
 /** Die Felder eines Geräts, die eine Frist bestimmen (mpg_devices). */
 export interface FristFelder {
-  interval?: string | null
+  interval?: string | string[] | null
   last_inspection?: string | null
   has_stk?: boolean | null
   last_stk?: string | null

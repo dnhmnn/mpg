@@ -2,6 +2,7 @@
 // Breit: Liste links, der Fall rechts daneben.
 
 import { Link, useOutlet, useParams, useSearchParams } from 'react-router-dom'
+import { darfBeheben } from '../../lib/mpg/rechte'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
 import { Aktionen, Karte, Leer, Reiter, SCHWERE_RAND, SchwereMarke, fmtDate, knopfLeise, kursivGrau, relativeDate, useBreit } from './teile'
@@ -31,7 +32,7 @@ export default function Meldungen() {
       style={d.id === gewaehlt ? { boxShadow: '0 0 0 1.5px var(--lbf-akzent)' } : undefined}>
       <Link to={`/mpg/meldungen/${d.id}?teil=${teil}`} replace={breit && !!gewaehlt} style={{ display: 'block', padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16 }}>{d.device_name}</div>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16 }}>{m.geraeteName(d.device_id, d.device_name)}</div>
           {d.status === 'resolved' ? <span style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Behoben</span> : <SchwereMarke severity={d.severity} />}
         </div>
         <div style={{ fontSize: 14, marginTop: 4, whiteSpace: 'pre-line', lineHeight: 1.45 }}>{d.description}</div>
@@ -41,7 +42,7 @@ export default function Meldungen() {
       </Link>
       {d.status !== 'resolved' && (
         <Aktionen>
-          <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={{ ...knopfLeise, background: '#16a34a', color: '#fff' }}>Beheben</button>
+          {darfBeheben(m.user, d.severity) && <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={{ ...knopfLeise, background: '#16a34a', color: '#fff' }}>Beheben</button>}
           <Link to={`/mpg/geraete/${d.device_id}`} style={{ ...knopfLeise, textDecoration: 'none' }}>Zum Gerät</Link>
         </Aktionen>
       )}
@@ -53,21 +54,24 @@ export default function Meldungen() {
       {banner}
       <Reiter wert={teil} onWahl={setTeil} optionen={[['eingang', `Eingang (${eingang.length})`], ['offen', `Offen (${offen.length})`], ['behoben', 'Behoben']]} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {teil === 'eingang' && eingang.length > 0 && !m.darfVerwalten && <div style={kursivGrau}>Bestätigen oder ablehnen kann, wer „MPG verwalten“ hat.</div>}
         {teil === 'eingang' && (eingang.length === 0 ? <Leer>Keine neuen Meldungen</Leer> : eingang.map(r => (
           <Karte key={r.id} rand={SCHWERE_RAND[r.severity]}>
             <div style={{ padding: '12px 14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'flex-start' }}>
-                <Link to={`/mpg/geraete/${r.device_id}`} style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', textDecoration: 'none' }}>{r.device_name}</Link>
+                <Link to={`/mpg/geraete/${r.device_id}`} style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)', textDecoration: 'none' }}>{m.geraeteName(r.device_id, r.device_name)}</Link>
                 <SchwereMarke severity={r.severity} />
               </div>
               <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1.45 }}>{r.description}</div>
               <div style={{ ...kursivGrau, marginTop: 6 }}>{relativeDate(r.created)} · {r.reporter_name || 'Anonym'}</div>
               {m.unklareBestaetigung(r.id) && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-fehler-text)', marginTop: 4 }}>Bestätigung nicht sicher gespeichert — bitte erneut senden</div>}
             </div>
-            <Aktionen>
-              <button onClick={() => m.setBlatt({ art: 'bestaetigen', meldung: r })} style={{ ...knopfLeise, background: 'var(--lbf-akzent-grund)', color: '#fff' }}>Bestätigen</button>
-              <button onClick={() => m.setBlatt({ art: 'ablehnen', meldung: r })} style={knopfLeise}>Ablehnen</button>
-            </Aktionen>
+            {m.darfVerwalten && (
+              <Aktionen>
+                <button onClick={() => m.setBlatt({ art: 'bestaetigen', meldung: r })} style={{ ...knopfLeise, background: 'var(--lbf-akzent-grund)', color: '#fff' }}>Bestätigen</button>
+                <button onClick={() => m.setBlatt({ art: 'ablehnen', meldung: r })} style={knopfLeise}>Ablehnen</button>
+              </Aktionen>
+            )}
           </Karte>
         )))}
         {teil === 'offen' && (offen.length === 0 ? <Leer>Keine offenen Defekte</Leer> : offen.map(defektKarte))}

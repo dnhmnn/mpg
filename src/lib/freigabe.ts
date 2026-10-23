@@ -43,7 +43,7 @@ export const MODULE: Modul[] = [
   { id: 'patienten', name: 'Patientendokumentation', beschreibung: 'Protokolle erfassen, prüfen, gegenzeichnen', apps: ['patienten'], rechte: ['patienten'], formulare: ['patienten'] },
   { id: 'dokumente', name: 'Vorgänge und CIRS', beschreibung: 'Formulare der Seite, eigene Vorlagen, CIRS-Meldungen', apps: ['dokumente'], rechte: ['dokumente'], formulare: ['cirs'] },
   { id: 'lager', name: 'Lager', beschreibung: 'Bestände, Ablaufdaten, Bestellungen, Produktausgabe', apps: ['lager'], rechte: ['lager', 'lager_verwalten', 'produktausgabe'], formulare: ['produktausgabe'], enthaelt: ['dateien', 'mpg', 'dokumente'] },
-  { id: 'mpg', name: 'MPG', beschreibung: 'Medizinprodukte prüfen, Defektmeldungen', apps: ['mpg'], rechte: [], formulare: ['defektmeldung'] },
+  { id: 'mpg', name: 'MPG', beschreibung: 'Medizinprodukte prüfen, Defektmeldungen', apps: ['mpg'], rechte: ['mpg_verwalten'], formulare: ['defektmeldung'] },
   { id: 'dateien', name: 'Dateien und Schreibstube', beschreibung: 'Gemeinsame Ablage, Office-Dokumente', apps: ['dateien', 'office'], rechte: ['dateien'], formulare: [] },
   { id: 'lernbar', name: 'Unitas und Lernbar', beschreibung: 'Persönliche Seite der Einsatzkräfte, Lernen, Termine', apps: ['lernbar'], rechte: ['lernbar'], formulare: [] },
   { id: 'ausbildungen', name: 'Ausbildungen', beschreibung: 'Termine, Teilnehmer, Lernmodule', apps: ['ausbildungen'], rechte: ['ausbildungen_manage'], formulare: [] },

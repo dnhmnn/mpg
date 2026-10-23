@@ -158,7 +158,7 @@ export function useAuth() {
     } catch { /* nicht zählen */ }
     const warnungen: string[] = []
     if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
-    if (mpg.unklar > 0) warnungen.push(`Im MPG ${mpg.unklar === 1 ? 'ist eine Speicherung' : `sind ${mpg.unklar} Speicherungen`} (Prüfung oder Defektmeldung) nicht sicher angekommen — bitte vorher im MPG erneut senden.`)
+    if (mpg.unklar > 0) warnungen.push(`Im MPG ${mpg.unklar === 1 ? 'ist eine Speicherung' : `sind ${mpg.unklar} Speicherungen`} (Prüfung, Defektmeldung, Sperre, Freigabe oder Ähnliches) nicht sicher angekommen — bitte vorher im MPG erneut senden.`)
     if (mpg.entwurf) warnungen.push('Eine begonnene MPG-Prüfung ist noch nicht gespeichert.')
     if (protokolle > 0) warnungen.push(`${protokolle} Protokoll${protokolle === 1 ? ' wartet' : 'e warten'} noch auf diesem Gerät auf die Übertragung.`)
     const lagerTeile: string[] = []

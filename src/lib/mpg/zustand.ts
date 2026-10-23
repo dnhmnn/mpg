@@ -1,13 +1,16 @@
 // Zustand eines Medizinprodukts — eine Regel für alle Ansichten (Liste, Hub-Widget).
 //
 // Rangfolge, die schwerste Stufe gewinnt:
-//   GESPERRT     nicht einsatzbereit markiert, letzte Prüfung nicht bestanden,
-//                offener Defekt „hoch“ oder „kritisch“
+//   GESPERRT     außer Betrieb genommen, nicht einsatzbereit markiert, letzte Prüfung
+//                nicht bestanden, offener Defekt „hoch“ oder „kritisch“
 //   HANDLUNG     offener Mangel (gering/mittel), offene Meldung von außen,
 //                Frist überfällig, heute fällig oder noch nie geprüft
 //   BALD         Frist innerhalb der Vorwarnung
 //   OK           einsatzbereit
 // Jede Stufe nennt ihre Gründe im Klartext.
+//
+// Ein außer Betrieb genommenes Gerät gehört nicht mehr zum Bestand: Listen und Zählungen
+// lassen es weg. Wo es doch bewertet wird, gilt es als gesperrt — nie als einsatzbereit.
 //
 // Prüffälle: src/lib/mpg/selbsttest.ts
 
@@ -35,6 +38,13 @@ export const SCHWERE_TEXT: Record<Schwere, string> = {
 export interface ZustandGeraet extends FristFelder {
   operational?: boolean | null
   last_inspection_passed?: boolean | null
+  /** Datum der Außerbetriebnahme; leer = in Betrieb */
+  ausser_betrieb?: string | null
+}
+
+/** Außer Betrieb genommen? Jeder eingetragene Wert zählt — im Zweifel nicht einsatzbereit. */
+export function istAusserBetrieb(g: Pick<ZustandGeraet, 'ausser_betrieb'>): boolean {
+  return !!String(g.ausser_betrieb ?? '').trim()
 }
 
 export interface Grund { stufe: Stufe; text: string }
@@ -81,6 +91,10 @@ export function zustandVon(
   meldungen: { severity?: string | null }[],
   heute: Tag,
 ): Zustand {
+  if (istAusserBetrieb(g)) {
+    const seit = kalendertag(g.ausser_betrieb)
+    return { stufe: 'gesperrt', gruende: [{ stufe: 'gesperrt', text: seit ? `Außer Betrieb seit ${tagText(seit)}` : 'Außer Betrieb' }], fristen: [] }
+  }
   const gruende: Grund[] = []
   if (g.operational === false) gruende.push({ stufe: 'gesperrt', text: 'Als nicht einsatzbereit markiert' })
   if (pruefungNichtBestanden(g)) gruende.push({ stufe: 'gesperrt', text: 'Letzte Prüfung nicht bestanden' })
@@ -101,7 +115,7 @@ export function zustandVon(
   return { stufe: gruende[0]?.stufe ?? 'ok', gruende, fristen }
 }
 
-/** Zählt Geräte je Stufe — z. B. für das Hub-Widget. */
+/** Zählt Geräte je Stufe — z. B. für das Hub-Widget. Außer Betrieb genommene zählen nicht mit. */
 export function zaehleStufen<T extends ZustandGeraet & { id: string }>(
   geraete: T[],
   defekte: { device_id: string; severity?: string | null }[],
@@ -110,6 +124,7 @@ export function zaehleStufen<T extends ZustandGeraet & { id: string }>(
 ): Record<Stufe, number> {
   const zahl: Record<Stufe, number> = { gesperrt: 0, handlung: 0, bald: 0, ok: 0 }
   for (const g of geraete) {
+    if (istAusserBetrieb(g)) continue
     const z = zustandVon(g, defekte.filter(d => d.device_id === g.id), meldungen.filter(m => m.device_id === g.id), heute)
     zahl[z.stufe]++
   }

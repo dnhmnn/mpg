@@ -16,7 +16,7 @@ export default function Runde() {
   const m = useMpg()
   const { blocker, banner } = useLadestand()
   if (blocker) return blocker
-  const runde = rundenVon(m.devices).find(r => r.schluessel === standort)
+  const runde = rundenVon(m.bestand).find(r => r.schluessel === standort)
   if (!runde) return <><SeitenKopf zurueck="/mpg" titel="Prüfrunde" /><Leer>An diesem Standort gibt es keine Geräte mehr.</Leer></>
   const geraete = [...runde.geraete].sort((a, b) =>
     STUFEN.indexOf(m.zustand(a).stufe) - STUFEN.indexOf(m.zustand(b).stufe) || a.name.localeCompare(b.name, 'de'))

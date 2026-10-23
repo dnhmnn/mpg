@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { STUFEN, type Stufe } from '../../lib/mpg/zustand'
+import { STUFEN, istAusserBetrieb, type Stufe } from '../../lib/mpg/zustand'
 import { ERGEBNIS_TEXT } from '../../lib/mpg/pruefung'
 import { kalendertag } from '../../lib/mpg/fristen'
 import { useMpg } from './MpgDaten'
@@ -34,27 +34,77 @@ export default function Heute() {
   const { blocker, banner } = useLadestand()
   // entwurfStand: neu lesen, sobald sich der Entwurf ändert
   const entwurf = useMemo(() => m.leseEntwurf(), [m.entwurfStand, m.user?.id])
-  const runden = useMemo(() => rundenVon(m.devices), [m.devices])
+  const runden = useMemo(() => rundenVon(m.bestand), [m.bestand])
 
   if (blocker) return blocker
 
   const entwurfGeraet = entwurf ? m.devices.find(d => d.id === entwurf.device_id) : undefined
   // Läuft sein Speichern gerade (Seite schon verlassen), ist er nicht „unklar“, sondern unterwegs
   const speichertGerade = !!entwurf && m.laufendePruefung === entwurf.ids.pruefung
-  const arbeit = m.devices
+  const arbeit = m.bestand
     .filter(d => { const s = m.zustand(d).stufe; return s === 'gesperrt' || s === 'handlung' })
     .sort((a, b) => rang(m.zustand(a).stufe) - rang(m.zustand(b).stufe) || a.name.localeCompare(b.name, 'de'))
-  const bald = m.devices.filter(d => m.zustand(d).stufe === 'bald')
+  const bald = m.bestand.filter(d => m.zustand(d).stufe === 'bald')
   const eingang = m.externalReports.filter(r => r.status === 'pending')
   const unklar = m.devices.filter(d => m.unklarerDefekt(d.id))
 
-  if (!m.devices.length) {
+  // Was nicht liegen bleiben darf — auch, wenn der Bestand leer ist
+  const entwurfKarte = entwurf && entwurfGeraet && (
+    <Karte rand={entwurf.versucht ? '#dc2626' : 'var(--lbf-akzent)'} style={{ marginBottom: 16 }}>
+      <div style={{ padding: '12px 14px' }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: entwurf.versucht ? 'var(--lbf-fehler-text)' : 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 3 }}>
+          {speichertGerade ? 'Wird gespeichert …' : entwurf.versucht ? 'Speichern unklar' : 'Begonnene Prüfung'}
+        </div>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17 }}>{entwurfGeraet.name}</div>
+        <div style={{ ...kursivGrau, marginTop: 2 }}>
+          {speichertGerade
+            ? 'Bitte einen Moment warten.'
+            : entwurf.versucht
+            ? `„${ERGEBNIS_TEXT[entwurf.versucht.ergebnis]}“ — ob es angekommen ist, ist offen. Bitte erneut senden.`
+            : `${entwurf.results.filter(r => r.status === 'ok' || r.status === 'mangel').length} von ${entwurf.results.length} Punkten entschieden`}
+        </div>
+      </div>
+      {!speichertGerade && (
+        <Aktionen>
+          {/* außer Betrieb genommen: eine nur begonnene Prüfung lässt sich nur noch verwerfen */}
+          {istAusserBetrieb(entwurfGeraet) && !entwurf.versucht
+            ? <button onClick={() => { if (confirm(`Begonnene Prüfung von „${entwurfGeraet.name}“ verwerfen? Das Gerät ist außer Betrieb genommen.`)) m.schreibeEntwurf(null) }} style={knopfLeise}>Verwerfen</button>
+            : <Link to={`/mpg/geraete/${entwurfGeraet.id}/pruefen`} style={{ ...knopfLeise, background: 'var(--lbf-akzent-grund)', color: '#fff', textDecoration: 'none' }}>
+                {entwurf.versucht ? 'Erneut senden' : 'Fortsetzen'}
+              </Link>}
+        </Aktionen>
+      )}
+    </Karte>
+  )
+  const unklarKarten = unklar.length > 0 && (
+    <Abschnitt titel="Nicht sicher gespeichert">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {unklar.map(d => <GeraetKarte key={d.id} device={d} />)}
+      </div>
+    </Abschnitt>
+  )
+  const eingangKarte = eingang.length > 0 && (
+    <Karte rand="var(--lbf-akzent)" style={{ marginBottom: 24 }} >
+      <Link to="/mpg/meldungen" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>{eingang.length === 1 ? 'Eine neue Meldung' : `${eingang.length} neue Meldungen`} von außen</div>
+          <div style={kursivGrau}>{eingang.slice(0, 3).map(r => m.geraeteName(r.device_id, r.device_name)).join(', ')}{eingang.length > 3 ? ' …' : ''}</div>
+        </div>
+        <span style={{ color: 'var(--lbf-akzent)' }}>{pik(ICON.weiter)}</span>
+      </Link>
+    </Karte>
+  )
+
+  if (!m.bestand.length) {
     return (
       <>
         {banner}
+        {entwurfKarte}
+        {unklarKarten}
+        {eingangKarte}
         <Leer>
-          Noch keine Geräte angelegt.
-          <div style={{ marginTop: 14 }}><Link to="/mpg/geraete/neu" style={{ ...knopfVoll, textDecoration: 'none', display: 'inline-block' }}>Erstes Gerät anlegen</Link></div>
+          {m.devices.length ? 'Keine Geräte im Bestand.' : 'Noch keine Geräte angelegt.'}
+          {m.darfVerwalten && <div style={{ marginTop: 14 }}><Link to="/mpg/geraete/neu" style={{ ...knopfVoll, textDecoration: 'none', display: 'inline-block' }}>{m.devices.length ? 'Gerät anlegen' : 'Erstes Gerät anlegen'}</Link></div>}
         </Leer>
       </>
     )
@@ -64,38 +114,8 @@ export default function Heute() {
     <>
       {banner}
 
-      {entwurf && entwurfGeraet && (
-        <Karte rand={entwurf.versucht ? '#dc2626' : 'var(--lbf-akzent)'} style={{ marginBottom: 16 }}>
-          <div style={{ padding: '12px 14px' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: entwurf.versucht ? 'var(--lbf-fehler-text)' : 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 3 }}>
-              {speichertGerade ? 'Wird gespeichert …' : entwurf.versucht ? 'Speichern unklar' : 'Begonnene Prüfung'}
-            </div>
-            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17 }}>{entwurfGeraet.name}</div>
-            <div style={{ ...kursivGrau, marginTop: 2 }}>
-              {speichertGerade
-                ? 'Bitte einen Moment warten.'
-                : entwurf.versucht
-                ? `„${ERGEBNIS_TEXT[entwurf.versucht.ergebnis]}“ — ob es angekommen ist, ist offen. Bitte erneut senden.`
-                : `${entwurf.results.filter(r => r.status === 'ok' || r.status === 'mangel').length} von ${entwurf.results.length} Punkten entschieden`}
-            </div>
-          </div>
-          {!speichertGerade && (
-            <Aktionen>
-              <Link to={`/mpg/geraete/${entwurfGeraet.id}/pruefen`} style={{ ...knopfLeise, background: 'var(--lbf-akzent-grund)', color: '#fff', textDecoration: 'none' }}>
-                {entwurf.versucht ? 'Erneut senden' : 'Fortsetzen'}
-              </Link>
-            </Aktionen>
-          )}
-        </Karte>
-      )}
-
-      {unklar.length > 0 && (
-        <Abschnitt titel="Nicht sicher gespeichert">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {unklar.map(d => <GeraetKarte key={d.id} device={d} />)}
-          </div>
-        </Abschnitt>
-      )}
+      {entwurfKarte}
+      {unklarKarten}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 24 }}>
         <StatKarte label="Bereit" zahl={m.stats.ok + m.stats.bald} text={m.stats.bald ? `davon ${m.stats.bald} bald fällig` : 'einsatzbereit'} onClick={() => navigate('/mpg/geraete?zustand=bereit')} />
@@ -103,17 +123,7 @@ export default function Heute() {
         <StatKarte label="Gesperrt" zahl={m.stats.gesperrt} text="nicht einsatzbereit" onClick={() => navigate('/mpg/geraete?zustand=gesperrt')} />
       </div>
 
-      {eingang.length > 0 && (
-        <Karte rand="var(--lbf-akzent)" style={{ marginBottom: 24 }} >
-          <Link to="/mpg/meldungen" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>{eingang.length === 1 ? 'Eine neue Meldung' : `${eingang.length} neue Meldungen`} von außen</div>
-              <div style={kursivGrau}>{eingang.slice(0, 3).map(r => r.device_name).join(', ')}{eingang.length > 3 ? ' …' : ''}</div>
-            </div>
-            <span style={{ color: 'var(--lbf-akzent)' }}>{pik(ICON.weiter)}</span>
-          </Link>
-        </Karte>
-      )}
+      {eingangKarte}
 
       <Abschnitt titel={`Zu tun (${arbeit.length})`}>
         {arbeit.length === 0

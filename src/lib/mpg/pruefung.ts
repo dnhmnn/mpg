@@ -108,3 +108,26 @@ export function defektText(ergebnis: Exclude<PruefErgebnis, 'bestanden'>, punkte
   const kopf = ergebnis === 'mangel' ? 'Mangel bei Prüfung' : 'Prüfung nicht bestanden'
   return [bemerkung.trim() ? `${kopf}: ${bemerkung.trim()}` : kopf, offen.length ? `Nicht in Ordnung: ${offen.join('; ')}` : ''].filter(Boolean).join('\n')
 }
+
+export type VorlagenQuelle = 'eigen' | 'standard' | 'sonstiges' | 'allgemein'
+
+/**
+ * Welche Prüfpunkte gelten für einen Gerätetyp: die eigene Vorlage des Typs, sonst die
+ * Standardliste des Typs, sonst die eigene Vorlage „Sonstiges“, sonst die allgemeine
+ * Standardliste. Eine leere Vorlage zählt nicht. Die Standardliste des Typs kommt vor
+ * „Sonstiges“ — sonst prüfte, wer nur „Sonstiges“ anpasst, jeden AED mit der allgemeinen
+ * Liste (ohne Elektroden, Akku, Selbsttest).
+ */
+export function vorlageWaehlen(
+  typ: string,
+  eigene: { device_type: string; items?: string[] | null }[],
+  standard: Record<string, string[]>,
+): { punkte: string[]; quelle: VorlagenQuelle } {
+  const eigen = (t: string) => eigene.find(c => c.device_type === t && c.items?.length)?.items
+  const e = eigen(typ)
+  if (e) return { punkte: e, quelle: 'eigen' }
+  if (standard[typ]?.length) return { punkte: standard[typ], quelle: 'standard' }
+  const s = eigen('Sonstiges')
+  if (s) return { punkte: s, quelle: 'sonstiges' }
+  return { punkte: standard['Sonstiges'] ?? [], quelle: 'allgemein' }
+}

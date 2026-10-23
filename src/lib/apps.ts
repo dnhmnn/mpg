@@ -62,10 +62,10 @@ export function zeitpunktBefristung(bis: string): number {
 // (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
   // Verwalter: alle Rechte samt Benutzerverwaltung. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
-  admin:     { permissions: { dashboard: true, einsaetze: true, eks: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true, notizen: true } },
+  admin:     { permissions: { dashboard: true, mpg_verwalten: true, einsaetze: true, eks: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true, notizen: true } },
   // Normale Benutzer: Unitas, Chat, Notizen, Einstellungen
   benutzer:  { permissions: { dashboard: true, lernbar: true, chat: true, notizen: true } },
-  mpg:       { permissions: { dashboard: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
+  mpg:       { permissions: { dashboard: true, mpg_verwalten: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
   lager:     { permissions: { dashboard: true, lager: true, lager_verwalten: true, produktausgabe: true, dateien: true, chat: true } },
   ausbildung:{ permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, chat: true } },
   qm:        { permissions: { dashboard: true, dokumente: true, dateien: true, chat: true } },
@@ -106,6 +106,7 @@ export const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'ausbildungen_manage',label: 'Ausbildungen' },
   { key: 'unitarii',           label: 'Benutzerverwaltung' },
   { key: 'dashboard',          label: 'MPG-Dashboard' },
+  { key: 'mpg_verwalten',      label: 'MPG verwalten' },
   { key: 'chat',               label: 'Chat' },
   { key: 'notizen',            label: 'Notizen' },
 ]
