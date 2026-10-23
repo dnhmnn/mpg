@@ -18,7 +18,7 @@
 //
 // Prüffälle: src/lib/mpg/selbsttest.ts
 
-import { faelligFeld, INTERVALL_TEXT, intervallVon, kalendertag, monateVon, tagText, tagVonDatum, type FristFelder, type Tag } from './fristen'
+import { faelligFeld, INTERVALL_TEXT, intervallVon, kalendertag, monateVon, mtkAbweichend, mtkJahre, stkAbweichend, stkMonate, tagText, tagVonDatum, type FristFelder, type Tag } from './fristen'
 import { defektText, maengelText, MANGEL_VERMERK, type PruefErgebnis, type Pruefpunkt } from './pruefung'
 import type { Anfrage } from './schreiben'
 import type { Schwere } from './zustand'
@@ -29,11 +29,12 @@ export interface GeraetKurz extends FristFelder { id: string; name: string; type
 
 // ── Gerätebuch ───────────────────────────────────────────────────────────────
 
-export type EreignisArt = 'angelegt' | 'geaendert' | 'gesperrt' | 'freigegeben' | 'ausser_betrieb' | 'wieder_in_betrieb' | 'vermerk' | 'geloescht'
+export type EreignisArt = 'angelegt' | 'geaendert' | 'gesperrt' | 'freigegeben' | 'ausser_betrieb' | 'wieder_in_betrieb' | 'vermerk' | 'geloescht' | 'stk' | 'mtk'
 
 export const EREIGNIS_TEXT: Record<EreignisArt, string> = {
   angelegt: 'Angelegt', geaendert: 'Stammdaten geändert', gesperrt: 'Gesperrt', freigegeben: 'Freigegeben',
   ausser_betrieb: 'Außer Betrieb genommen', wieder_in_betrieb: 'Wieder in Betrieb genommen', vermerk: 'Vermerk', geloescht: 'Gelöscht',
+  stk: 'Sicherheitstechnische Kontrolle', mtk: 'Messtechnische Kontrolle',
 }
 
 /** Was jede Person mit Zugang ins Gerätebuch schreiben darf — alles andere braucht „MPG verwalten“. */
@@ -42,7 +43,7 @@ export const EREIGNISSE_FUER_ALLE: EreignisArt[] = ['gesperrt', 'vermerk']
 /** Eine Stammdatenänderung, lesbar festgehalten (alt → neu). */
 export interface Aenderung { feld: string; name: string; alt: string; neu: string }
 
-function ereignis(o: { id: string; geraet: { id: string; name: string }; art: EreignisArt; text?: string; aenderungen?: Aenderung[]; bezug?: string; wer: Wer }): Anfrage {
+export function ereignis(o: { id: string; geraet: { id: string; name: string }; art: EreignisArt; text?: string; aenderungen?: Aenderung[]; bezug?: string; wer: Wer }): Anfrage {
   return {
     collection: 'mpg_ereignisse', aktion: 'create', id: o.id,
     body: {
@@ -59,12 +60,22 @@ export interface Stammdaten {
   name: string; type: string; serial_number: string; location: string; interval: string
   has_stk: boolean; last_stk: string; stk_interval_months: number
   has_mtk: boolean; last_mtk: string; mtk_interval_months: number
+  /** Datum der Inbetriebnahme — ab ihm läuft die erste STK und MTK */
+  inbetriebnahme: string
 }
 /** So kommen Stammdaten aus PocketBase: jedes Feld kann fehlen oder leer sein. */
 export type StammdatenRoh = { [K in keyof Stammdaten]?: Stammdaten[K] | null }
 
-function kontrolleText(an: boolean | null | undefined, letzte: string | null | undefined, monate: number | null | undefined): string {
-  return an ? `alle ${monateVon(monate)} Monate · zuletzt ${tagText(kalendertag(letzte))}` : 'nicht erforderlich'
+/** Takt einer STK/MTK lesbar; weicht der gespeicherte Wert ab (Altbestand), steht er dabei. */
+export function taktText(art: 'stk' | 'mtk', monate: number | null | undefined): string {
+  const takt = art === 'stk' ? `alle ${stkMonate(monate)} Monate` : mtkJahre(monate) === 1 ? 'jährlich' : `alle ${mtkJahre(monate)} Jahre`
+  const abweichend = art === 'stk' ? stkAbweichend(monate) : mtkAbweichend(monate)
+  return abweichend ? `${takt} (eingetragen: ${monateVon(monate)} Monate)` : takt
+}
+
+function kontrolleText(art: 'stk' | 'mtk', an: boolean | null | undefined, letzte: string | null | undefined, monate: number | null | undefined): string {
+  if (!an) return 'nicht erforderlich'
+  return `${taktText(art, monate)} · zuletzt ${tagText(kalendertag(letzte))}`
 }
 
 /** Stammdaten lesbar, je Feld — so stehen sie im Gerätebuch und auf der Seite des Geräts. */
@@ -75,8 +86,9 @@ export function stammdatenText(d: StammdatenRoh): { feld: string; name: string; 
     { feld: 'serial_number', name: 'Seriennummer', wert: (d.serial_number ?? '').trim() || '—' },
     { feld: 'location', name: 'Standort', wert: (d.location ?? '').trim() || '—' },
     { feld: 'interval', name: 'Prüfintervall', wert: INTERVALL_TEXT[intervallVon(d.interval)] },
-    { feld: 'stk', name: 'STK', wert: kontrolleText(d.has_stk, d.last_stk, d.stk_interval_months) },
-    { feld: 'mtk', name: 'MTK', wert: kontrolleText(d.has_mtk, d.last_mtk, d.mtk_interval_months) },
+    { feld: 'stk', name: 'STK', wert: kontrolleText('stk', d.has_stk, d.last_stk, d.stk_interval_months) },
+    { feld: 'mtk', name: 'MTK', wert: kontrolleText('mtk', d.has_mtk, d.last_mtk, d.mtk_interval_months) },
+    { feld: 'inbetriebnahme', name: 'Inbetriebnahme', wert: tagText(kalendertag(d.inbetriebnahme)) },
   ]
 }
 
@@ -103,12 +115,54 @@ export function planeNeuesGeraet(o: { id: string; daten: Stammdaten & { next_ins
   return anfragen
 }
 
-/** Stammdaten ändern; im Gerätebuch steht, was sich geändert hat. Nichts geändert → nichts zu schreiben. */
-export function planeGeraetAenderung(o: { id: string; alt: StammdatenRoh; daten: Stammdaten & { next_inspection_due: string }; wer: Wer; ereignisId: string; buch: boolean }): Anfrage[] {
-  const aenderungen = stammdatenAenderungen(o.alt, o.daten)
-  if (!aenderungen.length) return []
-  const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'update', id: o.id, body: { ...o.daten } }]
-  if (o.buch) anfragen.push(ereignis({ id: o.ereignisId, geraet: { id: o.id, name: o.daten.name }, art: 'geaendert', aenderungen, wer: o.wer }))
+/** Hat ein Stammdatum denselben Wert? Daten als Kalendertag, Intervall gelesen, Text ohne Leerraum. */
+export function gleichesStammdatum(k: keyof Stammdaten, a: unknown, b: unknown): boolean {
+  if (k === 'last_stk' || k === 'last_mtk' || k === 'inbetriebnahme') return (kalendertag(a as string) ?? '') === (kalendertag(b as string) ?? '')
+  if (k === 'interval') return intervallVon(a) === intervallVon(b)
+  if (k === 'has_stk' || k === 'has_mtk') return !!a === !!b
+  if (k === 'stk_interval_months' || k === 'mtk_interval_months') return monateVon(a as number) === monateVon(b as number)
+  return String(a ?? '').trim() === String(b ?? '').trim()
+}
+
+/** Name eines Stammdatums, wie er im Gerätebuch steht (STK- und MTK-Felder unter „STK“ bzw. „MTK“) */
+export function stammdatenName(k: keyof Stammdaten): string {
+  const feld = k.includes('stk') ? 'stk' : k.includes('mtk') ? 'mtk' : k
+  return stammdatenText({}).find(f => f.feld === feld)?.name ?? k
+}
+
+const STAMMFELDER: (keyof Stammdaten)[] = ['name', 'type', 'serial_number', 'location', 'interval', 'has_stk', 'last_stk', 'stk_interval_months', 'has_mtk', 'last_mtk', 'mtk_interval_months', 'inbetriebnahme']
+
+/** Welche Stammdaten unterscheiden sich? */
+export function geaenderteStammdaten(von: StammdatenRoh, nach: Stammdaten): (keyof Stammdaten)[] {
+  return STAMMFELDER.filter(k => k in nach && !gleichesStammdatum(k, von[k], nach[k]))
+}
+
+/**
+ * Stammdaten ändern; im Gerätebuch steht, was sich geändert hat. Gesendet wird nur, was im
+ * Formular geändert wurde (gegenüber `ausgang`, dem Stand beim Öffnen) — sonst setzte ein
+ * Formular, das vor einer inzwischen eingetragenen STK geöffnet wurde, deren Datum zurück.
+ * Nichts geändert → nichts zu schreiben.
+ * @param alt der Stand am Server (frisch gelesen) — daraus „alt → neu“ im Gerätebuch
+ * @param ausgang der Stand beim Öffnen des Formulars (Standard: alt)
+ * @param begruendung steht im Gerätebuch beim Eintrag (z. B. warum die STK entfällt)
+ */
+export function planeGeraetAenderung(o: {
+  id: string; alt: StammdatenRoh; ausgang?: StammdatenRoh; daten: Stammdaten & { next_inspection_due: string }
+  wer: Wer; ereignisId: string; buch: boolean; begruendung?: string
+}): Anfrage[] {
+  // Ist eine Kontrolle am Ende abgeschaltet, gehen ihr Datum und Intervall nicht mit (sonst ließe
+  // sich das Datum „hinter dem Häkchen“ ändern, ohne dass es im Gerätebuch erscheint)
+  const aus = (k: keyof Stammdaten) => (!o.daten.has_stk && (k === 'last_stk' || k === 'stk_interval_months'))
+    || (!o.daten.has_mtk && (k === 'last_mtk' || k === 'mtk_interval_months'))
+  const geaendert = geaenderteStammdaten(o.ausgang ?? o.alt, o.daten).filter(k => !aus(k) && !gleichesStammdatum(k, o.alt[k], o.daten[k]))
+  if (!geaendert.length) return []
+  const body: Record<string, unknown> = Object.fromEntries(geaendert.map(k => [k, o.daten[k]]))
+  if ('interval' in body) body.next_inspection_due = o.daten.next_inspection_due
+  const aenderungen = stammdatenAenderungen(o.alt, { ...o.alt, ...body } as StammdatenRoh)
+  const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'update', id: o.id, body }]
+  if (o.buch && (aenderungen.length || o.begruendung?.trim())) {
+    anfragen.push(ereignis({ id: o.ereignisId, geraet: { id: o.id, name: o.daten.name }, art: 'geaendert', aenderungen, text: o.begruendung, wer: o.wer }))
+  }
   return anfragen
 }
 

@@ -10,10 +10,12 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { pb } from '../../lib/pocketbase'
 import { useAuth } from '../../hooks/useAuth'
-import { faelligFeld, kalendertag, tagVonDatum } from '../../lib/mpg/fristen'
+import { useHeute } from '../../hooks/useHeute'
+import { faelligFeld, kalendertag, mtkJahre, stkMonate } from '../../lib/mpg/fristen'
 import { istAusserBetrieb, zustandVon, type Stufe, type Zustand } from '../../lib/mpg/zustand'
-import { planeGeraetAenderung, planeLoeschen, planeNeuesGeraet, stammdatenText, type Stammdaten } from '../../lib/mpg/aktionen'
+import { geaenderteStammdaten, gleichesStammdatum, planeGeraetAenderung, planeLoeschen, planeNeuesGeraet, stammdatenName, stammdatenText, type Stammdaten, type StammdatenRoh } from '../../lib/mpg/aktionen'
 import { darfMpgVerwalten } from '../../lib/mpg/rechte'
+import { mitDefektFallback, neuesteKontrollen, type KontrollArt, type KontrollEintrag } from '../../lib/mpg/kontrollen'
 import { vorlageWaehlen } from '../../lib/mpg/pruefung'
 import { neueId, pbOptionen, pbSchreiber, schreibeZusammen, SchreibFehler, type Anfrage } from '../../lib/mpg/schreiben'
 import { restNachAnker } from '../../lib/mpg/aktionen'
@@ -68,6 +70,7 @@ export type Blatt =
   | { art: 'ablehnen'; meldung: ExternalReport }
   | { art: 'sperren' | 'freigeben' | 'ausserBetrieb' | 'wiederInBetrieb'; device: Device }
   | { art: 'vermerk'; device: Device; bezug?: { id: string; text: string } }
+  | { art: 'kontrolle'; device: Device; kontrolle: KontrollArt; ausserplanmaessig?: boolean }
   | null
 
 export type Ausgang = 'ok' | 'unklar' | 'fehler' | 'belegt'
@@ -90,6 +93,10 @@ function useMpgDatenWert() {
   // Gibt es das Gerätebuch (Collection mpg_ereignisse) schon in PocketBase? Bis es
   // eingerichtet ist, schreibt alles ohne Gerätebuch — nichts scheitert daran.
   const [buch, setBuch] = useState(false)
+  // STK und MTK aus dem Gerätebuch — eine nicht bestandene sperrt, bis eine bestandene da ist
+  const [kontrollEintraege, setKontrollEintraege] = useState<KontrollEintrag[]>([])
+  // Hat das Gerätebuch das Feld „angaben“ (Plakette, Ergebnis, nächste Fälligkeit)? null: noch unbekannt
+  const [angabenDa, setAngabenDa] = useState<boolean | null>(null)
   // „MPG verwalten“ — die App blendet nur aus, durchgesetzt wird es in den API-Regeln.
   // Bei jedem Zeichnen neu: Ein befristetes Recht kann während der Sitzung ablaufen.
   const darfVerwalten = darfMpgVerwalten(user)
@@ -162,7 +169,7 @@ function useMpgDatenWert() {
     const nr = ++ladeNr.current
     setLoading(true)
     try {
-      await Promise.all([loadDevices(), loadChecklists(), loadDefects(), loadExternalReports(), pruefeBuch()])
+      await Promise.all([loadDevices(), loadChecklists(), loadDefects(), loadExternalReports(), pruefeBuch(), loadKontrollen()])
       if (nr === ladeNr.current) setLadefehler('')
     } catch (e) {
       if (nr === ladeNr.current && !(e as { isAbort?: boolean })?.isAbort) setLadefehler(pbFehlerText(e))
@@ -173,7 +180,7 @@ function useMpgDatenWert() {
 
   // Je Liste zählt nur die Antwort der neuesten Anfrage — eine verspätete ältere
   // Antwort (Funkloch) darf einen neueren Stand nicht überschreiben
-  const ladeGen = useRef({ geraete: 0, defekte: 0, meldungen: 0, vorlagen: 0 })
+  const ladeGen = useRef({ geraete: 0, defekte: 0, meldungen: 0, vorlagen: 0, kontrollen: 0 })
   function neuesteAnfrage(k: keyof typeof ladeGen.current) {
     const n = ++ladeGen.current[k]
     return () => n === ladeGen.current[k]
@@ -185,6 +192,8 @@ function useMpgDatenWert() {
     if (!aktuell()) return
     setDevices(r)
     setGeraeteGeladen(true)
+    // Mit den Geräten auch den Stand ihrer STK/MTK — ein anderes Gerät kann ihn geändert haben
+    loadKontrollen().catch(() => undefined)
   }
 
   async function loadDefects() {
@@ -224,11 +233,33 @@ function useMpgDatenWert() {
     setVorlagenGeladen(true)
   }
 
-  /** Gerätebuch vorhanden und lesbar? Ohne Antwort (Funkloch) bleibt der letzte Stand. */
+  /** STK- und MTK-Einträge des Gerätebuchs (wenige je Gerät und Jahr). Ohne Gerätebuch: keine. */
+  async function loadKontrollen() {
+    const aktuell = neuesteAnfrage('kontrollen')
+    try {
+      const r = await pb.collection('mpg_ereignisse').getFullList<KontrollEintrag>({
+        filter: pb.filter('organization_id = {:o} && (art = "stk" || art = "mtk")', { o: user!.organization_id }), sort: 'created', requestKey: null,
+      })
+      if (!aktuell()) return
+      setKontrollEintraege(r)
+      if (r.length) setAngabenDa('angaben' in r[0])
+    } catch (e) {
+      // Gerätebuch noch nicht eingerichtet (404/403/400): keine Kontrollen. Alles andere ist ein
+      // Ladefehler — der Stand der STK/MTK wäre sonst still unvollständig
+      if ([400, 403, 404].includes((e as { status?: number })?.status ?? 0) || (e as { isAbort?: boolean })?.isAbort) return
+      throw e
+    }
+  }
+
+  /**
+   * Gerätebuch vorhanden und lesbar? Ohne Antwort (Funkloch) bleibt der letzte Stand. Am ersten
+   * Eintrag zeigt sich auch, ob es das Feld „angaben“ gibt — PocketBase liefert jedes Feld mit.
+   */
   async function pruefeBuch() {
     try {
-      await pb.collection('mpg_ereignisse').getList(1, 1, { filter: pb.filter('organization_id = {:o}', { o: user!.organization_id }), fields: 'id', requestKey: null })
+      const r = await pb.collection('mpg_ereignisse').getList(1, 1, { filter: pb.filter('organization_id = {:o}', { o: user!.organization_id }), requestKey: null })
       setBuch(true)
+      if (r.items[0]) setAngabenDa('angaben' in r.items[0])
     } catch (e) {
       // 404: Collection fehlt · 403: Regeln noch nicht eingetragen · 400: Felder fehlen
       if ([400, 403, 404].includes((e as { status?: number })?.status ?? 0)) setBuch(false)
@@ -250,13 +281,16 @@ function useMpgDatenWert() {
   }
 
   const wer = () => ({ organization_id: user!.organization_id, name: user?.name || user?.email || 'Unbekannt' })
-  const heute = tagVonDatum(new Date())
+  const heute = useHeute()
 
   // Der Bestand: was außer Betrieb genommen ist, steht in keiner Liste und keiner Zählung mehr
   const bestand = useMemo(() => devices.filter(d => !istAusserBetrieb(d)), [devices])
   // Gibt es die Felder der Außerbetriebnahme schon? PocketBase liefert jedes Feld mit, auch
   // leer — fehlt es, würde ein Speichern still verworfen
   const ausserBetriebMoeglich = devices.some(d => 'ausser_betrieb' in d)
+  // Ebenso das Datum der Inbetriebnahme (Beginn der ersten STK- und MTK-Frist). Ohne Geräte
+  // zeigt es sich nicht — dann anbieten; fehlt das Feld doch, meldet das Speichern es.
+  const inbetriebnahmeMoeglich = devices.some(d => 'inbetriebnahme' in d) || (geraeteGeladen && devices.length === 0)
 
   /** Name eines Geräts — eine Meldung von außen kann ohne Namen ankommen (Geräteliste nicht geladen) */
   const geraeteName = (id: string, gespeichert?: string | null) => gespeichert?.trim() || devices.find(d => d.id === id)?.name || 'Unbekanntes Gerät'
@@ -264,15 +298,21 @@ function useMpgDatenWert() {
   const offeneDefekteVon = (id: string) => defects.filter(d => d.device_id === id && d.status !== 'resolved')
   const offeneMeldungenVon = (id: string) => externalReports.filter(r => r.device_id === id && r.status === 'pending')
 
+  // Neueste STK und MTK je Gerät — eine nicht bestandene sperrt (src/lib/mpg/zustand.ts)
+  // Dazu Defekte aus nicht bestandenen Kontrollen, deren Eintrag im Gerätebuch fehlt
+  const kontrollStaende = useMemo(() => mitDefektFallback(neuesteKontrollen(kontrollEintraege, heute), defects, kontrollEintraege), [kontrollEintraege, defects, heute])
+  /** Das Gerät, wie der Zustand es sieht: mit dem Stand seiner Kontrollen aus dem Gerätebuch */
+  const mitKontrollen = (d: Device) => ({ ...d, kontrollen: kontrollStaende.get(d.id) })
+
   const zustaende = useMemo(() => {
     const m = new Map<string, Zustand>()
     for (const d of devices) {
-      m.set(d.id, zustandVon(d, defects.filter(x => x.device_id === d.id && x.status !== 'resolved'),
+      m.set(d.id, zustandVon({ ...d, kontrollen: kontrollStaende.get(d.id) }, defects.filter(x => x.device_id === d.id && x.status !== 'resolved'),
         externalReports.filter(r => r.device_id === d.id && r.status === 'pending'), heute))
     }
     return m
-  }, [devices, defects, externalReports, heute])
-  const zustand = (d: Device): Zustand => zustaende.get(d.id) ?? zustandVon(d, offeneDefekteVon(d.id), offeneMeldungenVon(d.id), heute)
+  }, [devices, defects, externalReports, heute, kontrollStaende])
+  const zustand = (d: Device): Zustand => zustaende.get(d.id) ?? zustandVon(mitKontrollen(d), offeneDefekteVon(d.id), offeneMeldungenVon(d.id), heute)
 
   const stats = useMemo(() => {
     const s: Record<Stufe, number> = { gesperrt: 0, handlung: 0, bald: 0, ok: 0 }
@@ -296,7 +336,7 @@ function useMpgDatenWert() {
    * einmal — sonst gäbe er ein inzwischen wieder gesperrtes Gerät erneut frei. Ohne
    * Gerätebuch: Hat sich das Gerät seit dem ersten Versuch geändert, nachfragen.
    */
-  async function vorErneutemSenden(o: { versuch: BlattVersuch; geraetId: string; was: string }): Promise<{ weiter: 'schon' } | { weiter: 'senden'; anfragen: Anfrage[] } | { weiter: 'abbrechen' }> {
+  async function vorErneutemSenden(o: { versuch: BlattVersuch; geraetId: string; was: string }): Promise<{ weiter: 'schon' } | { weiter: 'senden'; anfragen: Anfrage[]; geraet: Record<string, unknown> } | { weiter: 'abbrechen' }> {
     const plan = o.versuch.anfragen
     // Was der Vorgang am Gerät setzt — zeigt das Gerät diesen Stand schon?
     const soll: Record<string, unknown> = Object.assign({}, ...plan.filter(a => a.collection === 'mpg_devices' && a.aktion === 'update' && a.id === o.geraetId).map(a => a.body))
@@ -307,13 +347,13 @@ function useMpgDatenWert() {
       const eintragDa = !!eintrag && buch && await gibtEs('mpg_ereignisse', eintrag.id)
       const g = await pb.collection('mpg_devices').getOne<Record<string, unknown>>(o.geraetId, { fields: ['id', 'updated', ...Object.keys(soll)].join(','), ...pbOptionen() })
       return {
-        eintragDa,
+        eintragDa, geraet: g,
         spiegelt: Object.entries(soll).every(([k, v]) => norm(k, g[k]) === norm(k, v)),
         unveraendert: !!o.versuch.updatedVorher && g.updated === o.versuch.updatedVorher,
       }
     })
     if (!r.ok) return { weiter: 'abbrechen' }
-    const { eintragDa, spiegelt, unveraendert } = r.wert
+    const { eintragDa, spiegelt, unveraendert, geraet } = r.wert
     const fertig = () => { showMsg('War bereits gespeichert'); setSchreibStand(n => n + 1); return { weiter: 'schon' as const } }
     const nachfragen = () => confirm(`Seit dem ersten Versuch wurde das Gerät geändert — vielleicht ist „${o.was}“ schon angekommen und danach hat jemand etwas geändert (z. B. gesperrt). Bitte erst den Stand prüfen.\n\nTrotzdem erneut senden?`)
     if (eintragDa) {
@@ -323,12 +363,12 @@ function useMpgDatenWert() {
       // hat jemand etwas geändert; einzeln geschrieben ist es unklar — nachfragen.
       const rest = restNachAnker(plan)
       if (!rest.length || spiegelt) return fertig()
-      if (unveraendert) return { weiter: 'senden', anfragen: rest }
+      if (unveraendert) return { weiter: 'senden', anfragen: rest, geraet }
       if (!o.versuch.einzeln) return fertig()
-      if (nachfragen()) return { weiter: 'senden', anfragen: rest }
+      if (nachfragen()) return { weiter: 'senden', anfragen: rest, geraet }
       return { weiter: 'abbrechen' }
     }
-    if (unveraendert || spiegelt || nachfragen()) return { weiter: 'senden', anfragen: plan }
+    if (unveraendert || spiegelt || nachfragen()) return { weiter: 'senden', anfragen: plan, geraet }
     return { weiter: 'abbrechen' }
   }
 
@@ -351,14 +391,18 @@ function useMpgDatenWert() {
    * Führt einen mehrteiligen Schreibvorgang aus.
    * 'unklar': keine Antwort oder nur teilweise geschrieben — mit DENSELBEN Anfragen erneut senden.
    */
-  async function ausfuehren(anfragen: Anfrage[], erfolg: string): Promise<Ausgang> {
+  /**
+   * @param eintragVerzichtbar Darf der Vorgang ohne seinen Eintrag im Gerätebuch durchgehen?
+   *   Standard ja: Das Gerätebuch ist Nachweis, nicht Sicherheit — Sperren, Mängel und Prüfungen
+   *   dürfen nie an seinem Eintrag scheitern (z. B. Regeln von mpg_ereignisse halb eingetragen).
+   *   Nein bei einer bestandenen STK/MTK: Deren Datum am Gerät gilt nur mit dem Nachweis dahinter.
+   */
+  async function ausfuehren(anfragen: Anfrage[], erfolg: string, eintragVerzichtbar = true): Promise<Ausgang> {
     if (laeuft.current) return 'belegt'
     laeuft.current = true
     setBusy(true)
     try {
-      // Das Gerätebuch ist Nachweis, nicht Sicherheit: Sperren, Mängel und Prüfungen dürfen nie
-      // an seinem Eintrag scheitern (z. B. Regeln von mpg_ereignisse halb eingetragen)
-      const r = await schreibeZusammen(schreiber, anfragen, a => a.collection === 'mpg_ereignisse' && a.aktion === 'create')
+      const r = await schreibeZusammen(schreiber, anfragen, a => eintragVerzichtbar && a.collection === 'mpg_ereignisse' && a.aktion === 'create')
       if (r === 'ohne') showMsg(`${erfolg} — aber ohne Eintrag im Gerätebuch. Bitte in PocketBase die Regeln von mpg_ereignisse prüfen.`, 'error')
       else showMsg(r === 'schon' ? 'War bereits gespeichert' : erfolg)
       setSchreibStand(n => n + 1)
@@ -382,19 +426,40 @@ function useMpgDatenWert() {
    * aus der letzten Prüfung. Die IDs vergibt das Formular — einmal je Formular, damit ein
    * erneutes Tippen nach einem Funkloch nichts doppelt anlegt.
    */
-  async function speichereGeraet(id: string | undefined, felder: GeraetFelder, ids: { geraet: string; ereignis: string }, voriger?: Anfrage[]): Promise<{ id: string | null; unklar?: Anfrage[] }> {
+  async function speichereGeraet(
+    id: string | undefined, felder: GeraetFelder, ids: { geraet: string; ereignis: string }, voriger?: Anfrage[],
+    o: { ausgang?: StammdatenRoh; begruendung?: string } = {},
+  ): Promise<{ id: string | null; unklar?: Anfrage[] }> {
     if (!felder.name.trim()) { showMsg('Bezeichnung fehlt', 'error'); return { id: null } }
     if (!darfVerwalten) { showMsg('Geräte anlegen und ändern braucht das Recht „MPG verwalten“.', 'error'); return { id: null } }
-    const alt = id ? devices.find(d => d.id === id) : undefined
+    // Was im Formular geändert wurde (neu: alles) — ein Datum in der Zukunft gäbe ein Gerät frei
+    const geaendert = geaenderteStammdaten(o.ausgang ?? {}, felder)
+    const zukunft = (['inbetriebnahme', 'last_stk', 'last_mtk'] as const).filter(k => geaendert.includes(k) && (kalendertag(felder[k]) ?? '') > heute)
+    if (zukunft.length) { showMsg('Ein Datum liegt in der Zukunft — bitte prüfen.', 'error'); return { id: null } }
+    let alt: Device | undefined = id ? devices.find(d => d.id === id) : undefined
     const daten = {
       ...felder, name: felder.name.trim(), location: felder.location.trim(), serial_number: felder.serial_number.trim(),
+      // STK höchstens 24 Monate, MTK ganze Jahre (höchstens 2) — ein Altwert bleibt, solange niemand ihn anfasst
+      stk_interval_months: !id || geaendert.includes('stk_interval_months') ? stkMonate(felder.stk_interval_months) : felder.stk_interval_months,
+      mtk_interval_months: !id || geaendert.includes('mtk_interval_months') ? mtkJahre(felder.mtk_interval_months) * 12 : felder.mtk_interval_months,
       next_inspection_due: faelligFeld({ interval: felder.interval, last_inspection: alt?.last_inspection }, heute),
     }
     // Nach einem unklaren Versuch genau den gesendeten Plan noch einmal — neu berechnet hielte
     // er das Gerät (schon geändert nachgeladen) für unverändert
-    const anfragen = voriger ?? (id
-      ? planeGeraetAenderung({ id, alt: alt ?? {}, daten, wer: wer(), ereignisId: ids.ereignis, buch })
-      : planeNeuesGeraet({ id: ids.geraet, daten, wer: wer(), ereignisId: ids.ereignis, buch }))
+    let anfragen = voriger
+    if (!anfragen && id) {
+      // Den Stand am Server frisch lesen: Inzwischen kann jemand eine STK eingetragen haben —
+      // gesendet wird nur, was hier geändert wurde, und „alt → neu“ im Gerätebuch stimmt
+      const r = await mitSperre(() => pb.collection('mpg_devices').getOne<Device>(id, pbOptionen()))
+      if (!r.ok) return { id: null }
+      alt = r.wert
+      const ausgang = o.ausgang ?? r.wert
+      // Hat jemand genau das inzwischen geändert, was hier auch geändert wird? Dann fragen
+      const fremd = geaendert.filter(k => !gleichesStammdatum(k, ausgang[k], r.wert[k]))
+      if (fremd.length && !confirm(`Seit dem Öffnen hat jemand an diesem Gerät ${[...new Set(fremd.map(stammdatenName))].join(', ')} geändert. Mit deinem Stand überschreiben?`)) return { id: null }
+      anfragen = planeGeraetAenderung({ id, alt: r.wert, ausgang, daten, wer: wer(), ereignisId: ids.ereignis, buch, begruendung: o.begruendung })
+    }
+    if (!anfragen) anfragen = planeNeuesGeraet({ id: ids.geraet, daten, wer: wer(), ereignisId: ids.ereignis, buch })
     if (!anfragen.length) { showMsg('Nichts geändert'); return { id: id ?? null } }
     const r = await ausfuehren(anfragen, id ? 'Gerät gespeichert' : 'Gerät angelegt — Erstprüfung offen')
     if (r !== 'ok') return { id: null, unklar: r === 'unklar' ? anfragen : undefined }
@@ -406,7 +471,9 @@ function useMpgDatenWert() {
     // ist, statt still „gespeichert“ zu melden (z. B. Prüfintervall, wenn das Feld anders heißt)
     try {
       const gespeichert = await pb.collection('mpg_devices').getOne<Device>(neu.id, pbOptionen())
-      const soll = stammdatenText(daten), ist = stammdatenText(gespeichert)
+      // Nur prüfen, was gesendet wurde — anderes kann inzwischen jemand anderes geändert haben
+      const gesendet = anfragen.find(a => a.collection === 'mpg_devices')?.body ?? {}
+      const soll = stammdatenText(id ? { ...gespeichert, ...gesendet } : daten), ist = stammdatenText(gespeichert)
       const fehlt = soll.filter((f, i) => f.wert !== ist[i].wert).map(f => f.name)
       if (fehlt.length) {
         showMsg(`Gespeichert — aber PocketBase hat ${fehlt.join(', ')} nicht übernommen. Bitte in PocketBase die Felder von mpg_devices prüfen (Prüfintervall: Feld „interval“, Text oder Auswahl mit daily, weekly, monthly, yearly).`, 'error')
@@ -508,8 +575,9 @@ function useMpgDatenWert() {
     msg, showMsg, busy, laeuft, blatt, setBlatt, schreibStand,
     wer, zustand, stats, geraeteName, offeneDefekteVon, offeneMeldungenVon, vorlageFuer, vorlageMitQuelle,
     gibtEs, mitSperre, ausfuehren, vorErneutemSenden, blattVersuch, merkeBlattVersuch,
+    loadKontrollen, kontrollEintraege, mitKontrollen, angabenDa, setAngabenDa,
     speichereGeraet, loescheGeraet, speichereVorlage,
-    buch, darfVerwalten, bestand, ausserBetriebMoeglich,
+    buch, darfVerwalten, bestand, ausserBetriebMoeglich, inbetriebnahmeMoeglich,
     leseEntwurf, schreibeEntwurf, entwurfWenn, entwurfStand, laufendePruefung, setLaufendePruefung,
     unklarStand, aendereUnklar, unklarerDefekt, unklareBestaetigung, defektAngekommen, meldungNochOffen,
   }

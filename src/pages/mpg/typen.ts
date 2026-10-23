@@ -1,6 +1,7 @@
 // Datensätze des MPG-Moduls (PocketBase-Collections mpg_*) und feste Vorgaben.
 
 import type { Aenderung, EreignisArt } from '../../lib/mpg/aktionen'
+import type { KontrollAngaben } from '../../lib/mpg/kontrollen'
 import type { Intervall } from '../../lib/mpg/fristen'
 import type { Pruefpunkt } from '../../lib/mpg/pruefung'
 
@@ -29,6 +30,8 @@ export interface Device {
   has_mtk?: boolean
   last_mtk?: string
   mtk_interval_months?: number
+  /** Inbetriebnahme — ab ihr läuft die erste STK und MTK (fehlt, solange das Feld nicht angelegt ist) */
+  inbetriebnahme?: string
   /** Außerbetriebnahme (Paket 3) — fehlen in PocketBase, solange die Felder nicht angelegt sind */
   ausser_betrieb?: string
   ausser_betrieb_grund?: string
@@ -43,6 +46,8 @@ export interface Ereignis {
   art: EreignisArt
   text: string
   aenderungen?: Aenderung[] | null
+  /** Angaben einer STK/MTK (Art, Datum, Ergebnis, Prüfer, Firma, Protokoll …) */
+  angaben?: KontrollAngaben | null
   bezug: string
   user_name: string
   created: string
@@ -95,7 +100,7 @@ export interface ExternalReport {
   created: string
 }
 
-export const DEVICE_TYPES = ['AED', 'BZ-Gerät', 'Absaugpumpe', 'Beatmungsgerät', 'Sauerstoffgerät', 'Pulsoximeter', 'Blutdruckmessgerät', 'Defibrillator', 'Sonstiges']
+export const DEVICE_TYPES = ['AED', 'Defibrillator', 'Patientenmonitor', 'Beatmungsgerät', 'Absaugpumpe', 'Spritzenpumpe', 'Infusionspumpe', 'Sauerstoffgerät', 'Pulsoximeter', 'Blutdruckmessgerät', 'Thermometer', 'BZ-Gerät', 'Transportinkubator', 'Externer Schrittmacher', 'Sonstiges']
 
 export const DEFAULT_CHECKLISTS: Record<string, string[]> = {
   'AED': ['Gerät auf äußere Beschädigungen prüfen', 'Status-Anzeige kontrollieren (OK-Symbol)', 'Batterie-Anzeige kontrollieren', 'Elektroden Verfallsdatum prüfen', 'Elektroden auf Beschädigungen prüfen', 'Selbsttest-Funktion überprüfen', 'Zubehör vollständig (Schere, Rasierer, Handschuhe)', 'Standort und Beschilderung kontrollieren'],

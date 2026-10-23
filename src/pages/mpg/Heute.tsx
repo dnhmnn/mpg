@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { STUFEN, istAusserBetrieb, type Stufe } from '../../lib/mpg/zustand'
 import { ERGEBNIS_TEXT } from '../../lib/mpg/pruefung'
 import { kalendertag } from '../../lib/mpg/fristen'
+import { abschnittVon, fristenEintraege } from './fristenListe'
 import { useMpg } from './MpgDaten'
 import { GeraetKarte } from './GeraetKarte'
 import { useLadestand } from './Ladestand'
@@ -83,6 +84,27 @@ export default function Heute() {
       </div>
     </Abschnitt>
   )
+  // STK und MTK: dieselbe Einteilung wie auf der Seite „Fristen“ — gesperrt zählt Geräte
+  const kEintraege = fristenEintraege(m)
+  const kAbschnitt = (i: number) => kEintraege.filter(e => abschnittVon(e, m.heute) === i)
+  const kGesperrt = new Set(kAbschnitt(0).map(e => e.device.id)).size
+  const kTeile = [
+    kGesperrt && `${kGesperrt === 1 ? '1 Gerät' : `${kGesperrt} Geräte`} gesperrt`,
+    kAbschnitt(1).length && `${kAbschnitt(1).length} diesen Monat`,
+    kAbschnitt(2).length && `${kAbschnitt(2).length} ohne Datum`,
+    kAbschnitt(3).length && `${kAbschnitt(3).length} in den nächsten drei Monaten`,
+  ].filter(Boolean)
+  const fristenKarte = kTeile.length > 0 && (
+    <Karte rand={kGesperrt ? '#dc2626' : 'var(--lbf-akzent)'} style={{ marginBottom: 24 }}>
+      <Link to="/mpg/fristen" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 700, fontSize: 15 }}>STK und MTK <span style={{ fontWeight: 400, fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>· sicherheits- und messtechnische Kontrollen</span></div>
+          <div style={kursivGrau}>{kTeile.join(' · ')}</div>
+        </div>
+        <span style={{ color: 'var(--lbf-akzent)' }}>{pik(ICON.weiter)}</span>
+      </Link>
+    </Karte>
+  )
   const eingangKarte = eingang.length > 0 && (
     <Karte rand="var(--lbf-akzent)" style={{ marginBottom: 24 }} >
       <Link to="/mpg/meldungen" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
@@ -124,6 +146,7 @@ export default function Heute() {
       </div>
 
       {eingangKarte}
+      {fristenKarte}
 
       <Abschnitt titel={`Zu tun (${arbeit.length})`}>
         {arbeit.length === 0

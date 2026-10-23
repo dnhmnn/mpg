@@ -112,6 +112,100 @@ onRecordCreateRequest((e) => {
   e.next()
 }, "mpg_devices")
 
+// STK, MTK und Inbetriebnahme liegen nie in der Zukunft — ein Tippfehler im Jahr oder eine
+// vorgehende Uhr gäbe sonst ein überfälliges Gerät für Jahre frei (ein Tag Spielraum für die
+// Zeitzone). Beim Ändern nur, was sich ändert: ein alter Wert blockiert nichts anderes.
+onRecordCreateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    const grenze = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+    for (const f of ["last_stk", "last_mtk", "inbetriebnahme"]) {
+      let wert = ""
+      try { wert = e.record.getString(f).slice(0, 10) } catch (err) { /* Feld fehlt */ }
+      if (wert && wert > grenze) throw new BadRequestError("Ein Datum liegt in der Zukunft — bitte prüfen (letzte STK, letzte MTK, Inbetriebnahme).")
+    }
+  }
+  e.next()
+}, "mpg_devices")
+
+onRecordUpdateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    const alt = e.record.original()
+    const grenze = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+    for (const f of ["last_stk", "last_mtk", "inbetriebnahme"]) {
+      let wert = "", vorher = ""
+      try { wert = e.record.getString(f).slice(0, 10); vorher = alt.getString(f).slice(0, 10) } catch (err) { /* Feld fehlt */ }
+      if (wert && wert !== vorher && wert > grenze) throw new BadRequestError("Ein Datum liegt in der Zukunft — bitte prüfen (letzte STK, letzte MTK, Inbetriebnahme).")
+    }
+  }
+  e.next()
+}, "mpg_devices")
+
+// Nach einer nicht bestandenen STK/MTK bleibt das Gerät gesperrt, bis eine bestandene im
+// Gerätebuch steht: Freigeben (operational → true) und ein späteres Datum der letzten
+// Kontrolle am Gerät gehen erst dann — sonst hinge die Sperre allein an der App. Wird die
+// Kontrolle wieder verlangt (Häkchen an), wird das Gerät gesperrt. Die neueste Kontrolle zählt
+// nach ihrem Tag (angaben.datum, sonst Tag des Eintrags), bei gleichem Tag nach der
+// Eintragszeit; fehlt der Eintrag, zählt ihr Defekt („STK nicht bestanden: …“). Gleiche Regel
+// in der App (src/lib/mpg/kontrollen.ts). Nur Einträge und Defekte der Organisation des Geräts.
+// Eine nachgetragene ältere zählt nicht, wenn am Gerät schon eine neuere bestandene steht.
+onRecordUpdateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    const alt = e.record.original()
+    const org = alt.getString("organization_id")
+    const grenze = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+    const freigabe = e.record.getBool("operational") && !alt.getBool("operational")
+    for (const art of ["stk", "mtk"]) {
+      const name = art === "stk" ? "STK" : "MTK"
+      let anNeu = false, anAlt = false, neu = "", vorher = ""
+      try {
+        anNeu = e.record.getBool("has_" + art)
+        anAlt = alt.getBool("has_" + art)
+        neu = e.record.getString("last_" + art).slice(0, 10)
+        vorher = alt.getString("last_" + art).slice(0, 10)
+      } catch (err) { continue }
+      const spaeter = !!neu && neu !== vorher
+      const wiederAn = anNeu && !anAlt
+      if (!((freigabe && (anNeu || anAlt)) || spaeter || wiederAn)) continue
+      // Neueste Kontrolle dieser Art
+      let beste = null
+      const vergleiche = (tag, created, bestanden) => {
+        if (!beste || tag > beste.tag || (tag === beste.tag && created > beste.created)) beste = { tag, created, bestanden }
+      }
+      let eintraege = []
+      try {
+        eintraege = e.app.findRecordsByFilter("mpg_ereignisse", "device_id = {:d} && organization_id = {:o} && art = {:a}", "-created", 500, 0, { d: e.record.id, o: org, a: art })
+      } catch (err) { eintraege = [] }
+      const verknuepft = {}
+      for (const x of eintraege) {
+        let angaben = {}
+        try { angaben = JSON.parse(x.getString("angaben") || "null") || {} } catch (err) { angaben = {} }
+        if (x.getString("bezug")) verknuepft[x.getString("bezug")] = true
+        const created = x.getString("created")
+        let tag = String(angaben.datum || "").trim()
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(tag) || tag > grenze) tag = created.slice(0, 10)
+        const ergebnis = angaben.ergebnis || (/nicht bestanden/.test(x.getString("text").split("\n")[0]) ? "nicht_bestanden" : "bestanden")
+        vergleiche(tag, created, ergebnis !== "nicht_bestanden")
+      }
+      // Defekte aus nicht bestandenen Kontrollen ohne eigenen Eintrag
+      let defekte = []
+      try {
+        defekte = e.app.findRecordsByFilter("mpg_defects", "device_id = {:d} && organization_id = {:o} && description ~ {:p}", "-created", 500, 0, { d: e.record.id, o: org, p: name + " nicht bestanden:" })
+      } catch (err) { defekte = [] }
+      for (const d of defekte) {
+        if (verknuepft[d.id] || d.getString("description").indexOf(name + " nicht bestanden:") !== 0) continue
+        vergleiche(d.getString("created").slice(0, 10), d.getString("created"), false)
+      }
+      if (!beste || beste.bestanden) continue
+      const letzte = vorher && vorher <= grenze ? vorher : ""
+      if (letzte && beste.tag < letzte) continue
+      if (spaeter && neu >= beste.tag) throw new BadRequestError(`Letzte ${name} nicht bestanden — eine neue ${name} bitte über „Eintragen“ mit Prüfer und Protokoll erfassen.`)
+      if (freigabe && (anNeu || anAlt) && !(anAlt && !anNeu)) throw new BadRequestError(`Letzte ${name} nicht bestanden — erst eine bestandene ${name} eintragen, dann freigeben.`)
+      if (wiederAn) e.record.set("operational", false)
+    }
+  }
+  e.next()
+}, "mpg_devices")
+
 // Der Prüfstand (zuletzt geprüft, bestanden) folgt aus einem Prüfprotokoll desselben
 // Geräts und derselben Organisation mit genau diesem Zeitpunkt und Ergebnis — und geht
 // nur vorwärts: Ein durchgefallenes Gerät lässt sich nicht auf eine ältere, bestandene
@@ -180,6 +274,28 @@ onRecordCreateRequest((e) => {
     try { e.record.set("user_id", e.auth.id) } catch (err) { /* Feld fehlt — dann eben nicht */ }
     if (!e.hasSuperuserAuth()) {
       try { e.record.set("user_name", e.auth.getString("name") || e.auth.getString("email")) } catch (err) { /* Feld fehlt */ }
+    }
+  }
+  e.next()
+}, "mpg_ereignisse")
+
+// Eine STK oder MTK: Tag der Kontrolle als JJJJ-MM-TT und nicht in der Zukunft. Einträge
+// gehören zur Organisation ihres Geräts — sonst zählte ein fremder Eintrag für dessen Sperre.
+onRecordCreateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    const art = e.record.getString("art")
+    if (art === "stk" || art === "mtk") {
+      let datum = ""
+      try { datum = String((JSON.parse(e.record.getString("angaben") || "null") || {}).datum || "").trim() } catch (err) { datum = "" }
+      if (datum && !/^\d{4}-\d{2}-\d{2}$/.test(datum)) throw new BadRequestError("Den Tag der Kontrolle bitte als JJJJ-MM-TT angeben.")
+      if (datum && datum > new Date(Date.now() + 86400000).toISOString().slice(0, 10)) {
+        throw new BadRequestError("Der Tag der Kontrolle liegt in der Zukunft — bitte prüfen.")
+      }
+    }
+    let geraet = null
+    try { geraet = e.app.findRecordById("mpg_devices", e.record.getString("device_id")) } catch (err) { geraet = null }
+    if (geraet && geraet.getString("organization_id") !== e.record.getString("organization_id")) {
+      throw new ForbiddenError("Dieses Gerät gehört zu einer anderen Organisation.")
     }
   }
   e.next()

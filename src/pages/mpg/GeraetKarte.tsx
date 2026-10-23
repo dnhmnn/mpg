@@ -10,7 +10,7 @@ import type { Device } from './typen'
 export function naechsteFrist(z: ReturnType<ReturnType<typeof useMpg>['zustand']>): string {
   return z.fristen.map(f => f.naechste
     ? `${f.art === 'pruefung' ? 'Prüfung' : f.bezeichnung} ${tagText(f.naechste)}`
-    : `${f.art === 'pruefung' ? 'Prüfung' : f.bezeichnung} offen`).join(' · ')
+    : f.art === 'pruefung' ? 'Prüfung offen' : `${f.bezeichnung}: Datum fehlt`).join(' · ')
 }
 
 export function GeraetKarte({ device, mitAktionen = true, zurueck, gruende = 3 }: { device: Device; mitAktionen?: boolean; zurueck?: string; gruende?: number }) {

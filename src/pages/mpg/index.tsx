@@ -8,6 +8,7 @@
 //   /mpg/geraete/:id/pruefen     Prüfung
 //   /mpg/meldungen               Eingang, offene und behobene Defekte (?teil=…)
 //   /mpg/meldungen/:id           Fall
+//   /mpg/fristen                 STK und MTK des Bestands
 //   /mpg/mehr · /mpg/vorlagen · /mpg/logbuch
 
 import { Navigate, Route, Routes } from 'react-router-dom'
@@ -24,6 +25,7 @@ import Fall from './Fall'
 import Mehr from './Mehr'
 import Vorlagen from './Vorlagen'
 import Logbuch from './Logbuch'
+import Fristen from './Fristen'
 
 export default function MpgModul() {
   return (
@@ -45,6 +47,7 @@ export default function MpgModul() {
           <Route path="vorlagen" element={<Vorlagen />} />
           <Route path="vorlagen/:typ" element={<Vorlagen />} />
           <Route path="logbuch" element={<Logbuch />} />
+          <Route path="fristen" element={<Fristen />} />
           <Route path="*" element={<Navigate to="/mpg" replace />} />
         </Route>
       </Routes>

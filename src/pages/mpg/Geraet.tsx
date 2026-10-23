@@ -7,8 +7,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
-import { kalendertag, lageText, plusMonate, tagText } from '../../lib/mpg/fristen'
-import { stammdatenText } from '../../lib/mpg/aktionen'
+import { kalendertag, lageText, plusMonate, tagText, type Frist } from '../../lib/mpg/fristen'
+import { stammdatenText, taktText } from '../../lib/mpg/aktionen'
+import { KONTROLLE_NAME, type KontrollArt } from '../../lib/mpg/kontrollen'
 import { darfBeheben } from '../../lib/mpg/rechte'
 import { istAusserBetrieb } from '../../lib/mpg/zustand'
 import { pbFehlerText } from '../../lib/pbFehler'
@@ -84,6 +85,12 @@ export default function Geraet() {
           <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={{ ...knopfRand, padding: '8px 12px', fontSize: 12 }}>Öffnen</button>
         </Karte>
       ))}
+      {(['stk', 'mtk'] as const).filter(k => m.blattVersuch(`kontrolle-${k}:${device.id}`)).map(k => (
+        <Karte key={k} rand="#dc2626" style={{ padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, fontSize: 13, fontStyle: 'italic', color: 'var(--lbf-fehler-text)' }}>{KONTROLLE_NAME[k]} nicht sicher gespeichert — bitte öffnen und erneut senden oder verwerfen.</div>
+          <button onClick={() => m.setBlatt({ art: 'kontrolle', device, kontrolle: k })} style={{ ...knopfRand, padding: '8px 12px', fontSize: 12 }}>Öffnen</button>
+        </Karte>
+      ))}
 
       <Reiter wert={teil} onWahl={setTeil} optionen={[['ueberblick', 'Überblick'], ['verlauf', 'Verlauf'], ['stammdaten', 'Stammdaten']]} />
 
@@ -156,9 +163,44 @@ function useLetzteSperre(device: Device): Ereignis | null {
   return e
 }
 
+/** Wie weit es bis zur Fälligkeit ist — ohne das „fällig“ der Zeile darüber zu wiederholen */
+function restText(f: Frist): string {
+  const t = f.tage ?? 0
+  if (f.lage === 'ueberfaellig' || f.lage === 'offen') return lageText(f)
+  if (f.lage === 'heute') return 'heute'
+  return t === 1 ? 'morgen' : `in ${t} Tagen`
+}
+
+/** Tag einer Kontrolle laut Gerätebuch (eingetragen kann sie später sein) */
+const kontrollTag = (e: Ereignis) => kalendertag(typeof e.angaben?.datum === 'string' ? e.angaben.datum : null) ?? kalendertag(e.created) ?? ''
+
+/** Die neueste STK und MTK (Gerätebuch) nach dem Tag der Kontrolle — wer, wann, mit welchem Ergebnis. */
+function useLetzteKontrollen(device: Device): Partial<Record<KontrollArt, Ereignis>> {
+  const m = useMpg()
+  const [k, setK] = useState<Partial<Record<KontrollArt, Ereignis>>>({})
+  useEffect(() => {
+    setK({})
+    if (!m.buch || (!device.has_stk && !device.has_mtk)) return
+    let aktuell = true
+    pb.collection('mpg_ereignisse').getList<Ereignis>(1, 20, {
+      filter: pb.filter('organization_id = {:o} && device_id = {:d} && (art = "stk" || art = "mtk")', { o: m.user!.organization_id, d: device.id }),
+      sort: '-created', requestKey: null,
+    }).then(r => {
+      if (!aktuell) return
+      // Nach dem Tag der Kontrolle, nicht nach dem Eintragen — eine nachgetragene ältere ist nicht „die letzte“
+      const neueste = (art: KontrollArt) => r.items.filter(e => e.art === art)
+        .sort((a, b) => kontrollTag(b).localeCompare(kontrollTag(a)) || b.created.localeCompare(a.created))[0]
+      setK({ stk: neueste('stk'), mtk: neueste('mtk') })
+    }).catch(() => undefined)
+    return () => { aktuell = false }
+  }, [device.id, device.has_stk, device.has_mtk, m.buch, m.schreibStand])
+  return k
+}
+
 function Ueberblick({ device }: { device: Device }) {
   const m = useMpg()
   const z = m.zustand(device)
+  const letzteKontrolle = useLetzteKontrollen(device)
   const defekte = m.offeneDefekteVon(device.id)
   const meldungen = m.offeneMeldungenVon(device.id)
   const sperre = useLetzteSperre(device)
@@ -178,22 +220,44 @@ function Ueberblick({ device }: { device: Device }) {
             </div>
           )}
           {device.operational === false && !m.darfVerwalten && <div style={{ ...kursivGrau, marginTop: 8 }}>Freigeben kann, wer „MPG verwalten“ hat.</div>}
+          {!m.darfVerwalten && z.gruende.some(g => /^(Letzte )?(STK|MTK)/.test(g.text)) && (
+            <div style={{ ...kursivGrau, marginTop: 8 }}>{z.stufe === 'gesperrt' ? 'Nicht einsetzen. ' : ''}STK und MTK veranlasst und trägt ein, wer „MPG verwalten“ hat.</div>
+          )}
         </Karte>
       </Abschnitt>
 
       <Abschnitt titel="Fristen">
         <Karte>
-          {z.fristen.map((f, i) => (
-            <div key={f.art} style={{ display: 'flex', gap: 12, padding: '11px 14px', borderTop: i ? '0.5px solid var(--lbf-border-light)' : undefined, alignItems: 'baseline' }}>
-              <div style={{ width: 70, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>{f.bezeichnung}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, color: f.lage === 'ueberfaellig' || f.lage === 'offen' || f.lage === 'heute' ? 'var(--lbf-akzent)' : 'var(--lbf-text)' }}>
-                  {f.naechste ? `fällig ${tagText(f.naechste)}` : 'noch nicht durchgeführt'}
+          {z.fristen.map((f, i) => {
+            const k = f.art === 'pruefung' ? null : letzteKontrolle[f.art]
+            return (
+              <div key={f.art} style={{ display: 'flex', gap: 12, padding: '11px 14px', borderTop: i ? '0.5px solid var(--lbf-border-light)' : undefined, alignItems: 'baseline' }}>
+                <div style={{ width: 70, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>{f.bezeichnung}</div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: f.art !== 'pruefung' && f.lage === 'ueberfaellig' ? 'var(--lbf-fehler-text)' : f.lage === 'ueberfaellig' || f.lage === 'offen' || f.lage === 'heute' ? 'var(--lbf-akzent)' : 'var(--lbf-text)' }}>
+                    {f.naechste ? `fällig ${f.art === 'pruefung' ? '' : 'bis '}${tagText(f.naechste)}` : f.art === 'pruefung' ? 'noch nicht durchgeführt'
+                      : f.zukunft ? 'Datum liegt in der Zukunft — bitte prüfen'
+                      : `Datum fehlt — letzte ${f.bezeichnung}${m.inbetriebnahmeMoeglich ? ' oder Inbetriebnahme' : ''} eintragen`}
+                  </div>
+                  <div style={kursivGrau}>
+                    {f.letzte ? `zuletzt ${tagText(f.letzte)}` : f.abInbetriebnahme ? 'erste Kontrolle — Frist ab Inbetriebnahme' : f.art === 'pruefung' ? 'noch nie geprüft' : 'noch keine eingetragen'}
+                    {f.art !== 'pruefung' ? ` · ${taktText(f.art, f.art === 'stk' ? device.stk_interval_months : device.mtk_interval_months)}` : ''}
+                    {f.naechste ? ` · ${restText(f)}` : ''}
+                  </div>
+                  {/* Die neueste Kontrolle aus dem Gerätebuch — eine nachgetragene ältere als „zuletzt“ hier nicht */}
+                  {k && !(f.letzte && kontrollTag(k) < f.letzte) && <div style={{ ...kursivGrau, marginTop: 2, overflowWrap: 'anywhere', ...(k.angaben?.ergebnis === 'nicht_bestanden' ? { color: 'var(--lbf-fehler-text)' } : {}) }}>{k.text.split('\n')[0]}</div>}
                 </div>
-                <div style={kursivGrau}>{f.letzte ? `zuletzt ${tagText(f.letzte)}` : 'kein Datum eingetragen'}{f.naechste ? ` · ${lageText(f)}` : ''}</div>
+                {f.art !== 'pruefung' && m.darfVerwalten && m.buch && (
+                  <button onClick={() => m.setBlatt({ art: 'kontrolle', device, kontrolle: f.art as KontrollArt })} style={{ ...knopfLeise, flexShrink: 0 }}>Eintragen</button>
+                )}
               </div>
+            )
+          })}
+          {m.darfVerwalten && !m.buch && z.fristen.some(f => f.art !== 'pruefung') && (
+            <div style={{ ...kursivGrau, padding: '0 14px 11px' }}>
+              STK und MTK mit Prüfer und Protokoll eintragen geht, sobald das Gerätebuch in PocketBase eingerichtet ist. Bis dahin das Datum der letzten Kontrolle unter „Bearbeiten“ eintragen.
             </div>
-          ))}
+          )}
         </Karte>
       </Abschnitt>
       </>}
@@ -349,7 +413,9 @@ function Verlauf({ device }: { device: Device }) {
 }
 
 function Stammdaten({ device }: { device: Device }) {
-  const zeilen: [string, string][] = [...stammdatenText(device).map(f => [f.name, f.wert] as [string, string]), ['Angelegt', fmtDate(device.created)]]
+  const m = useMpg()
+  // Ohne das Feld in PocketBase gibt es keine Inbetriebnahme — dann auch keine leere Zeile dafür
+  const zeilen: [string, string][] = [...stammdatenText(device).filter(f => f.feld !== 'inbetriebnahme' || m.inbetriebnahmeMoeglich).map(f => [f.name, f.wert] as [string, string]), ['Angelegt', fmtDate(device.created)]]
   return (
     <Karte>
       {zeilen.map(([k, v], i) => (

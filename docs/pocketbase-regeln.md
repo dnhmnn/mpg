@@ -420,8 +420,8 @@ Schließen in einem Zug, Prüfstand ohne Protokoll, vorab belegte Kennungen,
 gefälschte Namen, Zurücksetzen auf eine ältere Prüfung, Protokolle in der
 Zukunft, vor- und nachgehende Geräte-Uhren, Wiederöffnen und Umhängen von
 Defekten, Ablehnen nach teilweisem Bestätigen, gesperrte Admins mit altem Token,
-Leeren, Import und Umbenennen von Sammlungen): 247 Prüfungen je Version, alle
-bestanden. Gegenprobe mit offenen Regeln und ohne Hook: 158 schlagen an.
+Leeren, Import und Umbenennen von Sammlungen): 275 Prüfungen je Version, alle
+bestanden. Gegenprobe mit offenen Regeln und ohne Hook: 174 schlagen an.
 
 ### Vorher
 
@@ -433,8 +433,9 @@ einen Hinweis statt still nichts zu speichern.
    keines Pflicht:
    - `organization_id`, `device_id`, `device_name`, `art`, `text`, `bezug`,
      `user_name`, `user_id` — *Plain text*
-   - `aenderungen` und `angaben` — *JSON* (`angaben` nutzt das nächste Paket für
-     STK und MTK — jetzt mit anlegen, dann ist die Einrichtung in einem Zug erledigt)
+   - `aenderungen` und `angaben` — *JSON* (`angaben`: die Angaben einer STK oder
+     MTK — `art`, `datum`, `ergebnis`, `pruefer`, `firma`, `protokoll`,
+     `plakette`, `ausserplanmaessig`, `maengel`, `naechste`, `nachgetragen`)
    - `created` und `updated` (*Autodate*) legt PocketBase schon an — stehen lassen.
 
    `user_id` setzt der Hook aus der Anmeldung (Text statt Relation: Wird ein
@@ -443,7 +444,7 @@ einen Hinweis statt still nichts zu speichern.
    **nicht** eintragen.
 2. An **`mpg_devices`** vier Felder anlegen, nicht Pflicht:
    `ausser_betrieb` (*Date*), `ausser_betrieb_grund` (*Plain text*),
-   `verbleib` (*Plain text*), `inbetriebnahme` (*Date*, für die erste STK).
+   `verbleib` (*Plain text*), `inbetriebnahme` (*Date*, für die erste STK und MTK).
 
    Empfohlen, ebenfalls *Plain text*, nicht Pflicht: `user_id` an
    `mpg_inspections`, `reported_by_id` und `resolved_by_id` an `mpg_defects`.
@@ -579,8 +580,10 @@ Delete bleibt gesperrt; Spam löscht der Superuser in der Admin-Oberfläche.
 
 **⁶ Gerätebuch — Create.** Sperren mit Grund und Vermerke schreibt jeder mit
 MPG-Zugang; alle anderen Einträge (freigegeben, angelegt, geändert, außer Betrieb,
-wieder in Betrieb, gelöscht, ab dem nächsten Paket auch STK und MTK) nur „MPG
-verwalten“.
+wieder in Betrieb, gelöscht, STK, MTK) nur „MPG verwalten“. Das Datum der
+letzten STK oder MTK am Gerät (`last_stk`, `last_mtk`) und die Inbetriebnahme
+sind Stammdaten (Regel ²) — eine Kontrolle eintragen heißt also: Eintrag mit den
+Angaben im Gerätebuch, dann das Datum am Gerät, beides mit „MPG verwalten“.
 ```
 @request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now)) && ((@request.auth.permissions.mpg_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.mpg_verwalten.until ~ " " && @request.auth.temp_permissions.mpg_verwalten.until > @now)) || @request.body.art = "gesperrt" || @request.body.art = "vermerk")
 ```
@@ -620,6 +623,21 @@ Superuser korrigieren:
   gespeicherter Stand nach der Serverzeit (Uhr ging vor) zählt nicht als neuer.
   Prüfprotokolle mit einem Datum mehr als eine Stunde in der Zukunft werden
   abgelehnt (Spielraum für eine falsch gehende Geräte-Uhr).
+- Nach einer nicht bestandenen STK oder MTK bleibt das Gerät gesperrt, bis eine
+  bestandene im Gerätebuch steht: Freigeben und ein späteres Datum der letzten
+  Kontrolle am Gerät werden bis dahin abgelehnt — auch, wenn das Häkchen „STK
+  erforderlich“ dazwischen ab- und wieder angeschaltet wird (wieder an: gesperrt).
+  Die neueste Kontrolle zählt nach ihrem Tag (`angaben.datum`, als JJJJ-MM-TT),
+  bei gleichem Tag nach der Eintragszeit; fehlt der Eintrag, zählt ihr Defekt
+  („STK nicht bestanden: …“). Es zählen nur Einträge und Defekte der Organisation
+  des Geräts; eine nachgetragene ältere Kontrolle zählt nicht, wenn am Gerät schon
+  eine neuere bestandene steht.
+- Einträge im Gerätebuch gehören zur Organisation ihres Geräts — zu einem Gerät
+  einer anderen Organisation wird nichts eingetragen.
+- STK, MTK und Inbetriebnahme: kein Datum in der Zukunft (ein Tag Spielraum) —
+  ein Tippfehler im Jahr gäbe sonst ein überfälliges Gerät für Jahre frei. Beim
+  Ändern zählt nur ein geänderter Wert. Ebenso der Tag einer eingetragenen STK
+  oder MTK im Gerätebuch.
 - Namen setzt der Server aus der Anmeldung: Prüfer im Protokoll, Name und
   `user_id` im Gerätebuch, Melder und „behoben von“ am Defekt — samt Kennung,
   wenn die empfohlenen Felder angelegt sind. Ein mitgeschickter Wert wird

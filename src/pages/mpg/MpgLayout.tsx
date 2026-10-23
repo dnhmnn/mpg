@@ -12,11 +12,11 @@ const TABS: Ziel[] = [
   { pfad: '/mpg', name: 'Heute', icon: 'heute', ende: true, auch: ['/mpg/runde'] },
   { pfad: '/mpg/geraete', name: 'Geräte', icon: 'geraete' },
   { pfad: '/mpg/meldungen', name: 'Meldungen', icon: 'meldungen' },
-  { pfad: '/mpg/mehr', name: 'Mehr', icon: 'mehr', auch: ['/mpg/vorlagen', '/mpg/logbuch'] },
+  { pfad: '/mpg/mehr', name: 'Mehr', icon: 'mehr', auch: ['/mpg/vorlagen', '/mpg/logbuch', '/mpg/fristen'] },
 ]
 
 const LEISTE: { titel: string; ziele: Ziel[] }[] = [
-  { titel: 'Arbeit', ziele: [{ pfad: '/mpg', name: 'Heute', icon: 'heute', ende: true, auch: ['/mpg/runde'] }, { pfad: '/mpg/meldungen', name: 'Meldungen', icon: 'meldungen' }] },
+  { titel: 'Arbeit', ziele: [{ pfad: '/mpg', name: 'Heute', icon: 'heute', ende: true, auch: ['/mpg/runde'] }, { pfad: '/mpg/meldungen', name: 'Meldungen', icon: 'meldungen' }, { pfad: '/mpg/fristen', name: 'Fristen', icon: 'fristen' }] },
   { titel: 'Bestand', ziele: [{ pfad: '/mpg/geraete', name: 'Geräte', icon: 'geraete' }] },
   { titel: 'Einrichtung', ziele: [{ pfad: '/mpg/vorlagen', name: 'Prüfvorlagen', icon: 'vorlagen' }] },
   { titel: 'Nachweis', ziele: [{ pfad: '/mpg/logbuch', name: 'Logbuch', icon: 'logbuch' }] },

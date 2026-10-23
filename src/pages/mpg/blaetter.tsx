@@ -3,11 +3,12 @@
 // Versuche festgeschrieben und nur unverändert erneut gesendet.
 
 import { useState } from 'react'
-import { istAusserBetrieb, pruefungNichtBestanden, sperrtDefekt } from '../../lib/mpg/zustand'
+import { bleibtGesperrt, defektAusKontrolle, istAusserBetrieb, kontrolleNichtBestanden, sperrtDefekt, type Grund } from '../../lib/mpg/zustand'
 import {
   planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeSperre, planeVermerk, planeWiederInBetrieb,
 } from '../../lib/mpg/aktionen'
 import { kalendertag, plusMonate, tagText } from '../../lib/mpg/fristen'
+import { ERGEBNIS_NAME, KONTROLLE_LANG, KONTROLLE_NAME, naechsteNachKontrolle, plakettenText, planeKontrolle, type KontrollArt, type KontrollErgebnis } from '../../lib/mpg/kontrollen'
 import { darfBeheben } from '../../lib/mpg/rechte'
 import { batchIstAus, neueId, pbOptionen, type Anfrage } from '../../lib/mpg/schreiben'
 import { pb } from '../../lib/pocketbase'
@@ -29,6 +30,7 @@ export function Blaetter() {
     case 'ausserBetrieb': return <AusserBetrieb key={blatt.device.id} device={blatt.device} />
     case 'wiederInBetrieb': return <WiederInBetrieb key={blatt.device.id} device={blatt.device} />
     case 'vermerk': return <Vermerk key={blatt.device.id + (blatt.bezug?.id ?? '')} device={blatt.device} bezug={blatt.bezug} />
+    case 'kontrolle': return <KontrolleEintragen key={blatt.device.id + blatt.kontrolle} device={blatt.device} art={blatt.kontrolle} ausserplanmaessig={blatt.ausserplanmaessig} />
   }
 }
 
@@ -48,8 +50,9 @@ function useBlattVersuch(schluessel: string) {
   const [id] = useState(() => versuch?.id ?? neueId())
   const merke = (v: BlattVersuch | null) => { setVersuch(v); m.merkeBlattVersuch(schluessel, v) }
   /** Nach dem ersten Senden festhalten: genau dieser Plan, die Serverzeit des Geräts davor */
-  const unklarNach = (anfragen: Anfrage[], geraetId: string) => merke(versuch ?? {
-    anfragen, id, seit: new Date().toISOString(), updatedVorher: m.devices.find(d => d.id === geraetId)?.updated ?? '', einzeln: batchIstAus(),
+  /** @param updatedVorher Serverzeit des Geräts vor dem Senden, wenn frisch gelesen (sonst aus der Liste) */
+  const unklarNach = (anfragen: Anfrage[], geraetId: string, updatedVorher?: string) => merke(versuch ?? {
+    anfragen, id, seit: new Date().toISOString(), updatedVorher: updatedVorher ?? m.devices.find(d => d.id === geraetId)?.updated ?? '', einzeln: batchIstAus(),
   })
   return { versuch, id, merke, unklarNach }
 }
@@ -67,6 +70,27 @@ function verwerfen(merke: (v: BlattVersuch | null) => void, schliessen: () => vo
 
 function UnklarHinweis() {
   return <Hinweis>Ob das gespeichert wurde, ist unklar. „Erneut senden“ schickt genau diesen Stand und legt nichts doppelt an.</Hinweis>
+}
+
+/** Was ein Gerät weiter sperrt, kurz — z. B. „STK überfällig seit 23 Tagen“ */
+const sperrText = (g: Grund[]) => g.map(x => x.text).join(', ')
+
+/** Was nach dem Speichern weiter sperrt (das Blatt sagt sonst „wieder einsatzbereit“) — und was zu tun ist */
+function GesperrtBleibt({ gruende }: { gruende: Grund[] }) {
+  const m = useMpg()
+  if (!gruende.length) return null
+  const kontrolle = gruende.some(g => /STK|MTK/.test(g.text))
+  const weiter = !kontrolle ? ''
+    : !m.darfVerwalten ? ' STK und MTK veranlasst und trägt ein, wer „MPG verwalten“ hat.'
+    : m.buch ? ' Erst eine bestandene Kontrolle eintragen (am Gerät unter Fristen).'
+    : ' Erst das Datum der letzten bestandenen Kontrolle beim Gerät unter „Bearbeiten“ eintragen.'
+  return <Hinweis ton="warn">Gesperrt bleibt es: {sperrText(gruende)}.{weiter}</Hinweis>
+}
+
+/** Nicht bestandene STK/MTK am Gerät — dann gibt es keine Freigabe, bis eine bestandene da ist */
+function nichtBestandenText(m: ReturnType<typeof useMpg>, device: Device): string {
+  const arten = (['stk', 'mtk'] as const).filter(a => kontrolleNichtBestanden(m.mitKontrollen(device), a, m.heute)).map(a => KONTROLLE_NAME[a])
+  return arten.length ? `Letzte ${arten.join(' und ')} nicht bestanden — erst eine bestandene ${arten.join(' und ')} eintragen, dann freigeben.` : ''
 }
 
 /** Ohne „MPG verwalten“: sagen, wer es darf, statt eines Knopfs, der dann scheitert. */
@@ -169,6 +193,7 @@ function DefektMelden({ device }: { device: Device }) {
         {sperrtDefekt(form.severity)
           ? <Hinweis ton="warn">Bei „{SCHWERE_NAME[form.severity]}“ wird das Gerät gesperrt, bis der Defekt behoben ist.</Hinweis>
           : <Haken an={form.sperren} setAn={b => setForm({ ...form, sperren: b })} gesperrt={fest} titel="Gerät sperren" text="Als nicht einsatzbereit markieren" />}
+        {device.has_mtk && <div style={kursivGrau}>Nach Sturz, Öffnen oder Zweifel an der Messgenauigkeit: Gerät sperren — vor dem nächsten Einsatz ist eine MTK nötig.</div>}
         {form.unklar && !m.busy && <Hinweis>Ob diese Meldung gespeichert wurde, ist unklar. Erneut senden legt sie nicht doppelt an.</Hinweis>}
         <KnopfZeile abbrechen={form.unklar ? verwerfen : schliessen} abbrechenText={form.unklar ? 'Verwerfen' : 'Abbrechen'}
           los={melden} losText={form.unklar ? 'Erneut senden' : 'Mangel melden'} frei={!!form.description.trim()} gefahr />
@@ -188,7 +213,16 @@ function DefektBeheben({ defekt }: { defekt: Defect }) {
   const [wieder, setWieder] = useState(() => geraetWert(versuch, 'operational') === 'true')
   const geraet = m.devices.find(d => d.id === defekt.device_id)
   const weitere = geraet ? m.offeneDefekteVon(geraet.id).filter(d => d.id !== defekt.id) : []
-  const weitereSperrend = weitere.filter(d => sperrtDefekt(d.severity)).length
+  // Was nach dem Beheben (und ggf. der Freigabe) weiter sperrt — z. B. eine überfällige oder
+  // nicht bestandene STK: dann kein „wieder einsatzbereit“
+  // Ein Defekt aus einer nicht bestandenen STK/MTK gibt nie frei — auch wenn ihr Eintrag im Gerätebuch fehlt
+  const ausKontrolle = defektAusKontrolle(defekt.description)
+  const bleibt = (wieder: boolean) => geraet ? [
+    ...bleibtGesperrt(m.mitKontrollen(geraet), weitere, m.offeneMeldungenVon(geraet.id), m.heute, wieder ? { operational: true } : {})
+      .filter(g => wieder || g.text !== 'Als nicht einsatzbereit markiert'),
+    ...(ausKontrolle && wieder && !m.mitKontrollen(geraet).kontrollen?.[ausKontrolle] ? [{ stufe: 'gesperrt' as const, text: `Letzte ${KONTROLLE_NAME[ausKontrolle]} nicht bestanden` }] : []),
+  ] : []
+  const bleibtNachFreigabe = bleibt(true)
 
   // Ein unklarer Versuch bleibt erreichbar, auch wenn das Recht inzwischen fehlt — zum Verwerfen
   if (!darfBeheben(m.user, defekt.severity) && !versuch) {
@@ -202,7 +236,7 @@ function DefektBeheben({ defekt }: { defekt: Defect }) {
   const fertig = () => { merke(null); m.setBlatt(null); Promise.all([m.loadDefects(), m.loadDevices()]).catch(() => undefined) }
 
   async function beheben() {
-    const plan = versuch?.anfragen ?? planeBeheben({ defekt, notiz, wer: m.wer(), wiederEinsatzbereit: wieder && m.darfVerwalten, buch: m.buch ? { ereignisId } : undefined })
+    const plan = versuch?.anfragen ?? planeBeheben({ defekt, notiz, wer: m.wer(), wiederEinsatzbereit: wieder && m.darfVerwalten && !bleibtNachFreigabe.length, buch: m.buch ? { ereignisId } : undefined })
     const gibtFrei = plan.some(a => a.collection === 'mpg_devices' && a.body.operational === true)
     let anfragen = plan
     if (versuch && gibtFrei) {
@@ -211,7 +245,9 @@ function DefektBeheben({ defekt }: { defekt: Defect }) {
       if (v.weiter === 'abbrechen') return
       anfragen = v.anfragen
     }
-    const r = await m.ausfuehren(anfragen, gibtFrei ? 'Defekt behoben — Gerät wieder einsatzbereit' : 'Defekt als behoben markiert')
+    const rest = bleibt(gibtFrei)
+    const r = await m.ausfuehren(anfragen, rest.length ? `Defekt behoben — Gerät bleibt gesperrt (${sperrText(rest)})`
+      : gibtFrei ? 'Defekt behoben — Gerät wieder einsatzbereit' : 'Defekt als behoben markiert')
     if (r === 'ok') fertig()
     else if (r === 'unklar') unklarNach(plan, defekt.device_id)
   }
@@ -224,14 +260,17 @@ function DefektBeheben({ defekt }: { defekt: Defect }) {
           <textarea value={notiz} onChange={e => setNotiz(e.target.value)} rows={3} readOnly={m.busy || unklar}
             placeholder="Ersatzteil, Reparatur, Austausch …" style={{ ...eingabe, resize: 'vertical' }} />
         </Feld>
-        {geraet && geraet.operational === false && !istAusserBetrieb(geraet) && (weitereSperrend
-          ? <Hinweis>Das Gerät bleibt gesperrt: {weitereSperrend === 1 ? 'ein weiterer Defekt' : `${weitereSperrend} weitere Defekte`} „hoch“ oder „kritisch“ offen.</Hinweis>
-          : !m.darfVerwalten
-          ? <Hinweis>Das Gerät bleibt gesperrt, bis jemand mit „MPG verwalten“ es freigibt.</Hinweis>
-          : <Haken an={wieder} setAn={setWieder} gesperrt={m.busy || unklar} titel="Gerät wieder einsatzbereit" text={[
-              weitere.length ? `Noch ${weitere.length === 1 ? 'ein Mangel' : `${weitere.length} Mängel`} offen.` : '',
-              pruefungNichtBestanden(geraet) ? 'Die letzte Prüfung ist nicht bestanden — gesperrt bleibt es, bis eine Prüfung bestanden ist.' : 'Hebt die Sperre auf.',
-            ].filter(Boolean).join(' ')} />)}
+        {geraet && !istAusserBetrieb(geraet) && (geraet.operational === false
+          ? (bleibtNachFreigabe.length && !(unklar && wieder)
+            ? <GesperrtBleibt gruende={bleibtNachFreigabe} />
+            : !m.darfVerwalten
+            ? <Hinweis>Das Gerät bleibt gesperrt, bis jemand mit „MPG verwalten“ es freigibt.</Hinweis>
+            : <Haken an={wieder} setAn={setWieder} gesperrt={m.busy || unklar} titel="Gerät wieder einsatzbereit" text={[
+                weitere.length ? `Noch ${weitere.length === 1 ? 'ein Mangel' : `${weitere.length} Mängel`} offen.` : '',
+                geraet.has_mtk ? 'Hebt die Sperre auf — nach Reparatur, Öffnen oder Sturz erst nach einer bestandenen MTK.' : 'Hebt die Sperre auf.',
+              ].filter(Boolean).join(' ')} />)
+          : <GesperrtBleibt gruende={bleibt(false)} />)}
+        {geraet?.has_mtk && <div style={kursivGrau}>Nach Reparatur, Öffnen oder Sturz ist sofort eine MTK nötig — erst danach wieder einsetzen.</div>}
         {unklar && !m.busy && <UnklarHinweis />}
         <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, () => m.setBlatt(null)) : () => m.setBlatt(null)} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
           los={beheben} losText={unklar ? 'Erneut senden' : 'Als behoben markieren'} frei />
@@ -419,12 +458,16 @@ function Freigeben({ device }: { device: Device }) {
 
   const offen = m.offeneDefekteVon(device.id)
   const sperrend = offen.filter(d => sperrtDefekt(d.severity))
-  const nichtBestanden = pruefungNichtBestanden(device)
+  // Was nach der Freigabe weiter sperrt (letzte Prüfung oder STK/MTK nicht bestanden, überfällig …)
+  const bleibt = bleibtGesperrt(m.mitKontrollen(device), offen, m.offeneMeldungenVon(device.id), m.heute, { operational: true })
+  // Nach nicht bestandener STK/MTK keine Freigabe (der Server lehnt sie ebenso ab)
+  const nichtBestanden = nichtBestandenText(m, device)
 
   const fertig = () => { merke(null); schliessen(); m.loadDevices().catch(() => undefined) }
 
   async function freigeben() {
-    const plan = versuch?.anfragen ?? planeFreigabe({ geraet: device, bemerkung, wer: m.wer(), id, buch: m.buch })
+    const text = [bemerkung.trim(), bleibt.length ? `Gesperrt bleibt es: ${sperrText(bleibt)}` : ''].filter(Boolean).join('\n')
+    const plan = versuch?.anfragen ?? planeFreigabe({ geraet: device, bemerkung: text, wer: m.wer(), id, buch: m.buch })
     let anfragen = plan
     if (versuch) {
       const v = await m.vorErneutemSenden({ versuch, geraetId: device.id, was: 'Freigabe' })
@@ -432,7 +475,7 @@ function Freigeben({ device }: { device: Device }) {
       if (v.weiter === 'abbrechen') return
       anfragen = v.anfragen
     }
-    const r = await m.ausfuehren(anfragen, 'Gerät freigegeben')
+    const r = await m.ausfuehren(anfragen, bleibt.length ? `Freigegeben — gesperrt bleibt es (${sperrText(bleibt)})` : 'Gerät freigegeben')
     if (r === 'ok') fertig()
     else if (r === 'unklar') unklarNach(plan, device.id)
   }
@@ -442,6 +485,8 @@ function Freigeben({ device }: { device: Device }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {sperrend.length > 0
           ? <Hinweis ton="warn">Noch {sperrend.length === 1 ? 'ein Defekt' : `${sperrend.length} Defekte`} „hoch“ oder „kritisch“ offen. Erst beheben, dann freigeben.</Hinweis>
+          : nichtBestanden && !unklar
+          ? <Hinweis ton="warn">{nichtBestanden}</Hinweis>
           : <>
               {m.buch && (
                 <Feld label="Bemerkung (optional)" hinweis="Steht im Gerätebuch.">
@@ -450,11 +495,11 @@ function Freigeben({ device }: { device: Device }) {
                 </Feld>
               )}
               {offen.length > 0 && <Hinweis>Es {offen.length === 1 ? 'ist noch ein Mangel' : `sind noch ${offen.length} Mängel`} offen — sie sperren nicht.</Hinweis>}
-              {nichtBestanden && <Hinweis ton="warn">Die letzte Prüfung ist nicht bestanden — gesperrt bleibt es, bis eine Prüfung bestanden ist.</Hinweis>}
+              <GesperrtBleibt gruende={bleibt} />
             </>}
         {unklar && !m.busy && <UnklarHinweis />}
         <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
-          los={freigeben} losText={unklar ? 'Erneut senden' : 'Freigeben'} frei={sperrend.length === 0} />
+          los={freigeben} losText={unklar ? 'Erneut senden' : 'Freigeben'} frei={unklar || (sperrend.length === 0 && !nichtBestanden)} />
       </div>
     </Blatt>
   )
@@ -614,6 +659,198 @@ function Vermerk({ device, bezug }: { device: Device; bezug?: { id: string; text
         {unklar && !m.busy && <UnklarHinweis />}
         <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
           los={eintragen} losText={unklar ? 'Erneut senden' : 'Eintragen'} frei={unklar || (m.buch && !!text.trim())} />
+      </div>
+    </Blatt>
+  )
+}
+
+// ── STK oder MTK eintragen (MPG verwalten) ────────────────────────────────
+
+function KontrolleEintragen({ device, art, ausserplanmaessig: vorbelegt }: { device: Device; art: KontrollArt; ausserplanmaessig?: boolean }) {
+  const m = useMpg()
+  const { versuch, id, merke, unklarNach } = useBlattVersuch(`kontrolle-${art}:${device.id}`)
+  const unklar = !!versuch
+  const vorher = versuch?.anfragen.find(a => a.collection === 'mpg_ereignisse')?.body.angaben as Record<string, unknown> | undefined
+  const [datum, setDatum] = useState(() => String(vorher?.datum ?? m.heute))
+  const [ergebnis, setErgebnis] = useState<KontrollErgebnis>(() => (vorher?.ergebnis as KontrollErgebnis) ?? 'bestanden')
+  const [pruefer, setPruefer] = useState(() => String(vorher?.pruefer ?? ''))
+  const [firma, setFirma] = useState(() => String(vorher?.firma ?? ''))
+  const [protokoll, setProtokoll] = useState(() => String(vorher?.protokoll ?? ''))
+  // Muss beantwortet werden: Im unveränderlichen Gerätebuch steht nur, was jemand bestätigt hat
+  const [plakette, setPlakette] = useState<boolean | null>(() => typeof vorher?.plakette === 'boolean' ? vorher.plakette : null)
+  const [ausserplanmaessig, setAusserplanmaessig] = useState(() => vorher ? !!vorher.ausserplanmaessig : !!vorbelegt)
+  const [maengel, setMaengel] = useState(() => String(vorher?.maengel ?? ''))
+  const [defektId] = useState(() => String(versuch?.anfragen.find(a => a.collection === 'mpg_defects')?.id ?? neueId()))
+  const schliessen = () => m.setBlatt(null)
+  const titel = `${KONTROLLE_NAME[art]} eintragen: ${device.name}`
+  const name = KONTROLLE_NAME[art]
+  if (!m.darfVerwalten && !versuch) return <Blatt ueber={KONTROLLE_LANG[art]} titel={titel} onClose={schliessen}><NurVerwalter was="STK und MTK eintragen" /></Blatt>
+  if ((!m.buch || m.angabenDa === false) && !versuch) {
+    return (
+      <Blatt ueber={KONTROLLE_LANG[art]} titel={titel} onClose={schliessen}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Hinweis>{!m.buch
+            ? 'STK und MTK stehen im Gerätebuch — es ist in PocketBase noch nicht eingerichtet (Sammlung mpg_ereignisse).'
+            : 'Im Gerätebuch fehlt noch das Feld „angaben“ (JSON) an mpg_ereignisse — ohne es gingen Ergebnis, Plakette und nächste Fälligkeit verloren.'}
+            {' '}Bis dahin das Datum der letzten Kontrolle beim Gerät unter „Bearbeiten“ eintragen.</Hinweis>
+          <button onClick={schliessen} style={{ ...knopfRand, color: 'var(--warm-gray)' }}>Schließen</button>
+        </div>
+      </Blatt>
+    )
+  }
+  const tag = kalendertag(datum)
+  const monate = art === 'stk' ? device.stk_interval_months : device.mtk_interval_months
+  // Letzte bestandene am Gerät (für die Anzeige; vor dem Senden wird sie frisch gelesen) — ein
+  // Datum nach heute (Tippfehler) zählt nicht
+  const nurBisHeute = (t: string | null) => (t && t <= m.heute ? t : null)
+  const bisher = nurBisHeute(kalendertag(art === 'stk' ? device.last_stk : device.last_mtk))
+  const aelter = !!bisher && !!tag && tag < bisher
+  const naechste = tag && ergebnis !== 'nicht_bestanden' ? naechsteNachKontrolle(art, tag, monate) : null
+  const frei = unklar || (!!tag && tag <= m.heute && (!!pruefer.trim() || !!firma.trim()) && (ergebnis === 'bestanden' || !!maengel.trim())
+    && (ergebnis === 'nicht_bestanden' || plakette !== null))
+  const fest = m.busy || unklar
+  const fertig = () => { merke(null); schliessen(); Promise.all([m.loadDevices(), m.loadDefects(), m.loadKontrollen()]).catch(() => undefined) }
+
+  async function eintragen() {
+    if (!versuch && !tag) return
+    let plan = versuch?.anfragen
+    let geraetFrisch = device
+    if (!plan) {
+      // Frisch lesen: Eine inzwischen eingetragene neuere Kontrolle darf ein nachgetragenes
+      // älteres Datum nicht überschreiben — auch wenn die Liste hier noch den alten Stand hat
+      const g = await m.mitSperre(() => pb.collection('mpg_devices').getOne<Device>(device.id, { fields: 'id,updated,last_stk,last_mtk,stk_interval_months,mtk_interval_months,operational', ...pbOptionen() }))
+      if (!g.ok) return
+      geraetFrisch = { ...device, ...g.wert }
+      plan = planeKontrolle({
+        geraet: geraetFrisch, bisher: kalendertag(art === 'stk' ? g.wert.last_stk : g.wert.last_mtk), heute: m.heute, wer: m.wer(), ids: { ereignis: id, defekt: defektId },
+        angaben: { art, datum: tag!, ergebnis, pruefer, firma, protokoll, plakette: !!plakette, ausserplanmaessig: art === 'mtk' && ausserplanmaessig, maengel },
+      })
+    }
+    // Erneut: Ist der Eintrag schon da, fehlt höchstens das Datum am Gerät — und das nur
+    // nachschicken, wenn sich das Gerät seitdem nicht geändert hat (sonst überschriebe es
+    // vielleicht eine inzwischen eingetragene neuere Kontrolle)
+    let anfragen = plan
+    if (versuch) {
+      const v = await m.vorErneutemSenden({ versuch, geraetId: device.id, was: `${name} eintragen` })
+      if (v.weiter === 'schon') return fertig()
+      if (v.weiter === 'abbrechen') return
+      // Steht inzwischen eine neuere Kontrolle am Gerät, bleibt deren Datum
+      const feld = art === 'stk' ? 'last_stk' : 'last_mtk'
+      const dort = kalendertag(String(v.geraet[feld] ?? ''))
+      const gesendet = String(vorher?.datum ?? '')
+      anfragen = v.anfragen.filter(a => !(a.collection === 'mpg_devices' && feld in a.body && !!dort && dort >= gesendet))
+      if (!anfragen.length) {
+        m.showMsg(`${name} steht im Gerätebuch — am Gerät steht schon eine neuere, deren Datum gilt weiter`)
+        return fertig()
+      }
+    }
+    // Was der Plan tut (nach dem frischen Lesen) — danach richtet sich die Meldung
+    const feld = art === 'stk' ? 'last_stk' : 'last_mtk'
+    const sperrt = plan.some(a => a.collection === 'mpg_devices' && a.body.operational === false)
+    const datumNeu = plan.some(a => a.collection === 'mpg_devices' && feld in a.body)
+    // Was danach noch sperrt (z. B. die Sperre aus einer nicht bestandenen — die hebt erst die Freigabe auf)
+    const mit = m.mitKontrollen(geraetFrisch)
+    // Die neue bestandene ist nur dann die neueste, wenn keine spätere im Gerätebuch steht
+    const bisherK = mit.kontrollen?.[art]
+    const wirdNeueste = !bisherK || (tag ?? m.heute) >= bisherK.datum
+    const nachher = ergebnis === 'nicht_bestanden' ? [] : bleibtGesperrt(mit, m.offeneDefekteVon(device.id), m.offeneMeldungenVon(device.id), m.heute, {
+      ...(wirdNeueste ? { kontrollen: { ...mit.kontrollen, [art]: { datum: tag ?? m.heute, bestanden: true } } } : {}),
+      ...(datumNeu ? { [feld]: tag ?? '' } : {}),
+    })
+    const gleicherTag = !datumNeu && tag === nurBisHeute(kalendertag(art === 'stk' ? geraetFrisch.last_stk : geraetFrisch.last_mtk))
+    const nurFreigabe = nachher.length === 1 && nachher[0].text === 'Als nicht einsatzbereit markiert'
+    const text = ergebnis === 'nicht_bestanden' ? (sperrt ? `${name} nicht bestanden — Gerät gesperrt, Defekt angelegt` : `${name} nachgetragen (nicht bestanden) — das Gerät bleibt, wie es ist`)
+      : gleicherTag ? `${name} eingetragen — am selben Tag wie die zuletzt eingetragene`
+      : !datumNeu ? `${name} nachgetragen — am Gerät steht eine neuere, deren Frist gilt weiter`
+      : nurFreigabe ? `${name} eingetragen — das Gerät ist noch gesperrt: jetzt freigeben`
+      : nachher.length ? `${name} eingetragen — gesperrt bleibt es (${sperrText(nachher)})`
+      : ergebnis === 'maengel' ? `${name} eingetragen — Mängel als Defekt angelegt` : `${name} eingetragen`
+    // Das Datum am Gerät gilt nur mit dem Nachweis im Gerätebuch dahinter — nur eine Sperre
+    // (nicht bestanden) geht auch ohne ihren Eintrag durch
+    const r = await m.ausfuehren(anfragen, text, ergebnis === 'nicht_bestanden')
+    if (r === 'ok') {
+      // Ob das Feld „angaben“ angekommen ist, zeigt sich am ersten Eintrag
+      if (m.angabenDa === null) {
+        const e = await pb.collection('mpg_ereignisse').getOne(id, pbOptionen()).catch(() => null)
+        if (e && !('angaben' in e)) {
+          m.setAngabenDa(false)
+          m.showMsg(`${name} eingetragen — aber im Gerätebuch fehlt das Feld „angaben“ (JSON). Plakette und nächste Fälligkeit wurden nicht gespeichert.`, 'error')
+        } else if (e) m.setAngabenDa(true)
+      }
+      fertig()
+    } else if (r === 'unklar') unklarNach(plan, device.id, versuch ? undefined : geraetFrisch.updated)
+  }
+
+  return (
+    <Blatt ueber={KONTROLLE_LANG[art]} titel={titel} onClose={schliessen} gesperrt={m.busy}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Feld label="Durchgeführt am *">
+          <input type="date" value={datum} max={m.heute} onChange={e => setDatum(e.target.value)} readOnly={fest} style={eingabe} />
+        </Feld>
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Ergebnis</div>
+          <div role="radiogroup" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {(Object.keys(ERGEBNIS_NAME) as KontrollErgebnis[]).map(e => {
+              const an = ergebnis === e
+              const rot = e === 'nicht_bestanden'
+              return (
+                <button key={e} type="button" role="radio" aria-checked={an} disabled={fest} onClick={() => setErgebnis(e)} style={{
+                  padding: '11px 12px', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, textAlign: 'left', cursor: fest ? 'default' : 'pointer',
+                  border: `1.5px solid ${an ? (rot ? '#dc2626' : 'var(--lbf-akzent)') : 'var(--lbf-border)'}`,
+                  background: an ? (rot ? 'var(--lbf-fehler-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)') : 'transparent',
+                  color: rot ? 'var(--lbf-fehler-text)' : 'var(--lbf-text)',
+                }}>{ERGEBNIS_NAME[e]}</button>
+              )
+            })}
+          </div>
+        </div>
+        {ergebnis !== 'bestanden' && (
+          <Feld label={ergebnis === 'nicht_bestanden' ? 'Was wurde beanstandet? *' : 'Welche Mängel? *'}>
+            <textarea value={maengel} onChange={e => setMaengel(e.target.value)} rows={3} readOnly={fest}
+              placeholder="So, wie es im Prüfprotokoll steht" style={{ ...eingabe, resize: 'vertical' }} />
+          </Feld>
+        )}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 180px' }}><Feld label="Firma"><input value={firma} onChange={e => setFirma(e.target.value)} readOnly={fest} placeholder="Medizintechnik-Dienstleister" style={eingabe} /></Feld></div>
+          <div style={{ flex: '1 1 180px' }}><Feld label="Geprüft von"><input value={pruefer} onChange={e => setPruefer(e.target.value)} readOnly={fest} placeholder="Name der prüfenden Person" style={eingabe} /></Feld></div>
+        </div>
+        <Feld label="Protokoll-Nr." hinweis="Das Prüfprotokoll aufbewahren — mindestens bis zur nächsten Kontrolle.">
+          <input value={protokoll} onChange={e => setProtokoll(e.target.value)} readOnly={fest} style={eingabe} />
+        </Feld>
+        {ergebnis !== 'nicht_bestanden' && (
+          <div>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Prüfplakette angebracht? *</div>
+            <div role="radiogroup" aria-label="Prüfplakette angebracht" style={{ display: 'flex', gap: 8 }}>
+              {([true, false] as const).map(j => {
+                const an = plakette === j
+                return (
+                  <button key={String(j)} type="button" role="radio" aria-checked={an} disabled={fest} onClick={() => setPlakette(j)} style={{
+                    flex: 1, padding: '10px 12px', borderRadius: 10, fontFamily: 'inherit', fontSize: 14, fontWeight: 700, cursor: fest ? 'default' : 'pointer',
+                    border: `1.5px solid ${an ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: an ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'transparent', color: 'var(--lbf-text)',
+                  }}>{j ? 'Ja' : 'Nein'}</button>
+                )
+              })}
+            </div>
+            <div style={{ ...kursivGrau, marginTop: 4 }}>{art === 'stk' ? 'Mit Monat und Jahr der nächsten STK und der prüfenden Person.' : 'Mit dem Jahr der nächsten MTK und der prüfenden Stelle.'}</div>
+          </div>
+        )}
+        {plakette && naechste && !aelter && ergebnis !== 'nicht_bestanden' && (
+          <div style={kursivGrau}>Auf der Plakette sollte {plakettenText(art, naechste)} stehen. Steht dort ein {art === 'stk' ? 'früherer Monat' : 'früheres Jahr'}, das Intervall des Geräts unter „Bearbeiten“ kürzen.</div>
+        )}
+        {art === 'mtk' && (
+          <Haken an={ausserplanmaessig} setAn={setAusserplanmaessig} gesperrt={fest} titel="Außerplanmäßig" text="Nach Reparatur, Öffnen, Sturz oder Zweifel an der Messgenauigkeit" />
+        )}
+        {ergebnis === 'nicht_bestanden'
+          ? (aelter
+            ? <Hinweis>Älter als die zuletzt bestandene {name} vom {tagText(bisher)} — wird nur ins Gerätebuch eingetragen, das Gerät wird nicht gesperrt.</Hinweis>
+            : <Hinweis ton="warn">Das Gerät wird gesperrt und ein Defekt „hoch“ angelegt. Wieder einsatzbereit erst nach Reparatur und einer bestandenen {name}. Bis dahin läuft die Frist ab der letzten bestandenen (sonst ab der Inbetriebnahme).</Hinweis>)
+          : naechste && <Hinweis>{aelter
+            ? `Älter als die zuletzt eingetragene ${name} vom ${tagText(bisher)} — wird nachgetragen, deren Frist gilt weiter.`
+            : `Nächste ${name} fällig bis ${tagText(naechste)}${bisher && tag === bisher ? ' — am selben Tag wie die zuletzt eingetragene; das Datum am Gerät bleibt' : ''}.`}</Hinweis>}
+        {tag && tag > m.heute && <div style={{ ...kursivGrau, color: 'var(--lbf-fehler-text)' }}>Das Datum darf nicht in der Zukunft liegen.</div>}
+        {unklar && !m.busy && <UnklarHinweis />}
+        <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
+          los={eintragen} losText={unklar ? 'Erneut senden' : 'Eintragen'} frei={frei} gefahr={ergebnis === 'nicht_bestanden' && !aelter} />
       </div>
     </Blatt>
   )

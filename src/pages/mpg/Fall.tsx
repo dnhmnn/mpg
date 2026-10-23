@@ -1,7 +1,7 @@
 // Ein Fall (Defekt) als eigene, verlinkbare Seite.
 
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { sperrtDefekt } from '../../lib/mpg/zustand'
+import { defektAusKontrolle, sperrtDefekt } from '../../lib/mpg/zustand'
 import { darfBeheben } from '../../lib/mpg/rechte'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
@@ -49,7 +49,7 @@ export default function Fall() {
         <Link to={`/mpg/geraete/${d.device_id}`} style={{ ...knopfRand, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Zum Gerät</Link>
       </div>
       {!m.devices.some(g => g.id === d.device_id) && <div style={{ ...kursivGrau, marginTop: 8 }}>Das Gerät gibt es nicht mehr.</div>}
-      {offen && !darfBeheben(m.user, d.severity) && <div style={{ ...kursivGrau, marginTop: 8 }}>Einen Defekt „{d.severity === 'critical' ? 'kritisch' : 'hoch'}“ schließt, wer „MPG verwalten“ hat — das Beheben hebt die Sperre auf.</div>}
+      {offen && !darfBeheben(m.user, d.severity) && <div style={{ ...kursivGrau, marginTop: 8 }}>Einen Defekt „{d.severity === 'critical' ? 'kritisch' : 'hoch'}“ schließt, wer „MPG verwalten“ hat — {defektAusKontrolle(d.description) ? `die Sperre hebt erst eine bestandene ${defektAusKontrolle(d.description) === 'stk' ? 'STK' : 'MTK'} auf.` : 'das Beheben hebt die Sperre auf.'}</div>}
     </>
   )
 }

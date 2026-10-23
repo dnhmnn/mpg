@@ -2,9 +2,14 @@
 //
 // Rangfolge, die schwerste Stufe gewinnt:
 //   GESPERRT     außer Betrieb genommen, nicht einsatzbereit markiert, letzte Prüfung
-//                nicht bestanden, offener Defekt „hoch“ oder „kritisch“
-//   HANDLUNG     offener Mangel (gering/mittel), offene Meldung von außen,
-//                Frist überfällig, heute fällig oder noch nie geprüft
+//                nicht bestanden, offener Defekt „hoch“ oder „kritisch“, STK oder MTK
+//                überfällig (Entscheidung des Betreibers, 22.10.2026 — nach naheliegender
+//                Auslegung wäre ein Weiterbetrieb nicht verordnungskonform), letzte STK oder
+//                MTK nicht bestanden — bis eine bestandene eingetragen ist, wie bei der
+//                Prüfung (Entscheidung des Betreibers, 23.10.2026)
+//   HANDLUNG     offener Mangel (gering/mittel), offene Meldung von außen, Prüfung
+//                überfällig, heute fällig oder noch nie geprüft, STK/MTK heute fällig,
+//                ohne Datum oder mit einem Datum in der Zukunft
 //   BALD         Frist innerhalb der Vorwarnung
 //   OK           einsatzbereit
 // Jede Stufe nennt ihre Gründe im Klartext.
@@ -35,11 +40,16 @@ export const SCHWERE_TEXT: Record<Schwere, string> = {
   low: 'gering', medium: 'mittel', high: 'hoch', critical: 'kritisch',
 }
 
+/** Die neueste eingetragene STK bzw. MTK laut Gerätebuch (kontrollen.ts, neuesteKontrollen) */
+export interface KontrollStand { datum: Tag; bestanden: boolean; /** Zeit des Eintrags (created) */ eingetragen?: string }
+
 export interface ZustandGeraet extends FristFelder {
   operational?: boolean | null
   last_inspection_passed?: boolean | null
   /** Datum der Außerbetriebnahme; leer = in Betrieb */
   ausser_betrieb?: string | null
+  /** Neueste STK und MTK aus dem Gerätebuch — fehlt es, zählt nur, was am Gerät steht */
+  kontrollen?: Partial<Record<'stk' | 'mtk', KontrollStand>>
 }
 
 /** Außer Betrieb genommen? Jeder eingetragene Wert zählt — im Zweifel nicht einsatzbereit. */
@@ -66,12 +76,33 @@ export function pruefungNichtBestanden(g: Pick<ZustandGeraet, 'last_inspection' 
   return !!kalendertag(g.last_inspection) && g.last_inspection_passed === false
 }
 
+/**
+ * Ist die neueste STK bzw. MTK nicht bestanden? Dann bleibt das Gerät gesperrt, bis eine
+ * bestandene eingetragen ist. Eine nachgetragene ältere zählt nicht, wenn am Gerät schon
+ * eine neuere bestandene steht — ein Datum am Gerät nach heute ist aber keine (Tippfehler).
+ * Freigeben und ein späteres Datum am Gerät lehnt der Server dann ab (pb_hooks/mpg.pb.js).
+ */
+export function kontrolleNichtBestanden(g: Pick<ZustandGeraet, 'has_stk' | 'has_mtk' | 'last_stk' | 'last_mtk' | 'kontrollen'>, art: 'stk' | 'mtk', heute: Tag): boolean {
+  const k = g.kontrollen?.[art]
+  if (!(art === 'stk' ? g.has_stk : g.has_mtk) || !k || k.bestanden) return false
+  const letzte = kalendertag(art === 'stk' ? g.last_stk : g.last_mtk)
+  return !letzte || letzte > heute || k.datum >= letzte
+}
+
+/** Defekt aus einer nicht bestandenen STK/MTK? (Fallback, falls ihr Eintrag im Gerätebuch fehlt) */
+export function defektAusKontrolle(beschreibung: string | null | undefined): 'stk' | 'mtk' | null {
+  const m = /^(STK|MTK) nicht bestanden:/.exec(String(beschreibung ?? ''))
+  return m ? (m[1] === 'STK' ? 'stk' : 'mtk') : null
+}
+
 function fristGrund(f: Frist): Grund | null {
   const was = f.art === 'pruefung' ? 'Prüfung' : f.bezeichnung
+  if (f.zukunft && !f.naechste) return { stufe: 'handlung', text: `${was}: eingetragenes Datum liegt in der Zukunft — bitte prüfen` }
   switch (f.lage) {
     case 'offen':
-      return { stufe: 'handlung', text: f.art === 'pruefung' ? 'Erstprüfung offen' : `Letzte ${was} nicht eingetragen` }
+      return { stufe: 'handlung', text: f.art === 'pruefung' ? 'Erstprüfung offen' : `${was}: Datum fehlt` }
     case 'ueberfaellig':
+      return { stufe: f.art === 'pruefung' ? 'handlung' : 'gesperrt', text: `${was} ${lageText(f)}` }
     case 'heute':
       return { stufe: 'handlung', text: `${was} ${lageText(f)}` }
     case 'bald':
@@ -109,10 +140,29 @@ export function zustandVon(
   for (const f of fristen) {
     const gr = fristGrund(f)
     if (gr) gruende.push(gr)
+    if (f.zukunft && f.naechste) gruende.push({ stufe: 'handlung', text: `${f.bezeichnung}: eingetragenes Datum liegt in der Zukunft — bitte prüfen` })
+  }
+  for (const art of ['stk', 'mtk'] as const) {
+    if (kontrolleNichtBestanden(g, art, heute)) gruende.push({ stufe: 'gesperrt', text: `Letzte ${art === 'stk' ? 'STK' : 'MTK'} nicht bestanden` })
   }
 
   gruende.sort((a, b) => rang(a.stufe) - rang(b.stufe))
   return { stufe: gruende[0]?.stufe ?? 'ok', gruende, fristen }
+}
+
+/**
+ * Was ein Gerät nach einer Änderung (Defekt behoben, freigegeben …) noch sperren würde — damit
+ * ein Blatt nicht „wieder einsatzbereit“ sagt, wo z. B. eine überfällige STK weiter sperrt.
+ * @param nach die Änderung am Gerät (z. B. { operational: true })
+ */
+export function bleibtGesperrt(
+  g: ZustandGeraet,
+  defekte: { severity?: string | null }[],
+  meldungen: { severity?: string | null }[],
+  heute: Tag,
+  nach: Partial<ZustandGeraet>,
+): Grund[] {
+  return zustandVon({ ...g, ...nach }, defekte, meldungen, heute).gruende.filter(x => x.stufe === 'gesperrt')
 }
 
 /** Zählt Geräte je Stufe — z. B. für das Hub-Widget. Außer Betrieb genommene zählen nicht mit. */

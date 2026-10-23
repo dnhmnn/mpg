@@ -108,27 +108,64 @@ export function naechstePruefung(letzte: Tag, intervall: Intervall): Tag {
   }
 }
 
-/**
- * Nächste STK: „mit Ablauf des Monats“ — eine STK vom 10.03.2024 mit 24 Monaten
- * ist bis zum 31.03.2026 durchzuführen.
- */
-export function naechsteStk(letzte: Tag, monate: number): Tag {
-  return monatsende(plusMonate(letzte, monate))
-}
+// STK und MTK nach der Medizinprodukte-Betreiberverordnung (Neufassung 2025):
+// - STK: spätestens alle 24 Monate, „mit Ablauf des Monats“; kürzer, wenn der Betreiber
+//   es festlegt. Länger geht nicht — auch nicht auf Herstellerangabe.
+// - MTK: Nachprüffrist in ganzen Jahren, „mit Ablauf des Jahres“ (31.12.); für die Geräte
+//   im Rettungsdienst (Blutdruck, Thermometer) höchstens 2 Jahre — länger geht auch hier nicht.
+// - Die erste Frist läuft ab der Inbetriebnahme, danach ab der letzten BESTANDENEN Kontrolle.
+// - Ein Datum nach heute zählt nicht (Tippfehler im Jahr) — sonst gäbe es ein überfälliges
+//   Gerät für Jahre frei.
 
-/**
- * Nächste MTK. Bewusst taggenau (die frühere Fristregel „mit Ablauf des Jahres“ ist
- * für die Neufassung der MPBetreibV nicht bestätigt) — lieber zu früh als zu spät.
- * Je Modell einstellbar wird das mit den Prüfplänen.
- */
-export function naechsteMtk(letzte: Tag, monate: number): Tag {
-  return plusMonate(letzte, monate)
-}
+/** Höchstes STK-Intervall in Monaten */
+export const STK_HOECHSTENS = 24
 
 /** Monate eines STK/MTK-Intervalls; leer, 0 oder Unsinn → 24 wie bisher. */
 export function monateVon(wert: number | null | undefined): number {
   const n = Number(wert)
   return Number.isFinite(n) && n >= 1 ? Math.round(n) : 24
+}
+
+/** STK-Intervall: 1 bis höchstens 24 Monate — ein längeres wäre nicht zulässig. */
+export function stkMonate(wert: number | null | undefined): number {
+  return Math.min(monateVon(wert), STK_HOECHSTENS)
+}
+
+/** Höchste MTK-Nachprüffrist in Jahren */
+export const MTK_HOECHSTENS_JAHRE = 2
+
+/**
+ * MTK-Nachprüffrist in ganzen Jahren, 1 bis höchstens 2 (gespeichert als Monate). Angebrochene
+ * Jahre zählen nicht — im Zweifel früher: 18 Monate → jährlich.
+ */
+export function mtkJahre(wert: number | null | undefined): number {
+  return Math.min(MTK_HOECHSTENS_JAHRE, Math.max(1, Math.floor(monateVon(wert) / 12)))
+}
+
+/** Rechnet die App mit einem anderen STK-Intervall als dem gespeicherten (Altbestand, z. B. 36 Monate)? */
+export function stkAbweichend(wert: number | null | undefined): boolean {
+  return Number(wert) >= 1 && monateVon(wert) !== stkMonate(wert)
+}
+
+/** … ebenso bei der MTK (z. B. 18 oder 60 Monate gespeichert) */
+export function mtkAbweichend(wert: number | null | undefined): boolean {
+  return Number(wert) >= 1 && monateVon(wert) !== mtkJahre(wert) * 12
+}
+
+/**
+ * Nächste STK: „mit Ablauf des Monats“ — eine STK vom 10.03.2024 mit 24 Monaten
+ * ist bis zum 31.03.2026 durchzuführen. Mehr als 24 Monate gibt es nicht.
+ */
+export function naechsteStk(letzte: Tag, monate: number): Tag {
+  return monatsende(plusMonate(letzte, stkMonate(monate)))
+}
+
+/**
+ * Nächste MTK: „mit Ablauf des Jahres“ — eine MTK vom 10.03.2024 mit 2 Jahren ist bis
+ * zum 31.12.2026 durchzuführen.
+ */
+export function naechsteMtk(letzte: Tag, monate: number): Tag {
+  return `${Number(letzte.slice(0, 4)) + mtkJahre(monate)}-12-31`
 }
 
 export type Lage = 'offen' | 'ueberfaellig' | 'heute' | 'bald' | 'ok'
@@ -142,6 +179,10 @@ export interface Frist {
   lage: Lage
   /** Tage bis zur Fälligkeit; negativ = überfällig; null ohne Datum */
   tage: number | null
+  /** STK/MTK: noch keine Kontrolle — die Frist läuft ab der Inbetriebnahme */
+  abInbetriebnahme?: boolean
+  /** STK/MTK: ein eingetragenes Datum liegt nach heute und zählt deshalb nicht */
+  zukunft?: boolean
 }
 
 /** Lage einer Frist am Tag `heute`. */
@@ -164,6 +205,8 @@ export interface FristFelder {
   has_mtk?: boolean | null
   last_mtk?: string | null
   mtk_interval_months?: number | null
+  /** Inbetriebnahme — ab ihr läuft die erste STK- und MTK-Frist */
+  inbetriebnahme?: string | null
 }
 
 export const INTERVALL_TEXT: Record<Intervall, string> = {
@@ -179,16 +222,23 @@ export function fristenVon(g: FristFelder, heute: Tag): Frist[] {
     art: 'pruefung', bezeichnung: 'Prüfung', letzte, naechste,
     ...lageVon(naechste, heute, VORWARNUNG[intervall]),
   }]
-  if (g.has_stk) {
-    const l = kalendertag(g.last_stk)
-    const n = l ? naechsteStk(l, monateVon(g.stk_interval_months)) : null
-    liste.push({ art: 'stk', bezeichnung: 'STK', letzte: l, naechste: n, ...lageVon(n, heute, VORWARNUNG.stk) })
+  // Erste STK/MTK ab der Inbetriebnahme, danach ab der letzten bestandenen. Ein Datum nach
+  // heute zählt nicht: Steht die letzte Kontrolle in der Zukunft, gilt die Inbetriebnahme
+  // (im Zweifel früher fällig) — sonst ist das Datum offen und das Gerät hat Handlungsbedarf.
+  const gueltig = (t: Tag | null) => (t && t <= heute ? t : null)
+  const inbetriebRoh = kalendertag(g.inbetriebnahme)
+  const inbetrieb = gueltig(inbetriebRoh)
+  const kontrolle = (art: 'stk' | 'mtk', roh: Tag | null, naechsteVon: (bezug: Tag) => Tag): Frist => {
+    const l = gueltig(roh)
+    const bezug = l ?? inbetrieb
+    const n = bezug ? naechsteVon(bezug) : null
+    return {
+      art, bezeichnung: art === 'stk' ? 'STK' : 'MTK', letzte: l, naechste: n, abInbetriebnahme: !roh && !!inbetrieb,
+      zukunft: (!!roh && !l) || (!l && !!inbetriebRoh && !inbetrieb), ...lageVon(n, heute, VORWARNUNG[art]),
+    }
   }
-  if (g.has_mtk) {
-    const l = kalendertag(g.last_mtk)
-    const n = l ? naechsteMtk(l, monateVon(g.mtk_interval_months)) : null
-    liste.push({ art: 'mtk', bezeichnung: 'MTK', letzte: l, naechste: n, ...lageVon(n, heute, VORWARNUNG.mtk) })
-  }
+  if (g.has_stk) liste.push(kontrolle('stk', kalendertag(g.last_stk), b => naechsteStk(b, g.stk_interval_months ?? STK_HOECHSTENS)))
+  if (g.has_mtk) liste.push(kontrolle('mtk', kalendertag(g.last_mtk), b => naechsteMtk(b, g.mtk_interval_months ?? 24)))
   return liste
 }
 

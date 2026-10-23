@@ -175,6 +175,10 @@ function PruefSeite({ device }: { device: Device }) {
   const anderswo = m.laufendePruefung === stand.ids.pruefung && !sendetHier.current
   const fest = !!versucht || m.busy || anderswo
   const wahl = moeglicheErgebnisse(stand.results, stand.notes)
+  // Was das Gerät auch nach einer bestandenen Prüfung sperrt (z. B. STK überfällig) — dann
+  // sagen weder Knopf noch Meldung „einsatzbereit“
+  const sperrtWeiter = m.zustand(device).gruende.filter(g => g.stufe === 'gesperrt' && g.text !== 'Letzte Prüfung nicht bestanden')
+  const bleibtText = sperrtWeiter.length ? ` — Gerät bleibt gesperrt (${sperrtWeiter.map(g => g.text).join(', ')})` : ''
   const offen = unentschiedenePunkte(stand.results).length
   const maengel = stand.results.filter(r => r.status === 'mangel' || (!r.status && !r.checked)).length
 
@@ -239,8 +243,8 @@ function PruefSeite({ device }: { device: Device }) {
     }
     const nachtrag = !plan.some(a => a.collection === 'mpg_devices' && 'last_inspection' in a.body)
     const text = nachtrag ? 'Prüfung nachgetragen — es gibt eine neuere Prüfung, deren Stand gilt weiter'
-      : ergebnis === 'bestanden' ? 'Prüfung bestanden'
-      : ergebnis === 'mangel' ? 'Mangel festgehalten — Gerät bleibt einsatzbereit'
+      : ergebnis === 'bestanden' ? `Prüfung bestanden${bleibtText}`
+      : ergebnis === 'mangel' ? (bleibtText ? `Mangel festgehalten${bleibtText}` : 'Mangel festgehalten — Gerät bleibt einsatzbereit')
       : 'Prüfung nicht bestanden — Gerät gesperrt, Defekt angelegt'
     // Den Versuch VOR dem Senden festschreiben — auch im Entwurf, falls die App währenddessen
     // beendet wird: nach dem Neuladen gibt es dann nur „erneut senden“, nichts Geändertes
@@ -330,7 +334,7 @@ function PruefSeite({ device }: { device: Device }) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         {versucht
           ? knopf(versucht.ergebnis, `Erneut senden: ${ERGEBNIS_TEXT[versucht.ergebnis]}`)
-          : <>{maengel === 0 && knopf('bestanden')}{knopf('mangel')}{knopf('nicht_bestanden')}</>}
+          : <>{maengel === 0 && knopf('bestanden')}{knopf('mangel', sperrtWeiter.length ? 'Mangel festhalten' : undefined)}{knopf('nicht_bestanden')}</>}
       </div>
       <button onClick={verwerfen} disabled={m.busy} style={{ ...knopfRand, marginTop: 12, width: '100%', color: 'var(--warm-gray)' }}>
         {versucht ? 'Verwerfen' : 'Prüfung abbrechen'}

@@ -5,7 +5,8 @@ import { hatRecht } from '../lib/apps'
 import { modulFrei } from '../lib/freigabe'
 import { fallAus, istUeberfaellig, type CirsDatensatz } from '../lib/cirs'
 import { zaehleStufen, type ZustandGeraet } from '../lib/mpg/zustand'
-import { tagVonDatum } from '../lib/mpg/fristen'
+import { mitDefektFallback, neuesteKontrollen, type KontrollEintrag } from '../lib/mpg/kontrollen'
+import { useHeute } from '../hooks/useHeute'
 import type { User } from '../types'
 
 interface NewsItem {
@@ -28,11 +29,13 @@ export default function Widgets({ user }: WidgetsProps) {
   const navigate = useNavigate()
   const [news, setNews] = useState<NewsItem[]>([])
   const [newsLoaded, setNewsLoaded] = useState(false)
+  // Neuer Tag (App über Nacht offen): neu zählen — eine STK kann um Mitternacht überfällig werden
+  const heute = useHeute()
 
   useEffect(() => {
     if (!user?.organization_id) return
     fetchNews(user.organization_id)
-  }, [user])
+  }, [user, heute])
 
   async function fetchNews(org: string) {
     const items: NewsItem[] = []
@@ -114,19 +117,25 @@ export default function Widgets({ user }: WidgetsProps) {
         pb.collection('mpg_devices').getFullList<ZustandGeraet & { id: string }>({
           filter: pb.filter('organization_id = {:org}', { org }),
           // ausser_betrieb: außer Betrieb genommene zählen nicht mit (fehlt das Feld, liefert PocketBase es einfach nicht)
-          fields: 'id,interval,last_inspection,last_inspection_passed,operational,has_stk,last_stk,stk_interval_months,has_mtk,last_mtk,mtk_interval_months,ausser_betrieb',
+          fields: 'id,interval,last_inspection,last_inspection_passed,operational,has_stk,last_stk,stk_interval_months,has_mtk,last_mtk,mtk_interval_months,ausser_betrieb,inbetriebnahme',
           requestKey: 'widget-mpg',
         }),
-        pb.collection('mpg_defects').getFullList<{ device_id: string; severity: string }>({
+        pb.collection('mpg_defects').getFullList<{ id: string; device_id: string; severity: string; description: string; created: string }>({
           filter: pb.filter('organization_id = {:org} && status != "resolved"', { org }),
-          fields: 'device_id,severity', requestKey: 'widget-mpg-defekte',
+          fields: 'id,device_id,severity,description,created', requestKey: 'widget-mpg-defekte',
         }).catch(() => []),
         pb.collection('mpg_defect_reports').getFullList<{ device_id: string; severity: string }>({
           filter: pb.filter('organization_id = {:org} && status = "pending"', { org }),
           fields: 'device_id,severity', requestKey: 'widget-mpg-meldungen',
         }).catch(() => []),
-      ]).then(([geraete, defekte, meldungen]) => {
-        const z = zaehleStufen(geraete, defekte, meldungen, tagVonDatum(new Date()))
+        // STK/MTK aus dem Gerätebuch: eine nicht bestandene sperrt (ohne Gerätebuch: keine)
+        pb.collection('mpg_ereignisse').getFullList<KontrollEintrag>({
+          filter: pb.filter('organization_id = {:org} && (art = "stk" || art = "mtk")', { org }),
+          fields: 'device_id,art,created,text,angaben,bezug', requestKey: 'widget-mpg-kontrollen',
+        }).catch(() => []),
+      ]).then(([geraete, defekte, meldungen, kontrollEintraege]) => {
+        const kontrollen = mitDefektFallback(neuesteKontrollen(kontrollEintraege, heute), defekte, kontrollEintraege)
+        const z = zaehleStufen(geraete.map(g => ({ ...g, kontrollen: kontrollen.get(g.id) })), defekte, meldungen, heute)
         const parts: string[] = []
         if (z.gesperrt > 0) parts.push(`${z.gesperrt} gesperrt`)
         if (z.handlung > 0) parts.push(`${z.handlung} mit Handlungsbedarf`)

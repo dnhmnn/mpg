@@ -149,7 +149,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Lernbar | `src/pages/Lernbar.tsx` | Feed, Termine, Module |
 | Ausbildungen | `src/pages/ausbildungen/Ausbildungen.tsx` | Admin-Verwaltung Ausbildungen |
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
-| MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/`, Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
+| MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Fristen (STK/MTK), Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/` (STK/MTK: `fristen.ts`, `kontrollen.ts`; eine überfällige oder nicht bestandene STK oder MTK sperrt), Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
 | Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |
 
 ## PocketBase Collections (wichtigste)
@@ -165,7 +165,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | `eks_events` | EKS-Ereignislog (anhängend, **unveränderlich** — Update/Delete gesperrt). ID wird vom Client vergeben (15× `[a-z0-9]`) |
 | `inventory_transactions` | Lager-Journal (**unveränderlich**, Hook `pb_hooks/lager.pb.js`). Buchungen nur über `src/lib/lagerBuchung.ts` (Batch, Client-ID, genau einmal); Korrektur = Gegenbuchung (`storno_von`) |
 | `inventory_items`, `inventory_locations` | Lager-Stammdaten; benutzt → `archiviert` statt löschen |
-| `mpg_ereignisse` | MPG-Gerätebuch (**unveränderlich**, Hook `pb_hooks/mpg.pb.js`): Sperren, Freigaben, Stammdatenänderungen, Außerbetriebnahme, Vermerke. Geschrieben nur über die Pläne in `src/lib/mpg/aktionen.ts`; Korrektur = Vermerk mit `bezug` |
+| `mpg_ereignisse` | MPG-Gerätebuch (**unveränderlich**, Hook `pb_hooks/mpg.pb.js`): Sperren, Freigaben, Stammdatenänderungen, Außerbetriebnahme, STK/MTK (mit `angaben`), Vermerke. Geschrieben nur über die Pläne in `src/lib/mpg/aktionen.ts` und `src/lib/mpg/kontrollen.ts`; Korrektur = Vermerk mit `bezug` |
 | `mpg_devices`, `mpg_inspections`, `mpg_defects` | MPG; Prüfprotokolle unveränderlich, Defekte nicht löschbar, Gerät mit Nachweisen → `ausser_betrieb` statt löschen. Regeln: `docs/pocketbase-regeln.md`, „MPG: API-Regeln“ |
 
 ---
