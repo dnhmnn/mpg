@@ -6,7 +6,8 @@
 //   von html/body (oder ein deckendes, am Rand festes Element). Deshalb bekommen
 //   html und body hier das Dunkelrot; die Seite selbst bleibt darüber Elfenbein.
 //   Damit unten nicht auch die Leiste rot wird, hält die Seite dort einen festen
-//   Streifen in Elfenbein (.bv-bodenkante), oben einen roten (.bv-statusleiste).
+//   Streifen in Elfenbein (.bv-bodenkante, zuoberst am unteren Rand), oben einen
+//   roten (.bv-statusleiste, im Browser hinter der Seite).
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
 //   Leiste; der feste rote Streifen hält die Farbe auch beim Scrollen.
 // Der Wert kommt aus dem CSS-Token und folgt der Darstellung (hell, dunkel, Retro).
