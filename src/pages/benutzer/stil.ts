@@ -25,7 +25,9 @@ export const BV_CSS = `
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
 /* Statusleiste: fester Streifen in der Höhe der Uhr-Zeile (nur als App vom Homebildschirm > 0) */
-.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--lbf-kopf); z-index: 70; pointer-events: none; }
+.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: 70; pointer-events: none; }
+/* Unten Elfenbein am Rand: Safari 26 tönte die untere Leiste sonst nach dem roten html/body */
+.bv-bodenkante{ position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--warm-bg); z-index: 40; pointer-events: none; }
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
