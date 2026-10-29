@@ -25,9 +25,13 @@ export const BV_CSS = `
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
 /* Statusleiste: fester Streifen in der Höhe der Uhr-Zeile (nur als App vom Homebildschirm > 0) */
-.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: 70; pointer-events: none; }
-/* Unten Elfenbein am Rand: Safari 26 tönte die untere Leiste sonst nach dem roten html/body */
-.bv-bodenkante{ position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--warm-bg); z-index: 40; pointer-events: none; }
+/* Im Browser liegt der Streifen hinter der Seite (z-index -1): Safari 26 erkennt ihn am Rand
+   und färbt die Leiste danach, zu sehen ist er nicht — beim Scrollen also keine Linie. */
+.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
+/* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
+@media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
+/* Unten Elfenbein am Rand, ebenfalls hinter der Seite: Safari 26 tönte die untere Leiste sonst rot */
+.bv-bodenkante{ position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--warm-bg); z-index: -1; pointer-events: none; }
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
