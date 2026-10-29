@@ -150,6 +150,20 @@ export function isPlaceholderEmail(email?: string): boolean {
   return !!email && email.endsWith('@kein-email.intern')
 }
 
+// Die Adresse zum Anzeigen: leer bei einer erzeugten Platzhalter-Adresse (Person ohne E-Mail).
+export function sichtbareEmail(email?: string): string {
+  return isPlaceholderEmail(email) ? '' : email || ''
+}
+
+// Anmelde-Adresse für eine Person ohne E-Mail (Benutzerverwaltung). PocketBase braucht
+// eine; diese kommt nie an und wird über isPlaceholderEmail überall ausgeblendet.
+export function neuePlatzhalterEmail(): string {
+  const zeichen = 'abcdefghijklmnopqrstuvwxyz0123456789'
+  const z = new Uint32Array(12)
+  crypto.getRandomValues(z)
+  return `ohne-email-${Array.from(z, (n) => zeichen[n % zeichen.length]).join('')}@kein-email.intern`
+}
+
 // Liefert die Rechte-Vorlage für eine Rolle: organisationsspezifische Anpassung
 // (organizations.role_permissions) falls vorhanden, sonst die globale ROLES-Vorlage.
 export function getRoleTemplate(role: string, org?: { role_permissions?: Record<string, Record<string, boolean>> } | null): Record<string, boolean> {

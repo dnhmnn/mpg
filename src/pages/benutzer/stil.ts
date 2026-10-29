@@ -108,6 +108,8 @@ export const BV_CSS = `
 /* Suche */
 .bv-suche{ height: 46px; border-radius: 14px; background: var(--lbf-card); border: 1px solid var(--bv-feldrand); display: flex; align-items: center; gap: 10px; padding: 0 4px 0 14px; }
 .bv-suche:focus-within{ border-color: var(--lbf-akzent); }
+/* Der Rahmen der Suche zeigt den Fokus; kein zweiter, eckiger Rahmen um das Eingabefeld darin */
+.bv .bv-suche input:focus-visible{ outline: none; }
 .bv-suche > svg{ color: var(--lbf-akzent); }
 .bv svg.bv-klein{ width: 20px; height: 20px; }
 .bv-suche input{ flex: 1; min-width: 0; height: 100%; border: 0; background: none; font: inherit; font-size: 16px; color: var(--lbf-text); outline: none; user-select: text; -webkit-user-select: text; }

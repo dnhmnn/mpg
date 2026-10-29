@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { sichtbareEmail } from '../lib/apps'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Einsatz {
@@ -407,7 +408,7 @@ export default function Einsaetze() {
   const filteredUsers = userSearch.trim()
     ? allUsers.filter(u =>
         u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
-        u.email.toLowerCase().includes(userSearch.toLowerCase()))
+        sichtbareEmail(u.email).toLowerCase().includes(userSearch.toLowerCase()))
     : []
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -659,7 +660,7 @@ export default function Einsaetze() {
                         <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid var(--lbf-border)', borderRadius: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 10, maxHeight: 180, overflowY: 'auto' }}>
                           {filteredUsers.map(u => (
                             <button key={u.id} onClick={() => { setSelectedUser(u); setUserSearch(u.name) }} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: 14, color: 'var(--lbf-text)' }}>
-                              {u.name} <span style={{ color: 'var(--warm-gray)', fontSize: 12 }}>{u.email}</span>
+                              {u.name} <span style={{ color: 'var(--warm-gray)', fontSize: 12 }}>{sichtbareEmail(u.email)}</span>
                             </button>
                           ))}
                         </div>

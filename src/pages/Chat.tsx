@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import StatusBar from '../components/StatusBar'
 import { encryptData, decryptData, generateDocumentKey, encryptDocumentKeyForRecipient, decryptDocumentKey } from '../lib/crypto'
 import { getSessionPrivKey, getSessionPubKey, hasSessionKeys, initializeAndUnlock, getPublicKey, getPublicKeyB64, cachePublicKey, getCachedPublicKey } from '../lib/keyManager'
+import { sichtbareEmail } from '../lib/apps'
 
 interface Channel {
   id: string
@@ -275,7 +276,7 @@ export default function Chat() {
   const groupChannels = channels.filter(c => !c.is_direct)
   const filteredContacts = orgUsers.filter(u =>
     u.name?.toLowerCase().includes(contactSearch.toLowerCase()) ||
-    u.email?.toLowerCase().includes(contactSearch.toLowerCase())
+    sichtbareEmail(u.email).toLowerCase().includes(contactSearch.toLowerCase())
   )
 
   if (loading) return null
@@ -570,7 +571,7 @@ export default function Chat() {
                   <div className="chat-avatar-sm">{(u.name || u.email)[0].toUpperCase()}</div>
                   <div>
                     <div className="chat-contact-name">{u.name || u.email}</div>
-                    {u.name && <div className="chat-contact-email">{u.email}</div>}
+                    {u.name && sichtbareEmail(u.email) && <div className="chat-contact-email">{sichtbareEmail(u.email)}</div>}
                   </div>
                 </div>
               ))}

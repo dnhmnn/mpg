@@ -4,6 +4,7 @@ import type { Patient, PatientPayload, Medication, VitalRow } from './types'
 import { PubSection, inp, sel, ta, field, lbl } from '../public/pubStyles'
 import { pb } from '../../lib/pocketbase'
 import { useAuth } from '../../hooks/useAuth'
+import { sichtbareEmail } from '../../lib/apps'
 
 interface RQ { id: string; frage: string; created_by?: string; status: 'offen' | 'beantwortet'; created: string }
 interface SN { id: string; rueckfrage_id: string; text: string; created: string }
@@ -122,7 +123,8 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
     if (text.length < 2) { setMannResults(prev => ({ ...prev, [role]: [] })); return }
     try {
       const results = await pb.collection('users').getFullList({
-        filter: `organization_id="${(patient as any).organization_id}"&&(name~"${text}"||email~"${text}")`,
+        // Suchtext als Parameter; erzeugte Platzhalter-Adressen (Personen ohne E-Mail) zählen nicht
+        filter: pb.filter('organization_id = {:org} && (name ~ {:t} || (email ~ {:t} && email !~ "@kein-email.intern"))', { org: (patient as any).organization_id, t: text }),
         fields: 'id,name,email',
         sort: 'name',
       })
@@ -187,7 +189,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, zIndex: 200, maxHeight: 200, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 2 }}>
                 {results.map((u: any) => (
                   <div key={u.id} onMouseDown={() => pickMannUser(role, u)} style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid var(--border)' }}>
-                    {u.name}<span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 6 }}>{u.email}</span>
+                    {u.name}<span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 6 }}>{sichtbareEmail(u.email)}</span>
                   </div>
                 ))}
               </div>

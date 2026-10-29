@@ -1,15 +1,18 @@
 // Eine Person anlegen oder bearbeiten — als ganze Seite.
-// Die Speicherlogik ist die bisherige aus Unitarii.tsx (saveUser), unverändert.
+// Die Speicherlogik stammt aus Unitarii.tsx (saveUser). Ein Passwort setzt hier niemand:
+// Die Person legt es selbst fest (Willkommens-E-Mail, Passwort-Link). Ohne E-Mail bekommt
+// sie eine Platzhalter-Adresse und kann sich nicht anmelden, bis eine E-Mail nachgetragen ist.
 
 import { useState } from 'react'
 import { pb } from '../../lib/pocketbase'
-import { EMPTY_PERMS, PERM_LABELS, befristungBis, getRoleTemplate, isPlaceholderEmail, ohneRechte, zeitpunktBefristung } from '../../lib/apps'
+import { EMPTY_PERMS, PERM_LABELS, befristungBis, getRoleTemplate, isPlaceholderEmail, neuePlatzhalterEmail, ohneRechte, zeitpunktBefristung } from '../../lib/apps'
 import { eigeneRollen, nurAngehakt, rollenBezeichnung, rollenFarbe, rollenFuer, vorlageBereinigen, wegfallendeRollenrechte, type RollenEintrag } from '../../lib/rollen'
 import { haken, mitgebracht, vorlageMitVerknuepfungen } from '../../lib/verknuepfung'
 import { zufallsPasswort } from '../../lib/passwort'
+import { willkommenSenden } from '../../lib/willkommen'
 import WillkommenKnopf from '../../components/WillkommenKnopf'
 import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, RechteListe, SchalterZeile, Seite } from './bausteine'
-import { anlegeFehler, anzahl, anzahlRechte, aufzaehlung, fmtDateTimeLocal, genPassword, inDauer, initialen, type UUser } from './logik'
+import { anlegeFehler, anmeldeAdresse, anzahl, anzahlRechte, aufzaehlung, fmtDateTimeLocal, inDauer, initialen, type UUser } from './logik'
 import type { BvKontext } from './kontext'
 
 type TempRechte = Record<string, { until: string; granted_by?: string }>
@@ -73,14 +76,15 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
       }
     }
     return u ? {
-      name: u.name || '', email: u.email || '', contact_email: u.contact_email || '', phone: u.phone || '',
-      password: '', role: u.role || 'benutzer',
+      // Ohne eigene Adresse bleibt das Feld leer: Die erzeugte Platzhalter-Adresse zeigen wir nicht
+      name: u.name || '', email: isPlaceholderEmail(u.email) ? '' : u.email || '', contact_email: u.contact_email || '', phone: u.phone || '',
+      role: u.role || 'benutzer',
       permissions: { ...EMPTY_PERMS, ...(u.permissions || {}) } as Record<string, boolean>,
       supervisor: !!u.supervisor, disabled: !!u.disabled,
       expires_at: fmtDateTimeLocal(u.expires_at),
       temp_permissions: cleanTemp,
     } : {
-      name: '', email: '', contact_email: '', phone: '', password: '',
+      name: '', email: '', contact_email: '', phone: '',
       // Die voreingestellte Rolle setzt ihre Häkchen gleich — wie beim Wechsel der Rolle.
       // Sonst bekam ein neuer Benutzer ausdrücklich überall „nein“ und sah nach dem Anmelden nichts.
       role: 'benutzer',
@@ -132,16 +136,17 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
   }
 
   async function saveUser() {
-    if (!userForm.name.trim() || !userForm.email.trim()) {
-      showMsg('Name und E-Mail sind Pflicht', 'error'); return
-    }
+    if (!userForm.name.trim()) { showMsg('Der Name fehlt', 'error'); return }
+    const adresse = anmeldeAdresse(userForm.email, editingUser ? editingUser.email : undefined, neuePlatzhalterEmail)
+    if ('fehler' in adresse) { showMsg(adresse.fehler, 'error'); return }
     if (ohneRechte({ ...userForm, supervisor: editingUser ? userForm.supervisor : false })
       && !confirm(`${userForm.name.trim()} hat kein einziges Recht und sieht nach dem Anmelden nichts. Trotzdem speichern?`)) return
     setSavingUser(true)
     try {
       const expIso = userForm.expires_at ? new Date(userForm.expires_at).toISOString() : null
       const base: Record<string, unknown> = {
-        name: userForm.name.trim(), email: userForm.email.trim(),
+        name: userForm.name.trim(),
+        ...(adresse.email ? { email: adresse.email } : {}),
         contact_email: userForm.contact_email.trim(),
         phone: userForm.phone.trim(), role: userForm.role,
         permissions: userForm.permissions, disabled: userForm.disabled,
@@ -151,13 +156,13 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
       if (user?.supervisor) base.supervisor = userForm.supervisor
 
       if (editingUser) {
-        // Ein Passwort setzt der Verwalter nur noch bei Zugängen ohne eigene E-Mail (Teilnehmer)
-        if (isPlaceholderEmail(editingUser.email) && userForm.password.trim()) {
-          base.password = userForm.password
-          base.passwordConfirm = userForm.password
-        }
+        // Kein Passwort von hier: Das legt die Person selbst fest (Willkommens-E-Mail, Passwort-Link)
         await pb.collection('users').update(editingUser.id, base)
-        showMsg('Benutzer gespeichert')
+        if (adresse.nachgetragen) {
+          // Bisher ohne E-Mail: Jetzt kommt die Willkommens-E-Mail mit dem Link zum eigenen Passwort
+          const w = await willkommenSenden(editingUser.id)
+          showMsg(w.ok ? `Gespeichert. ${w.text}` : `Gespeichert, aber die Willkommens-E-Mail ging nicht raus: ${w.text}`, w.ok ? 'success' : 'error')
+        } else showMsg('Benutzer gespeichert')
       } else {
         // Kein Passwort vom Verwalter: Der Benutzer legt es über die Willkommens-E-Mail fest
         const unbekannt = zufallsPasswort()
@@ -170,7 +175,9 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
           // Die Rechte stehen schon fest — die Übernahme beim ersten Login (useAuth) entfällt
           permissions_migrated: true,
         })
-        showMsg('Benutzer angelegt. Das Passwort legt die Person über die Willkommens-E-Mail fest.')
+        showMsg(isPlaceholderEmail(adresse.email)
+          ? 'Benutzer angelegt. Ohne E-Mail kann sich die Person nicht anmelden.'
+          : 'Benutzer angelegt. Das Passwort legt die Person über die Willkommens-E-Mail fest.')
       }
       k.schliessen()
       await k.loadUsers()
@@ -216,32 +223,20 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
       <Feld label="Name" erst>
         <input className="bv-eingabe" value={userForm.name} onChange={e => setze('name', e.target.value)} placeholder="Vor- und Nachname" autoComplete="off" />
       </Feld>
-      {platzhalter ? (
-        <Feld label="Kontakt-E-Mail" zusatz="optional" hinweis="Dieser Zugang hat keine eigene Anmelde-Adresse, sie wurde automatisch erzeugt. Hier lässt sich eine Kontakt-E-Mail hinterlegen.">
-          <input className="bv-eingabe" type="email" inputMode="email" value={userForm.contact_email} onChange={e => setze('contact_email', e.target.value)} placeholder="name@beispiel.de" autoComplete="off" />
-        </Feld>
-      ) : (
-        <>
-          <Feld label="E-Mail" hinweis={!editingUser ? 'Bekommt eine Willkommens-E-Mail mit Link zur App, Org-Code und dem Link zum eigenen Passwort.' : undefined}>
-            <input className="bv-eingabe" type="email" inputMode="email" value={userForm.email} onChange={e => setze('email', e.target.value)} placeholder="name@beispiel.de" autoComplete="off" />
-          </Feld>
-          <Feld label="Kontakt-E-Mail" zusatz="optional, falls abweichend">
-            <input className="bv-eingabe" type="email" inputMode="email" value={userForm.contact_email} onChange={e => setze('contact_email', e.target.value)} placeholder="name@beispiel.de" autoComplete="off" />
-          </Feld>
-        </>
-      )}
+      <Feld label="E-Mail" zusatz={editingUser && !platzhalter ? undefined : 'optional'}
+        hinweis={!editingUser
+          ? 'Mit E-Mail kommt eine Willkommens-E-Mail mit dem Link zum eigenen Passwort. Ohne kann sich die Person nicht anmelden.'
+          : platzhalter
+            ? 'Noch keine. Ohne E-Mail kann sich die Person nicht anmelden. Trägst du eine ein, bekommt sie die Willkommens-E-Mail und legt ihr Passwort selbst fest.'
+            : undefined}>
+        <input className="bv-eingabe" type="email" inputMode="email" value={userForm.email} onChange={e => setze('email', e.target.value)} placeholder="name@beispiel.de" autoComplete="off" />
+      </Feld>
+      <Feld label="Kontakt-E-Mail" zusatz={userForm.email.trim() ? 'optional, falls abweichend' : 'optional'}>
+        <input className="bv-eingabe" type="email" inputMode="email" value={userForm.contact_email} onChange={e => setze('contact_email', e.target.value)} placeholder="name@beispiel.de" autoComplete="off" />
+      </Feld>
       <Feld label="Telefon" zusatz="optional">
         <input className="bv-eingabe" type="tel" inputMode="tel" value={userForm.phone} onChange={e => setze('phone', e.target.value)} placeholder="Für Rückfragen" autoComplete="off" />
       </Feld>
-      {platzhalter && (
-        // Ohne eigene E-Mail-Adresse kommt kein Link an — hier setzt der Verwalter das Passwort
-        <Feld label="Neues Passwort" zusatz="leer lässt es, wie es ist" hinweis="Dieser Zugang hat keine eigene E-Mail-Adresse. Ein Link zum Festlegen käme nicht an.">
-          <span className="bv-reihe">
-            <input className="bv-eingabe mono" type="text" value={userForm.password} onChange={e => setze('password', e.target.value)} placeholder="unverändert" autoComplete="off" />
-            <button type="button" className="bv-knopf gross" onClick={() => setze('password', genPassword())}>Neu</button>
-          </span>
-        </Feld>
-      )}
 
       <Abschnitt titel="Rolle" />
       <Hinweis oben>{editingUser ? 'Ein Rollenwechsel setzt die Häkchen der neuen Rolle dazu. Was die Person schon hat, bleibt, bis du es unten ausschaltest.' : 'Die Rolle setzt die Rechte unten vor.'}</Hinweis>

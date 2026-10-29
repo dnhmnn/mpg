@@ -3,6 +3,7 @@ import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import Modal from './Modal'
 import { rollenBezeichnung } from '../lib/rollen'
+import { sichtbareEmail } from '../lib/apps'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -278,7 +279,7 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
                     return (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--lbf-border)' }}>
                         <td style={{ padding: '12px' }}>{u.name || '—'}</td>
-                        <td style={{ padding: '12px' }}>{u.email}</td>
+                        <td style={{ padding: '12px' }}>{sichtbareEmail(u.email)}</td>
                         <td style={{ padding: '12px' }}>{roleLabel}</td>
                       </tr>
                     )

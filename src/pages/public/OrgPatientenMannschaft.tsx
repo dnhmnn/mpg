@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { mitFassung, NEUE_FASSUNG } from '../../lib/protokoll'
 import { pb } from '../../lib/pocketbase'
 import { inp, lbl } from './pubStyles'
+import { sichtbareEmail } from '../../lib/apps'
 
 type UserHit = { id: string; name: string; email: string }
 type Selection = UserHit | null
@@ -136,7 +137,7 @@ function UserSearch({ label, orgId, value, onChange }: {
               </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{u.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{sichtbareEmail(u.email)}</div>
               </div>
             </button>
           ))}

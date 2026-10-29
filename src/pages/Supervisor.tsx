@@ -4,7 +4,7 @@ import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
 import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen, rechtFrei } from '../lib/freigabe'
-import { PERM_LABELS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte } from '../lib/apps'
+import { PERM_LABELS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte, sichtbareEmail } from '../lib/apps'
 import { eigeneRollen, nurAngehakt, rolleInfo, rollenBezeichnung, rollenFuer, type RollenEintrag, vorlageBereinigen } from '../lib/rollen'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { zufallsPasswort } from '../lib/passwort'
@@ -1442,7 +1442,7 @@ export default function Supervisor() {
                           {u.name || '—'}
                         </div>
                         <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {u.email}
+                          {sichtbareEmail(u.email)}
                         </div>
                       </div>
                       <div style={{
@@ -1728,7 +1728,8 @@ export default function Supervisor() {
               <div style={fieldLabelStyle}>E-Mail</div>
               <input
                 type="email"
-                value={userFormEmail}
+                value={sichtbareEmail(userFormEmail)}
+                placeholder="keine"
                 readOnly
                 style={{ ...fieldInputStyle, color: 'var(--warm-gray)' }}
               />

@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { pb } from '../../../lib/pocketbase'
 import type { Werte } from './DokuFeld'
 import { POSTEN, besatzungLesen, einsichtIds, type Besetzung, type Posten } from './besatzung'
+import { sichtbareEmail } from '../../../lib/apps'
 
 const ROT = 'var(--lbf-akzent)'
 /** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
@@ -125,7 +126,7 @@ function Platz({ posten, person, orgId, onSetzen }: {
               </span>
               <span style={{ minWidth: 0 }}>
                 <span style={{ display: 'block', fontSize: 14, fontStyle: 'italic', fontWeight: 700, color: TEXT }}>{t.name}</span>
-                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>{t.email}</span>
+                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>{sichtbareEmail(t.email)}</span>
               </span>
             </button>
           ))}

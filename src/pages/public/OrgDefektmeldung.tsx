@@ -4,6 +4,7 @@ import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubWrap, PubSendBar, inp, lbl, field, ta } from './pubStyles'
 import { istAusserBetrieb } from '../../lib/mpg/zustand'
+import { sichtbareEmail } from '../../lib/apps'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
@@ -91,7 +92,7 @@ function UserSearch({ orgId, value, onChange }: {
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{u.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{sichtbareEmail(u.email)}</div>
               </div>
             </button>
           ))}

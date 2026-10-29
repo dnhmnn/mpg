@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubWrap, PubSendBar, PubSection, PubHeader, field, inp, lbl } from './pubStyles'
+import { sichtbareEmail } from '../../lib/apps'
 
 const today = () => new Date().toISOString().slice(0, 10)
 
@@ -85,7 +86,7 @@ function UserSearch({ orgId, value, onChange }: {
               </div>
               <div>
                 <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{u.email}</div>
+                <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{sichtbareEmail(u.email)}</div>
               </div>
             </button>
           ))}

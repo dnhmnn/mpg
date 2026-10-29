@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, kachelFarbe, vergebbareRechte, sichtbareEmail } from '../lib/apps'
 import { eigeneRollen, rolleInfo, rollenBezeichnung, rollenFuer } from '../lib/rollen'
 import { zufallsPasswort } from '../lib/passwort'
 import { haken, verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
@@ -408,7 +408,6 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   const [editingUser, setEditingUser] = useState<any>(null)
   const [userFormName, setUserFormName] = useState('')
   const [userFormEmail, setUserFormEmail] = useState('')
-  const [userFormPassword, setUserFormPassword] = useState('')
   const [userFormRole, setUserFormRole] = useState('benutzer')
   const [userFormPermissions, setUserFormPermissions] = useState<Record<string, boolean>>({ ...EMPTY_PERMS })
   const [userFormMsg, setUserFormMsg] = useState('')
@@ -514,7 +513,6 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     setEditingUser(null)
     setUserFormName('')
     setUserFormEmail('')
-    setUserFormPassword('')
     setUserFormRole('benutzer')
     setUserFormPermissions({ ...EMPTY_PERMS, ...getRoleTemplate('benutzer', vorlageOrg) })
     setUserFormMsg('')
@@ -525,7 +523,6 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     setEditingUser(u)
     setUserFormName(u.name || '')
     setUserFormEmail(u.email)
-    setUserFormPassword('')
     setUserFormRole(u.role || 'benutzer')
     setUserFormPermissions({ ...EMPTY_PERMS, ...(u.permissions || {}) })
     setUserFormMsg('')
@@ -543,12 +540,8 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     }
     try {
       if (editingUser) {
+        // Kein Passwort von hier: Das legt die Person selbst fest (Willkommens-E-Mail, Passwort-Link)
         const updateData: any = { name: userFormName, role: userFormRole, permissions: userFormPermissions }
-        // Ein Passwort setzt der Verwalter nur bei Zugängen ohne eigene E-Mail (Teilnehmer)
-        if (userFormPassword && isPlaceholderEmail(editingUser.email)) {
-          updateData.password = userFormPassword
-          updateData.passwordConfirm = userFormPassword
-        }
         await pb.collection('users').update(editingUser.id, updateData)
         setUserFormMsg('✅ Benutzer aktualisiert!')
       } else {
@@ -988,7 +981,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
               <div className="user-avatar">{(u.name || u.email)[0].toUpperCase()}</div>
               <div className="user-info">
                 <div className="user-name">{u.name || '—'}</div>
-                <div className="user-email">{u.email}</div>
+                <div className="user-email">{sichtbareEmail(u.email)}</div>
               </div>
               <div className="user-role">{u.supervisor ? 'Supervisor' : rollenBezeichnung(u.role, rechteOrg)}</div>
               {canManageUsers && u.id !== user?.id && (
@@ -1170,9 +1163,10 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                 <label>E-Mail {editingUser && '(nicht änderbar)'}</label>
                 <input
                   type="email"
-                  value={userFormEmail}
+                  // Beim Bearbeiten nur angezeigt: eine Platzhalter-Adresse (Person ohne E-Mail) bleibt leer
+                  value={editingUser ? sichtbareEmail(editingUser.email) : userFormEmail}
                   onChange={(e) => setUserFormEmail(e.target.value)}
-                  placeholder="email@beispiel.de"
+                  placeholder={editingUser ? 'keine' : 'email@beispiel.de'}
                   disabled={!!editingUser}
                   style={editingUser ? { background: 'var(--warm-bg)', color: 'var(--warm-gray)' } : {}}
                 />
@@ -1183,15 +1177,12 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                 )}
               </div>
               {editingUser && isPlaceholderEmail(editingUser.email) ? (
-                // Ohne eigene E-Mail-Adresse kommt kein Link an — hier setzt der Verwalter das Passwort
+                // Kein Passwort von hier: Ohne eigene E-Mail kann sich die Person nicht anmelden
                 <div className="ios-field">
-                  <label>Neues Passwort (optional)</label>
-                  <input
-                    type="password"
-                    value={userFormPassword}
-                    onChange={(e) => setUserFormPassword(e.target.value)}
-                    placeholder="Leer lassen für kein Passwort"
-                  />
+                  <label>Passwort</label>
+                  <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5 }}>
+                    Diese Person hat keine eigene E-Mail und kann sich nicht anmelden. Eine E-Mail trägst du in der Benutzerverwaltung nach; dann legt sie ihr Passwort über die Willkommens-E-Mail selbst fest.
+                  </div>
                 </div>
               ) : (
                 <div className="ios-field">

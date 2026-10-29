@@ -13,6 +13,7 @@ import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 import { archivHindernis, offeneRueckfragen, rueckfragen } from '../public/doku/rueckfrage'
 import { fristEnde, fristRestText } from '../public/doku/absenden'
+import { sichtbareEmail } from '../../lib/apps'
 
 type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
 
@@ -292,7 +293,8 @@ export default function Patienten() {
     if (!mannschaftModal || text.length < 2) { setMannResults(prev => ({ ...prev, [role]: [] })); return }
     try {
       const results = await pb.collection('users').getFullList({
-        filter: `organization_id="${(mannschaftModal as any).organization_id}"&&(name~"${text}"||email~"${text}")`,
+        // Suchtext als Parameter; erzeugte Platzhalter-Adressen (Personen ohne E-Mail) zählen nicht
+        filter: pb.filter('organization_id = {:org} && (name ~ {:t} || (email ~ {:t} && email !~ "@kein-email.intern"))', { org: (mannschaftModal as any).organization_id, t: text }),
         fields: 'id,name,email',
         sort: 'name',
       })
@@ -1270,7 +1272,7 @@ export default function Patienten() {
                                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--lbf-rot-rgb),0.04)')}
                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                               >
-                                <span style={{ fontStyle: 'italic', fontWeight: 700 }}>{u.name}</span> <span style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{u.email}</span>
+                                <span style={{ fontStyle: 'italic', fontWeight: 700 }}>{u.name}</span> <span style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{sichtbareEmail(u.email)}</span>
                               </div>
                             ))}
                           </div>

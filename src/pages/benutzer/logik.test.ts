@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { PERM_LABELS, befristungBis } from '../../lib/apps'
+import { PERM_LABELS, befristungBis, isPlaceholderEmail, neuePlatzhalterEmail, sichtbareEmail } from '../../lib/apps'
 import {
-  RECHTE_GRUPPEN, ROLLENFELD_TEXT, anlegeFehler, anzahl, anzahlRechte, anzeigeEmail, aufzaehlung, benutzerStatus, inDauer,
+  RECHTE_GRUPPEN, ROLLENFELD_TEXT, anlegeFehler, anmeldeAdresse, anzahl, anzahlRechte, anzeigeEmail, aufzaehlung, benutzerStatus, genPassword, inDauer,
   initialen, orgFehler, rechteGruppiert, suchen, type UUser,
 } from './logik'
 
@@ -89,6 +89,54 @@ describe('Texte', () => {
     expect(suchen(liste, 'privat').map(x => x.id)).toEqual(['3'])
     expect(suchen(liste, 'öm').map(x => x.id)).toEqual(['3'])
   })
+
+  it('Suche findet keine Platzhalter-Adresse', () => {
+    const liste = [u({ id: '1', name: 'Paul Wagner', email: 'ohne-email-abc123def456@kein-email.intern' })]
+    expect(suchen(liste, 'kein-email')).toEqual([])
+    expect(suchen(liste, 'intern')).toEqual([])
+    expect(suchen(liste, 'paul').map(x => x.id)).toEqual(['1'])
+  })
+})
+
+describe('Personen ohne E-Mail', () => {
+  const P = 'ohne-email-aaaaaaaaaaaa@kein-email.intern'
+  const neu = () => P
+
+  it('Platzhalter-Adresse: gültig für PocketBase, nie angezeigt, jedes Mal anders', () => {
+    const a = neuePlatzhalterEmail(), b = neuePlatzhalterEmail()
+    expect(a).toMatch(/^ohne-email-[a-z0-9]{12}@kein-email\.intern$/)
+    expect(isPlaceholderEmail(a)).toBe(true)
+    expect(a).not.toBe(b)
+    expect(sichtbareEmail(a)).toBe('')
+    expect(sichtbareEmail('anna@beispiel.de')).toBe('anna@beispiel.de')
+    expect(sichtbareEmail(undefined)).toBe('')
+    expect(anzeigeEmail({ email: a })).toBe('')
+  })
+
+  it('Neu ohne E-Mail: Platzhalter; mit E-Mail: die eingegebene', () => {
+    expect(anmeldeAdresse('', undefined, neu)).toEqual({ email: P, nachgetragen: false })
+    expect(anmeldeAdresse('   ', undefined, neu)).toEqual({ email: P, nachgetragen: false })
+    expect(anmeldeAdresse(' anna@beispiel.de ', undefined, neu)).toEqual({ email: 'anna@beispiel.de', nachgetragen: false })
+    // Eine selbst eingetippte Platzhalter-Adresse zählt wie keine: frische Adresse statt einer geratenen
+    expect(anmeldeAdresse('x@kein-email.intern', undefined, neu)).toEqual({ email: P, nachgetragen: false })
+  })
+
+  it('Bisher ohne E-Mail: leer lässt den Platzhalter, eine Adresse wird nachgetragen', () => {
+    expect(anmeldeAdresse('', 'alt@kein-email.intern', neu)).toEqual({ nachgetragen: false })
+    expect(anmeldeAdresse('anna@beispiel.de', 'alt@kein-email.intern', neu)).toEqual({ email: 'anna@beispiel.de', nachgetragen: true })
+  })
+
+  it('Echte Adresse: ändern ja, entfernen nein, unverändert wird nicht mitgeschickt', () => {
+    expect(anmeldeAdresse('anna@beispiel.de', 'anna@beispiel.de', neu)).toEqual({ nachgetragen: false })
+    expect(anmeldeAdresse('neu@beispiel.de', 'anna@beispiel.de', neu)).toEqual({ email: 'neu@beispiel.de', nachgetragen: false })
+    expect(anmeldeAdresse('', 'anna@beispiel.de', neu)).toEqual({ fehler: expect.stringMatching(/nicht entfernen/) })
+  })
+
+  it('Passwort für temporäre Zugänge: lesbar, ohne verwechselbare Zeichen', () => {
+    const p = genPassword()
+    expect(p).toMatch(/^[A-HJ-NP-Za-km-np-z2-9]{12}$/)
+    expect(genPassword(20)).toHaveLength(20)
+  })
 })
 
 describe('Fehlermeldungen beim Speichern', () => {
@@ -100,6 +148,11 @@ describe('Fehlermeldungen beim Speichern', () => {
 
   it('doppelte Adresse', () => {
     expect(anlegeFehler(pb(400, { email: { code: 'validation_not_unique' } }), true)).toMatch(/schon ein Konto/)
+  })
+
+  it('echte Adresse ändern verboten (strengere Manage-Regel)', () => {
+    expect(anlegeFehler(pb(400, { email: { code: 'validation_values_mismatch', message: "Values don't match." } }), false))
+      .toBe('Nicht gespeichert: Eine E-Mail-Adresse, mit der sich die Person schon anmeldet, ändert nur der Supervisor.')
   })
 
   it('Feld „role“ abgelehnt: Hinweis auf die Auswahlliste in PocketBase', () => {

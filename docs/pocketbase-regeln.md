@@ -346,10 +346,12 @@ Regel erlaubt:
 @request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)))
 ```
 
-**Manage** (Passwort oder E-Mail eines anderen ohne altes Passwort setzen —
-Unitarii, Einstellungen, Supervisor-Seite):
+**Manage** (E-Mail eines anderen ohne altes Passwort setzen, etwa bei einer
+Person ohne E-Mail nachtragen. Ein fremdes **Passwort** setzt nur der
+Supervisor — Admins und Verwalter schicken den Link, siehe „users: Passwörter
+legt jeder selbst fest“):
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (organization_id = @request.auth.organization_id && supervisor != true && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now))))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (organization_id = @request.auth.organization_id && supervisor != true && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && @request.body.password:isset = false))
 ```
 
 **Create** — ohne passende Regel legt man sich sonst einfach ein zweites Konto
@@ -701,6 +703,50 @@ abgelaufener Verwalter, Helfer, befristeter Verwalter einer anderen
 Organisation, Supervisor — dazu kein Supervisor-Recht, keine fremde
 Organisation, kein fremdes Passwort; die 275 Prüfungen von MPG-Paket 3 bestehen
 weiter.
+
+### users: Passwörter legt jeder selbst fest
+
+In der Benutzerverwaltung setzt niemand mehr das Passwort einer anderen Person.
+Die Person legt es selbst fest: über die Willkommens-E-Mail oder den
+„Passwort-Link“, beides geht an ihre eigene Adresse. Die App schickt kein
+Passwort mehr mit (Benutzerverwaltung, Einstellungen → Benutzer). Damit das
+auch über die Schnittstelle gilt, steht in der **Manage**-Regel im Abschnitt
+„users: Rechte vergeben nur Verantwortliche“ für Admins und Verwalter
+`@request.body.password:isset = false`. Wer die Regel schon eingetragen hat,
+ersetzt sie durch die dortige Fassung.
+
+Was bleibt:
+- Der **Supervisor** setzt weiter jedes Passwort (Supervisor-Seite).
+- Jeder ändert sein **eigenes** Passwort mit dem alten (Einstellungen).
+- **Temporäre Zugänge** bekommen ihr Passwort beim Anlegen (Create-Regel,
+  unverändert) — es gibt keine Adresse, an die ein Link gehen könnte.
+- Fehlt die Bedingung, weist PocketBase ein fremdes Passwort nicht ab; die App
+  schickt nur keins mehr.
+
+Geprüft gegen PocketBase 0.28.4 und 0.40.5: Admin, Verwalter und befristeter
+Verwalter setzen kein fremdes Passwort mehr (400 `oldPassword`), auch nicht per
+Batch, multipart oder mit leerem Passwort; auch nicht bei Teilnehmern über den
+Zweig der Ausbildungs-Verwalter. Weiter möglich: Namen und Rechte ändern, eine
+E-Mail nachtragen, Personen ohne E-Mail anlegen, temporäre Zugänge, eigenes
+Passwort mit dem alten, Supervisor.
+
+**Personen ohne E-Mail.** Die Benutzerverwaltung legt sie mit einer erzeugten
+Adresse `ohne-email-<12 Zeichen>@kein-email.intern` an (wie Teilnehmer der
+Ausbildungen, Endung `@kein-email.intern`), mit einem Zufallspasswort, das niemand
+kennt. Sie können sich nicht anmelden. Die Adresse erscheint nirgends in der App.
+Trägt ein Admin später eine E-Mail nach, schickt die App die Willkommens-E-Mail
+(`/willkommen/senden`); beim Anlegen schickt der Server sie bei Platzhaltern nicht.
+
+**Bewusst offen gelassen:** Admins und Verwalter dürfen die E-Mail einer
+anderen Person weiter ändern (etwa einen Tippfehler korrigieren). Ändert jemand sie auf eine eigene Adresse, schickt sich
+den Passwort-Link und stellt die Adresse zurück, hat er doch ein fremdes
+Passwort gesetzt. Das ging schon vorher. Schließen lässt es sich mit einer
+weiteren Bedingung am Admin-Zweig der Manage-Regel:
+`&& (@request.body.email:isset = false || @request.body.email = email || email ~ "%@kein-email.intern")`.
+Folge: Eine echte Adresse (auch einen Tippfehler darin) ändert dann nur noch der
+Supervisor; Nachtragen bei Personen ohne E-Mail geht weiter. Die App meldet die
+Ablehnung verständlich. Geprüft gegen beide Versionen; Stand Oktober 2026 nicht
+eingetragen (Entscheidung des Betreibers).
 
 ## Eigene Rollen der Organisationen
 

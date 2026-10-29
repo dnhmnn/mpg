@@ -19,6 +19,7 @@ describe('Willkommens-E-Mail: wer sie bekommt', () => {
     expect(echteAdresse('max@example.com')).toBe(true)
     expect(echteAdresse(' Max@Example.COM ')).toBe(true)
     expect(echteAdresse('teilnehmer-123@kein-email.intern')).toBe(false)
+    expect(echteAdresse('ohne-email-ab12cd34ef56@kein-email.intern')).toBe(false)
     expect(echteAdresse('temp-1700000000@org1.local')).toBe(false)
     expect(echteAdresse('')).toBe(false)
     expect(echteAdresse('kein-at-zeichen')).toBe(false)

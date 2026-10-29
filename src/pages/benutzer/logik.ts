@@ -126,6 +126,24 @@ export function anzeigeEmail(u: Pick<UUser, 'email' | 'contact_email'>): string 
   return u.contact_email || (isPlaceholderEmail(u.email) ? '' : u.email)
 }
 
+/**
+ * Welche Anmelde-Adresse beim Speichern einer Person mitgeht.
+ * - Neu ohne E-Mail: eine Platzhalter-Adresse. Die Person kann sich nicht anmelden.
+ * - Bisher ohne eigene Adresse, Feld leer: nichts mitschicken, der Platzhalter bleibt.
+ * - Bisher ohne eigene Adresse, jetzt eine eingetragen: `nachgetragen` — dann geht die
+ *   Willkommens-E-Mail raus (beim Anlegen schickt sie der Server von selbst).
+ * - Eine echte Adresse lässt sich ändern, aber nicht entfernen: Mit ihr meldet sich die Person an.
+ */
+export function anmeldeAdresse(eingabe: string, bisher: string | undefined, platzhalter: () => string):
+  { email?: string; nachgetragen: boolean } | { fehler: string } {
+  const e = eingabe.trim()
+  const ohne = !e || isPlaceholderEmail(e)
+  if (bisher === undefined) return { email: ohne ? platzhalter() : e, nachgetragen: false }
+  if (isPlaceholderEmail(bisher)) return ohne ? { nachgetragen: false } : { email: e, nachgetragen: true }
+  if (ohne) return { fehler: 'Die E-Mail lässt sich nicht entfernen: Mit ihr meldet sich die Person an.' }
+  return e === bisher ? { nachgetragen: false } : { email: e, nachgetragen: false }
+}
+
 /** Zwei Anfangsbuchstaben: "Anna Berger" → "AB", "Lea" → "L" */
 export function initialen(name: string | undefined, ersatz = ''): string {
   const woerter = (name || '').trim().split(/\s+/).filter(Boolean)
@@ -133,11 +151,11 @@ export function initialen(name: string | undefined, ersatz = ''): string {
   return z.toLocaleUpperCase('de-DE')
 }
 
-/** Suche in Name und E-Mail, ohne Groß/klein */
+/** Suche in Name und E-Mail, ohne Groß/klein (Platzhalter-Adressen zählen nicht) */
 export function suchen(liste: UUser[], q: string): UUser[] {
   const s = q.trim().toLocaleLowerCase('de-DE')
   if (!s) return liste
-  return liste.filter(u => [u.name, u.email, u.contact_email].some(f => (f || '').toLocaleLowerCase('de-DE').includes(s)))
+  return liste.filter(u => [u.name, isPlaceholderEmail(u.email) ? '' : u.email, u.contact_email].some(f => (f || '').toLocaleLowerCase('de-DE').includes(s)))
 }
 
 export function fmtDateTimeLocal(iso?: string): string {
@@ -148,12 +166,12 @@ export function fmtDateTimeLocal(iso?: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
-/** Lesbares Passwort für Zugänge ohne eigene E-Mail (wird angezeigt und weitergegeben) */
+/** Lesbares Passwort für einen temporären Zugang (wird angezeigt und weitergegeben) */
 export function genPassword(length = 12): string {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789'
-  let out = ''
-  for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)]
-  return out
+  const z = new Uint32Array(length)
+  crypto.getRandomValues(z)
+  return Array.from(z, (n) => chars[n % chars.length]).join('')
 }
 
 export const BENUTZER_FELDER: Record<string, string> = {
@@ -173,6 +191,10 @@ export function anlegeFehler(e: unknown, neu: boolean): string {
   }
   if (felder.includes('email') && /not_unique/.test(JSON.stringify(f.response?.data?.email ?? ''))) {
     return 'Diese E-Mail-Adresse hat schon ein Konto, eventuell in einer anderen Organisation.'
+  }
+  // Nur mit der strengeren Manage-Regel (docs/pocketbase-regeln.md, „Bewusst offen gelassen“): eine echte Adresse ändert der Supervisor
+  if (felder.includes('email') && /values_mismatch/.test(JSON.stringify(f.response?.data?.email ?? ''))) {
+    return (neu ? 'Nicht angelegt: ' : 'Nicht gespeichert: ') + 'Eine E-Mail-Adresse, mit der sich die Person schon anmeldet, ändert nur der Supervisor.'
   }
   // Das Feld role lehnt eine eigene Rolle ab: Auswahlliste (Select), zu kurze Höchstlänge oder ein Muster.
   // Unterscheidbar am Code (gegen PocketBase 0.28.4 und 0.40.5 geprüft).
