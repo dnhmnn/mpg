@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
-import { EMPTY_PERMS, ROLLEN, befristungBis, getRoleTemplate, isPlaceholderEmail, rollenName, vergebbareRechte, zeitpunktBefristung } from '../lib/apps'
+import { EMPTY_PERMS, ROLLEN, befristungBis, getRoleTemplate, isPlaceholderEmail, ohneRechte, rollenName, vergebbareRechte, zeitpunktBefristung } from '../lib/apps'
+import { pbFehlerText } from '../lib/pbFehler'
 import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, haken, mitgebracht, verknuepfungen, vorlageMitVerknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis, { verknuepfungZeilen } from '../components/VerknuepfungHinweis'
 import { zufallsPasswort } from '../lib/passwort'
@@ -64,6 +65,25 @@ function genPassword(length = 12): string {
   let out = ''
   for (let i = 0; i < length; i++) out += chars[Math.floor(Math.random() * chars.length)]
   return out
+}
+
+const BENUTZER_FELDER: Record<string, string> = {
+  email: 'Die E-Mail-Adresse', name: 'Der Name', contact_email: 'Die Kontakt-E-Mail', phone: 'Die Telefonnummer',
+  password: 'Das Passwort', passwordConfirm: 'Die Passwort-Wiederholung', expires_at: 'Das Ablaufdatum',
+}
+
+// PocketBase sagt nur „Failed to create record.“ — hier steht, woran es liegt
+function anlegeFehler(e: unknown, neu: boolean): string {
+  const f = (e ?? {}) as { status?: number; response?: { data?: Record<string, unknown> } }
+  const felder = Object.keys(f.response?.data ?? {})
+  // Ohne Feldangabe hat die Regel abgelehnt: Wer anlegt, braucht Admin oder das Recht Benutzerverwaltung
+  if (neu && f.status === 400 && felder.length === 0) {
+    return 'Nicht angelegt: Der Server lässt das mit diesem Konto nicht zu. Nötig ist die Rolle Admin oder das Recht „Benutzerverwaltung“ (bei einem befristeten Recht müssen die PocketBase-Regeln aktuell sein).'
+  }
+  if (felder.includes('email') && /not_unique/.test(JSON.stringify(f.response?.data?.email ?? ''))) {
+    return 'Diese E-Mail-Adresse hat schon ein Konto — eventuell in einer anderen Organisation.'
+  }
+  return (neu ? 'Nicht angelegt: ' : 'Nicht gespeichert: ') + pbFehlerText(e, BENUTZER_FELDER)
 }
 
 function fmtDateTimeLocal(iso?: string): string {
@@ -210,7 +230,9 @@ export default function Unitarii() {
       temp_permissions: cleanTemp,
     } : {
       name: '', email: '', contact_email: '', phone: '', password: '',
-      role: 'benutzer', permissions: { ...EMPTY_PERMS },
+      // Die voreingestellte Rolle setzt ihre Häkchen gleich — wie beim Wechsel der Rolle.
+      // Sonst bekam ein neuer Benutzer ausdrücklich überall „nein“ und sah nach dem Anmelden nichts.
+      role: 'benutzer', permissions: { ...EMPTY_PERMS, ...vorlageMitVerknuepfungen(getRoleTemplate('benutzer', { role_permissions: orgRolePerms }), orgVerkn, org) },
       supervisor: false, disabled: false, expires_at: '',
       temp_permissions: {},
     })
@@ -248,6 +270,8 @@ export default function Unitarii() {
     if (!userForm.name.trim() || !userForm.email.trim()) {
       showMsg('Name und E-Mail sind Pflicht', 'error'); return
     }
+    if (ohneRechte({ ...userForm, supervisor: editingUser ? userForm.supervisor : false })
+      && !confirm(`${userForm.name.trim()} hat kein einziges Recht und sieht nach dem Anmelden nichts. Trotzdem speichern?`)) return
     setSavingUser(true)
     try {
       const expIso = userForm.expires_at ? new Date(userForm.expires_at).toISOString() : null
@@ -278,12 +302,14 @@ export default function Unitarii() {
           passwordConfirm: unbekannt,
           organization_id: user!.organization_id,
           emailVisibility: true,
+          // Die Rechte stehen schon fest — die Übernahme beim ersten Login (useAuth) entfällt
+          permissions_migrated: true,
         })
         showMsg('Benutzer angelegt — das Passwort legt er über die Willkommens-E-Mail fest')
       }
       setEditOpen(false)
       await loadUsers()
-    } catch (e: any) { showMsg('Fehler: ' + (e?.message || e), 'error') }
+    } catch (e: any) { showMsg(anlegeFehler(e, !editingUser), 'error') }
     finally { setSavingUser(false) }
   }
 
@@ -382,12 +408,12 @@ export default function Unitarii() {
         password: tempForm.password, passwordConfirm: tempForm.password,
         role: tempForm.role, permissions: tempForm.permissions,
         organization_id: user!.organization_id, emailVisibility: true,
-        disabled: false, expires_at: expIso,
+        disabled: false, expires_at: expIso, permissions_migrated: true,
       })
       setTempOpen(false)
       await loadUsers()
       showMsg('Temporärer Zugang erstellt')
-    } catch (e: any) { showMsg('Fehler: ' + e.message, 'error') }
+    } catch (e: any) { showMsg(anlegeFehler(e, true), 'error') }
     finally { setSavingTemp(false) }
   }
 
@@ -1017,11 +1043,14 @@ function UserCard({ u, onClick, isSelf }: { u: UUser; onClick: () => void; isSel
   const expSoon = u.expires_at && new Date(u.expires_at).getTime() > Date.now()
   const expired = u.expires_at && new Date(u.expires_at).getTime() <= Date.now()
   const stripColor = u.disabled || expired ? 'rgba(var(--lbf-grau-rgb),0.5)' : (expSoon ? '#d97706' : 'var(--lbf-akzent)')
+  // Ein aktives Konto ohne ein einziges Recht sieht nach dem Anmelden nichts — sichtbar machen
+  const leer = !u.disabled && !expired && ohneRechte(u)
   const statusLabel = u.disabled
     ? 'DEAKTIVIERT'
     : expired ? 'ABGELAUFEN'
+    : leer ? 'KEINE RECHTE'
     : (expSoon ? `LÄUFT AB · ${fmtCountdown(u.expires_at!)}` : 'AKTIV')
-  const statusColor = u.disabled || expired ? 'var(--warm-gray)' : (expSoon ? '#d97706' : '#16a34a')
+  const statusColor = u.disabled || expired ? 'var(--warm-gray)' : leer ? 'var(--lbf-fehler-text-2)' : (expSoon ? '#d97706' : '#16a34a')
   const displayEmail = u.contact_email || (isPlaceholderEmail(u.email) ? '' : u.email)
 
   return (

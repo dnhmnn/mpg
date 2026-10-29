@@ -130,6 +130,20 @@ export function vergebbareRechte(org: unknown): { key: string; label: string }[]
 
 export const EMPTY_PERMS = Object.fromEntries(PERM_LABELS.map(p => [p.key, false])) as Record<string, boolean>
 
+/**
+ * Ein Konto, das nach dem Anmelden nichts sieht: kein Recht, auch kein noch
+ * laufendes befristetes, und kein Supervisor. Teilnehmer (Ausbildungen) haben
+ * absichtlich keine eigenen Rechte und zählen nicht.
+ */
+export function ohneRechte(
+  u: { role?: string; supervisor?: boolean; permissions?: Record<string, boolean>; temp_permissions?: Record<string, { until?: string } | undefined> },
+  jetzt = Date.now(),
+): boolean {
+  if (u.supervisor || u.role === 'teilnehmer') return false
+  if (Object.values(u.permissions || {}).some(v => v === true)) return false
+  return !Object.values(u.temp_permissions || {}).some(v => !!v?.until && zeitpunktBefristung(v.until) > jetzt)
+}
+
 // Erkennt automatisch generierte Platzhalter-E-Mails (z.B. für Teilnehmer ohne eigenen Account),
 // die nicht als "echte" Kontakt-E-Mail angezeigt werden sollen.
 export function isPlaceholderEmail(email?: string): boolean {
