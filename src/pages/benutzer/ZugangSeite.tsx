@@ -76,7 +76,7 @@ export default function ZugangSeite({ k }: { k: BvKontext }) {
         <input className="bv-eingabe" value={tempForm.name} onChange={e => setTempForm(p => ({ ...p, name: e.target.value }))} placeholder="z. B. Gast Müller" autoComplete="off" />
       </Feld>
       <Feld label="E-Mail" hinweis="Automatisch erzeugt, zum Anmelden. Es geht keine E-Mail raus.">
-        <input className="bv-eingabe mono" type="email" value={tempForm.email} onChange={e => setTempForm(p => ({ ...p, email: e.target.value }))} autoComplete="off" style={{ fontSize: 15 }} />
+        <input className="bv-eingabe mono" type="email" value={tempForm.email} onChange={e => setTempForm(p => ({ ...p, email: e.target.value }))} autoComplete="off" style={{ fontSize: 16 }} />
       </Feld>
       <Feld label="Passwort">
         <span className="bv-reihe">

@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { useStatusleiste } from '../hooks/useStatusleiste'
 import { ROLLEN, hatRecht, vergebbareRechte } from '../lib/apps'
 import { MAX_EIGENE_ROLLEN, eigeneRollen, rolleWiederherstellen } from '../lib/rollen'
 import { verknuepfungen, type Verknuepfungen } from '../lib/verknuepfung'
@@ -37,6 +38,8 @@ function scrollZu(y: number) {
 
 export default function Unitarii() {
   const { user, loading: authLoading } = useAuth()
+  // Statusleiste (Uhr, Akku) im Dunkelrot des Kopfs, solange die Seite offen ist
+  useStatusleiste()
   const navigate = useNavigate()
   const location = useLocation()
   const [sp] = useSearchParams()

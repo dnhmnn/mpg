@@ -182,7 +182,7 @@ export function NeuigkeitenReiter({ neuigkeiten, oeffne, loeschen }: { neuigkeit
             {url && <img className="bv-bild" src={url} alt="" />}
             <div style={{ padding: '14px 16px 12px' }}>
               {n.gepinnt && <p className="bv-hinweis" style={{ margin: '0 0 4px', fontWeight: 700 }}>Angeheftet</p>}
-              <h3 style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.25, margin: 0 }}>{n.titel}</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25, margin: 0 }}>{n.titel}</h3>
               {n.inhalt && <p className="bv-text">{n.inhalt}</p>}
               {von && <p className="bv-hinweis" style={{ margin: '10px 0 0' }}>{von}</p>}
             </div>
