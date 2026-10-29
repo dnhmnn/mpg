@@ -160,8 +160,8 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | `lernbar_beitraege` | Feed-Posts (typ: bild/text/video/quiz), Feld: `organisation_id` |
 | `ausbildungen_termine` | Termine |
 | `ausbildungen_module` | Lernmodule |
-| `organizations` | Organisationen mit Logo |
-| `users` | User mit `organization_id`, `organization_name`, `organization_logo` |
+| `organizations` | Organisationen mit Logo, Rollen-Vorlagen (`role_permissions`), eigene Rollen (`eigene_rollen`, nur über `src/lib/rollen.ts` lesen) und verknüpfte Rechte. Update-Regel: Lizenz und Module nur Supervisor, Rollen und Vorlagen Admin/Benutzerverwaltung, Formulare Vorgänge — `docs/pocketbase-regeln.md`, „Eigene Rollen der Organisationen“ |
+| `users` | User mit `organization_id`, `organization_name`, `organization_logo`; `role` ist eine Vorlage (vorgegeben oder `eigen_…`), was jemand darf, steht in `permissions` |
 | `eks_events` | EKS-Ereignislog (anhängend, **unveränderlich** — Update/Delete gesperrt). ID wird vom Client vergeben (15× `[a-z0-9]`) |
 | `inventory_transactions` | Lager-Journal (**unveränderlich**, Hook `pb_hooks/lager.pb.js`). Buchungen nur über `src/lib/lagerBuchung.ts` (Batch, Client-ID, genau einmal); Korrektur = Gegenbuchung (`storno_von`) |
 | `inventory_items`, `inventory_locations` | Lager-Stammdaten; benutzt → `archiviert` statt löschen |

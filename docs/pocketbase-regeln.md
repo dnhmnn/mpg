@@ -696,3 +696,233 @@ abgelaufener Verwalter, Helfer, befristeter Verwalter einer anderen
 Organisation, Supervisor — dazu kein Supervisor-Recht, keine fremde
 Organisation, kein fremdes Passwort; die 275 Prüfungen von MPG-Paket 3 bestehen
 weiter.
+
+## Eigene Rollen der Organisationen
+
+Neben den vorgegebenen Rollen (Admin, Benutzer, MPG-Beauftragter, Lagerwart,
+Ausbilder, Qualitätsmanagement, Teilnehmer) legt eine Organisation in der
+Benutzerverwaltung eigene Rollen an, etwa „Kassenwart“. Die Rollen stehen im
+JSON-Feld `organizations.eigene_rollen`:
+```json
+[{ "id": "eigen_k3m9x2qa", "name": "Kassenwart", "hinweis": "Dateien und Vorgänge", "farbe": "cognac", "archiviert": false }]
+```
+Die Häkchen einer eigenen Rolle stehen wie bei den vorgegebenen in
+`organizations.role_permissions[id]`, am Benutzer steht `users.role =
+"eigen_k3m9x2qa"`. Die ID ist `eigen_` plus acht Zeichen aus `a–z0–9` und ändert
+sich nie; Umbenennen ändert nur `name`.
+
+**Eine Rolle setzt nur Häkchen.** Was zählt, ist immer `users.permissions`. Eine
+`eigen_`-ID kommt in keiner Regel vor und gibt auf dem Server kein einziges
+Recht; anders als `admin`, `lager` und `mpg`, die in den Regeln oben Rechte ohne
+Häkchen geben. Die App verwirft beim Lesen jede Rolle, deren ID nicht dem Muster
+entspricht (`src/lib/rollen.ts`): Eine Rolle mit der ID `admin` und dem Namen
+„Kassenwart“ ließe einen Admin sonst unwissentlich `role = "admin"` vergeben.
+
+Bisher war die Update-Regel von `organizations` nicht festgehalten. Die App
+schreibt dort an drei Stellen: Benutzerverwaltung (`role_permissions`,
+`eigene_rollen`, `verknuepfungen`), Vorgänge (`form_config`) und die
+Supervisor-Seite (Name, Kürzel, Lizenz, Freischaltung, Anlegen). Die Regeln
+unten sperren die Felder von Lizenz, Freischaltung und Stammdaten für alle außer
+dem Supervisor; alle übrigen Felder bleiben für Verwalter und
+Vorgänge-Bearbeiter offen (siehe „Vorher“, Schritt 4).
+
+### Vorher
+
+1. **Die heutigen Regeln von `organizations` ablesen** und notieren (Update,
+   Create, Delete), damit sie sich zurückstellen lassen.
+2. **Feld `users.role` prüfen** (*Collections → users → Feld role*):
+   - Typ **Plain text**, *Max length* **0** (Standard) oder mindestens
+     **14**. Ist sie kleiner, hochsetzen. Sonst antwortet PocketBase beim
+     Speichern einer eigenen Rolle mit `validation_max_text_constraint` (siehe
+     unten).
+   - Typ **Select**: Eigene Rollen lassen sich so nicht speichern. Die App
+     erkennt die Antwort (siehe unten) und meldet es. Den Typ ändert PocketBase
+     nicht. **Nicht** das Feld löschen und als Text neu anlegen: Dabei gehen alle
+     Rollen verloren (geprüft: aus `admin` wird `""`), und jede Regel, die auf
+     `role = "admin"` schaut, greift nicht mehr. Stattdessen die Migration unten
+     einspielen. Vorher eine Sicherung anlegen (*Settings → Backups*).
+3. **Neues Feld in `organizations`:** `eigene_rollen`, Typ **JSON**, nicht
+   Pflicht, nicht versteckt (die App liest es). *Max size* beim Standard lassen.
+4. **Felder von `organizations` prüfen**, auf die sich die Update-Regel bezieht:
+   `org_name`, `org_code`, `logo`, `is_active`, `license_type`, `max_users`,
+   `license_valid_until`, `freigeschaltet`, `role_permissions`, `eigene_rollen`,
+   `verknuepfungen`, `form_config`. **PocketBase speichert die Regel auch, wenn
+   eines fehlt oder anders heißt** (geprüft), der Schutz dieses Felds fehlt dann
+   still. Jedes weitere Feld der Sammlung dürfen Verwalter und
+   Vorgänge-Bearbeiter ändern. Gehört es zu Lizenz oder Freischaltung, nach
+   demselben Muster (`@request.body.<feld>:isset = false`) in die Update-Regel
+   aufnehmen, direkt hinter `@request.body.freigeschaltet:isset = false`.
+5. **Alte Rollenwerte suchen** (*Collections → users*, Filter unten). Werte wie
+   `mitglied` stören die Regeln nicht; die App zeigt sie unverändert an. Vor dem
+   optionalen Pattern (unten) muss die Liste leer sein.
+6. Erst jetzt die Regeln unten eintragen.
+
+**Migration Select → Plain text.** Datei `1761750000_users_role_text.js` in den
+Ordner `pb_migrations` legen. Er liegt neben `pb_data`, sofern PocketBase nicht
+mit `--migrationsDir` startet; liegen die Hooks in `/opt/pb_hooks`, ist es
+meist `/opt/pb_migrations`. Danach PocketBase neu starten. Die Migration läuft
+beim Start genau einmal, als Ganzes oder gar nicht, und tut nichts, wenn `role`
+schon Text ist. Von PocketBase selbst angelegte Dateien im Ordner stören nicht:
+```js
+// Stellt users.role von „Select“ auf „Plain text“ um; die Werte bleiben erhalten.
+migrate((app) => {
+  const users = app.findCollectionByNameOrId("users")
+  const alt = users.fields.getByName("role")
+  if (!alt || alt.type() !== "select") return // schon Text: nichts zu tun
+  if (alt.maxSelect > 1) throw new Error("users.role ist eine Mehrfachauswahl — nicht automatisch umstellbar")
+  // 1. Textfeld daneben anlegen, Werte kopieren
+  users.fields.add(new TextField({ name: "role_text", max: 0 }))
+  app.save(users)
+  app.db().newQuery("UPDATE {{users}} SET [[role_text]] = [[role]]").execute()
+  // 2. Select entfernen und das Textfeld umbenennen, in einem Speichern (die Regeln bleiben gültig)
+  const c = app.findCollectionByNameOrId("users")
+  c.fields.removeByName("role")
+  c.fields.getByName("role_text").name = "role"
+  app.save(c)
+})
+```
+Geprüft auf 0.28.4 und 0.40.5 mit acht Konten (alle vorgegebenen Rollen und
+ohne Rolle): Danach ist `role` Plain text, jede Rolle ist erhalten, alle sieben
+`users`-Regeln sind unverändert, ein Admin (nur über `role = "admin"`) legt einen
+Benutzer mit eigener Rolle an, ein Benutzer ohne Recht gibt sich weiter keine
+Rolle, und ein zweiter Start ändert nichts: 22 Prüfungen je Version, alle
+bestanden.
+
+### organizations: API-Regeln
+
+| Wer | Was |
+|---|---|
+| Supervisor | alles, in jeder Organisation; als Einziger anlegen und löschen |
+| Admin (`role = "admin"`) oder Benutzerverwaltung (`unitarii`, auch befristet) | nur die eigene Organisation: `role_permissions`, `eigene_rollen`, `verknuepfungen`, `form_config` sowie jedes Feld, das die Regel nicht ausdrücklich sperrt |
+| Vorgänge (`dokumente`, auch befristet) | nur die eigene Organisation: `form_config` sowie jedes Feld, das die Regel nicht ausdrücklich sperrt — nicht aber die Rollenfelder |
+| alle anderen, auch ohne Anmeldung | lesen |
+
+Name, Kürzel, Logo, aktiv, Lizenz, Obergrenze, Ablauf und Freischaltung ändert
+nur der Supervisor, auch nicht unverändert mitgeschickt. Alles nur mit
+**aktivem Konto**, wie bei `users`. Wer die Benutzerverwaltung hat, kann ohnehin
+jedes Recht vergeben; für die Rollenfelder entsteht dadurch keine neue Macht.
+
+**List/Search** und **View**: unverändert öffentlich (leer, Schloss offen). Die
+öffentlichen Seiten lesen ohne Anmeldung (`OrgPublicLayout.tsx` per
+`org_code`, `PatientView.tsx`). Damit sind auch `role_permissions` und
+`eigene_rollen` öffentlich lesbar; einzelne Felder blendet eine Regel nicht aus.
+Rollennamen und Häkchen sind wenig sensibel.
+
+**Update**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (id = @request.auth.organization_id && @request.body.org_name:isset = false && @request.body.org_code:isset = false && @request.body.logo:isset = false && @request.body.is_active:isset = false && @request.body.license_type:isset = false && @request.body.max_users:isset = false && @request.body.license_valid_until:isset = false && @request.body.freigeschaltet:isset = false && ((@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) || ((@request.auth.permissions.dokumente = true || (@request.auth.temp_permissions.dokumente.until ~ " " && @request.auth.temp_permissions.dokumente.until > @now)) && @request.body.role_permissions:isset = false && @request.body.eigene_rollen:isset = false && @request.body.verknuepfungen:isset = false))))
+```
+
+**Create**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.supervisor = true
+```
+
+**Delete** (die App löscht keine Organisationen; das Schloss stehen zu lassen
+geht auch)
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.supervisor = true
+```
+
+Ablehnung: Update und Delete 404 („The requested resource wasn't found.“),
+Create 400 („Failed to create record.“). Die App meldet bei 404: „Der Server
+lässt das Ändern der Organisation nicht zu.“ Eine Sammelbuchung (Batch) mit
+einem verbotenen Teil wird ganz abgelehnt.
+
+### users: eigene Rollen
+
+Die `users`-Regeln oben brauchen nichts Neues. Geprüft mit `role` als Plain
+text:
+
+- Admin, Verwalter, befristeter Verwalter, Verwalter mit eigener Rolle und
+  Supervisor legen Benutzer mit `role = "eigen_k3m9x2qa"` an (die Anfrage aus
+  `src/pages/benutzer/PersonSeite.tsx`, `saveUser`) und ändern die Rolle hin und zurück.
+- Kein Benutzer ändert seine eigene Rolle: Helfer → eigene Rolle, eigene Rolle →
+  `admin`, eigene Rolle → andere eigene Rolle, auch nicht unverändert
+  mitgeschickt. Den eigenen Namen ändert er weiter.
+- Eine eigene Rolle ohne Häkchen gibt nichts: Ein Mitglied mit eigener Rolle
+  legt niemanden an, ändert niemand anderen und gibt sich keine
+  Benutzerverwaltung.
+- Abgelaufene, gesperrte und fremde Verwalter (andere Organisation) ändern nichts.
+- **Ausbildungs-Verwalter** machen einen Benutzer mit eigener Rolle nicht zum
+  Teilnehmer und legen keinen mit eigener Rolle an. Die Regel verlangt
+  `benutzer`, `""` bzw. `teilnehmer`. Das ist strenger als nötig und unkritisch.
+  Bitte nicht mit `role ~ "eigen_"` erweitern (siehe Filter unten).
+
+**Was PocketBase antwortet, wenn `role` nicht passt** (auf 0.28.4 und 0.40.5
+gleich). Unterscheiden lässt es sich an `e.response.data.role.code`:
+
+- `role` ist **Select** (Anlegen; beim Ändern dasselbe mit „Failed to update
+  record.“):
+  ```json
+  {"data":{"role":{"code":"validation_invalid_value","message":"Invalid value eigen_k3m9x2qa.","params":{"value":"eigen_k3m9x2qa"}}},"message":"Failed to create record.","status":400}
+  ```
+- `role` ist Plain text mit zu kleiner *Max length* (hier 10):
+  ```json
+  {"data":{"role":{"code":"validation_max_text_constraint","message":"Must be no more than 10 character(s).","params":{"max":10}}},"message":"Failed to create record.","status":400}
+  ```
+- Fehlt das Recht, kommt 400 ohne Feldfehler: `{"data":{},"message":"Failed to create record.","status":400}`.
+  Ein Feldfehler an `role` heißt also: Die Regel hätte es erlaubt, das Feld nicht.
+
+**Alte Rollenwerte finden.** Filter in *Collections → users*: Rollen, die weder
+vorgegeben sind noch mit `eigen_` beginnen:
+```
+role != "" && role != "admin" && role != "benutzer" && role != "mpg" && role != "lager" && role != "ausbildung" && role != "qm" && role != "teilnehmer" && role !~ "eigen\_%"
+```
+Geprüft: Er findet `mitglied`, `Admin`, `eigenxk3m9x2qa` und `xeigen_k3m9x2qa`,
+nicht aber die vorgegebenen, die leere Rolle und `eigen_…`. Zu `~` in
+PocketBase (geprüft auf beiden Versionen):
+
+- Ohne `%` heißt `~` „enthält“, und `_` zählt als Zeichen: `role ~ "eigen_"`
+  findet nur Werte mit `eigen_` darin.
+- Mit `%` ist `_` ein Platzhalter für ein beliebiges Zeichen: `role ~ "eigen_%"`
+  findet auch `eigenxk3m9x2qa`. Deshalb `\_`.
+- `~` unterscheidet nicht nach Groß- und Kleinschreibung: `role ~ "eigen\_%"`
+  findet auch `EIGEN_K3M9X2QA`.
+
+**Optional, als Härtung: Pattern an `users.role`**
+```
+^(admin|benutzer|mpg|lager|ausbildung|qm|teilnehmer|eigen_[a-z0-9]{8})$
+```
+Dann speichert PocketBase nur noch vorgegebene Rollen, eigene Rollen im
+richtigen Muster und die leere Rolle. Abgelehnt werden zum Beispiel `mitglied`,
+`EIGEN_K3M9X2QA`, `eigen_abc` und `admin ` (mit Leerzeichen), und zwar mit
+`{"data":{"role":{"code":"validation_invalid_format","message":"Invalid value format."}},…}`.
+**Vorsicht:** Ein Konto mit einem alten Wert lässt sich danach gar nicht mehr
+speichern, auch nicht nur sein Name (geprüft). Deshalb vorher den Filter oben
+leeren und mit `role ~ "eigen\_%"` nachsehen, dass jede eigene Rolle genau
+`eigen_` plus acht Kleinbuchstaben oder Ziffern ist. Kommt eine neue vorgegebene
+Rolle dazu, gehört sie ins Pattern.
+
+### Geprüft
+
+Gegen **PocketBase 0.28.4 und 0.40.5**, mit zwei Organisationen, `logo` als
+Datei-Feld (wie in der App) und zusätzlich als Text-Feld. Beteiligt waren
+Supervisor, gesperrter Supervisor, Admin, Verwalter, befristeter Verwalter
+(gültig, abgelaufen, altes Datumsformat), Verwalter mit eigener Rolle, Mitglied
+mit eigener Rolle, Vorgänge-Bearbeiter (dauerhaft, befristet, abgelaufen),
+Helfer, Teilnehmer, MPG-Beauftragter ohne Benutzerverwaltung, Ausbilder,
+gesperrter und abgelaufener Admin mit altem Token, Admin und Vorgänge-Bearbeiter
+der anderen Organisation und ohne Anmeldung.
+
+- **Matrix:** jede dieser Personen mit jedem Feld einzeln und in Kombinationen
+  (Rollen mit Freischaltung, Rollen mit `max_users`, `form_config` mit
+  `eigene_rollen` bzw. `verknuepfungen`), in der eigenen und der anderen
+  Organisation. Erlaubt heißt gespeichert, abgelehnt heißt: Datensatz
+  unverändert, auch `updated`. Das sind 1428 Fälle je Version: 144 erlaubt, 1284
+  abgelehnt.
+- **Trickanfragen:** Formular statt JSON (`max_users`, `freigeschaltet`,
+  `eigene_rollen`, `role_permissions`), Logo hochladen, `logo+`, `+logo`,
+  `logo-`, `logo` leer oder null, `max_users+`, `max_users-`,
+  `org_code:autogenerate`, Freischaltung leeren (`null` oder `[]`, das hieße
+  „alles frei“), Rolle mit der ID `admin`, die Vorlage `benutzer` über Vorgänge,
+  die Kennung von A auf B ändern, sich selbst nach B verschieben,
+  Sammelbuchungen (Batch) mit erlaubten und verbotenen Teilen. Die Antwort des
+  Speicherns enthält `eigene_rollen`, so erkennt die App das Feld.
+- Lesen ohne Anmeldung (per `org_code`, einzeln, Liste), Anlegen und Löschen nur
+  durch den Supervisor, dazu die `users`-Fälle, der Filter, das Pattern, die zu
+  kleine *Max length* und `role` als Select.
+
+Zusammen **1601 Prüfungen je Version, alle bestanden**. Gegenprobe mit der
+weiten Regel `id = @request.auth.organization_id` (jedes Mitglied darf alles an
+der eigenen Organisation, jeder Angemeldete legt an): 702 schlagen an.

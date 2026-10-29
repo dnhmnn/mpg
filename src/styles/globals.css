@@ -179,6 +179,24 @@
   --lbf-kachel-tief: #3d0408;
   --lbf-kachel-wein: #7a1020;
   --lbf-kachel-braun: #5c3800;
+  /* Dunkelroter Kopfbereich (Benutzerverwaltung, später Hub und Formulare):
+     Fläche, Schrift darauf, Felder im Kopf. Signalrot nur für Gesperrtes und
+     Konten ohne Rechte — sonst nirgends. */
+  --lbf-kopf: #3d0408;
+  --lbf-kopf-text: #fde8d8;
+  --lbf-kopf-text-2: rgba(253,232,216,0.75);
+  --lbf-kopf-feld: #521018;
+  --lbf-signal: #b8321a;
+  /* Erkennungsfarben der Rollen (src/lib/rollen.ts): gedeckt und warm,
+     helle Schrift darauf. Dunkel eine Stufe heller. */
+  --rolle-bordeaux: #600812;
+  --rolle-cognac: #7a4a1e;
+  --rolle-oliva: #55602f;
+  --rolle-petrolio: #2f5a60;
+  --rolle-prugna: #5e2a4c;
+  --rolle-senape: #86620f;
+  --rolle-salvia: #4f6a58;
+  --rolle-ardesia: #4f4640;
   /* Eingebaute Bedienelemente (Datum, Auswahl, Rollbalken) passend färben. */
   color-scheme: light;
 
@@ -282,6 +300,19 @@
   --lbf-kachel-tief: #6b1420;
   --lbf-kachel-wein: #a02434;
   --lbf-kachel-braun: #7a4c08;
+  --lbf-kopf: #2e0508;
+  --lbf-kopf-text: #fde8d8;
+  --lbf-kopf-text-2: rgba(253,232,216,0.72);
+  --lbf-kopf-feld: #48101a;
+  --lbf-signal: #e0583a;
+  --rolle-bordeaux: #8a1c28;
+  --rolle-cognac: #8a5a26;
+  --rolle-oliva: #66723a;
+  --rolle-petrolio: #3a6c73;
+  --rolle-prugna: #74365e;
+  --rolle-senape: #9a7316;
+  --rolle-salvia: #5d7c68;
+  --rolle-ardesia: #625850;
   color-scheme: dark;
 
   --bg: #000000;
@@ -374,6 +405,19 @@
   --lbf-rosa-text: #ff6b6b;
   --lbf-warn-grund-5: #1f2b00;
   --lbf-warn-text-4: #ffd400;
+  --lbf-kopf: #001400;
+  --lbf-kopf-text: #00ff41;
+  --lbf-kopf-text-2: rgba(0,255,65,0.62);
+  --lbf-kopf-feld: #002806;
+  --lbf-signal: #ff5f3a;
+  --rolle-bordeaux: #005a17;
+  --rolle-cognac: #3d5a00;
+  --rolle-oliva: #2f5a1a;
+  --rolle-petrolio: #005a3d;
+  --rolle-prugna: #1a4a2f;
+  --rolle-senape: #4a5a00;
+  --rolle-salvia: #1f5a2a;
+  --rolle-ardesia: #1a3d1f;
   color-scheme: dark;
 
   --bg: #080c08;
@@ -497,6 +541,19 @@
   --lbf-kachel-tief: #6b1420;
   --lbf-kachel-wein: #a02434;
   --lbf-kachel-braun: #7a4c08;
+  --lbf-kopf: #2e0508;
+  --lbf-kopf-text: #fde8d8;
+  --lbf-kopf-text-2: rgba(253,232,216,0.72);
+  --lbf-kopf-feld: #48101a;
+  --lbf-signal: #e0583a;
+  --rolle-bordeaux: #8a1c28;
+  --rolle-cognac: #8a5a26;
+  --rolle-oliva: #66723a;
+  --rolle-petrolio: #3a6c73;
+  --rolle-prugna: #74365e;
+  --rolle-senape: #9a7316;
+  --rolle-salvia: #5d7c68;
+  --rolle-ardesia: #625850;
   color-scheme: dark;
 
     --bg: #000000;

@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
-import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen } from '../lib/freigabe'
-import { ROLLEN, getRoleTemplate, isPlaceholderEmail, rollenName } from '../lib/apps'
+import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen, rechtFrei } from '../lib/freigabe'
+import { PERM_LABELS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte } from '../lib/apps'
+import { eigeneRollen, nurAngehakt, rolleInfo, rollenBezeichnung, rollenFuer, type RollenEintrag, vorlageBereinigen } from '../lib/rollen'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { zufallsPasswort } from '../lib/passwort'
 import WillkommenKnopf from '../components/WillkommenKnopf'
@@ -95,6 +96,8 @@ interface Org {
   freigeschaltet?: unknown
   role_permissions?: Record<string, Record<string, boolean>>
   verknuepfungen?: unknown
+  /** Eigene Rollen der Organisation (JSON-Feld, src/lib/rollen.ts) */
+  eigene_rollen?: unknown
   userCount: number
 }
 
@@ -108,25 +111,75 @@ interface OrgUser {
   organization_id?: string
 }
 
-function roleLabel(u: OrgUser) {
+function roleLabel(u: OrgUser, org: Org | null) {
   if (u.supervisor) return 'Supervisor'
-  return rollenName(u.role)
+  return rollenBezeichnung(u.role, org)
 }
 
 /** Die Rechte einer Rolle für diese Organisation: ihre Vorlage samt verknüpfter Rechte. */
 function rollenRechte(role: string, org: Org): Record<string, boolean> {
-  return vorlageMitVerknuepfungen(getRoleTemplate(role, org), verknuepfungen(org), org)
+  return vorlageMitVerknuepfungen(vorlageBereinigen(getRoleTemplate(role, org)), verknuepfungen(org), org)
 }
 
-function RollenAuswahl({ wert, onChange, hinweis }: { wert: string; onChange: (r: string) => void; hinweis?: string }) {
+/** „A, B und C“ */
+function aufzaehlen(namen: string[]): string {
+  return namen.length < 2 ? namen.join('') : `${namen.slice(0, -1).join(', ')} und ${namen[namen.length - 1]}`
+}
+
+const RECHTE_REIHENFOLGE = [...PERM_LABELS.map(p => p.key), 'produktausgabe']
+
+/**
+ * Was die Vorlage einer Rolle ankreuzt, in Worten. Der Supervisor wendet sie beim
+ * Anlegen und beim Rollenwechsel an, und die Organisation kann sie selbst ändern —
+ * deshalb steht sie sichtbar unter der Auswahl.
+ */
+function vorlageInWorten(rechte: Record<string, boolean>, org: Org): string {
+  const an = Object.keys(nurAngehakt(rechte))
+    .sort((a, b) => (RECHTE_REIHENFOLGE.indexOf(a) + 1 || 999) - (RECHTE_REIHENFOLGE.indexOf(b) + 1 || 999))
+  if (!an.length) return 'Bekommt keine Rechte.'
+  const namen = new Map<string, string>([
+    ...PERM_LABELS.map(p => [p.key, p.label] as [string, string]),
+    ['produktausgabe', 'Produktausgabe'],
+    ...vergebbareRechte(org).map(p => [p.key, p.label] as [string, string]),
+  ])
+  const frei = an.filter(k => rechtFrei(org, k)).map(k => namen.get(k) ?? k)
+  const gesperrt = an.length - frei.length
+  const teile: string[] = []
+  if (frei.length) teile.push(`Bekommt: ${aufzaehlen(frei)}.`)
+  if (gesperrt) teile.push(`${frei.length ? 'Dazu' : 'Bekommt'} ${gesperrt === 1 ? 'ein Recht' : `${gesperrt} Rechte`} gesperrter Module, ${gesperrt === 1 ? 'das' : 'die'} erst mit der Freischaltung ${gesperrt === 1 ? 'gilt' : 'gelten'}.`)
+  return teile.join(' ')
+}
+
+function rollenOption(r: RollenEintrag, org: Org | null) {
+  // Archiviert: nur noch für die, die sie schon haben (rollenFuer mit aktuelle)
+  const archiviert = r.archiviert && eigeneRollen(org).some(e => e.id === r.id)
+  return <option key={r.id} value={r.id}>{archiviert ? `${r.name} (archiviert)` : r.name}</option>
+}
+
+function RollenAuswahl({ wert, onChange, org, vorschau = true, hinweis }: {
+  wert: string; onChange: (r: string) => void; org: Org | null
+  /** Die Häkchen der Vorlage zeigen — nur, wenn sie beim Speichern auch angewendet wird */
+  vorschau?: boolean
+  hinweis?: string
+}) {
+  const rollen = rollenFuer(org, { aktuelle: wert })
+  const eigene = rollen.filter(r => r.eigen)
   return (
     <>
       <select value={wert} onChange={e => onChange(e.target.value)} style={fieldInputStyle}>
-        {ROLLEN.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+        {eigene.length > 0 ? (
+          <>
+            <optgroup label="Vorgegeben">{rollen.filter(r => !r.eigen).map(r => rollenOption(r, org))}</optgroup>
+            <optgroup label="Eigene Rollen">{eigene.map(r => rollenOption(r, org))}</optgroup>
+          </>
+        ) : rollen.map(r => rollenOption(r, org))}
+        {/* Alter, unbekannter Wert: so zeigen, wie er ist, statt still die erste Rolle anzuzeigen */}
+        {!rollen.some(r => r.id === wert) && <option value={wert}>{wert}</option>}
       </select>
       <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.4 }}>
-        {ROLLEN.find(r => r.id === wert)?.hinweis}{hinweis ? ' ' + hinweis : ''}
+        {rolleInfo(wert, org)?.hinweis}{hinweis ? ' ' + hinweis : ''}
       </div>
+      {vorschau && org && <div style={{ fontSize: 15, fontStyle: 'normal', color: 'var(--lbf-text)', marginTop: 6, lineHeight: 1.4 }}>{vorlageInWorten(rollenRechte(wert, org), org)}</div>}
     </>
   )
 }
@@ -545,7 +598,8 @@ export default function Supervisor() {
       const updates: any = { name: userFormName, role: userFormRole }
       // Neue Rolle: ihre Rechte kommen dazu, bestehende bleiben
       if (selectedOrg && userFormRole !== (editingUser.role || 'benutzer')) {
-        updates.permissions = { ...(editingUser.permissions || {}), ...rollenRechte(userFormRole, selectedOrg) }
+        // Nur die Häkchen der Vorlage: Vorlagen speichern auch „nein“, das darf nichts wegnehmen
+        updates.permissions = { ...(editingUser.permissions || {}), ...nurAngehakt(rollenRechte(userFormRole, selectedOrg)) }
       }
       if (userFormPassword) {
         updates.password = userFormPassword
@@ -1399,7 +1453,7 @@ export default function Supervisor() {
                         letterSpacing: '0.06em',
                         flexShrink: 0
                       }}>
-                        {roleLabel(u)}
+                        {roleLabel(u, selectedOrg)}
                       </div>
                       <button
                         onClick={e => { e.stopPropagation(); deleteUser(u.id) }}
@@ -1465,7 +1519,7 @@ export default function Supervisor() {
                   </div>
                   <div style={{ marginBottom: 16 }}>
                     <div style={fieldLabelStyle}>Rolle</div>
-                    <RollenAuswahl wert={newUserRole} onChange={setNewUserRole} />
+                    <RollenAuswahl wert={newUserRole} onChange={setNewUserRole} org={selectedOrg} />
                   </div>
                   {newUserMsg && (
                     <div style={{ fontSize: 13, fontStyle: 'italic', color: newUserMsg.startsWith('Fehler') ? '#dc2626' : '#16a34a', marginBottom: 10 }}>
@@ -1693,7 +1747,8 @@ export default function Supervisor() {
 
             <div style={{ marginBottom: 20 }}>
               <div style={fieldLabelStyle}>Rolle</div>
-              <RollenAuswahl wert={userFormRole} onChange={setUserFormRole}
+              <RollenAuswahl wert={userFormRole} onChange={setUserFormRole} org={selectedOrg}
+                vorschau={!!editingUser && userFormRole !== (editingUser.role || 'benutzer')}
                 hinweis={editingUser && userFormRole !== (editingUser.role || 'benutzer') ? 'Beim Speichern kommen die Rechte der neuen Rolle dazu; bestehende bleiben.' : undefined} />
             </div>
 

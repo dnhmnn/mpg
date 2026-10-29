@@ -2,7 +2,20 @@ import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
 import { ROLES, getRoleTemplate } from '../lib/apps'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
+import { istEigeneRolleId, vorlageBereinigen } from '../lib/rollen'
 import type { User } from '../types'
+
+/**
+ * Zieht dieser Start die Rollen-Vorlage am Benutzer nach (einmalig, für Altkonten
+ * ohne permissions_migrated)? Nur mit Netz. Eine eigene Rolle der Organisation hat
+ * keine Standardvorlage: Ohne frisch geladene Organisation würde "{}" geschrieben
+ * und als erledigt vermerkt, und ihre Vorlage käme nie mehr an. Dann wartet es auf
+ * den nächsten Start mit Organisation.
+ */
+export function vorlageNachziehen(u: Pick<User, 'role' | 'permissions_migrated'> | null | undefined, online: boolean, orgFrisch: boolean): boolean {
+  if (!u || u.permissions_migrated === true || !online) return false
+  return orgFrisch || !istEigeneRolleId(u.role || 'benutzer')
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
@@ -63,11 +76,12 @@ export function useAuth() {
       // aber nur mit frisch geladener Organisation, sonst stünden Voreinstellung und
       // gesperrte Module für immer am Benutzer. Was am Benutzer schon ausdrücklich
       // steht — auch ein abgewähltes Häkchen —, gilt weiter.
-      if (userData && userData.permissions_migrated !== true && navigator.onLine) {
+      // Eigene Rollen nur mit frisch geladener Organisation (vorlageNachziehen).
+      if (userData && vorlageNachziehen(userData, navigator.onLine, orgFrisch)) {
         const rolle = userData.role || 'benutzer'
         const vorlage = {
           // Mit frisch geladener Organisation ihre eigene Rollen-Vorlage, sonst die Standardvorlage
-          ...(orgFrisch ? getRoleTemplate(rolle, userData.organization as Parameters<typeof getRoleTemplate>[1]) : (ROLES[rolle]?.permissions || {})),
+          ...(orgFrisch ? vorlageBereinigen(getRoleTemplate(rolle, userData.organization as Parameters<typeof getRoleTemplate>[1])) : (ROLES[rolle]?.permissions || {})),
           ...(userData.lernbar_access ? { lernbar: true } : {}),
         }
         const merged = {

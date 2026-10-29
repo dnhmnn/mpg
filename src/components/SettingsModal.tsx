@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import Modal from './Modal'
+import { rollenBezeichnung } from '../lib/rollen'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -271,14 +272,8 @@ export default function SettingsModal({ isOpen, onClose, user }: SettingsModalPr
                   </tr>
                 ) : (
                   users.map((u) => {
-                    const roleLabels: Record<string, string> = {
-                      mpg: 'MPG',
-                      lager: 'Lager',
-                      ausbildung: 'Ausbildung',
-                      qm: 'QM',
-                      benutzer: 'Benutzer'
-                    }
-                    const roleLabel = roleLabels[u.role] || 'Benutzer'
+                    // Vorgegebene und eigene Rollen der Organisation (frisch geladen, sonst die vom Login)
+                    const roleLabel = u.supervisor ? 'Supervisor' : rollenBezeichnung(u.role, license ?? user?.organization)
                     
                     return (
                       <tr key={u.id} style={{ borderBottom: '1px solid var(--lbf-border)' }}>

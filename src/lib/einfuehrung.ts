@@ -286,10 +286,10 @@ export const SCHRITTE: EinfSchritt[] = [
     titel: 'Benutzer und Rechte',
     text: 'Unter „Benutzer“ legst du die Mitglieder deiner Organisation an und bestimmst, welche Module sie nutzen dürfen. Beim ersten Login bekommen sie automatisch ihre Einführung.',
     punkte: [
-      'Neuer Benutzer: Name, E-Mail und Passwort. Das Passwort gibst du selbst weiter — in der Benutzerverwaltung verschickt Responda dabei keine E-Mail.',
-      'Die Rolle setzt Häkchen nach Vorlage, danach passt du sie einzeln an. Die Vorlagen änderst du über das Symbol mit den Schiebereglern.',
+      'Neuer Benutzer: Name und E-Mail. Er bekommt eine Willkommens-E-Mail und legt sein Passwort selbst fest.',
+      'Die Rolle setzt Häkchen nach Vorlage, danach passt du sie einzeln an. Unter Benutzer → Rollen änderst du die Vorlagen und legst eigene Rollen für deine Organisation an, zum Beispiel „Gerätewart“.',
       'Zusatzrechte lassen sich befristet freigeben, von einer Stunde bis zu sieben Tagen.',
-      '„Zugang aktiv“ ausschalten sperrt den Login — besser als Löschen.',
+      '„Gesperrt“ einschalten sperrt die Anmeldung. Das ist besser als Löschen.',
     ],
     rechte: ['unitarii'],
   },
@@ -348,11 +348,12 @@ export function schritte(user: User, teile: Teil[]): EinfSchritt[] {
 }
 
 /**
- * EKS und Benutzerverwaltung lassen nur mit dem dauerhaften Recht hinein
- * (EksAuswahl.tsx, Unitarii.tsx) — ein befristetes zeigt zwar die Kachel, öffnet
- * die Seite aber nicht. Der Überblick verspricht deshalb nur, was auch aufgeht.
+ * EKS lässt nur mit dem dauerhaften Recht hinein (EksAuswahl.tsx) — ein befristetes
+ * zeigt zwar die Kachel, öffnet die Seite aber nicht. Der Überblick verspricht deshalb
+ * nur, was auch aufgeht. Die Benutzerverwaltung öffnet auch befristet (Unitarii.tsx,
+ * hatRecht), wie die users-Regeln auf dem Server.
  */
-const NUR_DAUERHAFT = new Set(['eks', 'unitarii'])
+const NUR_DAUERHAFT = new Set(['eks'])
 
 export function meineModule(user: User) {
   return MODULE.filter((m) => appFrei(user.organization, m.id) && (NUR_DAUERHAFT.has(m.recht)
@@ -385,8 +386,8 @@ export const CHECKLISTE: Punkt[] = [
     text: 'Lege die Benutzer deiner Organisation an. Das Passwort gibst du ihnen selbst weiter — in der Benutzerverwaltung verschickt Responda beim Anlegen keine E-Mail.',
   },
   {
-    id: 'vorlagen', titel: 'Rollen-Vorlagen anpassen', befund: 'rechte', recht: 'unitarii', pfad: '/unitarii',
-    text: 'Lege fest, welche Rechte jede Rolle beim Anlegen vorschlägt — über das Symbol mit den Schiebereglern. Das spart Häkchen und hält die Rechte einheitlich.',
+    id: 'vorlagen', titel: 'Rollen-Vorlagen anpassen', befund: 'rechte', recht: 'unitarii', pfad: '/unitarii?tab=rollen',
+    text: 'Lege unter Benutzer → Rollen fest, welche Rechte jede Rolle beim Anlegen vorschlägt. Passt keine, legst du dort eine eigene Rolle an. Das spart Häkchen und hält die Rechte einheitlich.',
   },
   {
     id: 'eks', titel: 'Einsatzführung (EKS) freigeben', befund: 'eks', recht: 'unitarii', pfad: '/unitarii', modul: 'eks',

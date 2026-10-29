@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, ROLLEN, getRoleTemplate, isPlaceholderEmail, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, kachelFarbe, vergebbareRechte } from '../lib/apps'
+import { eigeneRollen, rolleInfo, rollenBezeichnung, rollenFuer } from '../lib/rollen'
 import { zufallsPasswort } from '../lib/passwort'
 import { haken, verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import VerknuepfungHinweis from '../components/VerknuepfungHinweis'
@@ -419,6 +420,8 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   // Ist sie gar nicht bekannt, wird nichts mitgebracht.
   const rechteOrg: unknown = license ?? user?.organization
   const verkn = rechteOrg ? verknuepfungen(rechteOrg) : {}
+  // Rollen-Vorlagen aus derselben Organisation wie die Auswahl — sonst fände eine eigene Rolle ihre Häkchen nicht
+  const vorlageOrg = rechteOrg as Parameters<typeof getRoleTemplate>[1]
 
   // Dieselbe Regel wie die Benutzerverwaltung (Unitarii): wer Benutzer dauerhaft verwalten darf
   const canManageUsers = istVerantwortlich(user)
@@ -513,7 +516,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     setUserFormEmail('')
     setUserFormPassword('')
     setUserFormRole('benutzer')
-    setUserFormPermissions({ ...EMPTY_PERMS, ...getRoleTemplate('benutzer', license) })
+    setUserFormPermissions({ ...EMPTY_PERMS, ...getRoleTemplate('benutzer', vorlageOrg) })
     setUserFormMsg('')
     setShowUserModal(true)
   }
@@ -601,10 +604,12 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     setThemeMode(mode)
   }
 
-  const roleLabels: Record<string, string> = {
-    mpg: 'MPG', lager: 'Lager', ausbildung: 'Ausbildung', qm: 'QM', benutzer: 'Benutzer', teilnehmer: 'Teilnehmer'
-  }
-  const roleOptions = ROLLEN.map(r => ({ value: r.id, label: r.name }))
+  // Vorgegebene und eigene Rollen der Organisation; die aktuelle bleibt wählbar, auch archiviert oder gelöscht
+  const roleOptions = rollenFuer(rechteOrg, { aktuelle: userFormRole }).map(r => ({
+    value: r.id,
+    label: r.archiviert && eigeneRollen(rechteOrg).some(e => e.id === r.id) ? `${r.name} (archiviert)` : r.name,
+    eigen: r.eigen,
+  }))
 
   const isMain = view === 'main'
   const mainTransform = isMain ? 'translateX(0)' : 'translateX(-100%)'
@@ -985,7 +990,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                 <div className="user-name">{u.name || '—'}</div>
                 <div className="user-email">{u.email}</div>
               </div>
-              <div className="user-role">{roleLabels[u.role] || 'Benutzer'}</div>
+              <div className="user-role">{u.supervisor ? 'Supervisor' : rollenBezeichnung(u.role, rechteOrg)}</div>
               {canManageUsers && u.id !== user?.id && (
                 <div className="user-actions">
                   <button onClick={() => openEditUser(u)} className="user-action-btn edit" title="Bearbeiten">
@@ -1210,20 +1215,34 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
                   value={userFormRole}
                   onChange={(e) => {
                     const role = e.target.value
-                    const template = getRoleTemplate(role, license)
+                    const template = getRoleTemplate(role, vorlageOrg)
                     setUserFormRole(role)
                     setUserFormPermissions(p => ({ ...p, ...vorlageMitVerknuepfungen(template, verkn, rechteOrg) }))
                   }}
                   className="ios-field-select"
                 >
-                  {roleOptions.map(opt => (
-                    <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-card-solid)' }}>
-                      {opt.label}
-                    </option>
-                  ))}
+                  {(() => {
+                    const option = (opt: typeof roleOptions[number]) => (
+                      <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-card-solid)' }}>
+                        {opt.label}
+                      </option>
+                    )
+                    const eigene = roleOptions.filter(o => o.eigen)
+                    if (!eigene.length) return roleOptions.map(option)
+                    return (
+                      <>
+                        <optgroup label="Vorgegeben">{roleOptions.filter(o => !o.eigen).map(option)}</optgroup>
+                        <optgroup label="Eigene Rollen">{eigene.map(option)}</optgroup>
+                      </>
+                    )
+                  })()}
+                  {/* Alter, unbekannter Wert: so zeigen, wie er ist, statt still die erste Rolle anzuzeigen */}
+                  {!roleOptions.some(o => o.value === userFormRole) && (
+                    <option value={userFormRole} style={{ background: 'var(--bg-card-solid)' }}>{userFormRole}</option>
+                  )}
                 </select>
                 <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
-                  {ROLLEN.find(r => r.id === userFormRole)?.hinweis} Setzt die Häkchen unten — danach einzeln anpassbar.
+                  {rolleInfo(userFormRole, rechteOrg)?.hinweis} Setzt die Häkchen unten — danach einzeln anpassbar.
                 </div>
               </div>
               <div style={{ marginBottom: 16 }}>

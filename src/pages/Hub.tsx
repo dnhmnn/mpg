@@ -14,6 +14,7 @@ import Einfuehrung, { EinfuehrungAutomatisch, useEinfuehrungStand } from '../com
 import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
 import { ALL_APPS, hatRecht, zeitpunktBefristung } from '../lib/apps'
 import { appFrei } from '../lib/freigabe'
+import { rollenBezeichnung } from '../lib/rollen'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
 
@@ -482,11 +483,8 @@ export default function Hub() {
 
       {/* Profile bottom sheet */}
       {(() => {
-        const roleLabels: Record<string, string> = {
-          mpg: 'MPG-Beauftragter', lager: 'Lagerwart', ausbildung: 'Ausbilder',
-          qm: 'Qualitätsmanagement', benutzer: 'Benutzer'
-        }
-        const roleLabel = user?.supervisor ? 'Supervisor' : (roleLabels[user?.role || ''] || user?.role || 'Benutzer')
+        // Vorgegebene und eigene Rollen der Organisation (src/lib/rollen.ts)
+        const roleLabel = user?.supervisor ? 'Supervisor' : rollenBezeichnung(user?.role, user?.organization)
 
         async function handleInstall() {
           if (installPromptRef.current) {
