@@ -365,6 +365,7 @@ mit Admin-Rechten an:
 
 **Authentication rule** (unter den API-Regeln bei „Additional auth collection rules“) —
 gesperrte und abgelaufene Konten melden sich nicht an und erneuern kein Token:
+(setzt die Felder `disabled` und `expires_at` an `users` voraus, siehe „Felder prüfen“ bei MPG-Paket 3)
 ```
 disabled != true && (expires_at = "" || expires_at > @now)
 ```
@@ -452,9 +453,13 @@ einen Hinweis statt still nichts zu speichern.
    Der Hook trägt dort die Kennung der angemeldeten Person ein — der Name allein
    ließe sich durch Umbenennen des eigenen Kontos verstellen.
 3. **Felder prüfen**, auf die sich die Regeln beziehen:
-   - `users`: `disabled` (*Bool*) und `expires_at` (*Date*). **Fehlen sie,
-     speichert PocketBase die Regeln trotzdem** — Sperre und Ablauf greifen dann
-     still nicht. Ist `expires_at` *Plain text*, gilt ein Ablauf erst ab dem
+   - `users`: `disabled` (*Bool*) und `expires_at` (*Date*), beide nicht Pflicht.
+     **Vor den Regeln anlegen.** Die Authentication rule lehnt PocketBase ohne
+     sie ab („invalid left operand "disabled" - unknown field“); Regeln, die nur
+     `@request.auth.disabled` prüfen, speichert es dagegen — Sperre und Ablauf
+     greifen dann still nicht. Ohne die Felder verwirft PocketBase außerdem,
+     was die App dort schreibt: „Gesperrt“ wirkt nicht, und temporäre Zugänge
+     laufen nie ab. Ist `expires_at` *Plain text*, gilt ein Ablauf erst ab dem
      folgenden Tag (UTC); auf die Sekunde nur als *Date*.
    - `severity` an `mpg_defects`, `reporter_user_id` an
      `mpg_defect_reports` — fehlt eines, lehnt PocketBase das Speichern der
