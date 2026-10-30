@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import LandingRenderer from '../components/LandingRenderer'
 import Startseite from './landing/Startseite'
 import {
-  API_URL, APP_URL, defaultHomeSections,
+  API_URL, APP_URL, KONTAKT_EMAIL, defaultHomeSections,
   type GlobalSettings, type PageRec,
 } from '../lib/landingSchema'
 
@@ -18,7 +18,7 @@ const JSON_LD = JSON.stringify({
   url: 'https://responda.systems',
   // In Entwicklung: keine Preise (kein "offers"), bis Pakete feststehen
   description: 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen, Sanitätsdienste und Feuerwehren. In Entwicklung.',
-  provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: 'info@responda.systems' },
+  provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: KONTAKT_EMAIL },
   inLanguage: 'de',
   keywords: 'Einsatzverwaltung, Hilfsorganisation, Sanitätsdienst, Feuerwehr, Patientendokumentation, Medizinprodukte, Lagerverwaltung, Ausbildung',
 })
@@ -79,7 +79,7 @@ export default function LandingPage() {
 
   useEffect(() => { document.body.style.overflow = legal ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [legal])
 
-  const email = content.contact_email || 'info@responda.systems'
+  const email = KONTAKT_EMAIL
 
   // Unterseiten mit "In Navigation zeigen" automatisch ans Menü anhängen
   const navExtra = pages

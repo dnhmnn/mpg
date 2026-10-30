@@ -4,7 +4,7 @@ import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import LandingRenderer from '../components/LandingRenderer'
 import {
-  DEFAULT_DESIGN, DEF_NAV, SECTION_LABEL, defaultHomeSections, newSection, uid,
+  DEFAULT_DESIGN, DEF_NAV, KONTAKT_EMAIL, SECTION_LABEL, defaultHomeSections, newSection, uid,
   type Btn, type Design, type GlobalSettings, type PageRec, type Section, type SectionType, type Tier,
 } from '../lib/landingSchema'
 
@@ -396,7 +396,10 @@ export default function WebsiteEditor() {
                 <button onClick={() => setGlobal(g => ({ ...g, nav_items: [...(g.nav_items?.length ? g.nav_items : DEF_NAV), { label: '', href: '' }] }))} style={btn}>+ Menüpunkt</button>
               </div>
               <div style={card}>
-                <Field label="Kontakt-E-Mail" value={global.contact_email || ''} onChange={v => setGlobal(g => ({ ...g, contact_email: v }))} />
+                <div style={{ marginBottom: 10 }}>
+                  <label style={lbl}>Kontakt-E-Mail</label>
+                  <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>{KONTAKT_EMAIL} (fest eingestellt, gilt auf allen Seiten)</div>
+                </div>
                 <Field label="Footer-Zeile" value={global.footer_copy || ''} onChange={v => setGlobal(g => ({ ...g, footer_copy: v }))} placeholder={`© ${new Date().getFullYear()} Responda Systems`} />
               </div>
               <div style={card}>

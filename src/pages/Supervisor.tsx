@@ -10,6 +10,7 @@ import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { zufallsPasswort } from '../lib/passwort'
 import WillkommenKnopf from '../components/WillkommenKnopf'
 import KachelGenerator from './KachelGenerator'
+import { KONTAKT_EMAIL } from '../lib/landingSchema'
 
 /**
  * Das URL-Kürzel einer Organisation: nur Kleinbuchstaben und Ziffern — so hat
@@ -62,7 +63,7 @@ const DEFAULT_LANDING: LandingContent = {
     { title: 'Dateiverwaltung', description: 'Zentrale Ablage für alle Organisationsdokumente, sicher und zugriffsgesteuert.' },
     { title: 'Benutzerverwaltung', description: 'Rollen, individuelle Rechte, temporäre Zugänge und Supervisor-Funktionen für Admins.' },
   ],
-  contact_email: 'info@responda.systems',
+  contact_email: KONTAKT_EMAIL,
   show: { features: true, audience: true, pricing: true, contact: true },
   nav_items: [
     {label:'Features', href:'#features'},
@@ -1049,8 +1050,8 @@ export default function Supervisor() {
                     <textarea value={website.hero_subtitle} onChange={e => setWebsite(p => ({ ...p, hero_subtitle: e.target.value }))} rows={2} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Kurze Beschreibung unter der Überschrift..." />
                   </div>
                   <div>
-                    <label style={labelStyle}>Kontakt-E-Mail (im Footer + Impressum)</label>
-                    <input type="email" value={website.contact_email} onChange={e => setWebsite(p => ({ ...p, contact_email: e.target.value }))} style={inputStyle} placeholder="info@responda.systems" />
+                    <label style={labelStyle}>Kontakt-E-Mail (fest eingestellt)</label>
+                    <input type="email" value={KONTAKT_EMAIL} readOnly style={{ ...inputStyle, color: 'var(--warm-gray)' }} />
                   </div>
                 </div>
               </div>

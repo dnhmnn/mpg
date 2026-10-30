@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import {
-  APP_URL, API_URL, DEFAULT_DESIGN, DEF_NAV, ICONS, buildCss, safeHtml,
+  APP_URL, API_URL, DEFAULT_DESIGN, DEF_NAV, ICONS, KONTAKT_EMAIL, buildCss, safeHtml,
   type Btn, type Design, type GlobalSettings, type PageRec, type Section,
 } from '../lib/landingSchema'
 
@@ -183,9 +183,9 @@ function SectionView({ s, d, preview }: { s: Section; d: Design; preview?: boole
         <h2 dangerouslySetInnerHTML={{ __html: safeHtml(s.heading || '') }} />
         {s.sub && <p className="sub">{s.sub}</p>}
         <div className="contact-grid">
-          <ContactForm email={s.email || 'info@responda.systems'} preview={preview} />
+          <ContactForm email={KONTAKT_EMAIL} preview={preview} />
           <div className="cinfo">
-            <div className="cblock"><h3>E-Mail</h3><p><a href={`mailto:${s.email}`}>{s.email}</a></p></div>
+            <div className="cblock"><h3>E-Mail</h3><p><a href={`mailto:${KONTAKT_EMAIL}`}>{KONTAKT_EMAIL}</a></p></div>
             <div className="cblock"><h3>Zugang</h3><p>Bestandskunden gelangen über <a href={APP_URL}>app.responda.systems</a> zur Anwendung.</p></div>
           </div>
         </div>

@@ -3,6 +3,8 @@
 
 export const APP_URL = 'https://app.responda.systems'
 export const API_URL = 'https://api.responda.systems'
+// Kontakt auf der ganzen Website, fest (nicht über den Editor oder PocketBase änderbar)
+export const KONTAKT_EMAIL = 'daniel@responda.systems'
 
 export interface Btn { label: string; href: string; style: 'cream' | 'ghost' | 'primary' }
 export interface Card { title: string; description: string }
@@ -94,7 +96,7 @@ export function newSection(type: SectionType): Section {
     case 'pricing': return { ...base, anchor: 'preise', heading: 'Klare <em>Preise</em>', tiers: [{ name: 'Basis', price: '49', period: 'pro Monat', features: ['Punkt 1'], cta: 'Jetzt anfragen' }] }
     case 'text': return { ...base, bg: 'white', heading: 'Überschrift', body: 'Text …' }
     case 'cta': return { ...base, bg: 'dark', heading: 'Bereit?', sub: '', buttons: [{ label: 'Zur App →', href: APP_URL, style: 'cream' }] }
-    case 'contact': return { ...base, bg: 'white', anchor: 'kontakt', heading: 'Bereit für <em>Responda?</em>', sub: 'Schreib uns — wir melden uns.', email: 'info@responda.systems' }
+    case 'contact': return { ...base, bg: 'white', anchor: 'kontakt', heading: 'Bereit für <em>Responda?</em>', sub: 'Schreib uns — wir melden uns.', email: KONTAKT_EMAIL }
     case 'image': return { ...base, bg: 'white', image: '', caption: '' }
   }
 }
@@ -117,7 +119,7 @@ export function defaultHomeSections(g: GlobalSettings): Section[] {
   if (show.features) s.push({ id: 'features', type: 'cards', anchor: 'features', bg: 'warm', variant: 'feature', heading: 'Was <em>Responda</em> kann', sub: 'Alle Module in einer Anwendung — ohne Systembrüche.', items: g.features?.length ? g.features : DEF_FEATURES })
   if (show.audience) s.push({ id: 'fuer-wen', type: 'cards', anchor: 'fuer-wen', bg: 'white', variant: 'audience', heading: 'Gemacht für <em>Einsatzorganisationen</em>', sub: 'Von Ehrenamt bis Berufsorganisation.', items: g.audience?.length ? g.audience : DEF_AUDIENCE })
   if (show.pricing) s.push({ id: 'preise', type: 'pricing', anchor: 'preise', bg: 'warm', heading: 'Klare <em>Preise,</em> keine Überraschungen', sub: 'Monatlich kündbar. Keine Einrichtungsgebühr.', tiers: g.pricing?.length ? g.pricing : DEF_PRICING })
-  if (show.contact) s.push({ id: 'kontakt', type: 'contact', anchor: 'kontakt', bg: 'white', heading: 'Bereit für <em>Responda?</em>', sub: 'Schreib uns — wir melden uns innerhalb eines Werktags.', email: g.contact_email || 'info@responda.systems' })
+  if (show.contact) s.push({ id: 'kontakt', type: 'contact', anchor: 'kontakt', bg: 'white', heading: 'Bereit für <em>Responda?</em>', sub: 'Schreib uns — wir melden uns innerhalb eines Werktags.', email: KONTAKT_EMAIL })
   return s
 }
 
