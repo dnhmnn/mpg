@@ -33,7 +33,7 @@ const FUER_WEN: { name: string; text: string }[] = [
 ]
 
 const GRUNDSAETZE: { name: string; text: string }[] = [
-  { name: 'Daten in Deutschland', text: 'Responda läuft auf einem eigenen Server in Deutschland.' },
+  { name: 'Daten in Franken', text: 'Responda läuft auf einem eigenen Server in Nürnberg.' },
   { name: 'Ohne Installation', text: 'Im Browser auf Handy, Tablet und PC. Auf Wunsch wie eine App auf dem Startbildschirm.' },
   { name: 'Verlässlich im Einsatz', text: 'Die Einsatzführung arbeitet ohne Netz weiter und gleicht danach ab.' },
   { name: 'Gut lesbar', text: 'Große, klare Schrift und ein Dunkelmodus für die Nacht.' },
