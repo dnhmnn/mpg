@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { PERM_LABELS, befristungBis, isPlaceholderEmail, neuePlatzhalterEmail, sichtbareEmail } from '../../lib/apps'
 import {
-  RECHTE_GRUPPEN, ROLLENFELD_TEXT, anlegeFehler, anmeldeAdresse, anzahl, anzahlRechte, anzeigeEmail, aufzaehlung, benutzerStatus, genPassword, inDauer,
+  RECHTE_GRUPPEN, ROLLENFELD_TEXT, anlegeFehler, anmeldeAdresse, autodateFehler, anzahl, anzahlRechte, anzeigeEmail, aufzaehlung, benutzerStatus, genPassword, inDauer,
   initialen, orgFehler, rechteGruppiert, suchen, type UUser,
 } from './logik'
 
@@ -166,5 +166,15 @@ describe('Fehlermeldungen beim Speichern', () => {
   it('Organisation: 404 heißt, der Server lässt das Ändern nicht zu', () => {
     expect(orgFehler(pb(404))).toBe('Nicht gespeichert: Der Server lässt das Ändern der Organisation nicht zu.')
     expect(orgFehler({ status: 0 })).toMatch(/Keine Verbindung/)
+  })
+})
+
+describe('Ablaufdatum, das PocketBase selbst setzt (Feld als Autodate angelegt)', () => {
+  it('erkennt ein Datum, das die App nicht geschickt hat', () => {
+    expect(autodateFehler(null, '2026-10-30 11:47:19.222Z')).toBe(true)
+    expect(autodateFehler(null, '')).toBe(false)
+    expect(autodateFehler(null, undefined)).toBe(false)
+    // Selbst befristet: das ist gewollt
+    expect(autodateFehler('2026-11-06T10:00:00.000Z', '2026-11-06 10:00:00.000Z')).toBe(false)
   })
 })

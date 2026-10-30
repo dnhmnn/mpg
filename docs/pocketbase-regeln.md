@@ -463,6 +463,13 @@ einen Hinweis statt still nichts zu speichern.
      was die App dort schreibt: „Gesperrt“ wirkt nicht, und temporäre Zugänge
      laufen nie ab. Ist `expires_at` *Plain text*, gilt ein Ablauf erst ab dem
      folgenden Tag (UTC); auf die Sekunde nur als *Date*.
+     **Nicht *Autodate*:** Ein Autodate-Feld trägt beim Anlegen (und je nach
+     Einstellung bei jedem Ändern) die aktuelle Uhrzeit ein. Jede neue Person ist
+     dann sofort abgelaufen und kann sich nicht anmelden (geprüft mit 0.28.4 und
+     0.40.5; die App meldet es beim Speichern). Abhilfe: unter users → Fields das
+     Feld `expires_at` löschen und **im selben Schritt** ein Feld `expires_at` vom
+     Typ *Date* anlegen, dann speichern. Die Regeln bleiben gültig, die falschen
+     Werte sind danach leer. Temporäre Zugänge bekommen ihr Ablaufdatum neu.
    - `severity` an `mpg_defects`, `reporter_user_id` an
      `mpg_defect_reports` — fehlt eines, lehnt PocketBase das Speichern der
      Regel ab.

@@ -208,6 +208,16 @@ export function anlegeFehler(e: unknown, neu: boolean): string {
   return (neu ? 'Nicht angelegt: ' : 'Nicht gespeichert: ') + pbFehlerText(e, BENUTZER_FELDER)
 }
 
+export const AUTODATE_TEXT = 'PocketBase hat ein Ablaufdatum gesetzt, das die App nicht geschickt hat: Das Feld „expires_at“ bei users ist dort als „Autodate“ angelegt. Damit gilt jede neue Person sofort als abgelaufen und kann sich nicht anmelden. Bitte in PocketBase unter users → Fields das Feld „expires_at“ löschen und im selben Schritt ein Feld „expires_at“ vom Typ „Date“ anlegen, dann speichern.'
+
+/**
+ * Hat PocketBase ein Ablaufdatum gesetzt, obwohl die App keins geschickt hat?
+ * Dann ist users.expires_at als Autodate angelegt (setzt beim Anlegen/Ändern die Uhrzeit).
+ */
+export function autodateFehler(gesendet: string | null | undefined, antwort: string | null | undefined): boolean {
+  return !gesendet && !!antwort
+}
+
 /** Fehler beim Schreiben in die Organisation (Rollen, Vorlagen, Verknüpfungen) */
 export function orgFehler(e: unknown): string {
   const f = (e ?? {}) as { status?: number }

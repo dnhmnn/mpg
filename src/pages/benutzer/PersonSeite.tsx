@@ -12,7 +12,7 @@ import { zufallsPasswort } from '../../lib/passwort'
 import { willkommenSenden } from '../../lib/willkommen'
 import WillkommenKnopf from '../../components/WillkommenKnopf'
 import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, RechteListe, SchalterZeile, Seite } from './bausteine'
-import { anlegeFehler, anmeldeAdresse, anzahl, anzahlRechte, aufzaehlung, fmtDateTimeLocal, inDauer, initialen, type UUser } from './logik'
+import { AUTODATE_TEXT, anlegeFehler, anmeldeAdresse, autodateFehler, anzahl, anzahlRechte, aufzaehlung, fmtDateTimeLocal, inDauer, initialen, type UUser } from './logik'
 import type { BvKontext } from './kontext'
 
 type TempRechte = Record<string, { until: string; granted_by?: string }>
@@ -157,8 +157,9 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
 
       if (editingUser) {
         // Kein Passwort von hier: Das legt die Person selbst fest (Willkommens-E-Mail, Passwort-Link)
-        await pb.collection('users').update(editingUser.id, base)
-        if (adresse.nachgetragen) {
+        const neu = await pb.collection('users').update(editingUser.id, base)
+        if (autodateFehler(expIso, neu.expires_at)) showMsg('Gespeichert, aber: ' + AUTODATE_TEXT, 'error')
+        else if (adresse.nachgetragen) {
           // Bisher ohne E-Mail: Jetzt kommt die Willkommens-E-Mail mit dem Link zum eigenen Passwort
           const w = await willkommenSenden(editingUser.id)
           showMsg(w.ok ? `Gespeichert. ${w.text}` : `Gespeichert, aber die Willkommens-E-Mail ging nicht raus: ${w.text}`, w.ok ? 'success' : 'error')
@@ -166,7 +167,7 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
       } else {
         // Kein Passwort vom Verwalter: Der Benutzer legt es über die Willkommens-E-Mail fest
         const unbekannt = zufallsPasswort()
-        await pb.collection('users').create({
+        const neu = await pb.collection('users').create({
           ...base,
           password: unbekannt,
           passwordConfirm: unbekannt,
@@ -175,7 +176,8 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
           // Die Rechte stehen schon fest — die Übernahme beim ersten Login (useAuth) entfällt
           permissions_migrated: true,
         })
-        showMsg(isPlaceholderEmail(adresse.email)
+        if (autodateFehler(expIso, neu.expires_at)) showMsg('Angelegt, aber: ' + AUTODATE_TEXT, 'error')
+        else showMsg(isPlaceholderEmail(adresse.email)
           ? 'Benutzer angelegt. Ohne E-Mail kann sich die Person nicht anmelden.'
           : 'Benutzer angelegt. Das Passwort legt die Person über die Willkommens-E-Mail fest.')
       }
