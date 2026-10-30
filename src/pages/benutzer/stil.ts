@@ -30,10 +30,6 @@ export const BV_CSS = `
 .bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
 /* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
 @media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
-/* Unten Elfenbein am Rand, VOR der Seite: Safari 26 nimmt für die untere Leiste ein festes
-   Element am Rand nur, wenn es dort zuoberst liegt — sonst tönte es sie nach dem roten html/body.
-   Es sitzt unter der Safari-Leiste und fällt nicht auf; die Aktionsleiste der Seiten liegt darüber. */
-.bv-bodenkante{ position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--warm-bg); z-index: 45; pointer-events: none; }
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);

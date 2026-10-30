@@ -40,7 +40,8 @@ function scrollZu(y: number) {
 export default function Unitarii() {
   const { user, loading: authLoading } = useAuth()
   // Statusleiste (Uhr, Akku) im Dunkelrot des Kopfs, solange die Seite offen ist
-  useStatusleiste()
+  // Rot nur, solange der rote Kopf zu sehen ist; danach scheint der Inhalt durch die Safari-Leisten
+  useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
   const navigate = useNavigate()
   const location = useLocation()
   const [sp] = useSearchParams()

@@ -3,17 +3,17 @@
 // Drei Wege, je nach Browser — alle beim Verlassen der Seite zurückgesetzt:
 // - Android und Safari bis iOS 18 nehmen <meta name="theme-color">.
 // - Safari ab iOS 26 kennt theme-color nicht mehr und nimmt die Hintergrundfarbe
-//   von html/body (oder ein deckendes, am Rand festes Element). Deshalb bekommen
-//   html und body hier das Dunkelrot; die Seite selbst bleibt darüber Elfenbein.
-//   Damit unten nicht auch die Leiste rot wird, hält die Seite dort einen festen
-//   Streifen in Elfenbein (.bv-bodenkante, zuoberst am unteren Rand), oben einen
-//   roten (.bv-statusleiste, im Browser hinter der Seite).
+//   von html/body. Deshalb bekommen html und body das Dunkelrot, solange der rote
+//   Kopf (kopf, ein CSS-Selektor) oben zu sehen ist. Ist er weggescrollt, gilt wieder
+//   der helle Hintergrund (blatt): Dann scheint der Inhalt durch die Leisten wie auf
+//   jeder anderen Seite, und die untere Leiste wird nie rot. Ohne kopf bleibt es rot.
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
-//   Leiste; der feste rote Streifen hält die Farbe auch beim Scrollen.
-// Der Wert kommt aus dem CSS-Token und folgt der Darstellung (hell, dunkel, Retro).
+//   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
+// Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
 import { useEffect } from 'react'
 
-export function useStatusleiste(token = '--lbf-kopf'): void {
+export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string } = {}): void {
+  const { kopf, blatt = '--warm-bg' } = opt
   useEffect(() => {
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     const angelegt = !meta
@@ -24,28 +24,49 @@ export function useStatusleiste(token = '--lbf-kopf'): void {
     }
     const m = meta
     const vorher = m.content
+    const html = document.documentElement.style.backgroundColor
+    const body = document.body.style.backgroundColor
+    let oben = true
     const setzen = () => {
-      const farbe = getComputedStyle(document.documentElement).getPropertyValue(token).trim()
+      const t = oben ? token : blatt
+      const farbe = getComputedStyle(document.documentElement).getPropertyValue(t).trim()
       if (farbe) m.content = farbe
+      // Als CSS-Variable, folgt also der Darstellung
+      document.documentElement.style.backgroundColor = `var(${t})`
+      document.body.style.backgroundColor = `var(${t})`
+    }
+    // Ist der rote Kopf noch zu sehen? Höchstens einmal je Bild prüfen, nur bei einem Wechsel neu setzen
+    let geplant = 0
+    const pruefen = () => {
+      if (!kopf || geplant) return
+      geplant = requestAnimationFrame(() => {
+        geplant = 0
+        const el = document.querySelector(kopf)
+        const jetzt = el ? el.getBoundingClientRect().bottom > 0 : window.scrollY < 1
+        if (jetzt !== oben) { oben = jetzt; setzen() }
+      })
     }
     setzen()
+    pruefen()
     // Darstellung gewechselt: System hell/dunkel oder data-theme am <html>
     const mq = window.matchMedia?.('(prefers-color-scheme: dark)')
     mq?.addEventListener?.('change', setzen)
     const mo = new MutationObserver(setzen)
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-    // Safari 26: Hintergrund von html und body (als CSS-Variable, folgt also der Darstellung)
-    const html = document.documentElement.style.backgroundColor
-    const body = document.body.style.backgroundColor
-    document.documentElement.style.backgroundColor = `var(${token})`
-    document.body.style.backgroundColor = `var(${token})`
+    if (kopf) {
+      window.addEventListener('scroll', pruefen, { passive: true })
+      window.addEventListener('resize', pruefen)
+    }
     return () => {
       mq?.removeEventListener?.('change', setzen)
       mo.disconnect()
+      cancelAnimationFrame(geplant)
+      window.removeEventListener('scroll', pruefen)
+      window.removeEventListener('resize', pruefen)
       if (angelegt) m.remove()
       else m.content = vorher
       document.documentElement.style.backgroundColor = html
       document.body.style.backgroundColor = body
     }
-  }, [token])
+  }, [token, kopf, blatt])
 }
