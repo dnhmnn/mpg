@@ -17,7 +17,8 @@ export const RS_CSS = `
   background: var(--rs-blatt); color: var(--rs-text);
   font-family: 'Atkinson Hyperlegible', -apple-system, BlinkMacSystemFont, sans-serif;
   font-size: 16px; line-height: 1.45; -webkit-font-smoothing: antialiased;
-  overflow-x: hidden;
+  /* clip statt hidden: hidden machte .rs zum Scroll-Container, und die Leiste oben klebte nicht */
+  overflow-x: clip;
 }
 .rs *{ box-sizing: border-box; }
 .rs a{ color: inherit; text-decoration: none; }
@@ -27,6 +28,8 @@ export const RS_CSS = `
 
 /* Safari 26 färbt die Leisten nach dem, was am Rand liegt (wie in der Benutzerverwaltung) */
 .rs-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--rs-kopf); z-index: -1; pointer-events: none; }
+/* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
+@media (display-mode: standalone){ .rs-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
 .rs-bodenkante{ position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--rs-blatt); z-index: 45; pointer-events: none; }
 
 /* Leiste oben */
@@ -59,7 +62,7 @@ export const RS_CSS = `
   padding: 28px max(16px, env(safe-area-inset-right)) 76px max(16px, env(safe-area-inset-left)); }
 .rs-held .rs-innen{ display: grid; gap: 40px; align-items: center; }
 .rs-stand{ display: flex; align-items: flex-start; gap: 10px; font-size: 15px; font-weight: 700; color: var(--rs-creme-2); margin: 0 0 18px; }
-.rs-stand i{ width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: #f0a35e; flex-shrink: 0; box-shadow: 0 0 0 4px rgba(240,163,94,0.18); }
+.rs-stand i{ width: 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--rs-creme); flex-shrink: 0; }
 .rs-held h1{ font-size: clamp(32px, 7.4vw, 54px); line-height: 1.08; letter-spacing: -0.02em; font-weight: 700; margin: 0 0 18px; max-width: 15em; }
 .rs-held p.rs-einl{ font-size: clamp(17px, 2.2vw, 20px); line-height: 1.5; color: var(--rs-creme-2); margin: 0 0 30px; max-width: 34em; }
 .rs-held .rs-knoepfe{ display: flex; gap: 10px; flex-wrap: wrap; }
@@ -71,13 +74,13 @@ export const RS_CSS = `
   .rs-kacheln{ display: grid; grid-template-columns: repeat(3, 84px); gap: 18px; justify-content: end; }
 }
 .rs-kachel{ width: 84px; height: 84px; border-radius: 24px; display: grid; place-items: center; color: var(--rs-creme);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.22), inset 0 0 0 1px rgba(255,255,255,0.06); }
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
 .rs-kachel svg{ width: 38px; height: 38px; }
 
 /* Blatt */
 .rs-blatt{ background: var(--rs-blatt); border-radius: 28px 28px 0 0; margin-top: -32px; position: relative;
   padding: 12px max(16px, env(safe-area-inset-right)) calc(24px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
-.rs-ab{ padding-top: 44px; scroll-margin-top: 72px; }
+.rs-ab{ padding-top: 44px; scroll-margin-top: calc(72px + env(safe-area-inset-top)); }
 .rs-ab h2{ font-size: clamp(24px, 4vw, 32px); line-height: 1.15; letter-spacing: -0.015em; font-weight: 700; margin: 0 0 8px; }
 .rs-ab > .rs-innen > p.rs-unter{ font-size: 17px; color: var(--rs-text-2); margin: 0 0 20px; max-width: 40em; }
 
@@ -106,19 +109,20 @@ export const RS_CSS = `
 .rs-form{ background: #fff; border-radius: 20px; box-shadow: 0 1px 4px rgba(26,14,8,0.07); padding: 18px; display: grid; gap: 14px; }
 .rs-feld label{ display: block; font-size: 15px; font-weight: 700; margin: 0 2px 6px; }
 .rs-feld label small{ font-weight: 400; color: var(--rs-text-2); font-size: 14px; margin-left: 6px; }
-.rs-eingabe{ display: block; width: 100%; min-height: 48px; border-radius: 14px; border: 1px solid rgba(139,113,90,0.45); background: #fff;
+.rs-eingabe{ display: block; width: 100%; min-height: 48px; border-radius: 14px; border: 1px solid rgba(139,113,90,0.75); background: #fff;
   padding: 0 14px; font: inherit; font-size: 16px; color: var(--rs-text); outline: none; }
 textarea.rs-eingabe{ min-height: 120px; padding: 12px 14px; resize: vertical; line-height: 1.45; }
 .rs-eingabe:focus{ border-color: var(--rs-akzent); box-shadow: 0 0 0 1px var(--rs-akzent); }
 .rs .rs-eingabe:focus-visible{ outline: none; }
-.rs-eingabe::placeholder{ color: #8a7a68; opacity: 1; }
+.rs-eingabe::placeholder{ color: var(--rs-text-2); opacity: 1; }
 .rs-gesendet{ font-size: 17px; font-weight: 700; color: #166534; margin: 0; }
 .rs-fehler{ font-size: 15px; color: #b91c1c; margin: 0; }
+.rs-fehler a{ text-decoration: underline; font-weight: 700; }
 
 /* Fuß */
 .rs-fuss{ margin-top: 56px; padding: 22px 2px 8px; border-top: 1px solid var(--rs-linie); display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; font-size: 15px; color: var(--rs-text-2); }
 .rs-fuss b{ color: var(--rs-text); margin-right: auto; }
 @media (max-width: 520px){ .rs-fuss b{ flex-basis: 100%; } }
-.rs-fuss button, .rs-fuss a{ background: none; border: 0; min-height: 44px; padding: 0; font: inherit; font-size: 15px; color: var(--rs-text-2); cursor: pointer; font-weight: 700; }
+.rs-fuss button, .rs-fuss a{ display: inline-flex; align-items: center; background: none; border: 0; min-height: 44px; padding: 0; font: inherit; font-size: 15px; color: var(--rs-text-2); cursor: pointer; font-weight: 700; }
 .rs-fuss button:hover, .rs-fuss a:hover{ color: var(--rs-akzent); }
 `

@@ -7,8 +7,6 @@ import {
 // Rendert eine Seite aus Sektionen — identisch für die echte Website und die
 // Vorschau im Editor. `preview` unterdrückt Formular-Versand und Navigation.
 
-const check = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-
 function bgOf(s: Section, d: Design): string {
   if (s.bg === 'dark') return d.dark
   if (s.bg === 'white') return d.white
@@ -110,28 +108,12 @@ function SectionView({ s, d, preview }: { s: Section; d: Design; preview?: boole
   }
 
   if (s.type === 'pricing') {
+    // Während der Entwicklung nennt die Website keine Preise, auch nicht auf Unterseiten.
+    // Im Editor bleibt der Abschnitt als Hinweis sichtbar, damit man ihn findet und löschen kann.
+    if (!preview) return null
     return (
       <section {...common}>
-        <div className="wrap">
-          {s.eyebrow && <div className="eyebrow">{s.eyebrow}</div>}
-          <h2 dangerouslySetInnerHTML={{ __html: safeHtml(s.heading || '') }} />
-          {s.sub && <p className="sub">{s.sub}</p>}
-          <div className="price-grid">
-            {(s.tiers || []).map((t, i) => (
-              <div key={i} className={`pc${t.featured ? ' feat' : ''}`}>
-                {t.badge && <div className="pc-badge">{t.badge}</div>}
-                <div className="pc-name">{t.name}</div>
-                <div className="pc-price">{/^\d+$/.test(t.price) ? `${t.price} €` : t.price}</div>
-                <div className="pc-period">{t.period}</div>
-                <div className="pc-div" />
-                <ul className="pc-feats">
-                  {(t.features || []).filter(Boolean).map(f => <li key={f}>{check}<span>{f}</span></li>)}
-                </ul>
-                <a href="#kontakt" className={`btn-p ${t.featured ? 'btn-solid' : 'btn-outline'}`}>{t.cta || 'Jetzt anfragen'}</a>
-              </div>
-            ))}
-          </div>
-        </div>
+        <div className="wrap"><p className="sub">Preis-Abschnitt: wird auf der Website nicht angezeigt, solange Responda in Entwicklung ist.</p></div>
       </section>
     )
   }
@@ -186,7 +168,7 @@ function SectionView({ s, d, preview }: { s: Section; d: Design; preview?: boole
           <ContactForm email={KONTAKT_EMAIL} preview={preview} />
           <div className="cinfo">
             <div className="cblock"><h3>E-Mail</h3><p><a href={`mailto:${KONTAKT_EMAIL}`}>{KONTAKT_EMAIL}</a></p></div>
-            <div className="cblock"><h3>Zugang</h3><p>Bestandskunden gelangen über <a href={APP_URL}>app.responda.systems</a> zur Anwendung.</p></div>
+            <div className="cblock"><h3>Zugang</h3><p>Wer schon einen Zugang hat, meldet sich unter <a href={APP_URL}>app.responda.systems</a> an.</p></div>
           </div>
         </div>
       </div>
@@ -215,7 +197,7 @@ export default function LandingRenderer({ page, global, preview, onLegal }: {
         </a>
         <ul className="nav-links">
           {navItems.map(item => <li key={item.href + item.label}><a href={preview ? undefined : item.href}>{item.label}</a></li>)}
-          <li><a href={preview ? undefined : APP_URL} className="nav-cta">Zur App →</a></li>
+          <li><a href={preview ? undefined : APP_URL} className="nav-cta">Zur App</a></li>
         </ul>
         <button className="hamburger" onClick={() => setMenuOpen(o => !o)} aria-label="Menü">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -223,7 +205,7 @@ export default function LandingRenderer({ page, global, preview, onLegal }: {
       </nav>
       <div className={`mob-menu${menuOpen ? ' open' : ''}`}>
         {navItems.map(item => <a key={item.href + item.label} href={preview ? undefined : item.href} onClick={() => setMenuOpen(false)}>{item.label}</a>)}
-        <a href={preview ? undefined : APP_URL} className="cta">Zur App →</a>
+        <a href={preview ? undefined : APP_URL} className="cta">Zur App</a>
       </div>
 
       {(page.sections || []).map(s => <SectionView key={s.id} s={s} d={d} preview={preview} />)}

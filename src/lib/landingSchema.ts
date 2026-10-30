@@ -148,11 +148,12 @@ export const DEF_PRICING: Tier[] = [
   { name: 'Enterprise', price: 'Auf Anfrage', period: 'unbegrenzte Nutzer · individuell', features: ['Alles aus Team', 'Mehrere Standorte', 'Individuelle Integrationen', 'Dedizierter Ansprechpartner', 'SLA-Vereinbarung'], cta: 'Kontakt aufnehmen' },
 ]
 
+// Menü der Unterseiten: zurück zu den Abschnitten der Startseite (landing/Startseite.tsx)
 export const DEF_NAV = [
-  { label: 'Features', href: '#features' },
-  { label: 'Für wen', href: '#fuer-wen' },
-  { label: 'Preise', href: '#preise' },
-  { label: 'Kontakt', href: '#kontakt' },
+  { label: 'Module', href: '/#module' },
+  { label: 'Für wen', href: '/#fuer-wen' },
+  { label: 'Stand', href: '/#stand' },
+  { label: 'Kontakt', href: '/#kontakt' },
 ]
 
 // Erlaubt nur <em> und <br> in Überschriften — alles andere wird escaped
@@ -176,7 +177,7 @@ export function buildCss(d: Design): string {
   .lp .nav-links{display:flex;align-items:center;gap:28px;list-style:none}
   .lp .nav-links a{color:${d.gray};font-size:0.875rem;font-weight:600;transition:color 0.15s}
   .lp .nav-links a:hover{color:${d.primary}}
-  .lp .nav-cta{background:${d.primary}!important;color:#fff!important;padding:8px 18px!important;border-radius:99px!important;font-size:0.85rem!important;font-weight:700!important}
+  .lp .nav-cta{background:${d.primary}!important;color:#fff!important;padding:8px 18px!important;border-radius:12px!important;font-size:0.85rem!important;font-weight:700!important}
   .lp .nav-cta:hover{opacity:0.88}
   .lp .hamburger{display:none;background:none;border:none;cursor:pointer;padding:4px;color:${d.text}}
   .lp .mob-menu{display:none;position:fixed;inset:60px 0 0;background:${d.white};z-index:99;padding:24px;flex-direction:column;gap:4px;border-top:0.5px solid rgba(96,8,18,0.10)}
@@ -186,19 +187,19 @@ export function buildCss(d: Design): string {
   @media(max-width:680px){.lp .nav-links{display:none}.lp .hamburger{display:flex}}
   .lp section{padding:clamp(4rem,8vw,7rem) clamp(1.25rem,5vw,4rem)}
   .lp .wrap{max-width:1100px;margin:0 auto}
-  .lp .eyebrow{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.16em;color:${d.primary};margin-bottom:10px}
+  .lp .eyebrow{font-size:0.95rem;font-weight:700;color:${d.gray};margin-bottom:8px}
   .lp h2{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;margin-bottom:10px;letter-spacing:-0.02em;line-height:1.15}
-  .lp h2 em{color:${d.primary};font-style:italic}
+  .lp h2 em{color:${d.primary};font-style:normal}
   .lp .s-dark h2{color:${d.cream}} .lp .s-dark h2 em{color:#fff} .lp .s-dark .sub{color:rgba(253,232,216,0.6)} .lp .s-dark .eyebrow{color:rgba(253,232,216,0.5)}
-  .lp .sub{font-size:1.05rem;color:${d.gray};font-style:italic;margin-bottom:48px}
+  .lp .sub{font-size:1.05rem;color:${d.gray};margin-bottom:40px}
   .lp .hero{background:${d.dark};padding:clamp(5rem,10vw,9rem) clamp(1.25rem,5vw,4rem);text-align:center;position:relative;overflow:hidden}
   .lp .hero::before{content:'';position:absolute;top:-60px;right:-80px;width:400px;height:400px;border-radius:50%;background:rgba(255,255,255,0.03);pointer-events:none}
   .lp .hero::after{content:'';position:absolute;bottom:-80px;left:-60px;width:300px;height:300px;border-radius:50%;background:rgba(255,255,255,0.025);pointer-events:none}
   .lp .hero .wrap{position:relative;z-index:1}
-  .lp .hero-eye{font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.18em;color:rgba(253,232,216,0.5);margin-bottom:18px}
+  .lp .hero-eye{font-size:0.95rem;font-weight:700;color:rgba(253,232,216,0.7);margin-bottom:16px}
   .lp .hero h1{font-size:clamp(2.4rem,6vw,4.2rem);font-weight:800;color:${d.cream};line-height:1.08;max-width:820px;margin:0 auto 14px;letter-spacing:-0.02em}
-  .lp .hero h1 em{font-style:italic;color:#fff}
-  .lp .hero-sub{font-size:clamp(1rem,2vw,1.2rem);color:rgba(253,232,216,0.65);font-style:italic;max-width:560px;margin:0 auto 40px;line-height:1.6}
+  .lp .hero h1 em{font-style:normal;color:#fff}
+  .lp .hero-sub{font-size:clamp(1rem,2vw,1.2rem);color:rgba(253,232,216,0.75);max-width:560px;margin:0 auto 40px;line-height:1.6}
   .lp .hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
   .lp .btn-cream{display:inline-block;background:${d.cream};color:${d.dark};font-weight:700;font-size:0.95rem;padding:14px 28px;border-radius:99px;transition:opacity 0.15s,transform 0.12s;font-family:inherit;border:none;cursor:pointer}
   .lp .btn-cream:hover{opacity:0.9;transform:translateY(-1px)}
@@ -213,10 +214,10 @@ export function buildCss(d: Design): string {
   .lp .fc:hover{box-shadow:0 4px 24px rgba(0,0,0,0.10);transform:translateY(-2px)}
   .lp .fc-icon{width:44px;height:44px;border-radius:${Math.round(r * 0.8)}px;background:rgba(96,8,18,0.08);display:flex;align-items:center;justify-content:center;flex-shrink:0;color:${d.primary}}
   .lp .fc h3{font-size:1rem;font-weight:700;color:${d.text};margin-bottom:5px;letter-spacing:-0.01em}
-  .lp .fc p{font-size:0.85rem;color:${d.gray};line-height:1.55;font-style:italic}
+  .lp .fc p{font-size:0.9rem;color:${d.gray};line-height:1.55}
   .lp .aud-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
-  .lp .ac{background:${d.bg};border-radius:${r}px;padding:24px 20px;border-left:3px solid ${d.primary}}
-  .lp .ac h3{font-size:1rem;font-weight:700;margin-bottom:6px;font-style:italic;color:${d.text}}
+  .lp .ac{background:${d.white};border-radius:${r}px;padding:24px 20px;box-shadow:0 1px 4px rgba(0,0,0,0.07)}
+  .lp .ac h3{font-size:1rem;font-weight:700;margin-bottom:6px;color:${d.text}}
   .lp .ac p{font-size:0.83rem;color:${d.gray};line-height:1.5}
   .lp .price-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;align-items:start}
   .lp .pc{background:${d.white};border-radius:${r}px;padding:32px 28px;box-shadow:0 1px 6px rgba(0,0,0,0.07);border:0.5px solid rgba(96,8,18,0.10);position:relative}
@@ -244,7 +245,7 @@ export function buildCss(d: Design): string {
   @media(max-width:680px){.lp .contact-grid{grid-template-columns:1fr}}
   .lp .cform{display:flex;flex-direction:column;gap:14px}
   .lp .fg{display:flex;flex-direction:column;gap:6px}
-  .lp .flabel{font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:${d.primary}}
+  .lp .flabel{font-size:0.95rem;font-weight:700;color:${d.text}}
   .lp .finput,.lp .ftextarea{padding:12px 14px;border-radius:10px;border:1.5px solid rgba(96,8,18,0.10);background:${d.bg};color:${d.text};font-size:0.95rem;font-family:inherit;transition:border-color 0.2s;outline:none;-webkit-appearance:none;width:100%}
   .lp .finput:focus,.lp .ftextarea:focus{border-color:${d.primary}}
   .lp .ftextarea{min-height:120px;resize:vertical}
@@ -252,17 +253,17 @@ export function buildCss(d: Design): string {
   .lp .btn-form{background:${d.primary};color:#fff;border:none;padding:14px;border-radius:10px;font-weight:700;font-size:0.95rem;font-family:inherit;cursor:pointer;transition:opacity 0.15s;width:100%}
   .lp .btn-form:hover{opacity:0.88}
   .lp .cinfo{display:flex;flex-direction:column;gap:28px}
-  .lp .cblock h3{font-size:0.62rem;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:${d.primary};margin-bottom:8px}
-  .lp .cblock p{font-size:0.95rem;color:${d.text};font-style:italic;line-height:1.6}
+  .lp .cblock h3{font-size:1rem;font-weight:700;color:${d.text};margin-bottom:6px}
+  .lp .cblock p{font-size:0.95rem;color:${d.text};line-height:1.6}
   .lp .cblock a{color:${d.primary}}
   .lp .prose{font-size:1rem;color:${d.text};line-height:1.75;max-width:760px;white-space:pre-wrap}
   .lp .s-dark .prose{color:rgba(253,232,216,0.8)}
   .lp .sec-img{width:100%;border-radius:${r}px;display:block;box-shadow:0 4px 24px rgba(0,0,0,0.10)}
-  .lp .cap{font-size:0.8rem;color:${d.gray};font-style:italic;text-align:center;margin-top:10px}
+  .lp .cap{font-size:0.9rem;color:${d.gray};text-align:center;margin-top:10px}
   .lp footer{background:${d.dark};padding:40px clamp(1.25rem,5vw,4rem)}
   .lp .foot-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px}
   .lp .foot-logo span{font-weight:700;color:rgba(253,232,216,0.8);font-size:0.95rem}
-  .lp .foot-copy{font-size:0.8rem;color:rgba(253,232,216,0.35);font-style:italic}
+  .lp .foot-copy{font-size:0.9rem;color:rgba(253,232,216,0.6)}
   .lp .foot-links{display:flex;gap:20px;list-style:none}
   .lp .foot-links button,.lp .foot-links a{font-size:0.8rem;color:rgba(253,232,216,0.45);background:none;border:none;cursor:pointer;font-family:inherit;transition:color 0.15s;padding:0}
   .lp .foot-links button:hover,.lp .foot-links a:hover{color:rgba(253,232,216,0.85)}
@@ -273,7 +274,7 @@ export function buildCss(d: Design): string {
   .lp .modal h1{font-size:1.8rem;letter-spacing:-0.02em;font-weight:800;color:${d.text}}
   .lp .modal h1 em{color:${d.primary}}
   .lp .lsec{margin-top:28px}
-  .lp .lsec h2{font-size:0.65rem;font-weight:700;text-transform:uppercase;letter-spacing:0.14em;color:${d.primary};margin-bottom:8px}
+  .lp .lsec h2{font-size:1rem;font-weight:700;color:${d.text};margin-bottom:6px}
   .lp .lsec p{font-size:0.9rem;color:${d.text};line-height:1.7;margin-bottom:8px}
   .lp .lsec a{color:${d.primary}}
 `

@@ -7,7 +7,7 @@ import {
   type GlobalSettings, type PageRec,
 } from '../lib/landingSchema'
 
-const BESCHREIBUNG = 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen, Sanitätsdienste und Feuerwehren. Derzeit in Entwicklung.'
+const BESCHREIBUNG = 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Derzeit in Entwicklung.'
 
 const JSON_LD = JSON.stringify({
   '@context': 'https://schema.org',
@@ -17,7 +17,7 @@ const JSON_LD = JSON.stringify({
   operatingSystem: 'Web, iOS, Android',
   url: 'https://responda.systems',
   // In Entwicklung: keine Preise (kein "offers"), bis Pakete feststehen
-  description: 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen, Sanitätsdienste und Feuerwehren. In Entwicklung.',
+  description: 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. In Entwicklung.',
   provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: KONTAKT_EMAIL },
   inLanguage: 'de',
   keywords: 'Einsatzverwaltung, Hilfsorganisation, Sanitätsdienst, Feuerwehr, Patientendokumentation, Medizinprodukte, Lagerverwaltung, Ausbildung',
@@ -87,7 +87,11 @@ export default function LandingPage() {
     .map(p => ({ label: p.title, href: `/${p.slug}` }))
   const globalWithNav: GlobalSettings = {
     ...content,
-    nav_items: [...(content.nav_items?.length ? content.nav_items : []), ...navExtra],
+    // Unterseiten führen zurück zu den Abschnitten der Startseite (alte Menüs mit "Preise" gelten nicht mehr)
+    nav_items: [
+      { label: 'Module', href: '/#module' }, { label: 'Für wen', href: '/#fuer-wen' }, { label: 'Stand', href: '/#stand' },
+      ...navExtra, { label: 'Kontakt', href: '/#kontakt' },
+    ],
   }
 
   const modalStyle: React.CSSProperties = {
@@ -116,7 +120,9 @@ export default function LandingPage() {
     <>
       {istStart
         ? <Startseite email={email} unterseiten={navExtra} onLegal={setLegal} />
-        : <LandingRenderer page={page} global={globalWithNav} onLegal={setLegal} />}
+        // Unterseite noch nicht geladen (oder gleich weitergeleitet): ruhig Elfenbein statt der alten Vorgabe-Startseite
+        : rec ? <LandingRenderer page={page} global={globalWithNav} onLegal={setLegal} />
+        : <div style={{ minHeight: '100dvh', background: '#faf9f7' }} />}
 
       {legal === 'impressum' && createPortal(
         <div style={modalStyle} onClick={e => { if (e.target === e.currentTarget) setLegal(null) }}>
@@ -127,10 +133,10 @@ export default function LandingPage() {
             {pb_impressum
               ? <div style={{ marginTop: 24, fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{pb_impressum}</div>
               : <>
-                <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 TMG</h2><p style={secP}>Daniel Heilmann<br/>Alter Keller 5<br/>91541 Rothenburg ob der Tauber<br/>Deutschland</p></div>
+                <div style={secStyle}><h2 style={secH}>Angaben gemäß § 5 DDG</h2><p style={secP}>Daniel Heilmann<br/>Alter Keller 5<br/>91541 Rothenburg ob der Tauber<br/>Deutschland</p></div>
                 <div style={secStyle}><h2 style={secH}>Kontakt</h2><p style={secP}>E-Mail: {lnk('mailto:daniel@responda.systems', 'daniel@responda.systems')}</p></div>
                 <div style={secStyle}><h2 style={secH}>Verantwortlich für den Inhalt nach § 18 Abs. 2 MStV</h2><p style={secP}>Daniel Heilmann<br/>Alter Keller 5<br/>91541 Rothenburg ob der Tauber</p></div>
-                <div style={secStyle}><h2 style={secH}>Haftungsausschluss</h2><p style={secP}>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir gemäß § 7 Abs. 1 TMG für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.</p></div>
+                <div style={secStyle}><h2 style={secH}>Haftungsausschluss</h2><p style={secP}>Die Inhalte dieser Website wurden mit größter Sorgfalt erstellt. Für die Richtigkeit, Vollständigkeit und Aktualität der Inhalte können wir jedoch keine Gewähr übernehmen. Als Diensteanbieter sind wir für eigene Inhalte auf diesen Seiten nach den allgemeinen Gesetzen verantwortlich.</p></div>
                 <div style={secStyle}><h2 style={secH}>Urheberrecht</h2><p style={secP}>Die durch die Seitenbetreiber erstellten Inhalte und Werke auf diesen Seiten unterliegen dem deutschen Urheberrecht. Die Vervielfältigung, Bearbeitung, Verbreitung und jede Art der Verwertung außerhalb der Grenzen des Urheberrechtes bedürfen der schriftlichen Zustimmung des jeweiligen Autors bzw. Erstellers.</p></div>
               </>
             }
@@ -161,7 +167,7 @@ export default function LandingPage() {
                   <p style={secP}>Wenn Sie uns über das Kontaktformular eine Anfrage zukommen lassen, werden Ihre Angaben (Name, E-Mail-Adresse, Nachricht) zur Bearbeitung der Anfrage und für den Fall von Anschlussfragen bei uns gespeichert. Diese Daten geben wir nicht ohne Ihre Einwilligung weiter. Rechtsgrundlage ist Art. 6 Abs. 1 lit. b DSGVO (Vertragsanbahnung) bzw. Art. 6 Abs. 1 lit. f DSGVO.</p>
                 </div>
                 <div style={secStyle}><h2 style={secH}>5. Schriftarten</h2>
-                  <p style={secP}>Diese Website verwendet Schriftarten (<em>Atkinson Hyperlegible</em>, <em>Inter</em>), die auf unseren eigenen Servern gehostet werden. Es findet keine Übertragung von Daten an externe Schriftanbieter statt.</p>
+                  <p style={secP}>Diese Website verwendet Schriftarten (Atkinson Hyperlegible, Inter), die auf unseren eigenen Servern gehostet werden. Es findet keine Übertragung von Daten an externe Schriftanbieter statt.</p>
                 </div>
                 <div style={secStyle}><h2 style={secH}>6. Cookies und Tracking</h2>
                   <p style={secP}>Diese Website verwendet keine Tracking-Cookies und keine Analyse-Tools (z. B. Google Analytics). Es werden ausschließlich technisch notwendige Daten verarbeitet.</p>

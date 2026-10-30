@@ -86,7 +86,7 @@ export default defineConfig({
       manifest: {
         name: 'Responda',
         short_name: 'Responda',
-        description: 'Responda – Einsatzdokumentation',
+        description: 'Einsatz, Dokumentation, Material und Ausbildung für Hilfsorganisationen und Feuerwehren',
         theme_color: '#c0392b',
         background_color: '#ffffff',
         display: 'standalone',

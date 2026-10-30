@@ -11,31 +11,32 @@ import { RS_CSS } from './stil'
 // Warme Erkennungsfarben wie bei den Rollen (Bordeaux, Cognac, Oliva, Petrolio, Prugna, Senape, Salvia, Ardesia)
 const F = ['#600812', '#7a4a1e', '#55602f', '#2f5a60', '#5e2a4c', '#86620f', '#4f6a58', '#4f4640']
 
+// Jede Aussage hier muss in der App stimmen (Stand geprüft gegen den Code).
 const MODULE: { icon: string; farbe: string; name: string; text: string }[] = [
-  { icon: 'clipboard', farbe: F[0], name: 'Patientendokumentation', text: 'Protokolle auf dem Handy oder Tablet, mit Freigabe und Rückfragen.' },
-  { icon: 'eks', farbe: F[3], name: 'Einsatzführung', text: 'Einsatztagebuch, Kräfte, Abschnitte und Atemschutzüberwachung. Arbeitet auch ohne Netz.' },
+  { icon: 'clipboard', farbe: F[0], name: 'Patientendokumentation', text: 'Protokolle mit Freigabe und Rückfragen.' },
+  { icon: 'eks', farbe: F[3], name: 'Einsatzführung', text: 'Einsatztagebuch, Kräfte, Abschnitte und Atemschutzüberwachung.' },
   { icon: 'siren', farbe: F[1], name: 'Einsätze', text: 'Einsätze anlegen oder über Alamos automatisch übernehmen.' },
   { icon: 'mpg', farbe: F[6], name: 'Medizinprodukte', text: 'Geräte, Prüfungen und Fristen wie STK und MTK, mit Gerätebuch und Defektmeldung.' },
   { icon: 'package', farbe: F[5], name: 'Lager und Material', text: 'Bestände, Entnahmen, Inventur und Bestellungen.' },
   { icon: 'book', farbe: F[2], name: 'Ausbildung', text: 'Kurse und Termine, Einladungen und Anwesenheit.' },
-  { icon: 'graduation', farbe: F[4], name: 'Unitas', text: 'Neuigkeiten, Lernmodule und Quizze für das ganze Team.' },
-  { icon: 'file', farbe: F[7], name: 'Vorgänge', text: 'Formulare, Dokumente und CIRS-Meldungen.' },
-  { icon: 'chat', farbe: F[3], name: 'Chat und Notizen', text: 'Ende-zu-Ende verschlüsselt, ohne fremde Dienste.' },
-  { icon: 'folder', farbe: F[1], name: 'Dateien und Schreibstube', text: 'Gemeinsame Ablage und Dokumente schreiben.' },
+  { icon: 'graduation', farbe: F[4], name: 'Unitas', text: 'Die Seite für alle Einsatzkräfte: Neuigkeiten, eigene Protokolle, Lernmodule und Quiz.' },
+  { icon: 'file', farbe: F[7], name: 'Vorgänge', text: 'Formulare, Anträge und CIRS-Meldungen.' },
+  { icon: 'chat', farbe: F[3], name: 'Chat und Notizen', text: 'Nachrichten und Notizen im Team, ohne fremde Dienste.' },
+  { icon: 'folder', farbe: F[1], name: 'Dateien', text: 'Gemeinsame Ablage für eure Dokumente.' },
   { icon: 'users', farbe: F[0], name: 'Benutzer und Rollen', text: 'Eigene Rollen je Organisation, befristete Rechte und Zugänge für Gäste.' },
 ]
 
 const FUER_WEN: { name: string; text: string }[] = [
-  { name: 'Sanitätsdienste und Bereitschaften', text: 'DRK, ASB, Johanniter, Malteser und andere, vom Sanitätswachdienst bis zur Großveranstaltung.' },
-  { name: 'Wasser- und Bergrettung', text: 'DLRG, Wasserwacht, Bergwacht.' },
-  { name: 'Feuerwehren', text: 'Freiwillige Feuerwehren und Werkfeuerwehren, mit Einsatzführung und Atemschutzüberwachung.' },
-  { name: 'Betriebe und Ausbildungsstätten', text: 'Betriebssanitäter, Schulungszentren und Ausbildungsträger.' },
+  { name: 'Sanitätsdienste und Bereitschaften', text: 'BRK, DRK, ASB, Johanniter, Malteser: Patientendokumentation vom Dorffest bis zur Großveranstaltung, dazu Medizinprodukte und Material.' },
+  { name: 'Wasser- und Bergrettung', text: 'DLRG, Wasserwacht, Bergwacht: Einsätze dokumentieren, Geräte und Material im Blick, Ausbildung planen.' },
+  { name: 'Feuerwehren', text: 'Freiwillige Feuerwehren und Werkfeuerwehren: Einsatzführung mit Atemschutzüberwachung, Geräte und Ausbildung.' },
+  { name: 'Betriebe und Ausbildungsstätten', text: 'Betriebssanitäter, Schulungszentren und Ausbildungsträger: Kurse, Teilnehmende und Anwesenheit.' },
 ]
 
 const GRUNDSAETZE: { name: string; text: string }[] = [
-  { name: 'Daten in Franken', text: 'Responda läuft auf einem eigenen Server in Nürnberg.' },
+  { name: 'Daten in Franken', text: 'Eure Daten liegen auf einem eigenen Server in Nürnberg.' },
   { name: 'Ohne Installation', text: 'Im Browser auf Handy, Tablet und PC. Auf Wunsch wie eine App auf dem Startbildschirm.' },
-  { name: 'Verlässlich im Einsatz', text: 'Die Einsatzführung arbeitet ohne Netz weiter und gleicht danach ab.' },
+  { name: 'Verlässlich im Einsatz', text: 'Ein laufender Einsatz in der Einsatzführung geht ohne Netz weiter und gleicht danach ab.' },
   { name: 'Gut lesbar', text: 'Große, klare Schrift und ein Dunkelmodus für die Nacht.' },
 ]
 
@@ -57,13 +58,13 @@ function Kontakt({ email }: { email: string }) {
     } catch { setStand('fehler') }
   }
 
-  if (stand === 'gesendet') return <div className="rs-form"><p className="rs-gesendet">Danke, wir melden uns.</p></div>
+  if (stand === 'gesendet') return <div className="rs-form"><p className="rs-gesendet" role="status">Danke, wir melden uns.</p></div>
 
   return (
     <form className="rs-form" onSubmit={senden}>
       <div className="rs-feld"><label htmlFor="rs-name">Name</label><input id="rs-name" className="rs-eingabe" name="name" required autoComplete="name" /></div>
       <div className="rs-feld"><label htmlFor="rs-mail">E-Mail</label><input id="rs-mail" className="rs-eingabe" type="email" name="email" required autoComplete="email" /></div>
-      <div className="rs-feld"><label htmlFor="rs-org">Organisation<small>optional</small></label><input id="rs-org" className="rs-eingabe" name="organisation" autoComplete="organization" placeholder="z. B. Bereitschaft, Ortsgruppe, Wache" /></div>
+      <div className="rs-feld"><label htmlFor="rs-org">Organisation<small>optional</small></label><input id="rs-org" className="rs-eingabe" name="organisation" autoComplete="organization" placeholder="z. B. BRK-Bereitschaft, FF Musterdorf, DLRG-Ortsgruppe" /></div>
       <div className="rs-feld"><label htmlFor="rs-text">Nachricht</label><textarea id="rs-text" className="rs-eingabe" name="nachricht" placeholder="Was möchtet ihr wissen?" /></div>
       {stand === 'fehler' && (
         <p className="rs-fehler" role="alert">Das hat nicht geklappt. Schreibt uns bitte direkt an <a href={`mailto:${email}`}>{email}</a>.</p>
@@ -109,17 +110,17 @@ export default function Startseite({ email, unterseiten, onLegal }: {
       <header className="rs-held rs-dunkel">
         <div className="rs-innen">
           <div>
-            <p className="rs-stand"><i aria-hidden="true" />In Entwicklung, im Test mit ersten Organisationen</p>
+            <p className="rs-stand"><i aria-hidden="true" />In Entwicklung und in Erprobung mit ersten Organisationen</p>
             <h1>Einsatz, Dokumentation, Material und Ausbildung in einer App</h1>
-            <p className="rs-einl">Für Hilfsorganisationen, Sanitätsdienste und Feuerwehren. Auf dem Handy, dem Tablet im Fahrzeug und am PC.</p>
+            <p className="rs-einl">Für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Auf dem Handy, dem Tablet im Fahrzeug und am PC.</p>
             <div className="rs-knoepfe">
               <a className="rs-knopf creme" href="#kontakt">Interesse melden</a>
               <a className="rs-knopf rand" href="#module">Was Responda kann</a>
             </div>
           </div>
           <div className="rs-kacheln" aria-hidden="true">
-            {KACHELN.map((k, i) => (
-              <span key={k} className="rs-kachel" style={{ background: F[(i * 3) % F.length] }}><AppIcon icon={k} /></span>
+            {KACHELN.map(k => (
+              <span key={k} className="rs-kachel" style={{ background: MODULE.find(m => m.icon === k)?.farbe }}><AppIcon icon={k} /></span>
             ))}
           </div>
         </div>
@@ -129,7 +130,7 @@ export default function Startseite({ email, unterseiten, onLegal }: {
         <section id="module" className="rs-ab">
           <div className="rs-innen">
             <h2>Was Responda kann</h2>
-            <p className="rs-unter">Alles, was im Dienst anfällt, an einem Ort. Jede Organisation schaltet frei, was sie braucht.</p>
+            <p className="rs-unter">Die wichtigsten Aufgaben im Dienst an einem Ort. Ihr nutzt nur die Module, die ihr braucht.</p>
             <div className="rs-spalten">
               {[MODULE.slice(0, 6), MODULE.slice(6)].map((teil, i) => (
                 <div key={i} className="rs-flaeche">
@@ -148,14 +149,26 @@ export default function Startseite({ email, unterseiten, onLegal }: {
         <section id="fuer-wen" className="rs-ab">
           <div className="rs-innen">
             <h2>Für wen</h2>
-            <p className="rs-unter">Für Ehrenamt und Hauptamt, für kleine Ortsgruppen und große Verbände.</p>
+            <p className="rs-unter">Für Ehrenamt und Hauptamt, von der kleinen Ortsgruppe bis zur großen Bereitschaft.</p>
             <div className="rs-spalten">
-              <div className="rs-flaeche">
-                {FUER_WEN.map(f => <div key={f.name} className="rs-z ohne"><div><b>{f.name}</b><span>{f.text}</span></div></div>)}
-              </div>
-              <div className="rs-flaeche">
-                {GRUNDSAETZE.map(g => <div key={g.name} className="rs-z ohne"><div><b>{g.name}</b><span>{g.text}</span></div></div>)}
-              </div>
+              {[FUER_WEN.slice(0, 2), FUER_WEN.slice(2)].map((teil, i) => (
+                <div key={i} className="rs-flaeche">
+                  {teil.map(f => <div key={f.name} className="rs-z ohne"><div><b>{f.name}</b><span>{f.text}</span></div></div>)}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="verlass" className="rs-ab">
+          <div className="rs-innen">
+            <h2>Worauf ihr euch verlassen könnt</h2>
+            <div className="rs-spalten" style={{ marginTop: 14 }}>
+              {[GRUNDSAETZE.slice(0, 2), GRUNDSAETZE.slice(2)].map((teil, i) => (
+                <div key={i} className="rs-flaeche">
+                  {teil.map(g => <div key={g.name} className="rs-z ohne"><div><b>{g.name}</b><span>{g.text}</span></div></div>)}
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -165,7 +178,7 @@ export default function Startseite({ email, unterseiten, onLegal }: {
             <h2>Stand der Entwicklung</h2>
             <div className="rs-notiz" style={{ marginTop: 14 }}>
               <p>Responda ist noch in Entwicklung. Wir erproben es mit ersten Organisationen im echten Dienst, und es kommen laufend Funktionen dazu.</p>
-              <p>Preise und Pakete legen wir fest, wenn die Erprobung abgeschlossen ist. Wer jetzt mitmacht, gestaltet Responda mit.</p>
+              <p>Über Kosten sprechen wir, wenn die Erprobung abgeschlossen ist. Wer jetzt mitmacht, gestaltet Responda mit.</p>
             </div>
           </div>
         </section>
@@ -186,6 +199,7 @@ export default function Startseite({ email, unterseiten, onLegal }: {
         <div className="rs-innen">
           <footer className="rs-fuss">
             <b>Responda Systems</b>
+            {unterseiten.map(l => <a key={l.href} href={l.href}>{l.label}</a>)}
             <button type="button" onClick={() => onLegal('impressum')}>Impressum</button>
             <button type="button" onClick={() => onLegal('datenschutz')}>Datenschutz</button>
             <a href={APP_URL}>Zur App</a>

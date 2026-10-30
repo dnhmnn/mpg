@@ -208,6 +208,13 @@ export default function WebsiteEditor() {
                 <button onClick={deletePage} style={{ ...btn, color: '#dc2626', borderColor: 'rgba(220,38,38,0.3)' }}>Löschen</button>
               </div>
 
+              {(active.slug || '') === '' && (
+                <div style={{ ...card, borderColor: 'rgba(var(--lbf-rot-rgb),0.35)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 4 }}>Die Startseite steht während der Entwicklung fest im Code</div>
+                  <div style={{ fontSize: 13, color: 'var(--warm-gray)', lineHeight: 1.45 }}>Änderungen hier erscheinen nicht auf responda.systems. Unterseiten wirken wie gewohnt; Preis-Abschnitte werden dort nicht angezeigt.</div>
+                </div>
+              )}
+
               {/* Seiteneinstellungen */}
               <div style={card}>
                 <div style={{ fontSize: 10, fontWeight: 700, color: RED, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>Seite</div>
