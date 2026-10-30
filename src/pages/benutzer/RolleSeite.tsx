@@ -1,19 +1,21 @@
 // Rollen als ganze Seite: eine eigene Rolle anlegen oder bearbeiten, und die
-// Vorlage einer vorgegebenen Rolle anpassen (wie bisher im Blatt „Rollen-Vorlagen“).
+// Rechte einer vorgegebenen Rolle für diese Organisation anpassen.
 //
-// Eine Rolle setzt nur Häkchen vor. Gespeichert wird sie in der Organisation:
-// eigene_rollen (Name, Beschreibung, Farbe) und role_permissions[id] (Häkchen),
-// beides in einem einzigen Update.
+// Was jemand darf, kommt aus seinen Rollen. Gespeichert wird eine Rolle in der
+// Organisation: eigene_rollen (Name, Beschreibung, Farbe) und role_permissions[id]
+// (Rechte), beides in einem einzigen Update. Danach bekommen alle mit dieser Rolle
+// die neuen Rechte (nach Rückfrage, abgleich.ts).
 
 import { useState } from 'react'
 import { pb } from '../../lib/pocketbase'
-import { EMPTY_PERMS, getRoleTemplate } from '../../lib/apps'
+import { EMPTY_PERMS, FESTE_ROLLEN, getRoleTemplate } from '../../lib/apps'
 import {
-  MAX_HINWEIS, ROLLEN_FARBEN, eigeneRollen, freieFarbe, pruefeRollenName, rolleAendern, rolleAnlegen, rolleEntfernen, rolleInfo,
+  MAX_HINWEIS, ROLLEN_FARBEN, eigeneRollen, freieFarbe, hatRolle, pruefeRollenName, rolleAendern, rolleAnlegen, rolleEntfernen, rolleInfo,
   rollenFuer, vorlageBereinigen, type RollenFarbe,
 } from '../../lib/rollen'
 import { haken } from '../../lib/verknuepfung'
-import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, RechteListe, Seite } from './bausteine'
+import { nachRollenAenderung } from './abgleich'
+import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, RechteAnzeige, RechteListe, Seite } from './bausteine'
 import { anzahl, anzahlRechte, orgFehler, personen as personenText } from './logik'
 import type { BvKontext } from './kontext'
 
@@ -78,7 +80,7 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
   const sauberName = 'name' in pruef ? pruef.name : ''
   const nameFehler = nameFehlerServer || (pruefFehler && (versucht || (beruehrt && pruefFehler.grund !== 'leer')) ? pruefFehler.text : '')
   const n = anzahlRechte(draft, rechte)
-  const personen = rolleId ? k.users.filter(u => u.role === rolleId).length : 0
+  const personen = rolleId ? k.users.filter(u => hatRolle(u, rolleId)).length : 0
   const farbName = ROLLEN_FARBEN.find(f => f.id === farbe)?.name ?? ''
 
   function uebernehmen(id: string) {
@@ -117,8 +119,14 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
       // 5. PocketBase verwirft unbekannte Felder stillschweigend — nachsehen
       k.setOrgFrisch(o)
       if (!('eigene_rollen' in o)) { showMsg(FELD_FEHLT, 'error'); return }
-      k.setOrgRolePerms((o.role_permissions as Vorlagen | undefined) ?? {})
-      showMsg(rolleId ? 'Rolle gespeichert' : `Rolle „${sauberName}“ angelegt`)
+      const rpNeu = (o.role_permissions as Vorlagen | undefined) ?? {}
+      k.setOrgRolePerms(rpNeu)
+      // Wer die Rolle hat, bekommt die neuen Rechte (nach Rückfrage)
+      const nach = rolleId
+        ? await nachRollenAenderung({ orgId, rolleId: id, rolleName: sauberName, rp: rpNeu, v: orgVerkn, org: o, rechte, hatRolle: u => hatRolle(u, id), selbst: k.user.id })
+        : { text: '', fehler: false }
+      if (nach.text) await k.loadUsers()
+      showMsg((rolleId ? 'Rolle gespeichert.' : `Rolle „${sauberName}“ angelegt.`) + nach.text, nach.fehler ? 'error' : 'success')
       k.schliessen()
     } catch (e) { showMsg(orgFehler(e), 'error') }
     finally { setSaving(false) }
@@ -129,12 +137,14 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
     if (!rolleId || !rolle || !orgId) return
     setEntfernt(true)
     try {
-      // Frisch zählen: Wer die Rolle noch hat, behält sie — dann nur archivieren
-      const belegt = (await pb.collection('users').getList(1, 1, {
-        filter: pb.filter('organization_id = {:o} && role = {:r}', { o: orgId, r: rolleId }), fields: 'id', requestKey: null,
-      })).totalItems
+      // Frisch zählen, als erste oder weitere Rolle: Wer sie noch hat, behält sie — dann nur archivieren.
+      // Die Anführungszeichen grenzen die ID im JSON ab (sonst zählte eigen_x auch eigen_xy).
+      const zaehlen = (filter: string) => pb.collection('users').getList(1, 1, { filter, fields: 'id', requestKey: null }).then(r => r.totalItems)
+      const belegt = await zaehlen(pb.filter('organization_id = {:o} && (role = {:r} || zusatzrollen ~ {:q})', { o: orgId, r: rolleId, q: `"${rolleId}"` }))
+        // Ohne Feld zusatzrollen lehnt PocketBase den Filter ab: dann gibt es nur erste Rollen
+        .catch(() => zaehlen(pb.filter('organization_id = {:o} && role = {:r}', { o: orgId, r: rolleId })))
       const frage = belegt > 0
-        ? `Noch ${belegt === 1 ? '1 Person hat' : `${belegt} Personen haben`} die Rolle „${rolle.name}“. Sie wird deshalb nur archiviert: Sie ist nicht mehr wählbar, wer sie hat, behält Rolle und Häkchen. Archivieren?`
+        ? `Noch ${belegt === 1 ? '1 Person hat' : `${belegt} Personen haben`} die Rolle „${rolle.name}“. Sie wird deshalb nur archiviert: Sie ist nicht mehr wählbar, wer sie hat, behält sie samt Rechten. Archivieren?`
         : `Rolle „${rolle.name}“ löschen? Niemand hat sie.`
       if (!confirm(frage)) return
       const frisch = await orgLesen(orgId)
@@ -179,8 +189,8 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
         </div>
       </Feld>
       {!rolleId && (
-        <Feld label="Häkchen übernehmen von" hinweis="Setzt die Schalter unten wie bei dieser Rolle. Danach lässt sich jeder einzeln ändern.">
-          <Auswahl value={von} onChange={uebernehmen} label="Häkchen übernehmen von">
+        <Feld label="Rechte übernehmen von" hinweis="Setzt die Schalter unten wie bei dieser Rolle. Danach lässt sich jeder einzeln ändern.">
+          <Auswahl value={von} onChange={uebernehmen} label="Rechte übernehmen von">
             <option value="">Keiner Rolle, alles aus</option>
             {rollenFuer(org).map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
           </Auswahl>
@@ -188,7 +198,7 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
       )}
 
       <Abschnitt titel="Rechte" rechts={`${n} von ${rechte.length}`} />
-      <Hinweis oben>Werden bei neuen Personen mit dieser Rolle vorbelegt. Wer die Rolle schon hat, behält seine Häkchen.</Hinweis>
+      <Hinweis oben>Was jede Person mit dieser Rolle darf. Ändern gilt für alle, die sie haben; vorher fragt die App nach.</Hinweis>
       <RechteListe rechte={rechte} werte={draft} v={orgVerkn} org={org} onChange={(key, an) => setDraft(p => haken(p, key, an, orgVerkn, org))} />
 
       {rolleId && (
@@ -196,7 +206,7 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
           <Abschnitt titel="Personen" rechts={personenText(personen)} />
           <Hinweis oben>
             {personen > 0
-              ? 'Wer die Rolle hat, behält sie beim Archivieren samt Häkchen. Sie ist danach nur nicht mehr wählbar.'
+              ? 'Wer die Rolle hat, behält sie beim Archivieren samt Rechten. Sie ist danach nur nicht mehr wählbar.'
               : 'Niemand hat diese Rolle. Löschen entfernt sie samt Vorlage.'}
           </Hinweis>
           {vorhanden?.archiviert ? (
@@ -216,50 +226,70 @@ export function EigeneRolleSeite({ k, rolleId }: { k: BvKontext; rolleId?: strin
   )
 }
 
-/** Vorlage einer vorgegebenen Rolle (Admin, Benutzer, …) für diese Organisation */
+/** Eine vorgegebene Rolle (Einsatzkraft, Führung, …): ihre Rechte für diese Organisation */
 export function VorlageSeite({ k, rolle }: { k: BvKontext; rolle: string }) {
   const { org, orgRolePerms, orgVerkn, rechte, showMsg } = k
   const info = rolleInfo(rolle, org)
+  const fest = FESTE_ROLLEN.includes(rolle)
   const [templateDraft, setTemplateDraft] = useState<Record<string, boolean>>(() =>
     ({ ...EMPTY_PERMS, ...getRoleTemplate(rolle, { role_permissions: orgRolePerms }) }))
   const [savingTemplate, setSavingTemplate] = useState(false)
   const n = anzahlRechte(templateDraft, rechte)
+  const personen = k.users.filter(u => hatRolle(u, rolle)).length
 
   function resetTemplateDraft() {
     setTemplateDraft({ ...EMPTY_PERMS, ...getRoleTemplate(rolle, null) })
   }
 
   async function saveRoleTemplate() {
-    if (!k.user.organization_id) return
+    const orgId = k.user.organization_id
+    if (!orgId || fest) return
     setSavingTemplate(true)
     try {
-      // Frisch lesen: role_permissions trägt jetzt auch die Vorlagen der eigenen Rollen
-      const frisch = await orgLesen(k.user.organization_id)
-      const updated: Vorlagen = { ...((frisch.role_permissions as Vorlagen | undefined) ?? {}), [rolle]: { ...templateDraft } }
-      const o = await pb.collection('organizations').update(k.user.organization_id, { role_permissions: updated }, { requestKey: null })
+      // Frisch lesen: role_permissions trägt auch die Rechte der eigenen Rollen
+      const frisch = await orgLesen(orgId)
+      const updated: Vorlagen = { ...((frisch.role_permissions as Vorlagen | undefined) ?? {}), [rolle]: vorlageBereinigen(templateDraft) }
+      const o = await pb.collection('organizations').update(orgId, { role_permissions: updated }, { requestKey: null })
       k.setOrgFrisch(o)
-      k.setOrgRolePerms((o.role_permissions as Vorlagen | undefined) ?? updated)
-      showMsg('Rollen-Vorlage gespeichert')
+      const rpNeu = (o.role_permissions as Vorlagen | undefined) ?? updated
+      k.setOrgRolePerms(rpNeu)
+      // Wer die Rolle hat, bekommt die neuen Rechte (nach Rückfrage)
+      const nach = await nachRollenAenderung({ orgId, rolleId: rolle, rolleName: info?.name ?? rolle, rp: rpNeu, v: orgVerkn, org: o, rechte, hatRolle: u => hatRolle(u, rolle), selbst: k.user.id })
+      if (nach.text) await k.loadUsers()
+      showMsg('Rolle gespeichert.' + nach.text, nach.fehler ? 'error' : 'success')
       k.schliessen()
     } catch (e) { showMsg(orgFehler(e), 'error') }
     finally { setSavingTemplate(false) }
   }
 
+  if (fest) {
+    return (
+      <Seite titel={info?.name ?? rolle} unter={k.orgName} zurueck={k.schliessen}>
+        <Abschnitt titel="Rolle" erst rechts={personenText(personen)} />
+        <Hinweis oben>{info?.hinweis} Diese Rolle ist fest und lässt sich nicht anpassen.</Hinweis>
+        <Abschnitt titel="Darf" rechts={rolle === 'admin' ? `${n} von ${rechte.length}` : undefined} />
+        {rolle === 'admin'
+          ? <RechteAnzeige rechte={rechte} werte={templateDraft} />
+          : <Hinweis oben>Teilnehmende bekommen Unitas über die Ausbildungen. Weitere Rechte gibt es nur befristet.</Hinweis>}
+      </Seite>
+    )
+  }
+
   return (
     <Seite titel={info?.name ?? rolle} unter={k.orgName} zurueck={k.schliessen}
-      leiste={<Leiste titel={anzahl(n, 'Recht', 'Rechte')} unter={info?.name ?? rolle} knopf="Vorlage speichern" icon="haken" onClick={saveRoleTemplate} laeuft={savingTemplate} />}>
-      <Abschnitt titel="Vorlage" erst />
-      <Hinweis oben>{info?.hinweis} Kommt mit Responda. Änderungen gelten nur für die {k.orgName}. Wer die Rolle schon hat, behält seine Häkchen.</Hinweis>
+      leiste={<Leiste titel={anzahl(n, 'Recht', 'Rechte')} unter={info?.name ?? rolle} knopf="Rolle speichern" icon="haken" onClick={saveRoleTemplate} laeuft={savingTemplate} />}>
+      <Abschnitt titel="Rolle" erst rechts={personenText(personen)} />
+      <Hinweis oben>{info?.hinweis} Kommt mit Responda. Änderungen gelten nur für die {k.orgName}.</Hinweis>
 
       <Abschnitt titel="Rechte" rechts={`${n} von ${rechte.length}`} />
-      <Hinweis oben>Werden bei neuen Personen mit dieser Rolle vorbelegt und beim Wechsel auf diese Rolle angehakt.</Hinweis>
+      <Hinweis oben>Was jede Person mit dieser Rolle darf. Ändern gilt für alle, die sie haben; vorher fragt die App nach.</Hinweis>
       <RechteListe rechte={rechte} werte={templateDraft} v={orgVerkn} org={org} onChange={(key, an) => setTemplateDraft(p => haken(p, key, an, orgVerkn, org))} />
 
       <Abschnitt titel="Standard" />
       <div className="bv-flaeche">
         <button type="button" className="bv-z aktion" onClick={resetTemplateDraft}><span className="bv-tx">Auf Standard zurücksetzen</span></button>
       </div>
-      <Hinweis>Setzt die Schalter auf die Voreinstellung von Responda. Gespeichert wird erst mit „Vorlage speichern“.</Hinweis>
+      <Hinweis>Setzt die Schalter auf die Voreinstellung von Responda. Gespeichert wird erst mit „Rolle speichern“.</Hinweis>
     </Seite>
   )
 }

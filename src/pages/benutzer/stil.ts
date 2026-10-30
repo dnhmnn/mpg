@@ -155,6 +155,13 @@ input.bv-eingabe[type="datetime-local"]{ padding-top: 12px; padding-bottom: 12px
 .bv-wahl small{ display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .bv-punkt{ display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
 
+/* Mehrere Rollen: Kästchen zum Ankreuzen */
+.bv-kasten{ width: 24px; height: 24px; border-radius: 7px; border: 2px solid var(--bv-feldrand); flex-shrink: 0; display: grid; place-items: center; background: var(--lbf-card); color: #fff; }
+.bv-kasten svg{ width: 16px; height: 16px; opacity: 0; }
+[aria-checked="true"] > .bv-kasten{ background: var(--lbf-akzent-grund); border-color: var(--lbf-akzent-grund); }
+[aria-checked="true"] > .bv-kasten svg{ opacity: 1; }
+.bv svg.bv-da{ color: var(--lbf-akzent); stroke-width: 2.4; }
+
 /* Rollenfarben: Farbfeld in der Rollenliste und die Farbwahl */
 .bv-feldr{ width: 34px; height: 34px; border-radius: 10px; color: var(--lbf-kopf-text); display: grid; place-items: center; font-size: 12.5px; font-weight: 700; flex-shrink: 0; letter-spacing: 0.02em; }
 .bv-farben{ display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); }

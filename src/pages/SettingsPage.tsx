@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
-import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, EMPTY_PERMS, getRoleTemplate, isPlaceholderEmail, kachelFarbe, vergebbareRechte, sichtbareEmail } from '../lib/apps'
-import { eigeneRollen, rolleInfo, rollenBezeichnung, rollenFuer } from '../lib/rollen'
-import { zufallsPasswort } from '../lib/passwort'
-import { haken, verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
-import VerknuepfungHinweis from '../components/VerknuepfungHinweis'
+import { ALL_APPS, getDockPins, setDockPins, MAX_DOCK_PINS, kachelFarbe } from '../lib/apps'
 import { MODULE as FREIGABE_MODULE, freigeschaltet } from '../lib/freigabe'
 import AppIcon from '../components/AppIcon'
 import { useAuth } from '../hooks/useAuth'
@@ -355,7 +351,6 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   const { user: angemeldet } = useAuth()
   const user = vorgegeben ?? angemeldet
   // Nur Rechte freigeschalteter Module anbieten (wie in der Benutzerverwaltung)
-  const PERM_LABELS = vergebbareRechte(user?.organization)
   const navigate = useNavigate()
   const [view, setView] = useState<View>('main')
   const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
@@ -401,26 +396,9 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
 
   // Users
   const [users, setUsers] = useState<any[]>([])
-  const [loadingUsers, setLoadingUsers] = useState(false)
-
-  // User modal
-  const [showUserModal, setShowUserModal] = useState(false)
-  const [editingUser, setEditingUser] = useState<any>(null)
-  const [userFormName, setUserFormName] = useState('')
-  const [userFormEmail, setUserFormEmail] = useState('')
-  const [userFormRole, setUserFormRole] = useState('benutzer')
-  const [userFormPermissions, setUserFormPermissions] = useState<Record<string, boolean>>({ ...EMPTY_PERMS })
-  const [userFormMsg, setUserFormMsg] = useState('')
-  const [savingUser, setSavingUser] = useState(false)
 
   // License
   const [license, setLicense] = useState<any>(null)
-  // Verknüpfte Rechte der Organisation (frisch geladen, sonst die vom Login).
-  // Ist sie gar nicht bekannt, wird nichts mitgebracht.
-  const rechteOrg: unknown = license ?? user?.organization
-  const verkn = rechteOrg ? verknuepfungen(rechteOrg) : {}
-  // Rollen-Vorlagen aus derselben Organisation wie die Auswahl — sonst fände eine eigene Rolle ihre Häkchen nicht
-  const vorlageOrg = rechteOrg as Parameters<typeof getRoleTemplate>[1]
 
   // Dieselbe Regel wie die Benutzerverwaltung (Unitarii): wer Benutzer dauerhaft verwalten darf
   const canManageUsers = istVerantwortlich(user)
@@ -434,8 +412,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
   }, [user])
 
   useEffect(() => {
-    if (view === 'users') { loadUsers(); loadLicense() }
-    if (view === 'license') loadLicense()
+    if (view === 'license') { loadUsers(); loadLicense() }
   }, [view])
 
   async function saveProfile() {
@@ -485,17 +462,14 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
 
   async function loadUsers() {
     if (!user?.organization_id) return
-    setLoadingUsers(true)
     try {
+      // Nur für die Zahl in der Lizenz
       const result = await pb.collection('users').getFullList({
-        filter: `organization_id = "${user.organization_id}"`,
-        sort: '-created'
+        filter: pb.filter('organization_id = {:o}', { o: user.organization_id }), fields: 'id',
       })
       setUsers(result)
     } catch (e) {
       console.error('Error loading users:', e)
-    } finally {
-      setLoadingUsers(false)
     }
   }
 
@@ -509,100 +483,10 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     }
   }
 
-  function openAddUser() {
-    setEditingUser(null)
-    setUserFormName('')
-    setUserFormEmail('')
-    setUserFormRole('benutzer')
-    setUserFormPermissions({ ...EMPTY_PERMS, ...getRoleTemplate('benutzer', vorlageOrg) })
-    setUserFormMsg('')
-    setShowUserModal(true)
-  }
-
-  function openEditUser(u: any) {
-    setEditingUser(u)
-    setUserFormName(u.name || '')
-    setUserFormEmail(u.email)
-    setUserFormRole(u.role || 'benutzer')
-    setUserFormPermissions({ ...EMPTY_PERMS, ...(u.permissions || {}) })
-    setUserFormMsg('')
-    setShowUserModal(true)
-  }
-
-  async function saveUser() {
-    if (!user?.organization_id) return
-    setUserFormMsg('')
-    setSavingUser(true)
-    if (!userFormEmail || !userFormEmail.includes('@')) {
-      setUserFormMsg('❌ Gültige E-Mail eingeben')
-      setSavingUser(false)
-      return
-    }
-    try {
-      if (editingUser) {
-        // Kein Passwort von hier: Das legt die Person selbst fest (Willkommens-E-Mail, Passwort-Link)
-        const updateData: any = { name: userFormName, role: userFormRole, permissions: userFormPermissions }
-        await pb.collection('users').update(editingUser.id, updateData)
-        setUserFormMsg('✅ Benutzer aktualisiert!')
-      } else {
-        // Kein Passwort vom Verwalter: Der Benutzer legt es über die Willkommens-E-Mail fest
-        const tempPassword = zufallsPasswort()
-        await pb.collection('users').create({
-          email: userFormEmail,
-          name: userFormName,
-          role: userFormRole,
-          permissions: userFormPermissions,
-          permissions_migrated: true,
-          password: tempPassword,
-          passwordConfirm: tempPassword,
-          organization_id: user.organization_id
-        })
-        setUserFormMsg('✅ Benutzer erstellt. Das Passwort legt er über die Willkommens-E-Mail fest.')
-      }
-      setTimeout(() => {
-        setShowUserModal(false)
-        loadUsers()
-      }, 2000)
-    } catch (e: any) {
-      setUserFormMsg('❌ Fehler: ' + e.message)
-    } finally {
-      setSavingUser(false)
-    }
-  }
-
-  // Link zum Passwort-Festlegen an die gespeicherte Adresse
-  async function passwortLinkSenden() {
-    if (!editingUser?.email) return
-    setUserFormMsg('')
-    try {
-      await pb.collection('users').requestPasswordReset(editingUser.email)
-      setUserFormMsg(`✅ Link zum Passwort-Festlegen an ${editingUser.email} gesendet.`)
-    } catch (e: any) {
-      setUserFormMsg('❌ Nicht gesendet: ' + (e?.message || e))
-    }
-  }
-
-  async function deleteUser(userId: string) {
-    if (!confirm('Möchten Sie diesen Benutzer wirklich löschen?')) return
-    try {
-      await pb.collection('users').delete(userId)
-      loadUsers()
-    } catch (e: any) {
-      alert('Fehler beim Löschen: ' + e.message)
-    }
-  }
-
   function handleThemeChange(mode: ThemeMode) {
     setTheme(mode)
     setThemeMode(mode)
   }
-
-  // Vorgegebene und eigene Rollen der Organisation; die aktuelle bleibt wählbar, auch archiviert oder gelöscht
-  const roleOptions = rollenFuer(rechteOrg, { aktuelle: userFormRole }).map(r => ({
-    value: r.id,
-    label: r.archiviert && eigeneRollen(rechteOrg).some(e => e.id === r.id) ? `${r.name} (archiviert)` : r.name,
-    eigen: r.eigen,
-  }))
 
   const isMain = view === 'main'
   const mainTransform = isMain ? 'translateX(0)' : 'translateX(-100%)'
@@ -944,65 +828,18 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
     </div>
   )
 
-  // Users
+  // Users: Benutzer, Rollen und Rechte gibt es nur noch in der Benutzerverwaltung (/unitarii)
   const usersPanel = (
     <div style={S.detailPanel}>
-      <div style={{ ...S.sectionHeader, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span>BENUTZER</span>
-        {canManageUsers && (
-          <button
-            onClick={openAddUser}
-            style={{
-              background: 'var(--lbf-akzent-grund)', border: 'none', borderRadius: '8px',
-              padding: '6px 12px', color: '#fff', fontSize: '13px',
-              fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit'
-            }}
-          >
-            + Hinzufügen
-          </button>
-        )}
-      </div>
       <div style={S.card}>
-        {loadingUsers ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(var(--lbf-rot-rgb),0.4)' }}>
-            Lade Benutzer...
-          </div>
-        ) : users.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(var(--lbf-rot-rgb),0.4)' }}>
-            Keine Benutzer gefunden
-          </div>
-        ) : (
-          users.map((u, idx) => (
-            <div
-              key={u.id}
-              className="user-row"
-              style={{ borderBottom: idx === users.length - 1 ? 'none' : '1px solid var(--lbf-border-light)' }}
-            >
-              <div className="user-avatar">{(u.name || u.email)[0].toUpperCase()}</div>
-              <div className="user-info">
-                <div className="user-name">{u.name || '—'}</div>
-                <div className="user-email">{sichtbareEmail(u.email)}</div>
-              </div>
-              <div className="user-role">{u.supervisor ? 'Supervisor' : rollenBezeichnung(u.role, rechteOrg)}</div>
-              {canManageUsers && u.id !== user?.id && (
-                <div className="user-actions">
-                  <button onClick={() => openEditUser(u)} className="user-action-btn edit" title="Bearbeiten">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button onClick={() => deleteUser(u.id)} className="user-action-btn delete" title="Löschen">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+        <div style={{ padding: '16px', fontSize: 15, lineHeight: 1.45, color: 'var(--lbf-text)' }}>
+          <b style={{ display: 'block', marginBottom: 4 }}>Benutzer in der Benutzerverwaltung</b>
+          <span style={{ color: 'var(--warm-gray)' }}>Personen anlegen, Rollen vergeben und befristete Rechte gibt es an einem Ort: in der Benutzerverwaltung.</span>
+          <button type="button" onClick={() => navigate('/unitarii')}
+            style={{ display: 'block', marginTop: 14, minHeight: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: 'var(--lbf-akzent-grund)', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+            Zur Benutzerverwaltung
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -1141,137 +978,6 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
           onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStandRef.current, einfuehrungTeile, new Date())); setEinfuehrungTeile(null) }} />
       )}
 
-      {/* User Modal */}
-      {showUserModal && (
-        <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>{editingUser ? 'Benutzer bearbeiten' : 'Benutzer hinzufügen'}</h3>
-              <button className="modal-close" onClick={() => setShowUserModal(false)}>×</button>
-            </div>
-            <div className="modal-body">
-              <div className="ios-field">
-                <label>Name</label>
-                <input
-                  type="text"
-                  value={userFormName}
-                  onChange={(e) => setUserFormName(e.target.value)}
-                  placeholder="Name eingeben"
-                />
-              </div>
-              <div className="ios-field">
-                <label>E-Mail {editingUser && '(nicht änderbar)'}</label>
-                <input
-                  type="email"
-                  // Beim Bearbeiten nur angezeigt: eine Platzhalter-Adresse (Person ohne E-Mail) bleibt leer
-                  value={editingUser ? sichtbareEmail(editingUser.email) : userFormEmail}
-                  onChange={(e) => setUserFormEmail(e.target.value)}
-                  placeholder={editingUser ? 'keine' : 'email@beispiel.de'}
-                  disabled={!!editingUser}
-                  style={editingUser ? { background: 'var(--warm-bg)', color: 'var(--warm-gray)' } : {}}
-                />
-                {!editingUser && (
-                  <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
-                    Bekommt automatisch eine Willkommens-E-Mail mit Link zur App, Org-Code und „Passwort festlegen“.
-                  </div>
-                )}
-              </div>
-              {editingUser && isPlaceholderEmail(editingUser.email) ? (
-                // Kein Passwort von hier: Ohne eigene E-Mail kann sich die Person nicht anmelden
-                <div className="ios-field">
-                  <label>Passwort</label>
-                  <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5 }}>
-                    Diese Person hat keine eigene E-Mail und kann sich nicht anmelden. Eine E-Mail trägst du in der Benutzerverwaltung nach; dann legt sie ihr Passwort über die Willkommens-E-Mail selbst fest.
-                  </div>
-                </div>
-              ) : (
-                <div className="ios-field">
-                  <label>Passwort</label>
-                  <div style={{ fontSize: 12.5, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.5 }}>
-                    {editingUser
-                      ? 'Legt der Benutzer selbst fest. Hat er es vergessen oder keine Willkommens-E-Mail bekommen, schick ihm den Link zum Festlegen.'
-                      : 'Legt der Benutzer selbst fest — über den Link in der Willkommens-E-Mail.'}
-                  </div>
-                  {editingUser && (
-                    <button type="button" onClick={passwortLinkSenden}
-                      style={{ marginTop: 8, background: 'none', border: '1px solid rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 8, padding: '7px 12px', fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }}>
-                      Link zum Passwort-Festlegen senden
-                    </button>
-                  )}
-                </div>
-              )}
-              <div className="ios-field">
-                <label>Rolle</label>
-                <select
-                  value={userFormRole}
-                  onChange={(e) => {
-                    const role = e.target.value
-                    const template = getRoleTemplate(role, vorlageOrg)
-                    setUserFormRole(role)
-                    setUserFormPermissions(p => ({ ...p, ...vorlageMitVerknuepfungen(template, verkn, rechteOrg) }))
-                  }}
-                  className="ios-field-select"
-                >
-                  {(() => {
-                    const option = (opt: typeof roleOptions[number]) => (
-                      <option key={opt.value} value={opt.value} style={{ background: 'var(--bg-card-solid)' }}>
-                        {opt.label}
-                      </option>
-                    )
-                    const eigene = roleOptions.filter(o => o.eigen)
-                    if (!eigene.length) return roleOptions.map(option)
-                    return (
-                      <>
-                        <optgroup label="Vorgegeben">{roleOptions.filter(o => !o.eigen).map(option)}</optgroup>
-                        <optgroup label="Eigene Rollen">{eigene.map(option)}</optgroup>
-                      </>
-                    )
-                  })()}
-                  {/* Alter, unbekannter Wert: so zeigen, wie er ist, statt still die erste Rolle anzuzeigen */}
-                  {!roleOptions.some(o => o.value === userFormRole) && (
-                    <option value={userFormRole} style={{ background: 'var(--bg-card-solid)' }}>{userFormRole}</option>
-                  )}
-                </select>
-                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
-                  {rolleInfo(userFormRole, rechteOrg)?.hinweis} Setzt die Häkchen unten — danach einzeln anpassbar.
-                </div>
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <div style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>
-                  Zugriffsrechte
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, padding: '10px 12px', background: 'var(--warm-bg)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
-                  {PERM_LABELS.map(({ key, label }) => (
-                    <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, fontWeight: 400, textTransform: 'none', letterSpacing: 'normal', color: 'var(--lbf-text)' }}>
-                      <input
-                        type="checkbox"
-                        checked={!!userFormPermissions[key]}
-                        onChange={(e) => { const an = e.target.checked; setUserFormPermissions(p => haken(p, key, an, verkn, rechteOrg)) }}
-                        style={{ width: 16, height: 16, accentColor: 'var(--lbf-akzent)' }}
-                      />
-                      {label}
-                    </label>
-                  ))}
-                </div>
-                <VerknuepfungHinweis rechte={PERM_LABELS} v={verkn} org={rechteOrg} />
-              </div>
-              {userFormMsg && (
-                <div style={{ marginTop: '12px', fontSize: '14px', color: userFormMsg.includes('✅') ? '#34c759' : '#ff3b30' }}>
-                  {userFormMsg}
-                </div>
-              )}
-              <button
-                className="ios-button"
-                onClick={saveUser}
-                disabled={savingUser}
-                style={{ opacity: savingUser ? 0.7 : 1 }}
-              >
-                {savingUser ? 'Speichern...' : (editingUser ? 'Änderungen speichern' : 'Benutzer erstellen')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

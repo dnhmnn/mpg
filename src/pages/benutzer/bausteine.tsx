@@ -118,6 +118,32 @@ export function RechteListe({ rechte, werte, onChange, v, org }: {
   )
 }
 
+/**
+ * Was jemand darf, nur zum Ansehen: die Rechte, die seine Rollen geben, nach Bereichen.
+ * Ändern lassen sie sich über die Rollen (oder befristet), nicht hier.
+ */
+export function RechteAnzeige({ rechte, werte, leer = 'Diese Rollen geben keine Rechte.' }: { rechte: Recht[]; werte: Record<string, boolean>; leer?: string }) {
+  const an = rechte.filter(r => werte[r.key] === true)
+  if (!an.length) return <div className="bv-notiz"><p>{leer}</p></div>
+  return (
+    <>
+      {rechteGruppiert(an).map(g => (
+        <section key={g.name}>
+          <h3 className="bv-gruppe">{g.name}</h3>
+          <div className="bv-flaeche">
+            {g.rechte.map(r => (
+              <div key={r.key} className="bv-z bv-recht">
+                <span className="bv-tx"><b>{r.label}</b>{RECHT_BESCHREIBUNG[r.key] && <small>{RECHT_BESCHREIBUNG[r.key]}</small>}</span>
+                <Icon n="haken" className="bv-klein bv-da" />
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </>
+  )
+}
+
 export function Leiste({ titel, unter, knopf, icon, onClick, laeuft, laeuftText = 'Speichert…', disabled }: {
   titel: string; unter?: string; knopf: string; icon?: string; onClick: () => void; laeuft?: boolean; laeuftText?: string; disabled?: boolean
 }) {

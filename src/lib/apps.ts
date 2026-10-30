@@ -38,6 +38,9 @@ export function hatRecht(user: User | null | undefined, recht: string, jetzt = D
   if (!user) return false
   if (user.supervisor) return true
   if (user.permissions?.[recht]) return true
+  // Die Leitung verwaltet Benutzer immer, wie in den Server-Regeln (role = "admin"),
+  // auch wenn ihr gespeichertes Häkchen aus alter Zeit fehlt
+  if (recht === 'unitarii' && user.role === 'admin') return true
   const bis = user.temp_permissions?.[recht]?.until
   return !!bis && zeitpunktBefristung(bis) > jetzt
 }
@@ -57,36 +60,44 @@ export function zeitpunktBefristung(bis: string): number {
   return Number.isFinite(t) ? t : 0
 }
 
-// Vorlagen zur Vorbefüllung der individuellen Rechte beim Anlegen/Ändern eines Benutzers.
-// Werden NICHT mehr für Laufzeit-Zugriffsprüfungen verwendet — einzig user.permissions
-// (+ supervisor + temp_permissions) entscheidet über den Zugriff (siehe hasPermission in Hub.tsx).
+// Was jede vorgegebene Rolle gibt. Rechte kommen nur aus Rollen (src/lib/rollen.ts,
+// rechteAusRollen): Hat jemand mehrere, zählen sie zusammen. users.permissions ist die
+// gespeicherte Kopie, die App und Server-Regeln prüfen (+ supervisor + temp_permissions).
+// Grundrechte: Unitas, Geräte prüfen und Einstellungen (dashboard), Chat, Notizen.
+const GRUND = { dashboard: true, lernbar: true, chat: true, notizen: true }
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
-  // Verwalter: alle Rechte samt Benutzerverwaltung. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
-  admin:     { permissions: { dashboard: true, mpg_verwalten: true, einsaetze: true, eks: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, chat: true, unitarii: true, notizen: true } },
-  // Normale Benutzer: Unitas, Chat, Notizen, Einstellungen
-  benutzer:  { permissions: { dashboard: true, lernbar: true, chat: true, notizen: true } },
-  mpg:       { permissions: { dashboard: true, mpg_verwalten: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, lernbar: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, chat: true, unitarii: true, notizen: true } },
-  lager:     { permissions: { dashboard: true, lager: true, lager_verwalten: true, produktausgabe: true, dateien: true, chat: true } },
-  ausbildung:{ permissions: { dashboard: true, einsaetze: true, lernbar: true, ausbildungen_manage: true, patienten: true, dateien: true, chat: true } },
-  qm:        { permissions: { dashboard: true, dokumente: true, dateien: true, chat: true } },
+  // Leitung: alle Rechte samt Benutzerverwaltung, fest. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
+  admin:     { permissions: { ...GRUND, mpg_verwalten: true, einsaetze: true, eks: true, lager: true, lager_verwalten: true, produktausgabe: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, unitarii: true } },
+  benutzer:  { permissions: { ...GRUND } },
+  fuehrung:  { permissions: { ...GRUND, einsaetze: true, eks: true, dateien: true } },
+  medizin:   { permissions: { ...GRUND, patienten: true } },
+  mpg:       { permissions: { ...GRUND, mpg_verwalten: true, lager: true, dateien: true } },
+  lager:     { permissions: { ...GRUND, lager: true, lager_verwalten: true, produktausgabe: true, dateien: true, dokumente: true } },
+  ausbildung:{ permissions: { ...GRUND, ausbildungen_manage: true, dateien: true } },
+  qm:        { permissions: { ...GRUND, dokumente: true, dateien: true } },
 }
 
+/** Rollen, die eine Organisation nicht anpassen kann: Leitung hat immer alles, Teilnehmende bekommen Unitas über die Ausbildungen */
+export const FESTE_ROLLEN = ['admin', 'teilnehmer']
+
 /**
- * Die Rollen beim Anlegen: Admin und Benutzer für den üblichen Fall, die
- * Fachrollen als Vorlage für Spezialfälle, Teilnehmer für die Ausbildungen.
+ * Die vorgegebenen Rollen, nach Aufgabe benannt (für alle Hilfsorganisationen und
+ * Feuerwehren). Die Kennungen bleiben, wo der Server sie kennt (admin, mpg, lager, teilnehmer).
  */
 export const ROLLEN: { id: string; name: string; hinweis: string }[] = [
-  { id: 'admin',      name: 'Admin',                     hinweis: 'Verwalter: alle Rechte der freigeschalteten Module, dazu die Benutzerverwaltung.' },
-  { id: 'benutzer',   name: 'Benutzer',                  hinweis: 'Normale Rechte: Unitas, Chat, Notizen und Einstellungen.' },
-  { id: 'mpg',        name: 'MPG-Beauftragter',          hinweis: 'Fachrolle: MPG, Lager, Patienten, Vorgänge, Ausbildungen und Benutzerverwaltung.' },
-  { id: 'lager',      name: 'Lagerwart',                 hinweis: 'Fachrolle: Lager mit Produktausgabe, Dateien, Chat.' },
-  { id: 'ausbildung', name: 'Ausbilder',                 hinweis: 'Fachrolle: Ausbildungen, Unitas, Einsätze, Patienten.' },
-  { id: 'qm',         name: 'Qualitätsmanagement',       hinweis: 'Fachrolle: Vorgänge und CIRS, Dateien.' },
-  { id: 'teilnehmer', name: 'Teilnehmer (Ausbildungen)', hinweis: 'Für die Ausbildungen, ohne eigene Rechte.' },
+  { id: 'admin',      name: 'Leitung (Admin)',      hinweis: 'Alle Rechte, immer mit Benutzerverwaltung.' },
+  { id: 'benutzer',   name: 'Einsatzkraft',         hinweis: 'Grundrolle: Unitas, Geräte prüfen und Defekte melden, Einstellungen, Chat und Notizen.' },
+  { id: 'fuehrung',   name: 'Führung',              hinweis: 'Einsätze, Einsatzführung (EKS) und Dateien. Für Gruppen-, Zug- und Bereitschaftsführung.' },
+  { id: 'medizin',    name: 'Medizinische Leitung', hinweis: 'Patientenprotokolle einsehen, prüfen und freigeben.' },
+  { id: 'mpg',        name: 'Medizinprodukte',      hinweis: 'Geräte verwalten, sperren und freigeben, dazu Lager und Dateien.' },
+  { id: 'lager',      name: 'Material & Lager',     hinweis: 'Lager und Bestand verwalten, Dateien und Vorgänge.' },
+  { id: 'ausbildung', name: 'Ausbildung',           hinweis: 'Kurse, Termine und Module pflegen, dazu Dateien.' },
+  { id: 'qm',         name: 'Qualitätsmanagement',  hinweis: 'Vorgänge mit CIRS, dazu Dateien.' },
+  { id: 'teilnehmer', name: 'Teilnehmende',         hinweis: 'Kursteilnehmende: nur Unitas, gesteuert über die Ausbildungen.' },
 ]
 
 export function rollenName(id: string | undefined): string {
-  return ROLLEN.find(r => r.id === id)?.name ?? (id || 'Benutzer')
+  return ROLLEN.find(r => r.id === id)?.name ?? (id || 'Einsatzkraft')
 }
 
 export const DEFAULT_DOCK_PINS = ['einsaetze', 'patienten', 'ausbildungen', 'mpg']
@@ -167,6 +178,8 @@ export function neuePlatzhalterEmail(): string {
 // Liefert die Rechte-Vorlage für eine Rolle: organisationsspezifische Anpassung
 // (organizations.role_permissions) falls vorhanden, sonst die globale ROLES-Vorlage.
 export function getRoleTemplate(role: string, org?: { role_permissions?: Record<string, Record<string, boolean>> } | null): Record<string, boolean> {
+  // Leitung und Teilnehmende sind fest: Eine Organisation kann der Leitung nichts wegnehmen
+  if (FESTE_ROLLEN.includes(role)) return ROLES[role]?.permissions ?? {}
   return org?.role_permissions?.[role] ?? ROLES[role]?.permissions ?? {}
 }
 

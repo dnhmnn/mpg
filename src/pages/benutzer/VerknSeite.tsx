@@ -1,11 +1,12 @@
-// Verknüpfte Rechte (lib/verknuepfung.ts) als ganze Seite. Die Logik ist die
-// bisherige aus dem Blatt „Verknüpfte Rechte“ in Unitarii.tsx.
+// Verknüpfte Rechte (lib/verknuepfung.ts) als ganze Seite: Gibt eine Rolle ein Recht,
+// bringt es die verknüpften mit (lib/rollen.ts, rechteAusRollen).
 
 import { useState } from 'react'
 import { pb } from '../../lib/pocketbase'
-import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, ergaenzen, gleicheVerknuepfungen, mitgebracht, verknuepfungen, type Verknuepfungen } from '../../lib/verknuepfung'
+import { NIE_MITGEBRACHT, STANDARD_VERKNUEPFUNGEN, gleicheVerknuepfungen, mitgebracht, verknuepfungen, type Verknuepfungen } from '../../lib/verknuepfung'
+import { nachRollenAenderung } from './abgleich'
 import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, SchalterZeile, Seite } from './bausteine'
-import { aufzaehlung, orgFehler, type UUser } from './logik'
+import { aufzaehlung, orgFehler } from './logik'
 import type { BvKontext } from './kontext'
 
 export default function VerknSeite({ k, recht }: { k: BvKontext; recht?: string }) {
@@ -49,39 +50,19 @@ export default function VerknSeite({ k, recht }: { k: BvKontext; recht?: string 
     finally { setSavingVerkn(false) }
   }
 
-  // Bestehende Benutzer nachziehen: fehlende verknüpfte Rechte ergänzen, nichts wegnehmen
+  // Bestehende Personen nachziehen: Rechte aus ihren Rollen samt verknüpften neu rechnen (lib/rollen.ts)
   async function verknuepfungenAnwenden() {
-    // Nur mit frisch geladener Organisation: ihre Verknüpfungen und gesperrten Module
+    // Nur mit frisch geladener Organisation: ihre Verknüpfungen, Rollen und gesperrten Module
     if (!k.user.organization_id || !orgFrisch) return
     setAnwenden(true)
     try {
-      const liste = await pb.collection('users').getFullList<UUser>({
-        filter: pb.filter('organization_id = {:o}', { o: k.user.organization_id }),
-        fields: 'id,name,email,permissions,supervisor', requestKey: null,
+      const nach = await nachRollenAenderung({
+        orgId: k.user.organization_id, rolleId: '', rolleName: '', rp: k.orgRolePerms, v: orgVerkn, org: orgFrisch,
+        rechte: PERM_LABELS, hatRolle: () => true, selbst: k.user.id,
       })
-      // Supervisor dürfen ohnehin alles
-      const plan = liste.filter(u => !u.supervisor)
-        .map(u => ({ u, dazu: ergaenzen(u.permissions, orgVerkn, org).dazu }))
-        .filter(x => x.dazu.length)
-      if (!plan.length) { showMsg('Alle Benutzer haben die verknüpften Rechte schon'); return }
-      const zeilen = plan.slice(0, 12).map(x => `• ${x.u.name || x.u.email}: ${x.dazu.map(rechtName).join(', ')}`)
-      if (plan.length > 12) zeilen.push(`… und ${plan.length - 12} weitere`)
-      if (!confirm(`Bei ${plan.length} ${plan.length === 1 ? 'Benutzer' : 'Benutzern'} werden Rechte ergänzt:\n\n${zeilen.join('\n')}\n\nWeggenommen wird nichts.`)) return
-      let ok = 0
-      let fehler = 0
-      for (const x of plan) {
-        try {
-          // Frisch lesen, damit eine Änderung von nebenan nicht verloren geht
-          const frisch = await pb.collection('users').getOne<UUser>(x.u.id, { fields: 'id,permissions', requestKey: null })
-          const { rechte, dazu } = ergaenzen(frisch.permissions, orgVerkn, org)
-          if (dazu.length) await pb.collection('users').update(x.u.id, { permissions: rechte }, { requestKey: null })
-          ok++
-        } catch { fehler++ }
-      }
+      if (!nach.text) { showMsg('Alle haben schon die Rechte ihrer Rollen samt Verknüpfungen'); return }
       await k.loadUsers()
-      showMsg(fehler
-        ? `${ok} ergänzt, ${fehler} nicht gespeichert`
-        : `Bei ${ok} ${ok === 1 ? 'Benutzer' : 'Benutzern'} ergänzt`, fehler ? 'error' : 'success')
+      showMsg(nach.text.trim(), nach.fehler ? 'error' : 'success')
     } catch (e: any) { showMsg('Fehler: ' + (e?.message || e), 'error') }
     finally { setAnwenden(false) }
   }
@@ -92,7 +73,7 @@ export default function VerknSeite({ k, recht }: { k: BvKontext; recht?: string 
       leiste={<Leiste titel="Verknüpfte Rechte" unter={geaendert ? 'Geändert, noch nicht gespeichert' : 'Gespeichert'} knopf="Speichern" icon="haken"
         onClick={saveVerkn} laeuft={savingVerkn} disabled={!geaendert} />}>
       <Hinweis oben>
-        Wer ein Recht bekommt, bekommt die verknüpften gleich mit angehakt: beim Anlegen, beim Bearbeiten, über die Rolle und bei befristeten Rechten. Danach lässt sich jedes einzeln wieder abwählen.
+        Gibt eine Rolle ein Recht, bringt es die verknüpften mit. Das gilt auch für befristete Rechte.
       </Hinweis>
       {!verknFeldDa && (
         <div className="bv-notiz" role="alert" style={{ marginBottom: 8 }}>
@@ -115,7 +96,7 @@ export default function VerknSeite({ k, recht }: { k: BvKontext; recht?: string 
           <SchalterZeile key={key} titel={label} an={!!verknDraft[verknRecht]?.includes(key)} onChange={an => toggleVerkn(verknRecht, key, an)} />
         ))}
       </div>
-      <Hinweis>Die Benutzerverwaltung wird nie mitgebracht: Wer sie hat, kann jedes Recht vergeben, auch das für Patientendaten. Sie wird immer einzeln vergeben.</Hinweis>
+      <Hinweis>Die Benutzerverwaltung wird nie mitgebracht: Wer sie hat, kann jedes Recht vergeben, auch das für Patientendaten.</Hinweis>
 
       <Abschnitt titel="Eingestellt" />
       <div className="bv-flaeche">
@@ -130,9 +111,9 @@ export default function VerknSeite({ k, recht }: { k: BvKontext; recht?: string 
         </button>
       </div>
 
-      <Abschnitt titel="Bestehende Benutzer" />
+      <Abschnitt titel="Bestehende Personen" />
       <Hinweis oben>
-        Ergänzt bei allen Benutzern die verknüpften Rechte, die ihnen noch fehlen, etwa bei allen mit Lager. Es zählen die dauerhaften Rechte; weggenommen wird nichts. Vorher siehst du, wer was bekommt.
+        Rechnet bei allen die Rechte aus ihren Rollen samt Verknüpfungen neu. Vorher siehst du, wer was bekommt oder verliert.
       </Hinweis>
       <div className="bv-flaeche">
         <button type="button" className="bv-z aktion" onClick={verknuepfungenAnwenden} disabled={anwendenGesperrt}>

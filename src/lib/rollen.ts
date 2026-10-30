@@ -1,16 +1,21 @@
 // Rollen: die vorgegebenen (ROLLEN in apps.ts) und die eigenen einer Organisation.
 //
-// Eine Rolle ist nur eine Vorlage: Sie setzt beim Anlegen und beim Wechsel Häkchen
-// vor. Was jemand darf, steht immer ausdrücklich in users.permissions — eine eigene
-// Rolle gibt auf dem Server nichts. Deshalb haben eigene Rollen Kennungen, die nie
+// Was jemand darf, ergibt sich aus seinen Rollen; hat jemand mehrere, zählen sie
+// zusammen (rechteAusRollen). Gespeichert wird das Ergebnis als Kopie in
+// users.permissions, denn danach fragen App und Server-Regeln. Je Person weicht
+// nur noch temp_permissions (befristet) ab. Eigene Rollen haben Kennungen, die nie
 // mit den Rollen kollidieren, die auf dem Server etwas bedeuten (admin, lager, mpg,
 // teilnehmer, benutzer): immer "eigen_" und 8 Zeichen.
 //
+// Gespeichert an der Person:
+//   users.role         = erste Rolle (zählt in den Server-Regeln, z. B. "admin")
+//   users.zusatzrollen = weitere Rollen ["fuehrung", "eigen_…"]  (JSON)
 // Gespeichert in der Organisation:
 //   organizations.eigene_rollen    = [{ id, name, hinweis?, farbe?, archiviert? }]
 //   organizations.role_permissions = { [id]: { recht: true|false } }  (wie bei den vorgegebenen)
 
-import { PERM_LABELS, ROLLEN } from './apps'
+import { FESTE_ROLLEN, PERM_LABELS, ROLLEN, getRoleTemplate } from './apps'
+import { mitgebracht, type Verknuepfungen } from './verknuepfung'
 import { MODULE } from './freigabe'
 
 export const EIGENE_ID = /^eigen_[a-z0-9]{8}$/
@@ -36,10 +41,10 @@ const FARB_IDS = ROLLEN_FARBEN.map(f => f.id) as readonly string[]
 
 /** Feste Farben der vorgegebenen Rollen. Die häufigste (Benutzer) bleibt ruhig. */
 const VORGABE_FARBE: Record<string, RollenFarbe> = {
-  admin: 'bordeaux', benutzer: 'ardesia', mpg: 'petrolio', lager: 'cognac', ausbildung: 'oliva', qm: 'prugna', teilnehmer: 'salvia',
+  admin: 'bordeaux', benutzer: 'ardesia', fuehrung: 'senape', medizin: 'salvia', mpg: 'petrolio', lager: 'cognac', ausbildung: 'oliva', qm: 'prugna', teilnehmer: 'ardesia',
 }
 const VORGABE_KUERZEL: Record<string, string> = {
-  admin: 'AD', benutzer: 'BE', mpg: 'MB', lager: 'LW', ausbildung: 'AU', qm: 'QM', teilnehmer: 'TN',
+  admin: 'AD', benutzer: 'EK', fuehrung: 'FÜ', medizin: 'ML', mpg: 'MP', lager: 'LA', ausbildung: 'AU', qm: 'QM', teilnehmer: 'TN',
 }
 
 export interface EigeneRolle { id: string; name: string; hinweis?: string; farbe?: RollenFarbe; archiviert?: boolean }
@@ -82,7 +87,7 @@ export function eigeneRollen(org: unknown): EigeneRolle[] {
   return aus
 }
 
-const EIGEN_HINWEIS = 'Eigene Rolle der Organisation. Sie setzt nur Häkchen.'
+const EIGEN_HINWEIS = 'Eigene Rolle der Organisation.'
 
 function eintragEigen(r: EigeneRolle): RollenEintrag {
   return { id: r.id, name: r.name, hinweis: r.hinweis || EIGEN_HINWEIS, eigen: true, archiviert: !!r.archiviert, farbe: r.farbe ?? 'senape' }
@@ -104,7 +109,7 @@ export function rollenFuer(org: unknown, opt: { aktuelle?: string; mitArchiviert
   if (istEigeneRolleId(opt.aktuelle) && !alle.some(r => r.id === opt.aktuelle)) {
     // Gelöscht oder nur noch nicht bekannt (gespeicherte Organisation offline älter als die Rolle):
     // beides lässt sich hier nicht sicher unterscheiden, deshalb neutral
-    alle.push({ id: opt.aktuelle, name: 'Unbekannte Rolle', hinweis: 'Diese Rolle ist hier nicht (mehr) bekannt. Die Häkchen der Person bleiben, wie sie sind.', eigen: true, archiviert: true, farbe: 'ardesia' })
+    alle.push({ id: opt.aktuelle, name: 'Unbekannte Rolle', hinweis: 'Diese Rolle ist hier nicht (mehr) bekannt und gibt keine Rechte.', eigen: true, archiviert: true, farbe: 'ardesia' })
   }
   return alle
 }
@@ -115,7 +120,7 @@ export function rolleInfo(id: string | undefined, org: unknown): RollenEintrag |
 
 /** Der Name einer Rolle, wie Menschen ihn lesen. Alte, unbekannte Werte erscheinen, wie sie sind. */
 export function rollenBezeichnung(id: string | undefined, org: unknown): string {
-  if (!id) return 'Benutzer'
+  if (!id) return 'Einsatzkraft'
   return rolleInfo(id, org)?.name ?? id
 }
 
@@ -131,6 +136,128 @@ export function rollenKuerzel(id: string | undefined, org: unknown): string {
   const woerter = name.split(/[\s-]+/).filter(Boolean)
   const k = woerter.length > 1 ? woerter[0][0] + woerter[1][0] : name.slice(0, 2)
   return k.toLocaleUpperCase('de-DE')
+}
+
+// --- Mehrere Rollen je Person -------------------------------------------------
+
+/** Reihenfolge: Die erste Rolle einer Person steht in users.role und zählt in den Server-Regeln */
+const REIHENFOLGE = ['admin', 'teilnehmer', 'fuehrung', 'medizin', 'mpg', 'lager', 'ausbildung', 'qm']
+/** Rollen, die allein stehen: Leitung hat ohnehin alles, Teilnehmende sind keine Mitglieder mit Rechten */
+export const EINZELN = FESTE_ROLLEN
+
+type MitRollen = { role?: string; zusatzrollen?: unknown }
+
+/**
+ * Die Zusatzrollen, wie PocketBase sie liefert (Array, JSON-Text oder nichts).
+ * Leitung und Teilnehmende stehen nie dort (rollenOrdnen): Was so aussieht, ist
+ * eingeschleust (etwa selbst eingetragen, bevor die Server-Regel galt) und zählt nicht.
+ */
+function zusatzListe(z: unknown): string[] {
+  let w = z
+  if (typeof w === 'string') { try { w = JSON.parse(w) } catch { w = [] } }
+  return Array.isArray(w)
+    ? w.filter((x): x is string => typeof x === 'string' && x.trim() !== '').map(x => x.trim()).filter(x => !EINZELN.includes(x))
+    : []
+}
+
+/** Alle Rollen einer Person, ohne Doppelte; ohne Rolle gilt Einsatzkraft. Teilnehmende haben nur diese eine. */
+export function rollenVon(u: MitRollen | null | undefined): string[] {
+  const haupt = (u?.role || '').trim() || 'benutzer'
+  if (haupt === 'teilnehmer') return ['teilnehmer']
+  return [...new Set([haupt, ...zusatzListe(u?.zusatzrollen)])]
+}
+
+/** Hat die Person diese Rolle, als erste oder als weitere? */
+export function hatRolle(u: MitRollen, id: string): boolean {
+  return rollenVon(u).includes(id)
+}
+
+/**
+ * Gewählte Rollen in die gespeicherte Form bringen: ohne Doppelte, Leitung bzw.
+ * Teilnehmende allein, sonst in fester Reihenfolge (vorgegebene, dann eigene, Einsatzkraft zuletzt).
+ * Die erste wird users.role, die übrigen users.zusatzrollen.
+ */
+export function rollenOrdnen(ids: string[]): { role: string; zusatzrollen: string[] } {
+  const rein = [...new Set(ids.map(i => (i || '').trim()).filter(Boolean))]
+  for (const e of EINZELN) if (rein.includes(e)) return { role: e, zusatzrollen: [] }
+  const rang = (id: string) => {
+    const i = REIHENFOLGE.indexOf(id)
+    if (i >= 0) return i
+    return id === 'benutzer' ? 1000 : 500
+  }
+  const sortiert = rein.map((id, i) => ({ id, i })).sort((a, b) => rang(a.id) - rang(b.id) || a.i - b.i).map(x => x.id)
+  if (!sortiert.length) return { role: 'benutzer', zusatzrollen: [] }
+  return { role: sortiert[0], zusatzrollen: sortiert.slice(1) }
+}
+
+export type Vorlagen = Record<string, Record<string, boolean>>
+
+/**
+ * Was die Rollen zusammen geben: jedes bekannte Recht ausdrücklich mit Ja oder Nein.
+ * Je Rolle die Vorlage (Leitung und Teilnehmende fest, sonst die der Organisation oder
+ * von Responda) samt verknüpften Rechten. Unbekannte Rollen geben nichts.
+ */
+export function rechteAusRollen(ids: string[], rp: Vorlagen | null | undefined, v: Verknuepfungen, org?: unknown): Record<string, boolean> {
+  const aus: Record<string, boolean> = Object.fromEntries([...BEKANNTE_RECHTE].map(k => [k, false]))
+  for (const id of ids) {
+    const t = vorlageBereinigen(getRoleTemplate(id, { role_permissions: rp ?? {} }))
+    for (const [k, w] of Object.entries(t)) if (w === true && k in aus) aus[k] = true
+  }
+  // Gibt eine Rolle ein Recht, bringt es die verknüpften mit — auch wenn eine angepasste
+  // Rolle sie ausdrücklich abgewählt gespeichert hat (sonst wirkten spätere Verknüpfungen nie)
+  for (const k of Object.keys(aus)) if (aus[k]) for (const z of mitgebracht(k, v, org)) if (z in aus) aus[z] = true
+  return aus
+}
+
+/** Teilnehmende: nur Unitas, und nur wenn die Ausbildungen es freigegeben haben */
+export function rechteTeilnehmende(ist: Record<string, boolean> | null | undefined): Record<string, boolean> {
+  const aus: Record<string, boolean> = Object.fromEntries([...BEKANNTE_RECHTE].map(k => [k, false]))
+  aus.lernbar = ist?.lernbar === true
+  return aus
+}
+
+/** Was eine Person nach ihren Rollen darf (Teilnehmende: nur Unitas aus den Ausbildungen) */
+export function sollRechte(u: MitRollen & { permissions?: Record<string, boolean> | null }, rp: Vorlagen | null | undefined, v: Verknuepfungen, org?: unknown): Record<string, boolean> {
+  const rollen = rollenVon(u)
+  return rollen[0] === 'teilnehmer' ? rechteTeilnehmende(u.permissions) : rechteAusRollen(rollen, rp, v, org)
+}
+
+/** Ist die Rolle hier bekannt (vorgegeben oder eigene, auch archiviert)? */
+export function rolleBekannt(id: string, org: unknown): boolean {
+  return ROLLEN.some(r => r.id === id) || eigeneRollen(org).some(r => r.id === id)
+}
+
+export interface Abweichung { dazu: string[]; weg: string[]; unbekannt: string[] }
+
+/**
+ * Hat die Person andere Rechte gespeichert, als ihre Rollen geben? (Aus der Zeit, als
+ * Rechte einzeln vergeben wurden, oder weil eine Rolle geändert wurde.) dazu: gibt die
+ * Rolle, fehlt aber; weg: hat die Person, gibt aber keine Rolle. Der Supervisor ist
+ * ausgenommen; Teilnehmende dürfen nur Unitas (aus den Ausbildungen).
+ */
+export function abweichung(u: MitRollen & { supervisor?: boolean; permissions?: Record<string, boolean> | null },
+  rp: Vorlagen | null | undefined, v: Verknuepfungen, org?: unknown): Abweichung | null {
+  if (u.supervisor) return null
+  const rollen = rollenVon(u)
+  const soll = sollRechte(u, rp, v, org)
+  const ist = u.permissions || {}
+  const dazu = Object.keys(soll).filter(k => soll[k] && ist[k] !== true)
+  const weg = Object.keys(soll).filter(k => !soll[k] && ist[k] === true)
+  const unbekannt = org ? rollen.filter(id => !rolleBekannt(id, org)) : []
+  return dazu.length || weg.length || unbekannt.length ? { dazu, weg, unbekannt } : null
+}
+
+/** Rollen als Text in fester Reihenfolge: „Führung, Ausbildung“. Einsatzkraft nur, wenn sonst nichts da ist. */
+export function rollenNamen(ids: string[], org: unknown): string {
+  const { role, zusatzrollen } = rollenOrdnen(ids)
+  const alle = [role, ...zusatzrollen]
+  const ohneGrund = alle.length > 1 ? alle.filter(id => id !== 'benutzer') : alle
+  return ohneGrund.map(id => rollenBezeichnung(id, org)).join(', ')
+}
+
+/** Die Rollen einer Person als Text: „Führung, Ausbildung“ */
+export function rollenText(u: MitRollen, org: unknown): string {
+  return rollenNamen(rollenVon(u), org)
 }
 
 const ZEICHEN = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -154,6 +281,9 @@ export function pruefeRollenName(name: string, rollen: EigeneRolle[], ausserId?:
   if (!roh) return { ok: false, grund: 'leer', text: 'Bitte einen Namen eingeben.' }
   if (roh.length > MAX_NAME) return { ok: false, grund: 'zu_lang', text: `Höchstens ${MAX_NAME} Zeichen.` }
   const klein = roh.toLocaleLowerCase('de-DE')
+  // Behält eine bestehende eigene Rolle ihren Namen, bleibt er erlaubt — auch wenn es inzwischen
+  // eine vorgegebene Rolle gleichen Namens gibt (sonst ließe sie sich nicht mehr speichern)
+  if (ausserId && rollen.some(r => r.id === ausserId && r.name.toLocaleLowerCase('de-DE') === klein)) return { ok: true, name: roh }
   const reserviert = [...ROLLEN.flatMap(r => [r.id, r.name]), 'Supervisor', 'Teilnehmer'].map(s => s.toLocaleLowerCase('de-DE'))
   if (reserviert.includes(klein)) return { ok: false, grund: 'reserviert', text: 'So heißt schon eine vorgegebene Rolle.' }
   if (rollen.some(r => r.id !== ausserId && r.name.toLocaleLowerCase('de-DE') === klein)) {
@@ -238,19 +368,4 @@ export function vorlageBereinigen(v: unknown): Record<string, boolean> {
 /** Nur die angehakten Einträge — zum Ergänzen, ohne Bestehendes mit „nein“ zu überschreiben */
 export function nurAngehakt(v: Record<string, boolean>): Record<string, boolean> {
   return Object.fromEntries(Object.entries(v).filter(([, w]) => w === true))
-}
-
-/**
- * Rechte, die die alte Rolle auf dem Server auch ohne Häkchen gab (docs/pocketbase-regeln.md)
- * und die mit dem Wechsel wegfallen — für eine Warnung beim Speichern.
- */
-export function wegfallendeRollenrechte(alt: string | undefined, neu: string, rechte: Record<string, boolean> = {}): string[] {
-  const vonRolle: Record<string, string[]> = {
-    admin: ['unitarii', 'lager_verwalten', 'mpg_verwalten'],
-    mpg: ['lager_verwalten', 'mpg_verwalten'],
-    lager: ['lager_verwalten'],
-  }
-  if (!alt || alt === neu) return []
-  const bleibt = new Set(vonRolle[neu] ?? [])
-  return (vonRolle[alt] ?? []).filter(k => rechte[k] !== true && !bleibt.has(k))
 }

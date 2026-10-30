@@ -1,14 +1,14 @@
 // Die vier Reiter der Benutzerverwaltung: Benutzer, Rollen, Neuigkeiten, Temporär.
 
 import { getRoleTemplate } from '../../lib/apps'
-import { MAX_EIGENE_ROLLEN, eigeneRollen, rollenBezeichnung, rollenFarbe, rollenFuer, rollenKuerzel } from '../../lib/rollen'
+import { MAX_EIGENE_ROLLEN, abweichung, eigeneRollen, hatRolle, rollenFarbe, rollenFuer, rollenKuerzel, rollenText, rollenVon } from '../../lib/rollen'
 import { mitgebracht } from '../../lib/verknuepfung'
 import { Abschnitt, Hinweis, Icon } from './bausteine'
 import { FeldFehltHinweis, eigeneFeldDa } from './RolleSeite'
 import { anzahl, anzahlRechte, anzeigeEmail, aufzaehlung, benutzerStatus, initialen, personen, suchen, type Neuigkeit, type UUser } from './logik'
 import type { BvKontext } from './kontext'
 
-export type Unterseite = 'person' | 'rolle' | 'vorlage' | 'verkn' | 'neuigkeit' | 'zugang'
+export type Unterseite = 'person' | 'rolle' | 'vorlage' | 'verkn' | 'neuigkeit' | 'zugang' | 'abgleich'
 type Oeffne = (seite: Unterseite, id?: string) => void
 
 const AUS_GRUND = 'rgba(var(--lbf-grau-rgb),0.22)'
@@ -18,11 +18,11 @@ export function BenutzerZeile({ u, k, onClick }: { u: UUser; k: BvKontext; onCli
   const st = benutzerStatus(u)
   const aus = st?.art === 'gesperrt' || st?.art === 'abgelaufen'
   const mail = anzeigeEmail(u)
-  const rolle = rollenBezeichnung(u.role, k.org) + (u.supervisor ? ', Supervisor' : '')
+  const rolle = rollenText(u, k.org) + (u.supervisor ? ', Supervisor' : '')
   return (
     <button type="button" className={`bv-z bv-nutzer${aus ? ' aus' : ''}`} onClick={onClick}>
       <span className="bv-ava" aria-hidden="true"
-        style={aus ? { background: AUS_GRUND, color: AUS_TEXT } : { background: rollenFarbe(u.role, k.org) }}>
+        style={aus ? { background: AUS_GRUND, color: AUS_TEXT } : { background: rollenFarbe(rollenVon(u)[0], k.org) }}>
         {initialen(u.name, mail || u.email)}
       </span>
       <span className="bv-tx">
@@ -37,8 +37,17 @@ export function BenutzerZeile({ u, k, onClick }: { u: UUser; k: BvKontext; onCli
 
 export function BenutzerReiter({ k, q, setQ, oeffne }: { k: BvKontext; q: string; setQ: (q: string) => void; oeffne: Oeffne }) {
   const liste = suchen(k.users, q)
+  // Gespeicherte Rechte, die nicht zu den Rollen passen (Einzelrechte aus früherer Zeit, geänderte Rollen)
+  const abweichend = k.users.filter(u => abweichung(u, k.orgRolePerms, k.orgVerkn, k.org)).length
   return (
     <>
+      {abweichend > 0 && (
+        <div className="bv-notiz" style={{ marginBottom: 14 }}>
+          <b>{abweichend === 1 ? '1 Person hat' : `${abweichend} Personen haben`} andere Rechte als ihre Rollen</b>
+          <p>Was jemand darf, kommt jetzt aus den Rollen. Sieh dir an, wer abweicht, und gleiche an oder übernimm Sonderrechte als eigene Rolle.</p>
+          <button type="button" className="bv-knopf" onClick={() => oeffne('abgleich')}>Ansehen</button>
+        </div>
+      )}
       <div className="bv-suche">
         <Icon n="suche" className="bv-klein" />
         <input type="text" enterKeyHint="search" value={q} onChange={e => setQ(e.target.value)} placeholder="Name oder E-Mail suchen" aria-label="Name oder E-Mail suchen" autoComplete="off" />
@@ -72,14 +81,14 @@ export function RollenReiter({ k, oeffne, archivOffen, setArchivOffen, wiederher
   const archivierte = eigene.filter(r => r.archiviert).sort((a, b) => a.name.localeCompare(b.name, 'de'))
   const vorgegeben = rollenFuer(org).filter(r => !r.eigen)
   const rechteVon = (id: string) => anzahlRechte(getRoleTemplate(id, { role_permissions: orgRolePerms }), rechte)
-  const anzahlPersonen = (id: string) => users.filter(u => u.role === id).length
+  const anzahlPersonen = (id: string) => users.filter(u => hatRolle(u, id)).length
   const voll = aktive.length >= MAX_EIGENE_ROLLEN
   const name = (key: string) => rechte.find(r => r.key === key)?.label ?? key
   const verkn = org ? rechte.map(r => ({ r, mit: mitgebracht(r.key, k.orgVerkn, org) })).filter(x => x.mit.length) : []
 
   return (
     <>
-      <p className="bv-hinweis" style={{ margin: '2px 2px 0' }}>Eine Rolle setzt nur Häkchen vor. Was zählt, sind die Häkchen bei jeder Person.</p>
+      <p className="bv-hinweis" style={{ margin: '2px 2px 0' }}>Was jemand darf, kommt aus seinen Rollen. Eine Person kann mehrere haben, dann zählen sie zusammen.</p>
 
       <Abschnitt titel="Eigene Rollen" rechts={feldDa ? anzahl(aktive.length, 'Rolle', 'Rollen') : undefined} />
       {!feldDa && (
@@ -119,21 +128,21 @@ export function RollenReiter({ k, oeffne, archivOffen, setArchivOffen, wiederher
                   </div>
                 ))}
               </div>
-              <Hinweis>Archivierte Rollen sind nicht mehr wählbar. Wer sie hat, behält sie samt Häkchen.</Hinweis>
+              <Hinweis>Archivierte Rollen sind nicht mehr wählbar. Wer sie hat, behält sie samt Rechten.</Hinweis>
             </>
           )}
         </>
       )}
 
-      <Abschnitt titel="Vorlagen" />
-      <Hinweis oben>Kommen mit Responda. Änderungen gelten nur für die {k.orgName}.</Hinweis>
+      <Abschnitt titel="Rollen von Responda" />
+      <Hinweis oben>Kommen mit Responda. Ihre Rechte lassen sich für die {k.orgName} anpassen, außer bei Leitung und Teilnehmenden.</Hinweis>
       <div className="bv-flaeche">
         {vorgegeben.map(r => {
           const n = rechteVon(r.id)
           return (
             <button key={r.id} type="button" className="bv-z" onClick={() => oeffne('vorlage', r.id)}>
               <span className="bv-feldr" aria-hidden="true" style={{ background: `var(--rolle-${r.farbe})` }}>{rollenKuerzel(r.id, org)}</span>
-              <span className="bv-tx"><b>{r.name}</b><small>{n ? `setzt ${anzahl(n, 'Recht', 'Rechte')} vor` : 'setzt keine Rechte vor'}</small></span>
+              <span className="bv-tx"><b>{r.name}</b><small>{r.id === 'teilnehmer' ? 'Unitas über die Ausbildungen' : anzahl(n, 'Recht', 'Rechte')}, {personen(anzahlPersonen(r.id))}</small></span>
               <Icon n="weiter" className="bv-pfeil" />
             </button>
           )

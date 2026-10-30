@@ -343,7 +343,7 @@ Regel erlaubt:
 
 **Update**
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && @request.body.supervisor:isset = false) || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)))
 ```
 
 **Manage** (E-Mail eines anderen ohne altes Passwort setzen, etwa bei einer
@@ -357,7 +357,7 @@ legt jeder selbst fest“):
 **Create** — ohne passende Regel legt man sich sonst einfach ein zweites Konto
 mit Admin-Rechten an:
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (@request.body.organization_id = @request.auth.organization_id && (@request.body.supervisor:isset = false || @request.body.supervisor = false) && ((@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) || (@request.auth.permissions.ausbildungen_manage = true && @request.body.role = "teilnehmer" && @request.body.permissions.dashboard != true && @request.body.permissions.unitarii != true && @request.body.permissions.patienten != true && @request.body.permissions.dokumente != true && @request.body.permissions.einsaetze != true && @request.body.permissions.eks != true && @request.body.permissions.lager != true && @request.body.permissions.lager_verwalten != true && @request.body.permissions.produktausgabe != true && @request.body.permissions.dateien != true && @request.body.permissions.ausbildungen_manage != true && @request.body.permissions.mpg_verwalten != true))))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && (@request.body.supervisor:isset = false || @request.body.supervisor = false)) || (@request.body.organization_id = @request.auth.organization_id && (@request.body.supervisor:isset = false || @request.body.supervisor = false) && ((@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) || (@request.auth.permissions.ausbildungen_manage = true && @request.body.role = "teilnehmer" && @request.body.zusatzrollen:isset = false && @request.body.permissions.dashboard != true && @request.body.permissions.unitarii != true && @request.body.permissions.patienten != true && @request.body.permissions.dokumente != true && @request.body.permissions.einsaetze != true && @request.body.permissions.eks != true && @request.body.permissions.lager != true && @request.body.permissions.lager_verwalten != true && @request.body.permissions.produktausgabe != true && @request.body.permissions.dateien != true && @request.body.permissions.ausbildungen_manage != true && @request.body.permissions.mpg_verwalten != true))))
 ```
 
 **Delete**
@@ -386,7 +386,7 @@ oder übergangsweise diese Update-Regel nehmen, die die Übernahme genau einmal
 zulässt (bis dahin kann sich ein solches Konto dabei aber beliebige Rechte
 geben):
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)) || (id = @request.auth.id && permissions_migrated != true && @request.body.permissions_migrated = true && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && @request.body.supervisor:isset = false) || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)) || (id = @request.auth.id && permissions_migrated != true && @request.body.permissions_migrated = true && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.zusatzrollen:isset = false))
 ```
 
 ## MPG: API-Regeln
@@ -711,6 +711,51 @@ Organisation, Supervisor — dazu kein Supervisor-Recht, keine fremde
 Organisation, kein fremdes Passwort; die 275 Prüfungen von MPG-Paket 3 bestehen
 weiter.
 
+### users: Supervisor nur in PocketBase
+
+Supervisor ist der Betreiber von Responda. Das Recht vergibt niemand über die App
+oder die Schnittstelle, auch kein Supervisor: Update und Create im Abschnitt
+„users: Rechte vergeben nur Verantwortliche“ (und die Übergangsregel) lehnen
+jede Anfrage ab, die `supervisor` mitschickt, außer `supervisor = false` beim
+Anlegen. Gesetzt oder entzogen wird es nur in der PocketBase-Oberfläche
+(Superuser, für den die Regeln nicht gelten). Alles andere darf ein Supervisor
+weiter, auch fremde Passwörter (Manage). Die Benutzerverwaltung zeigt keinen
+Schalter mehr dafür. Geprüft gegen 0.28.4 und 0.40.5.
+
+### users: Mehrere Rollen je Person
+
+Was jemand darf, kommt aus seinen Rollen; hat jemand mehrere, zählen sie
+zusammen (`src/lib/rollen.ts`, `rechteAusRollen`). Die erste Rolle steht wie
+bisher in `users.role` und zählt in den Regeln (etwa `role = "admin"`), die
+weiteren stehen im neuen Feld **`users.zusatzrollen`** (Typ *JSON*, nicht Pflicht,
+z. B. `["ausbildung", "eigen_k3m9x2qa"]`). Die App schreibt das Ergebnis wie bisher
+als Kopie nach `users.permissions`; die Regeln prüfen weiter nur diese Kopie.
+
+**Einrichten, in dieser Reihenfolge:**
+1. **Zuerst die Regeln:** Update, Create und (falls eingetragen) die
+   Übergangsregel durch die Fassung im Abschnitt „users: Rechte vergeben nur
+   Verantwortliche“ ersetzen. Neu ist dort `@request.body.zusatzrollen:isset =
+   false` im eigenen Zweig und im Zweig der Ausbildungs-Verwalter (sonst könnte
+   sich jemand selbst eine Rolle eintragen, und der nächste Abgleich gäbe ihm die
+   Rechte), dazu die Supervisor-Sperre (siehe „Supervisor nur in PocketBase“).
+   Die Regeln lassen sich schon vor dem Feld speichern.
+2. **Dann das Feld:** `users` → Fields → neues Feld `zusatzrollen`, Typ **JSON**,
+   nicht Pflicht.
+
+Leitung und Teilnehmende als weitere Rolle wertet die App nie aus: Steht so etwas
+in `zusatzrollen`, wurde es eingeschleust.
+
+Ohne das Feld verwirft PocketBase die weiteren Rollen still; die App meldet das
+beim Speichern. Zum Zählen nach einer Rolle braucht der Filter Anführungszeichen
+um die ID (`zusatzrollen ~ '"fuehrung"'`), sonst zählt `eigen_x` auch `eigen_xy`.
+Geprüft gegen 0.28.4 und 0.40.5 (110 Prüfungen, Gegenprobe mit Batch, multipart,
+anderen Schreibweisen): Niemand gibt sich selbst Rollen, Ausbildungs-Verwalter
+vergeben keine, Admin, Verwalter (auch befristet) und Supervisor schon.
+
+**Leitung und Teilnehmende sind fest.** Die Leitung (`admin`) hat immer alle
+Rechte samt Benutzerverwaltung, eine Organisation kann ihr nichts wegnehmen.
+Teilnehmende bekommen Unitas über die Ausbildungen. Beide stehen allein.
+
 ### users: Passwörter legt jeder selbst fest
 
 In der Benutzerverwaltung setzt niemand mehr das Passwort einer anderen Person.
@@ -764,15 +809,18 @@ JSON-Feld `organizations.eigene_rollen`:
 ```json
 [{ "id": "eigen_k3m9x2qa", "name": "Kassenwart", "hinweis": "Dateien und Vorgänge", "farbe": "cognac", "archiviert": false }]
 ```
-Die Häkchen einer eigenen Rolle stehen wie bei den vorgegebenen in
+Die Rechte einer eigenen Rolle stehen wie bei den vorgegebenen in
 `organizations.role_permissions[id]`, am Benutzer steht `users.role =
-"eigen_k3m9x2qa"`. Die ID ist `eigen_` plus acht Zeichen aus `a–z0–9` und ändert
+"eigen_k3m9x2qa"` oder die ID in `users.zusatzrollen` (siehe „users: Mehrere
+Rollen je Person“). Die ID ist `eigen_` plus acht Zeichen aus `a–z0–9` und ändert
 sich nie; Umbenennen ändert nur `name`.
 
-**Eine Rolle setzt nur Häkchen.** Was zählt, ist immer `users.permissions`. Eine
-`eigen_`-ID kommt in keiner Regel vor und gibt auf dem Server kein einziges
-Recht; anders als `admin`, `lager` und `mpg`, die in den Regeln oben Rechte ohne
-Häkchen geben. Die App verwirft beim Lesen jede Rolle, deren ID nicht dem Muster
+**Die Rollen geben die Rechte, die Regeln prüfen die Kopie.** Die App rechnet aus
+allen Rollen einer Person ihre Rechte und speichert sie in `users.permissions`;
+ändert eine Organisation eine Rolle, zieht die App die Personen mit dieser Rolle
+nach Rückfrage nach. Eine `eigen_`-ID kommt in keiner Regel vor; anders als
+`admin`, `lager` und `mpg`, die in den Regeln oben Rechte auch ohne die Kopie
+geben. Die App verwirft beim Lesen jede Rolle, deren ID nicht dem Muster
 entspricht (`src/lib/rollen.ts`): Eine Rolle mit der ID `admin` und dem Namen
 „Kassenwart“ ließe einen Admin sonst unwissentlich `role = "admin"` vergeben.
 

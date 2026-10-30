@@ -1,14 +1,12 @@
-// Temporären Zugang erstellen: ein echtes Konto mit Ablaufdatum. Logik wie bisher
-// (saveTemp); neu ist nur, dass die gewählte Rolle ihre Häkchen vorsetzt.
+// Temporären Zugang erstellen: ein echtes Konto mit Ablaufdatum. Was der Zugang darf,
+// kommt wie bei allen aus den gewählten Rollen.
 
 import { useState } from 'react'
 import { pb } from '../../lib/pocketbase'
-import { EMPTY_PERMS, getRoleTemplate } from '../../lib/apps'
-import { rollenBezeichnung, vorlageBereinigen } from '../../lib/rollen'
-import { haken, vorlageMitVerknuepfungen } from '../../lib/verknuepfung'
-import { Abschnitt, Feld, Hinweis, Leiste, RechteListe, Seite } from './bausteine'
-import { RollenWahl } from './PersonSeite'
-import { anlegeFehler, anzahl, anzahlRechte, genPassword } from './logik'
+import { rechteAusRollen, rollenNamen, rollenOrdnen } from '../../lib/rollen'
+import { Abschnitt, Feld, Hinweis, Leiste, RechteAnzeige, Seite } from './bausteine'
+import { RollenAuswahl } from './PersonSeite'
+import { ZUSATZ_FEHLT, anlegeFehler, anzahl, anzahlRechte, genPassword } from './logik'
 import type { BvKontext } from './kontext'
 
 const DAUERN = [{ h: 1, l: '1 Std.' }, { h: 4, l: '4 Std.' }, { h: 24, l: '24 Std.' }, { h: 24 * 7, l: '7 Tage' }, { h: 24 * 30, l: '30 Tage' }]
@@ -19,18 +17,12 @@ export default function ZugangSeite({ k }: { k: BvKontext }) {
     name: 'Temporärer Zugang',
     email: `temp-${Date.now()}@${user?.organization_id || 'org'}.local`,
     password: genPassword(),
-    role: 'benutzer',
-    permissions: { ...EMPTY_PERMS, lernbar: true } as Record<string, boolean>,
+    rollen: ['benutzer'],
     durationHours: 24, customExpiresAt: '',
   }))
   const [savingTemp, setSavingTemp] = useState(false)
 
-  function rolleWaehlen(role: string) {
-    if (role === tempForm.role) return
-    // Ein neuer Zugang: Die Rolle bestimmt die Häkchen ganz
-    const vorlage = vorlageMitVerknuepfungen(vorlageBereinigen(getRoleTemplate(role, { role_permissions: orgRolePerms })), orgVerkn, org)
-    setTempForm(p => ({ ...p, role, permissions: { ...EMPTY_PERMS, ...vorlage } }))
-  }
+  const soll = rechteAusRollen(tempForm.rollen, orgRolePerms, orgVerkn, org)
 
   async function saveTemp() {
     if (!tempForm.name.trim() || !tempForm.email.trim() || !tempForm.password.trim()) {
@@ -41,16 +33,18 @@ export default function ZugangSeite({ k }: { k: BvKontext }) {
       const expIso = tempForm.customExpiresAt
         ? new Date(tempForm.customExpiresAt).toISOString()
         : new Date(Date.now() + tempForm.durationHours * 3600 * 1000).toISOString()
-      await pb.collection('users').create({
+      const geordnet = rollenOrdnen(tempForm.rollen)
+      const neu = await pb.collection('users').create({
         name: tempForm.name.trim(), email: tempForm.email.trim(),
         password: tempForm.password, passwordConfirm: tempForm.password,
-        role: tempForm.role, permissions: tempForm.permissions,
+        ...geordnet, permissions: soll,
         organization_id: user!.organization_id, emailVisibility: true,
         disabled: false, expires_at: expIso, permissions_migrated: true,
       })
       k.schliessen()
       await k.loadUsers()
-      showMsg('Temporärer Zugang erstellt')
+      if (geordnet.zusatzrollen.length && !('zusatzrollen' in neu)) showMsg('Erstellt, aber: ' + ZUSATZ_FEHLT, 'error')
+      else showMsg('Temporärer Zugang erstellt')
     } catch (e) { showMsg(anlegeFehler(e, true), 'error') }
     finally { setSavingTemp(false) }
   }
@@ -60,14 +54,14 @@ export default function ZugangSeite({ k }: { k: BvKontext }) {
     catch { showMsg('Kopieren fehlgeschlagen', 'error') }
   }
 
-  const n = anzahlRechte(tempForm.permissions, rechte)
+  const n = anzahlRechte(soll, rechte)
   const bis = tempForm.customExpiresAt
     ? `bis ${new Date(tempForm.customExpiresAt).toLocaleString('de-DE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
     : DAUERN.find(d => d.h === tempForm.durationHours)?.l ?? `${tempForm.durationHours} Std.`
 
   return (
     <Seite titel="Temporärer Zugang" unter={k.orgName} zurueck={k.schliessen}
-      leiste={<Leiste titel={rollenBezeichnung(tempForm.role, org)} unter={`${anzahl(n, 'Recht', 'Rechte')}, ${bis}`}
+      leiste={<Leiste titel={rollenNamen(tempForm.rollen, org)} unter={`${anzahl(n, 'Recht', 'Rechte')}, ${bis}`}
         knopf="Zugang erstellen" icon="haken" onClick={saveTemp} laeuft={savingTemp} laeuftText="Erstellt…" />}>
       <Hinweis oben>Ein echtes Konto, das nach Ablauf automatisch nicht mehr geht. Zugangsdaten gibst du selbst weiter.</Hinweis>
 
@@ -97,13 +91,12 @@ export default function ZugangSeite({ k }: { k: BvKontext }) {
         <input className="bv-eingabe" type="datetime-local" value={tempForm.customExpiresAt} onChange={e => setTempForm(p => ({ ...p, customExpiresAt: e.target.value }))} />
       </Feld>
 
-      <Abschnitt titel="Rolle" />
-      <Hinweis oben>Die Rolle setzt die Rechte unten vor.</Hinweis>
-      <RollenWahl k={k} wert={tempForm.role} onWahl={rolleWaehlen} />
+      <Abschnitt titel="Rollen" />
+      <Hinweis oben>Was der Zugang darf, kommt aus den Rollen. Mehrere zählen zusammen.</Hinweis>
+      <RollenAuswahl k={k} werte={tempForm.rollen} onChange={rollen => setTempForm(p => ({ ...p, rollen }))} />
 
-      <Abschnitt titel="Rechte" rechts={`${n} von ${rechte.length}`} />
-      <RechteListe rechte={rechte} werte={tempForm.permissions} v={orgVerkn} org={org}
-        onChange={(key, an) => setTempForm(p => ({ ...p, permissions: haken(p.permissions, key, an, orgVerkn, org) }))} />
+      <Abschnitt titel="Darf" rechts={`${n} von ${rechte.length}`} />
+      <RechteAnzeige rechte={rechte} werte={soll} />
     </Seite>
   )
 }

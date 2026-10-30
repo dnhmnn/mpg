@@ -21,12 +21,13 @@ import { EigeneRolleSeite, FELD_FEHLT, VorlageSeite, eigeneFeldDa, orgLesen } fr
 import VerknSeite from './benutzer/VerknSeite'
 import NeuigkeitSeite from './benutzer/NeuigkeitSeite'
 import ZugangSeite from './benutzer/ZugangSeite'
+import AbgleichSeite from './benutzer/AbgleichSeite'
 import { orgFehler, type Neuigkeit, type UUser } from './benutzer/logik'
 import type { BvKontext } from './benutzer/kontext'
 
 type Reiter = 'benutzer' | 'rollen' | 'neuigkeiten' | 'temp'
 const REITER: Reiter[] = ['benutzer', 'rollen', 'neuigkeiten', 'temp']
-const SEITEN: Unterseite[] = ['person', 'rolle', 'vorlage', 'verkn', 'neuigkeit', 'zugang']
+const SEITEN: Unterseite[] = ['person', 'rolle', 'vorlage', 'verkn', 'neuigkeit', 'zugang', 'abgleich']
 
 // Die Seite rollt je nach Darstellung im Fenster oder im body (globals.css)
 const scrollPos = () => Math.max(window.scrollY, document.body.scrollTop, document.documentElement.scrollTop)
@@ -228,6 +229,8 @@ export default function Unitarii() {
     } else if (seite === 'neuigkeit') {
       const n = seiteId ? neuigkeiten.find(x => x.id === seiteId) : undefined
       inhalt = seiteId && !n ? nichtGefunden('Neuigkeit') : <NeuigkeitSeite key={seiteId ?? 'neu'} k={k} editingN={n ?? null} neuLaden={loadNeuigkeiten} />
+    } else if (seite === 'abgleich') {
+      inhalt = <AbgleichSeite k={k} oeffne={oeffne} />
     } else {
       inhalt = <ZugangSeite k={k} />
     }

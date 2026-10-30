@@ -14,7 +14,7 @@ import Einfuehrung, { EinfuehrungAutomatisch, useEinfuehrungStand } from '../com
 import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
 import { ALL_APPS, hatRecht, zeitpunktBefristung } from '../lib/apps'
 import { appFrei } from '../lib/freigabe'
-import { rollenBezeichnung } from '../lib/rollen'
+import { rollenText } from '../lib/rollen'
 import { pb } from '../lib/pocketbase'
 import type { App } from '../types'
 
@@ -484,7 +484,7 @@ export default function Hub() {
       {/* Profile bottom sheet */}
       {(() => {
         // Vorgegebene und eigene Rollen der Organisation (src/lib/rollen.ts)
-        const roleLabel = user?.supervisor ? 'Supervisor' : rollenBezeichnung(user?.role, user?.organization)
+        const roleLabel = user?.supervisor ? 'Supervisor' : user ? rollenText(user, user.organization) : ''
 
         async function handleInstall() {
           if (installPromptRef.current) {

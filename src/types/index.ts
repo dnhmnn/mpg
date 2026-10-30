@@ -5,6 +5,8 @@ export interface User {
   name?: string
   phone?: string
   role?: string
+  /** Weitere Rollen neben role (src/lib/rollen.ts) */
+  zusatzrollen?: unknown
   organization_id?: string
   organization_name?: string
   organization_logo?: string

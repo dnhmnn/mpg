@@ -40,11 +40,11 @@ describe('Rollenwechsel beim Supervisor', () => {
 
 describe('Rollen-Bezeichnung in Supervisor, Einstellungen und Profil', () => {
   it('vorgegebene Rollen mit ihrem Namen, auch Admin (die Einstellungen zeigten „Benutzer“)', () => {
-    expect(rollenBezeichnung('admin', org)).toBe('Admin')
-    expect(rollenBezeichnung('mpg', org)).toBe('MPG-Beauftragter')
-    expect(rollenBezeichnung('teilnehmer', org)).toBe('Teilnehmer (Ausbildungen)')
-    expect(rollenBezeichnung(undefined, org)).toBe('Benutzer')
-    expect(rollenBezeichnung('', org)).toBe('Benutzer')
+    expect(rollenBezeichnung('admin', org)).toBe('Leitung (Admin)')
+    expect(rollenBezeichnung('mpg', org)).toBe('Medizinprodukte')
+    expect(rollenBezeichnung('teilnehmer', org)).toBe('Teilnehmende')
+    expect(rollenBezeichnung(undefined, org)).toBe('Einsatzkraft')
+    expect(rollenBezeichnung('', org)).toBe('Einsatzkraft')
   })
 
   it('eigene Rollen mit ihrem Namen, archivierte auch, gelöschte als „Unbekannte Rolle“', () => {

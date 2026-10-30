@@ -11,6 +11,8 @@ export interface UUser {
   contact_email?: string
   phone?: string
   role?: string
+  /** Weitere Rollen neben role (PocketBase-Feld JSON) */
+  zusatzrollen?: unknown
   permissions?: Record<string, boolean>
   organization_id?: string
   supervisor?: boolean
@@ -208,6 +210,8 @@ export function anlegeFehler(e: unknown, neu: boolean): string {
   return (neu ? 'Nicht angelegt: ' : 'Nicht gespeichert: ') + pbFehlerText(e, BENUTZER_FELDER)
 }
 
+export const ZUSATZ_FEHLT = 'In PocketBase fehlt bei users das Feld „zusatzrollen“ (Typ JSON). Gespeichert ist nur die erste Rolle. Bitte zuerst die neuen users-Regeln eintragen, dann das Feld anlegen (docs/pocketbase-regeln.md, „Mehrere Rollen je Person“) und die Person noch einmal speichern.'
+
 export const AUTODATE_TEXT = 'PocketBase hat ein Ablaufdatum gesetzt, das die App nicht geschickt hat: Das Feld „expires_at“ bei users ist dort als „Autodate“ angelegt. Damit gilt jede neue Person sofort als abgelaufen und kann sich nicht anmelden. Bitte in PocketBase unter users → Fields das Feld „expires_at“ löschen und im selben Schritt ein Feld „expires_at“ vom Typ „Date“ anlegen, dann speichern.'
 
 /**
@@ -216,6 +220,11 @@ export const AUTODATE_TEXT = 'PocketBase hat ein Ablaufdatum gesetzt, das die Ap
  */
 export function autodateFehler(gesendet: string | null | undefined, antwort: string | null | undefined): boolean {
   return !gesendet && !!antwort
+}
+
+/** Was nach dem Speichern an PocketBase noch fehlt — beide Hinweise, wenn beides zutrifft */
+export function einrichtungsFehler(zusatzFehlt: boolean, autodate: boolean): string {
+  return [autodate ? AUTODATE_TEXT : '', zusatzFehlt ? ZUSATZ_FEHLT : ''].filter(Boolean).join(' Außerdem: ')
 }
 
 /** Fehler beim Schreiben in die Organisation (Rollen, Vorlagen, Verknüpfungen) */

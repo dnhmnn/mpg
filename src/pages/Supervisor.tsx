@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
 import { BUCHBARE_MODULE, MODULE as FREIGABE_MODULE, enthaltenIn, freigabeText, gebucht, mitEnthaltenen, rechtFrei } from '../lib/freigabe'
 import { PERM_LABELS, getRoleTemplate, isPlaceholderEmail, vergebbareRechte, sichtbareEmail } from '../lib/apps'
-import { eigeneRollen, nurAngehakt, rolleInfo, rollenBezeichnung, rollenFuer, type RollenEintrag, vorlageBereinigen } from '../lib/rollen'
+import { eigeneRollen, nurAngehakt, rechteAusRollen, rechteTeilnehmende, rolleInfo, rollenBezeichnung, rollenFuer, rollenOrdnen, rollenText, rollenVon, type RollenEintrag, type Vorlagen, vorlageBereinigen } from '../lib/rollen'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { zufallsPasswort } from '../lib/passwort'
 import WillkommenKnopf from '../components/WillkommenKnopf'
@@ -107,6 +107,7 @@ interface OrgUser {
   name: string
   email: string
   role?: string
+  zusatzrollen?: unknown
   permissions?: Record<string, boolean>
   supervisor?: boolean
   organization_id?: string
@@ -114,7 +115,7 @@ interface OrgUser {
 
 function roleLabel(u: OrgUser, org: Org | null) {
   if (u.supervisor) return 'Supervisor'
-  return rollenBezeichnung(u.role, org)
+  return rollenText(u, org)
 }
 
 /** Die Rechte einer Rolle für diese Organisation: ihre Vorlage samt verknüpfter Rechte. */
@@ -597,10 +598,13 @@ export default function Supervisor() {
     setUserFormMsg('')
     try {
       const updates: any = { name: userFormName, role: userFormRole }
-      // Neue Rolle: ihre Rechte kommen dazu, bestehende bleiben
+      // Neue erste Rolle: Was die Person darf, kommt aus allen ihren Rollen (lib/rollen.ts)
       if (selectedOrg && userFormRole !== (editingUser.role || 'benutzer')) {
-        // Nur die Häkchen der Vorlage: Vorlagen speichern auch „nein“, das darf nichts wegnehmen
-        updates.permissions = { ...(editingUser.permissions || {}), ...nurAngehakt(rollenRechte(userFormRole, selectedOrg)) }
+        const rollen = rollenOrdnen([userFormRole, ...rollenVon(editingUser).slice(1)])
+        Object.assign(updates, rollen)
+        updates.permissions = rollen.role === 'teilnehmer'
+          ? rechteTeilnehmende(editingUser.permissions)
+          : rechteAusRollen([rollen.role, ...rollen.zusatzrollen], (selectedOrg.role_permissions as Vorlagen | undefined) ?? {}, verknuepfungen(selectedOrg), selectedOrg)
       }
       if (userFormPassword) {
         updates.password = userFormPassword
@@ -1751,7 +1755,7 @@ export default function Supervisor() {
               <div style={fieldLabelStyle}>Rolle</div>
               <RollenAuswahl wert={userFormRole} onChange={setUserFormRole} org={selectedOrg}
                 vorschau={!!editingUser && userFormRole !== (editingUser.role || 'benutzer')}
-                hinweis={editingUser && userFormRole !== (editingUser.role || 'benutzer') ? 'Beim Speichern kommen die Rechte der neuen Rolle dazu; bestehende bleiben.' : undefined} />
+                hinweis={editingUser && userFormRole !== (editingUser.role || 'benutzer') ? 'Beim Speichern werden die Rechte aus allen Rollen der Person neu berechnet; was keine Rolle gibt, fällt weg.' : undefined} />
             </div>
 
             {editingUser && !isPlaceholderEmail(editingUser.email) && (

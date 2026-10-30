@@ -5,21 +5,24 @@
 
 import { useState } from 'react'
 import { pb } from '../../lib/pocketbase'
-import { EMPTY_PERMS, PERM_LABELS, befristungBis, getRoleTemplate, isPlaceholderEmail, neuePlatzhalterEmail, ohneRechte, zeitpunktBefristung } from '../../lib/apps'
-import { eigeneRollen, nurAngehakt, rollenBezeichnung, rollenFarbe, rollenFuer, vorlageBereinigen, wegfallendeRollenrechte, type RollenEintrag } from '../../lib/rollen'
-import { haken, mitgebracht, vorlageMitVerknuepfungen } from '../../lib/verknuepfung'
+import { befristungBis, getRoleTemplate, isPlaceholderEmail, neuePlatzhalterEmail, ohneRechte, zeitpunktBefristung } from '../../lib/apps'
+import {
+  EINZELN, eigeneRollen, rechteAusRollen, rechteTeilnehmende, rollenFarbe, rollenFuer, rollenNamen, rollenOrdnen, rollenVon, type RollenEintrag,
+} from '../../lib/rollen'
+import { mitgebracht } from '../../lib/verknuepfung'
 import { zufallsPasswort } from '../../lib/passwort'
 import { willkommenSenden } from '../../lib/willkommen'
 import WillkommenKnopf from '../../components/WillkommenKnopf'
-import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, RechteListe, SchalterZeile, Seite } from './bausteine'
-import { AUTODATE_TEXT, anlegeFehler, anmeldeAdresse, autodateFehler, anzahl, anzahlRechte, aufzaehlung, fmtDateTimeLocal, inDauer, initialen, type UUser } from './logik'
+import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, RechteAnzeige, SchalterZeile, Seite } from './bausteine'
+import { anlegeFehler, einrichtungsFehler, anmeldeAdresse, autodateFehler, anzahl, anzahlRechte, aufzaehlung, fmtDateTimeLocal, inDauer, initialen, type UUser } from './logik'
 import type { BvKontext } from './kontext'
+import { rechtName as rechtNameBei } from './abgleich'
 
 type TempRechte = Record<string, { until: string; granted_by?: string }>
 
 const DAUERN = [{ h: 1, l: '1 Std.' }, { h: 4, l: '4 Std.' }, { h: 12, l: '12 Std.' }, { h: 24, l: '24 Std.' }, { h: 24 * 7, l: '7 Tage' }]
 
-/** Hinweis unter einer Rolle: vorgegebene mit ihrem Text, eigene mit Beschreibung oder den Rechten, die sie vorsetzt */
+/** Hinweis unter einer Rolle: vorgegebene mit ihrem Text, eigene mit Beschreibung oder den Rechten, die sie gibt */
 export function rollenHinweis(r: RollenEintrag, k: Pick<BvKontext, 'org' | 'orgRolePerms' | 'rechte'>): string {
   if (!r.eigen) return r.hinweis
   const eigen = eigeneRollen(k.org).find(e => e.id === r.id)
@@ -28,15 +31,29 @@ export function rollenHinweis(r: RollenEintrag, k: Pick<BvKontext, 'org' | 'orgR
   if (eigen.hinweis) return vorne + eigen.hinweis
   const t = getRoleTemplate(r.id, { role_permissions: k.orgRolePerms })
   const namen = k.rechte.filter(x => t[x.key] === true).map(x => x.label)
-  return vorne + (namen.length ? namen.join(', ') : 'Setzt keine Rechte vor')
+  return vorne + (namen.length ? namen.join(', ') : 'Gibt keine Rechte')
 }
 
-/** Rollen als Auswahl: vorgegebene, dann die eigenen der Organisation */
-export function RollenWahl({ k, wert, onWahl }: { k: BvKontext; wert: string; onWahl: (id: string) => void }) {
-  const rollen = rollenFuer(k.org, { aktuelle: wert })
+/**
+ * Rollen zum Ankreuzen: vorgegebene, dann die eigenen der Organisation. Mehrere gehen
+ * zusammen und ihre Rechte zählen zusammen; Leitung und Teilnehmende stehen allein.
+ */
+export function RollenAuswahl({ k, werte, onChange }: { k: BvKontext; werte: string[]; onChange: (ids: string[]) => void }) {
+  // Archivierte nur, wenn die Person sie schon hat; Unbekannte (gelöschte) erscheinen, damit man sie abwählen kann
+  const bekannt = rollenFuer(k.org, { mitArchivierten: true }).filter(r => !r.archiviert || werte.includes(r.id))
+  const unbekannt = werte.filter(id => !bekannt.some(r => r.id === id)).map(id => rollenFuer(k.org, { aktuelle: id }).find(r => r.id === id)
+    ?? { id, name: id, hinweis: 'Diese Rolle ist hier nicht bekannt und gibt keine Rechte.', eigen: true, archiviert: true, farbe: 'ardesia' as const })
+  const rollen = [...bekannt, ...unbekannt]
+  function umschalten(id: string) {
+    if (werte.includes(id)) {
+      const rest = werte.filter(w => w !== id)
+      onChange(rest.length ? rest : ['benutzer'])
+    } else if (EINZELN.includes(id)) onChange([id])
+    else onChange([...werte.filter(w => !EINZELN.includes(w)), id])
+  }
   const zeile = (r: RollenEintrag) => (
-    <button key={r.id} type="button" role="radio" aria-checked={r.id === wert} className="bv-z bv-wahl" onClick={() => onWahl(r.id)}>
-      <span className="bv-radio" aria-hidden="true" />
+    <button key={r.id} type="button" role="checkbox" aria-checked={werte.includes(r.id)} className="bv-z bv-wahl" onClick={() => umschalten(r.id)}>
+      <span className="bv-kasten" aria-hidden="true"><Icon n="haken" /></span>
       <span className="bv-tx">
         <b><i className="bv-punkt" style={{ background: `var(--rolle-${r.farbe})` }} aria-hidden="true" />{r.name}</b>
         <small>{rollenHinweis(r, k)}</small>
@@ -46,11 +63,11 @@ export function RollenWahl({ k, wert, onWahl }: { k: BvKontext; wert: string; on
   const eigene = rollen.filter(r => r.eigen)
   return (
     <>
-      <div className="bv-flaeche" role="radiogroup" aria-label="Rolle">{rollen.filter(r => !r.eigen).map(zeile)}</div>
+      <div className="bv-flaeche" role="group" aria-label="Rollen">{rollen.filter(r => !r.eigen).map(zeile)}</div>
       {eigene.length > 0 && (
         <>
           <h3 className="bv-gruppe">Eigene Rollen der {k.orgName}</h3>
-          <div className="bv-flaeche" role="radiogroup" aria-label="Eigene Rollen">{eigene.map(zeile)}</div>
+          <div className="bv-flaeche" role="group" aria-label="Eigene Rollen">{eigene.map(zeile)}</div>
         </>
       )}
     </>
@@ -78,18 +95,14 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
     return u ? {
       // Ohne eigene Adresse bleibt das Feld leer: Die erzeugte Platzhalter-Adresse zeigen wir nicht
       name: u.name || '', email: isPlaceholderEmail(u.email) ? '' : u.email || '', contact_email: u.contact_email || '', phone: u.phone || '',
-      role: u.role || 'benutzer',
-      permissions: { ...EMPTY_PERMS, ...(u.permissions || {}) } as Record<string, boolean>,
-      supervisor: !!u.supervisor, disabled: !!u.disabled,
+      rollen: rollenVon(u),
+      disabled: !!u.disabled,
       expires_at: fmtDateTimeLocal(u.expires_at),
       temp_permissions: cleanTemp,
     } : {
       name: '', email: '', contact_email: '', phone: '',
-      // Die voreingestellte Rolle setzt ihre Häkchen gleich — wie beim Wechsel der Rolle.
-      // Sonst bekam ein neuer Benutzer ausdrücklich überall „nein“ und sah nach dem Anmelden nichts.
-      role: 'benutzer',
-      permissions: { ...EMPTY_PERMS, ...vorlageMitVerknuepfungen(getRoleTemplate('benutzer', { role_permissions: orgRolePerms }), orgVerkn, org) } as Record<string, boolean>,
-      supervisor: false, disabled: false, expires_at: '',
+      rollen: ['benutzer'],
+      disabled: false, expires_at: '',
       temp_permissions: {} as TempRechte,
     }
   })
@@ -97,17 +110,15 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
   const [linkLaeuft, setLinkLaeuft] = useState(false)
   const [tempPermKey, setTempPermKey] = useState('')
 
-  const rechtName = (key: string) => rechte.find(p => p.key === key)?.label ?? PERM_LABELS.find(p => p.key === key)?.label ?? key
+  const rechtName = (key: string) => rechtNameBei(key, rechte)
   const setze = <K extends keyof typeof userForm>(feld: K, wert: (typeof userForm)[K]) => setUserForm(p => ({ ...p, [feld]: wert }))
 
-  function rolleWaehlen(role: string) {
-    // Dieselbe Rolle noch einmal angetippt: nichts tun, sonst nähme die Vorlage einzeln gesetzte Häkchen weg
-    if (role === userForm.role) return
-    const vorlage = vorlageMitVerknuepfungen(vorlageBereinigen(getRoleTemplate(role, { role_permissions: orgRolePerms })), orgVerkn, org)
-    // Neue Person: Die Rolle bestimmt die Häkchen ganz (nichts bleibt von einer vorher angetippten Rolle).
-    // Bestehende Person: nur ergänzen. Was sie einzeln hat, nimmt ein Rollenwechsel nicht still weg.
-    setUserForm(p => ({ ...p, role, permissions: editingUser ? { ...p.permissions, ...nurAngehakt(vorlage) } : { ...EMPTY_PERMS, ...vorlage } }))
-  }
+  // Was die Person darf, kommt aus ihren Rollen. Teilnehmende dürfen nur Unitas, und das
+  // schalten die Ausbildungen frei: Bei ihnen bleibt nur dieses eine gespeicherte Recht.
+  const teilnehmend = userForm.rollen[0] === 'teilnehmer' && userForm.rollen.length === 1
+  const soll: Record<string, boolean> = teilnehmend
+    ? rechteTeilnehmende(editingUser?.role === 'teilnehmer' ? editingUser.permissions : null)
+    : rechteAusRollen(userForm.rollen, orgRolePerms, orgVerkn, org)
 
   function addTempPerm(key: string, hours: number) {
     if (!key) return
@@ -117,7 +128,7 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
       const temp = { ...p.temp_permissions, [key]: { until, granted_by: von } }
       // Verknüpfte Rechte gelten genauso lange — außer sie sind schon dauerhaft oder länger da
       for (const z of mitgebracht(key, orgVerkn, org)) {
-        if (p.permissions[z]) continue
+        if (soll[z]) continue
         const bisher = temp[z]?.until
         if (bisher && zeitpunktBefristung(bisher) >= zeitpunktBefristung(until)) continue
         temp[z] = { until, granted_by: von }
@@ -139,26 +150,32 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
     if (!userForm.name.trim()) { showMsg('Der Name fehlt', 'error'); return }
     const adresse = anmeldeAdresse(userForm.email, editingUser ? editingUser.email : undefined, neuePlatzhalterEmail)
     if ('fehler' in adresse) { showMsg(adresse.fehler, 'error'); return }
-    if (ohneRechte({ ...userForm, supervisor: editingUser ? userForm.supervisor : false })
+    // Sich selbst die Benutzerverwaltung nehmen sperrt einen hier aus — nur nach ausdrücklicher Rückfrage
+    const befristetVerwalter = !!userForm.temp_permissions.unitarii && zeitpunktBefristung(userForm.temp_permissions.unitarii.until) > Date.now()
+    if (istSelbst && !user.supervisor && editingUser?.permissions?.unitarii === true && !soll.unitarii && !befristetVerwalter
+      && !confirm('Mit diesen Rollen nimmst du dir selbst die Benutzerverwaltung. Danach kommst du hier nicht mehr hinein. Trotzdem speichern?')) return
+    if (ohneRechte({ ...userForm, role: userForm.rollen[0], permissions: soll, supervisor: !!editingUser?.supervisor })
       && !confirm(`${userForm.name.trim()} hat kein einziges Recht und sieht nach dem Anmelden nichts. Trotzdem speichern?`)) return
     setSavingUser(true)
     try {
       const expIso = userForm.expires_at ? new Date(userForm.expires_at).toISOString() : null
+      // Erste Rolle in users.role (zählt in den Server-Regeln), weitere in users.zusatzrollen
+      const geordnet = rollenOrdnen(userForm.rollen)
       const base: Record<string, unknown> = {
         name: userForm.name.trim(),
         ...(adresse.email ? { email: adresse.email } : {}),
         contact_email: userForm.contact_email.trim(),
-        phone: userForm.phone.trim(), role: userForm.role,
-        permissions: userForm.permissions, disabled: userForm.disabled,
+        phone: userForm.phone.trim(), ...geordnet,
+        permissions: soll, disabled: userForm.disabled,
         expires_at: expIso,
         temp_permissions: userForm.temp_permissions,
       }
-      if (user?.supervisor) base.supervisor = userForm.supervisor
 
       if (editingUser) {
         // Kein Passwort von hier: Das legt die Person selbst fest (Willkommens-E-Mail, Passwort-Link)
         const neu = await pb.collection('users').update(editingUser.id, base)
-        if (autodateFehler(expIso, neu.expires_at)) showMsg('Gespeichert, aber: ' + AUTODATE_TEXT, 'error')
+        const probleme = einrichtungsFehler(geordnet.zusatzrollen.length > 0 && !('zusatzrollen' in neu), autodateFehler(expIso, neu.expires_at))
+        if (probleme) showMsg('Gespeichert, aber: ' + probleme, 'error')
         else if (adresse.nachgetragen) {
           // Bisher ohne E-Mail: Jetzt kommt die Willkommens-E-Mail mit dem Link zum eigenen Passwort
           const w = await willkommenSenden(editingUser.id)
@@ -176,7 +193,8 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
           // Die Rechte stehen schon fest — die Übernahme beim ersten Login (useAuth) entfällt
           permissions_migrated: true,
         })
-        if (autodateFehler(expIso, neu.expires_at)) showMsg('Angelegt, aber: ' + AUTODATE_TEXT, 'error')
+        const probleme = einrichtungsFehler(geordnet.zusatzrollen.length > 0 && !('zusatzrollen' in neu), autodateFehler(expIso, neu.expires_at))
+        if (probleme) showMsg('Angelegt, aber: ' + probleme, 'error')
         else showMsg(isPlaceholderEmail(adresse.email)
           ? 'Benutzer angelegt. Ohne E-Mail kann sich die Person nicht anmelden.'
           : 'Benutzer angelegt. Das Passwort legt die Person über die Willkommens-E-Mail fest.')
@@ -208,17 +226,19 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
     } catch (e: any) { showMsg('Fehler: ' + e.message, 'error') }
   }
 
-  const n = anzahlRechte(userForm.permissions, rechte)
+  const n = anzahlRechte(soll, rechte)
   const tempListe = Object.entries(userForm.temp_permissions)
-  const rolleName = rollenBezeichnung(userForm.role, org)
-  const weg = wegfallendeRollenrechte(editingUser?.role, userForm.role, userForm.permissions)
-  const wegVergebbar = weg.filter(x => rechte.some(r => r.key === x))
-  const tempWahl = rechte.filter(p => !userForm.permissions[p.key] && !userForm.temp_permissions[p.key])
+  const rollenName = rollenNamen(userForm.rollen, org)
+  const tempWahl = rechte.filter(p => !soll[p.key] && !userForm.temp_permissions[p.key])
+  // Was sich beim Speichern an den Rechten ändert, wenn die Person bisher andere hatte als ihre Rollen
+  // Auch Rechte gesperrter Module und solche ohne Schalter (etwa Produktausgabe) zählen: Speichern schreibt alle
+  const neuDazu = editingUser ? Object.keys(soll).filter(key => soll[key] && editingUser.permissions?.[key] !== true).map(rechtName) : []
+  const neuWeg = editingUser ? Object.keys(soll).filter(key => !soll[key] && editingUser.permissions?.[key] === true).map(rechtName) : []
 
   return (
     <Seite titel={editingUser ? (editingUser.name || 'Benutzer bearbeiten') : 'Neuer Benutzer'} unter={k.orgName} zurueck={k.schliessen}
-      rechts={editingUser ? <span className="bv-ava" aria-hidden="true" style={{ background: userForm.disabled ? 'rgba(var(--lbf-grau-rgb),0.45)' : rollenFarbe(userForm.role, org) }}>{initialen(userForm.name, userForm.email)}</span> : undefined}
-      leiste={<Leiste titel={rolleName} unter={anzahl(n, 'Recht', 'Rechte') + (tempListe.length ? `, ${tempListe.length} befristet` : '')}
+      rechts={editingUser ? <span className="bv-ava" aria-hidden="true" style={{ background: userForm.disabled ? 'rgba(var(--lbf-grau-rgb),0.45)' : rollenFarbe(rollenOrdnen(userForm.rollen).role, org) }}>{initialen(userForm.name, userForm.email)}</span> : undefined}
+      leiste={<Leiste titel={rollenName} unter={anzahl(n, 'Recht', 'Rechte') + (tempListe.length ? `, ${tempListe.length} befristet` : '')}
         knopf={editingUser ? 'Speichern' : 'Benutzer anlegen'} icon={editingUser ? 'haken' : 'personplus'} onClick={saveUser} laeuft={savingUser} />}>
 
       <Abschnitt titel="Person" erst />
@@ -240,29 +260,21 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
         <input className="bv-eingabe" type="tel" inputMode="tel" value={userForm.phone} onChange={e => setze('phone', e.target.value)} placeholder="Für Rückfragen" autoComplete="off" />
       </Feld>
 
-      <Abschnitt titel="Rolle" />
-      <Hinweis oben>{editingUser ? 'Ein Rollenwechsel setzt die Häkchen der neuen Rolle dazu. Was die Person schon hat, bleibt, bis du es unten ausschaltest.' : 'Die Rolle setzt die Rechte unten vor.'}</Hinweis>
-      <RollenWahl k={k} wert={userForm.role} onWahl={rolleWaehlen} />
-      {weg.length > 0 && (
+      <Abschnitt titel="Rollen" rechts={userForm.rollen.length > 1 ? anzahl(userForm.rollen.length, 'Rolle', 'Rollen') : undefined} />
+      <Hinweis oben>Was die Person darf, kommt aus ihren Rollen. Mehrere zählen zusammen.</Hinweis>
+      <RollenAuswahl k={k} werte={userForm.rollen} onChange={rollen => setze('rollen', rollen)} />
+      {(neuDazu.length > 0 || neuWeg.length > 0) && (
         <div className="bv-notiz" role="status" style={{ marginTop: 12 }}>
-          <b>Mit dem Wechsel fällt etwas weg</b>
-          <p>Die bisherige Rolle gab auf dem Server auch ohne Häkchen: {aufzaehlung(weg.map(rechtName))}. Mit der neuen Rolle fehlt das, solange es unten nicht angehakt ist.</p>
-          {wegVergebbar.length > 0 && (
-            <button type="button" className="bv-knopf" onClick={() => setUserForm(p => ({ ...p, permissions: wegVergebbar.reduce((acc, key) => haken(acc, key, true, orgVerkn, org), p.permissions) }))}>
-              Häkchen setzen
-            </button>
-          )}
+          <b>Bisher andere Rechte als die Rollen</b>
+          {neuDazu.length > 0 && <p>Mit dem Speichern kommt dazu: {aufzaehlung(neuDazu)}.</p>}
+          {neuWeg.length > 0 && <p>Mit dem Speichern fällt weg: {aufzaehlung(neuWeg)}. Braucht die Person das weiter, gib ihr eine Rolle, die es enthält, oder lege eine eigene Rolle an.</p>}
         </div>
       )}
 
-      <Abschnitt titel="Rechte" rechts={`${n} von ${rechte.length}`} />
-      <Hinweis oben>
-        {editingUser
-          ? 'Was hier angehakt ist, darf die Person. Die Rolle setzt nur vor.'
-          : `Vorbelegt durch die Rolle ${rolleName}. Jeder Schalter lässt sich einzeln ändern.`}
-      </Hinweis>
-      <RechteListe rechte={rechte} werte={userForm.permissions} v={orgVerkn} org={org}
-        onChange={(key, an) => setUserForm(p => ({ ...p, permissions: haken(p.permissions, key, an, orgVerkn, org) }))} />
+      <Abschnitt titel="Darf" rechts={`${n} von ${rechte.length}`} />
+      {teilnehmend
+        ? <Hinweis oben>Teilnehmende bekommen Unitas über die Ausbildungen. Weitere Rechte gibt es nur befristet.</Hinweis>
+        : <RechteAnzeige rechte={rechte} werte={soll} />}
 
       <Abschnitt titel="Befristete Rechte" rechts={tempListe.length ? anzahl(tempListe.length, 'aktiv', 'aktiv') : undefined} />
       {tempListe.length === 0
@@ -295,10 +307,9 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
         <SchalterZeile titel="Gesperrt" unter="Kann sich nicht anmelden" an={userForm.disabled} onChange={v => setze('disabled', v)} />
         <SchalterZeile titel="Zugang befristen" unter="Endet automatisch an einem Datum" an={!!userForm.expires_at}
           onChange={v => setze('expires_at', v ? fmtDateTimeLocal(new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString()) : '')} />
-        {user?.supervisor && (
-          <SchalterZeile titel="Supervisor" unter="Voller Zugriff auf alles" an={userForm.supervisor} onChange={v => setze('supervisor', v)} />
-        )}
       </div>
+      {/* Supervisor vergibt nur der Betreiber direkt in PocketBase, nie die App */}
+      {editingUser?.supervisor && <Hinweis>Supervisor: Dieses Recht wird nur direkt in PocketBase vergeben.</Hinweis>}
       {userForm.expires_at && (
         <Feld label="Endet am">
           <input className="bv-eingabe" type="datetime-local" value={userForm.expires_at} onChange={e => setze('expires_at', e.target.value)} />

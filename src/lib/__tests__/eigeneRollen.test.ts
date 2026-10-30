@@ -3,7 +3,7 @@ import { ROLLEN, getRoleTemplate } from '../apps'
 import {
   EIGENE_ID, SERVER_ROLLEN, eigeneRollen, freieFarbe, istEigeneRolleId, neueRollenId, nurAngehakt, pruefeRollenName,
   rolleAendern, rolleAnlegen, rolleEntfernen, rolleInfo, rolleWiederherstellen, rollenBezeichnung, rollenFarbe, rollenFuer,
-  rollenKuerzel, vorlageBereinigen, wegfallendeRollenrechte, type EigeneRolle,
+  rollenKuerzel, vorlageBereinigen, type EigeneRolle,
 } from '../rollen'
 
 // Fester „Zufall“: liefert der Reihe nach die Werte, dann wieder von vorn
@@ -86,14 +86,14 @@ describe('Rollen zur Auswahl', () => {
 
   it('Bezeichnung: vorgegeben, eigen, leer, alter Wert', () => {
     const org = { eigene_rollen: [GF] }
-    expect(rollenBezeichnung('lager', org)).toBe('Lagerwart')
+    expect(rollenBezeichnung('lager', org)).toBe('Material & Lager')
     expect(rollenBezeichnung('eigen_gruppe01', org)).toBe('Gruppenführerin')
-    expect(rollenBezeichnung(undefined, org)).toBe('Benutzer')
+    expect(rollenBezeichnung(undefined, org)).toBe('Einsatzkraft')
     expect(rollenBezeichnung('mitglied', org)).toBe('mitglied')
   })
 
-  it('Hinweis einer eigenen Rolle ohne Beschreibung sagt, dass sie nur Häkchen setzt', () => {
-    expect(rolleInfo('eigen_gruppe01', { eigene_rollen: [GF] })?.hinweis).toBe('Eigene Rolle der Organisation. Sie setzt nur Häkchen.')
+  it('Hinweis einer eigenen Rolle ohne Beschreibung', () => {
+    expect(rolleInfo('eigen_gruppe01', { eigene_rollen: [GF] })?.hinweis).toBe('Eigene Rolle der Organisation.')
     expect(rolleInfo('eigen_prakt002', { eigene_rollen: [PR] })?.hinweis).toBe('Unitas, Chat, Notizen')
   })
 
@@ -116,7 +116,8 @@ describe('Namen eigener Rollen prüfen', () => {
     expect(pruefeRollenName('   ', [])).toMatchObject({ ok: false, grund: 'leer' })
     expect(pruefeRollenName('x'.repeat(41), [])).toMatchObject({ ok: false, grund: 'zu_lang' })
     expect(pruefeRollenName(' ADMIN ', [])).toMatchObject({ ok: false, grund: 'reserviert' })
-    expect(pruefeRollenName('lagerwart', [])).toMatchObject({ ok: false, grund: 'reserviert' })
+    expect(pruefeRollenName('material & lager', [])).toMatchObject({ ok: false, grund: 'reserviert' })
+    expect(pruefeRollenName('Führung', [])).toMatchObject({ ok: false, grund: 'reserviert' })
     expect(pruefeRollenName('Supervisor', [])).toMatchObject({ ok: false, grund: 'reserviert' })
     expect(pruefeRollenName('gruppenführerin', [GF])).toMatchObject({ ok: false, grund: 'vergeben' })
   })
@@ -190,13 +191,5 @@ describe('Vorlagen und Rollenwechsel', () => {
 
   it('nur die angehakten Einträge — ergänzt, ohne Bestehendes mit „nein“ zu überschreiben', () => {
     expect(nurAngehakt({ chat: true, lager: false })).toEqual({ chat: true })
-  })
-
-  it('warnt, wenn die alte Rolle auf dem Server Rechte ohne Häkchen gab', () => {
-    expect(wegfallendeRollenrechte('lager', 'eigen_gruppe01', { lager: true })).toEqual(['lager_verwalten'])
-    expect(wegfallendeRollenrechte('lager', 'eigen_gruppe01', { lager_verwalten: true })).toEqual([])
-    expect(wegfallendeRollenrechte('admin', 'mpg', {})).toEqual(['unitarii'])
-    expect(wegfallendeRollenrechte('benutzer', 'eigen_gruppe01', {})).toEqual([])
-    expect(wegfallendeRollenrechte(undefined, 'benutzer')).toEqual([])
   })
 })

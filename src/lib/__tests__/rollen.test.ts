@@ -2,12 +2,12 @@ import { describe, it, expect } from 'vitest'
 import { PERM_LABELS, ROLES, ROLLEN, getRoleTemplate, rollenName } from '../apps'
 
 describe('Rollen beim Anlegen', () => {
-  it('Admin und Benutzer stehen vorn, die Fachrollen bleiben, Teilnehmer zuletzt', () => {
-    expect(ROLLEN.map((r) => r.id)).toEqual(['admin', 'benutzer', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer'])
-    expect(rollenName('admin')).toBe('Admin')
-    expect(rollenName('lager')).toBe('Lagerwart')
+  it('Leitung und Einsatzkraft vorn, dann die Fachrollen, Teilnehmende zuletzt; nach Aufgabe benannt', () => {
+    expect(ROLLEN.map((r) => r.id)).toEqual(['admin', 'benutzer', 'fuehrung', 'medizin', 'mpg', 'lager', 'ausbildung', 'qm', 'teilnehmer'])
+    expect(rollenName('admin')).toBe('Leitung (Admin)')
+    expect(rollenName('lager')).toBe('Material & Lager')
     expect(rollenName('unbekannt')).toBe('unbekannt')
-    expect(rollenName(undefined)).toBe('Benutzer')
+    expect(rollenName(undefined)).toBe('Einsatzkraft')
   })
 
   it('jede Rolle außer Teilnehmer hat eine Rechte-Vorlage', () => {
@@ -26,10 +26,12 @@ describe('Rollen beim Anlegen', () => {
     expect(ROLES.benutzer.permissions).toEqual({ dashboard: true, lernbar: true, chat: true, notizen: true })
   })
 
-  it('eine Organisation kann die Admin-Vorlage anpassen', () => {
-    const org = { role_permissions: { admin: { unitarii: true, lager: true } } }
-    expect(getRoleTemplate('admin', org)).toEqual({ unitarii: true, lager: true })
-    expect(getRoleTemplate('admin', {})).toEqual(ROLES.admin.permissions)
+  it('Leitung und Teilnehmende sind fest, Fachrollen kann eine Organisation anpassen', () => {
+    const org = { role_permissions: { admin: { unitarii: false, lager: true }, teilnehmer: { patienten: true }, mpg: { lager: true } } }
+    expect(getRoleTemplate('admin', org)).toEqual(ROLES.admin.permissions)
+    expect(getRoleTemplate('teilnehmer', org)).toEqual({})
+    expect(getRoleTemplate('mpg', org)).toEqual({ lager: true })
+    expect(getRoleTemplate('mpg', {})).toEqual(ROLES.mpg.permissions)
   })
 })
 

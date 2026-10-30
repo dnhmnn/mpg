@@ -107,7 +107,7 @@ export function nurLernbar(user: User | null | undefined): boolean {
  * Verantwortlichen, und die Benutzerverwaltung selbst lässt dann auch nicht hinein.
  */
 export function istVerantwortlich(user: User | null | undefined): boolean {
-  return !!user && (user.supervisor === true || user.permissions?.unitarii === true)
+  return !!user && (user.supervisor === true || user.permissions?.unitarii === true || user.role === 'admin')
 }
 
 /**
