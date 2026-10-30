@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import LandingRenderer from '../components/LandingRenderer'
+import Startseite from './landing/Startseite'
 import {
   API_URL, APP_URL, defaultHomeSections,
   type GlobalSettings, type PageRec,
 } from '../lib/landingSchema'
+
+const BESCHREIBUNG = 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen, Sanitätsdienste und Feuerwehren. Derzeit in Entwicklung.'
 
 const JSON_LD = JSON.stringify({
   '@context': 'https://schema.org',
@@ -13,11 +16,11 @@ const JSON_LD = JSON.stringify({
   applicationCategory: 'BusinessApplication',
   operatingSystem: 'Web, iOS, Android',
   url: 'https://responda.systems',
-  description: 'Responda digitalisiert Einsätze, Patientenprotokolle, Lagerverwaltung und Ausbildungen für Feuerwehren, Rettungsdienste und Hilfsorganisationen.',
-  offers: { '@type': 'Offer', price: '49', priceCurrency: 'EUR', priceSpecification: { '@type': 'UnitPriceSpecification', price: '49', priceCurrency: 'EUR', unitText: 'Monat' } },
+  // In Entwicklung: keine Preise (kein "offers"), bis Pakete feststehen
+  description: 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen, Sanitätsdienste und Feuerwehren. In Entwicklung.',
   provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: 'info@responda.systems' },
   inLanguage: 'de',
-  keywords: 'Einsatzverwaltung, Feuerwehr, Rettungsdienst, Patientenprotokoll, Lagerverwaltung, Ausbildung',
+  keywords: 'Einsatzverwaltung, Hilfsorganisation, Sanitätsdienst, Feuerwehr, Patientendokumentation, Medizinprodukte, Lagerverwaltung, Ausbildung',
 })
 
 export default function LandingPage() {
@@ -37,6 +40,9 @@ export default function LandingPage() {
   }, [])
 
   const rec = pages.find(p => (p.slug || '') === slug)
+  // Die Startseite steht während der Entwicklung fest im Code (landing/Startseite.tsx);
+  // eine im Website-Editor gespeicherte Startseite gilt bis dahin nicht.
+  const istStart = slug === ''
 
   // Unbekannter Pfad auf der Marketing-Domain -> weiter zur App (wie bisher)
   useEffect(() => {
@@ -50,11 +56,12 @@ export default function LandingPage() {
     : { slug: '', title: 'Start', sections: defaultHomeSections(content) }
 
   useEffect(() => {
-    document.title = page.seo_title || 'Responda — Digitale Einsatzverwaltung für Feuerwehr & Rettungsdienst'
-    if (page.seo_description) {
+    document.title = (!istStart && page.seo_title) || 'Responda: Digitale Einsatzverwaltung für Hilfsorganisationen'
+    const beschreibung = istStart ? BESCHREIBUNG : page.seo_description
+    if (beschreibung) {
       let m = document.querySelector('meta[name="description"]') as HTMLMetaElement | null
       if (!m) { m = document.createElement('meta'); m.name = 'description'; document.head.appendChild(m) }
-      m.content = page.seo_description
+      m.content = beschreibung
     }
     const script = document.createElement('script')
     script.type = 'application/ld+json'
@@ -62,7 +69,7 @@ export default function LandingPage() {
     script.text = JSON_LD
     document.head.appendChild(script)
     return () => { document.getElementById('lp-jsonld')?.remove() }
-  }, [page.seo_title, page.seo_description])
+  }, [istStart, page.seo_title, page.seo_description])
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') setLegal(null) }
@@ -93,11 +100,11 @@ export default function LandingPage() {
     background: '#fff', borderRadius: 20, maxWidth: 760, margin: '0 auto',
     padding: 'clamp(28px,5vw,52px)', position: 'relative',
   }
-  const eyeStyle: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.16em', color: '#600812', marginBottom: 10 }
+  const eyeStyle: React.CSSProperties = { fontSize: 15, fontWeight: 700, color: '#6b5c4d', marginBottom: 6 }
   const h1Style: React.CSSProperties = { fontSize: '1.8rem', fontWeight: 800, letterSpacing: '-0.02em', color: '#1a0e08', marginBottom: 0 }
-  const emStyle: React.CSSProperties = { color: '#600812', fontStyle: 'italic' }
+  const emStyle: React.CSSProperties = { color: '#1a0e08' }
   const secStyle: React.CSSProperties = { marginTop: 28 }
-  const secH: React.CSSProperties = { fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: '#600812', marginBottom: 8 }
+  const secH: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: '#1a0e08', marginBottom: 6 }
   const secP: React.CSSProperties = { fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.7, marginBottom: 8 }
   const closeBtn: React.CSSProperties = { position: 'absolute', top: 20, right: 20, width: 32, height: 32, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', fontSize: 18, fontFamily: 'inherit' }
 
@@ -107,7 +114,9 @@ export default function LandingPage() {
 
   return (
     <>
-      <LandingRenderer page={page} global={globalWithNav} onLegal={setLegal} />
+      {istStart
+        ? <Startseite email={email} unterseiten={navExtra} onLegal={setLegal} />
+        : <LandingRenderer page={page} global={globalWithNav} onLegal={setLegal} />}
 
       {legal === 'impressum' && createPortal(
         <div style={modalStyle} onClick={e => { if (e.target === e.currentTarget) setLegal(null) }}>
