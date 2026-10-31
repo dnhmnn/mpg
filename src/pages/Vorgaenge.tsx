@@ -463,7 +463,7 @@ export default function Vorgaenge() {
                 <div key={form.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(var(--lbf-grau-rgb),0.35)' : 'var(--lbf-akzent)'}`, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14, color: isHidden ? 'var(--warm-gray)' : 'var(--lbf-text)', fontStyle: isHidden ? 'italic' : 'normal' }}>{form.label}</div>
-                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{form.desc}</div>
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{isHidden ? 'Aus, auch über Links und QR-Codes nicht erreichbar' : form.desc}</div>
                   </div>
                   {form.configurable && !isHidden && (
                     <button onClick={() => setTab('editor')} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Felder</button>

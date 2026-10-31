@@ -4,12 +4,12 @@ import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
 import { PubWrap, PubSendBar, inp, lbl, field, ta } from './pubStyles'
 import { istAusserBetrieb } from '../../lib/mpg/zustand'
-import { sichtbareEmail } from '../../lib/apps'
+import { MIN_ZEICHEN, neueSuche } from './mitgliederSuche'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
 interface DeviceSummary { id: string; name: string; type: string; location: string; ausser_betrieb?: string }
-interface UserHit { id: string; name: string; email: string }
+interface UserHit { id: string; name: string }
 
 const SEVERITY_CFG: Record<Severity, { label: string; desc: string; color: string; bg: string }> = {
   low:      { label: 'Gering',   desc: 'Gerät noch nutzbar',          color: '#d97706', bg: 'rgba(217,119,6,0.08)'  },
@@ -37,6 +37,9 @@ function UserSearch({ orgId, value, onChange }: {
   const [open, setOpen] = useState(false)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
+  const [suche] = useState(neueSuche)
+
+  useEffect(() => () => { clearTimeout(timer.current); suche.abbrechen() }, [suche])
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -49,14 +52,12 @@ function UserSearch({ orgId, value, onChange }: {
   function onInput(q: string) {
     setQuery(q)
     clearTimeout(timer.current)
-    if (!q.trim()) { setResults([]); setOpen(false); return }
+    if (q.trim().length < MIN_ZEICHEN) { suche.abbrechen(); setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
       try {
-        const res = await pb.collection('users').getList(1, 8, {
-          filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
-          sort: 'name',
-        })
-        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
+        const liste = await suche.suchen(orgId, q)
+        if (liste === null) return
+        setResults(liste)
         setOpen(true)
       } catch {
         setResults([])
@@ -66,7 +67,7 @@ function UserSearch({ orgId, value, onChange }: {
   }
 
   function select(u: UserHit) {
-    onChange(u); setQuery(''); setResults([]); setOpen(false)
+    suche.abbrechen(); onChange(u); setQuery(''); setResults([]); setOpen(false)
   }
 
   return (
@@ -90,10 +91,7 @@ function UserSearch({ orgId, value, onChange }: {
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
                 {u.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{sichtbareEmail(u.email)}</div>
-              </div>
+              <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{u.name}</div>
             </button>
           ))}
         </div>

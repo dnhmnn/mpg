@@ -128,7 +128,7 @@ export default function Einladung() {
   async function loadToken() {
     try {
       const result = await pb.collection('ausbildungen_einladungs_tokens').getFirstListItem(
-        `token = "${token}"`, { requestKey: `inv-${Date.now()}` }
+        pb.filter('token = {:t}', { t: token }), { requestKey: `inv-${Date.now()}` }
       )
       setRecord(result as unknown as TokenRecord)
     } catch {

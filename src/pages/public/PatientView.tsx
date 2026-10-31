@@ -57,8 +57,11 @@ export default function PatientView() {
   }
 
   async function loadByCode(c: string) {
+    // Zugangscodes sind Ziffern. Alles andere fragt gar nicht erst: Anführungszeichen
+    // oder % aus der Adresse könnten die Suche sonst auf fremde Protokolle ausweiten.
+    if (!/^\d{4,12}$/.test(c)) { setStatus('notfound'); return }
     try {
-      const records = await pb.collection('patients').getList(1, 200, { filter: `payload ~ '"access_code":"${c}"'` })
+      const records = await pb.collection('patients').getList(1, 200, { filter: pb.filter('payload ~ {:muster}', { muster: `"access_code":"${c}"` }) })
       const rec = records.items[0]
       if (!rec) { setStatus('notfound'); return }
       const payload = parsePayload(rec.payload)

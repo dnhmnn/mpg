@@ -6,10 +6,9 @@
 // Deshalb steht am Posten, was er bewirkt, statt dass beides gleich aussieht.
 
 import { useEffect, useRef, useState } from 'react'
-import { pb } from '../../../lib/pocketbase'
 import type { Werte } from './DokuFeld'
 import { POSTEN, besatzungLesen, einsichtIds, type Besetzung, type Posten } from './besatzung'
-import { sichtbareEmail } from '../../../lib/apps'
+import { MIN_ZEICHEN, neueSuche, type Mitglied } from '../mitgliederSuche'
 
 const ROT = 'var(--lbf-akzent)'
 /** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
@@ -18,7 +17,6 @@ const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
-type Treffer = { id: string; name: string; email: string }
 
 /** Ein Posten: besetzt zeigen oder suchen lassen. */
 function Platz({ posten, person, orgId, onSetzen }: {
@@ -28,38 +26,38 @@ function Platz({ posten, person, orgId, onSetzen }: {
   onSetzen: (person: Besetzung | null) => void
 }) {
   const [frage, setFrage] = useState('')
-  const [treffer, setTreffer] = useState<Treffer[]>([])
+  const [treffer, setTreffer] = useState<Mitglied[]>([])
   const [sucht, setSucht] = useState(false)
   const [fehler, setFehler] = useState(false)
   const uhr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const [suche] = useState(neueSuche)
 
-  useEffect(() => () => clearTimeout(uhr.current), [])
+  useEffect(() => () => { clearTimeout(uhr.current); suche.abbrechen() }, [suche])
 
   function tippen(q: string) {
     setFrage(q)
     clearTimeout(uhr.current)
     setFehler(false)
-    if (q.trim().length < 2) { setTreffer([]); setSucht(false); return }
+    if (q.trim().length < MIN_ZEICHEN) { suche.abbrechen(); setTreffer([]); setSucht(false); return }
     setSucht(true)
     uhr.current = setTimeout(async () => {
       try {
-        const res = await pb.collection('users').getList(1, 8, {
-          filter: `organization_id = "${orgId}" && name ~ "${q.trim().replace(/"/g, '')}"`,
-          sort: 'name',
-        })
-        setTreffer(res.items.map((u) => ({ id: u.id, name: String(u.name ?? ''), email: String(u.email ?? '') })))
+        const liste = await suche.suchen(orgId, q)
+        if (liste === null) return
+        setTreffer(liste)
+        setSucht(false)
       } catch {
         // Ohne Netz gibt es keine Liste — der Name geht trotzdem, nur ohne
         // Einsicht. Das sagt der Hinweis unter dem Feld.
         setTreffer([])
         setFehler(true)
-      } finally {
         setSucht(false)
       }
     }, 300)
   }
 
   function nehmen(p: Besetzung | null) {
+    suche.abbrechen()
     onSetzen(p)
     setFrage('')
     setTreffer([])
@@ -124,10 +122,7 @@ function Platz({ posten, person, orgId, onSetzen }: {
               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, flexShrink: 0, borderRadius: 13, background: ROT_GRUND, color: '#fff', fontSize: 12, fontWeight: 700 }}>
                 {t.name.charAt(0).toUpperCase()}
               </span>
-              <span style={{ minWidth: 0 }}>
-                <span style={{ display: 'block', fontSize: 14, fontStyle: 'italic', fontWeight: 700, color: TEXT }}>{t.name}</span>
-                <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>{sichtbareEmail(t.email)}</span>
-              </span>
+              <span style={{ minWidth: 0, fontSize: 14, fontStyle: 'italic', fontWeight: 700, color: TEXT }}>{t.name}</span>
             </button>
           ))}
           {/* Immer erreichbar, nicht erst wenn die Suche nichts findet:

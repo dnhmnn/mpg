@@ -2,9 +2,9 @@ import { useState, useRef, useEffect } from 'react'
 import { mitFassung, NEUE_FASSUNG } from '../../lib/protokoll'
 import { pb } from '../../lib/pocketbase'
 import { inp, lbl } from './pubStyles'
-import { sichtbareEmail } from '../../lib/apps'
+import { MIN_ZEICHEN, neueSuche } from './mitgliederSuche'
 
-type UserHit = { id: string; name: string; email: string }
+type UserHit = { id: string; name: string }
 type Selection = UserHit | null
 type Pos = 'tf' | 'm1' | 'm2' | 'm3'
 
@@ -39,6 +39,9 @@ function UserSearch({ label, orgId, value, onChange }: {
   const [manualName, setManualName] = useState('')
   const timer = useRef<ReturnType<typeof setTimeout>>()
   const ref = useRef<HTMLDivElement>(null)
+  const [suche] = useState(neueSuche)
+
+  useEffect(() => () => { clearTimeout(timer.current); suche.abbrechen() }, [suche])
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -50,7 +53,7 @@ function UserSearch({ label, orgId, value, onChange }: {
 
   function confirmManual() {
     if (!manualName.trim()) return
-    onChange({ id: '', name: manualName.trim(), email: '' })
+    onChange({ id: '', name: manualName.trim() })
     setManualName('')
     setManualMode(false)
   }
@@ -58,14 +61,12 @@ function UserSearch({ label, orgId, value, onChange }: {
   function onInput(q: string) {
     setQuery(q)
     clearTimeout(timer.current)
-    if (!q.trim()) { setResults([]); setOpen(false); return }
+    if (q.trim().length < MIN_ZEICHEN) { suche.abbrechen(); setResults([]); setOpen(false); return }
     timer.current = setTimeout(async () => {
       try {
-        const res = await pb.collection('users').getList(1, 8, {
-          filter: `organization_id = "${orgId}" && name ~ "${q.trim()}"`,
-          sort: 'name',
-        })
-        setResults(res.items.map(u => ({ id: u.id, name: u.name, email: u.email })))
+        const liste = await suche.suchen(orgId, q)
+        if (liste === null) return
+        setResults(liste)
         setOpen(true)
       } catch {
         setResults([])
@@ -76,6 +77,7 @@ function UserSearch({ label, orgId, value, onChange }: {
   }
 
   function select(u: UserHit) {
+    suche.abbrechen()
     onChange(u)
     setQuery('')
     setResults([])
@@ -135,10 +137,7 @@ function UserSearch({ label, orgId, value, onChange }: {
               <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                 {u.name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{sichtbareEmail(u.email)}</div>
-              </div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
             </button>
           ))}
         </div>

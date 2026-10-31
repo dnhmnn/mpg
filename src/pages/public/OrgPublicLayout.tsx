@@ -32,18 +32,21 @@ export function OrgKontext({ org, orgCode, children }: {
 }
 /**
  * Ein öffentliches Formular nur zeigen, wenn sein Modul für die Organisation
- * freigeschaltet ist. Wer über einen alten Link oder QR-Code kommt, sieht
+ * freigeschaltet ist und die Organisation es nicht ausgeschaltet hat
+ * (Vorgänge → Formulare). Wer über einen alten Link oder QR-Code kommt, sieht
  * einen Hinweis statt des Formulars.
  */
 export function FormularFrei({ formular, children }: { formular: string; children: React.ReactNode }) {
   const { org, orgCode } = useOrg()
-  if (formularFrei(org, formular)) return <>{children}</>
+  const aus = ((org.form_config as { hidden_forms?: unknown } | undefined)?.hidden_forms)
+  const ausgeschaltet = Array.isArray(aus) && aus.includes(formular)
+  if (formularFrei(org, formular) && !ausgeschaltet) return <>{children}</>
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
       <div style={{ background: 'var(--lbf-card)', borderRadius: 16, boxShadow: 'var(--lbf-shadow)', padding: '28px 24px', maxWidth: 420, width: '100%', textAlign: 'center' }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{org.org_name}</div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: 'var(--lbf-text)', marginBottom: 8 }}>Nicht freigeschaltet</div>
-        <div style={{ fontSize: 14, color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 18 }}>Dieses Formular ist für eure Organisation nicht freigeschaltet. Bei Fragen wende dich an die Verantwortlichen deiner Organisation.</div>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: 'var(--lbf-text)', marginBottom: 8 }}>{ausgeschaltet ? 'Ausgeschaltet' : 'Nicht freigeschaltet'}</div>
+        <div style={{ fontSize: 14, color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 18 }}>{ausgeschaltet ? 'Eure Organisation hat dieses Formular ausgeschaltet.' : 'Dieses Formular ist für eure Organisation nicht freigeschaltet.'} Bei Fragen wende dich an die Verantwortlichen deiner Organisation.</div>
         <a href={`/${orgCode}`} style={{ display: 'inline-block', padding: '10px 18px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>Zur Seite der Organisation</a>
       </div>
     </div>
@@ -65,7 +68,7 @@ export default function OrgPublicLayout() {
   useEffect(() => {
     if (!orgCode) { setError('Kein Organisationscode.'); setLoading(false); return }
     const cacheKey = `org_cache_${orgCode}`
-    pb.collection('organizations').getFirstListItem<Organization>(`org_code = "${orgCode}"`)
+    pb.collection('organizations').getFirstListItem<Organization>(pb.filter('org_code = {:code}', { code: orgCode }))
       .then(r => {
         if (r.is_active) {
           localStorage.setItem(cacheKey, JSON.stringify(r))
