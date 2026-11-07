@@ -98,7 +98,8 @@ export default function Login() {
         return
       }
       if (err?.status === 400) setError('E-Mail oder Passwort falsch')
-      else if (err?.status === 429) setError('Zu viele Anmeldeversuche. Bitte warte kurz.')
+      // Gesperrt nach falschen Passwörtern (pb_hooks/formular.pb.js): der Server nennt die Wartezeit
+      else if (err?.status === 429) setError(typeof err?.response?.message === 'string' && err.response.message.startsWith('Zu viele') ? err.response.message : 'Zu viele Anmeldeversuche. Bitte warte kurz.')
       else if (err?.message?.includes('Failed to fetch') || !err?.status) setError('Keine Verbindung zum Server')
       else setError('Anmeldung fehlgeschlagen')
     } finally {

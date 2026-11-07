@@ -15,7 +15,7 @@ import { pb } from '../../lib/pocketbase'
 import { pbFehlerText } from '../../lib/pbFehler'
 import { altenVersuchSenden, ohne, useMpg, type BlattVersuch, type DefektFormular } from './MpgDaten'
 import { Blatt, Feld, Haken, Hinweis, eingabe, knopfRand, knopfVollWenn, kursivGrau } from './teile'
-import { SCHWERE_NAME, type Defect, type Device, type ExternalReport, type Severity } from './typen'
+import { SCHWERE_NAME, abzeichenStil, melder, type Defect, type Device, type ExternalReport, type Severity } from './typen'
 
 export function Blaetter() {
   const { blatt } = useMpg()
@@ -335,12 +335,16 @@ function MeldungBestaetigenFormular({ meldung }: { meldung: ExternalReport }) {
   }
 
   const fest = !!versuch || m.busy
+  const mz = melder(meldung)
   return (
     <Blatt ueber="Meldung bestätigen" titel={m.geraeteName(meldung.device_id, meldung.device_name)} onClose={() => m.setBlatt(null)} gesperrt={m.busy}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div>
           <div style={{ fontSize: 14, color: 'var(--lbf-text)', lineHeight: 1.5 }}>{meldung.description}</div>
-          <div style={{ ...kursivGrau, marginTop: 4 }}>Gemeldet von {meldung.reporter_name || 'Anonym'}</div>
+          <div style={{ ...kursivGrau, marginTop: 4, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8, rowGap: 2 }}>
+            <span>Gemeldet von {mz.zeile}</span>
+            {mz.abzeichen && <span style={abzeichenStil(mz.abzeichen.farbe)}>{mz.abzeichen.text}</span>}
+          </div>
         </div>
         <Feld label="Anmerkung (optional)">
           <textarea value={anmerkung} readOnly={fest} onChange={e => setAnmerkung(e.target.value)} rows={3}

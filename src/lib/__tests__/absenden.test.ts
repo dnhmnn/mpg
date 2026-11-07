@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  FRIST_MS, datensatz, fristEnde, fristLaeuft, fristRestText, fristText, inWarteschlange, protokollnummer,
+  FRIST_MS, aenderbar, datensatz, fristEnde, fristLaeuft, fristRestText, fristText, inWarteschlange, protokollnummer,
   pruefen, titel, warteschlange, warteschlangeLeeren, warteschlangeSchluessel,
   type Speicher,
 } from '../../pages/public/doku/absenden'
@@ -139,6 +139,35 @@ describe('Frist älterer Protokolle', () => {
 
   it('ist abgelaufen, wenn nicht einmal das Anlegen lesbar ist', () => {
     expect(fristEnde({}, 'kein Datum')).toBe(0)
+  })
+
+  it('liest das Datumsformat von PocketBase (Leerzeichen statt T)', () => {
+    expect(fristEnde({}, '2026-10-31 13:20:05.120Z')).toBe(Date.parse('2026-10-31T13:20:05.120Z') + FRIST_MS)
+  })
+})
+
+describe('Ein abgesendetes Protokoll ändern (Bauplan v2, 1.11, 1.14)', () => {
+  const jetzt = Date.parse('2026-11-01T12:00:00.000Z')
+  const absender = (status: string) => ({ id: 'u1', name: 'Anna Berg', status, weg: '', modus: 'passwort', am: '' })
+
+  it('geht, solange die Frist läuft', () => {
+    expect(aenderbar({ frist: '2026-11-02T00:00:00.000Z', absender: absender('bestaetigt') }, '', jetzt)).toBe('ja')
+    expect(aenderbar({ frist: '2026-11-01T11:00:00.000Z', absender: absender('bestaetigt') }, '', jetzt)).toBe('abgelaufen')
+  })
+
+  it('geht nicht, solange es auf die Unterschrift wartet, obwohl die Frist leer ist', () => {
+    // Früher hieß eine leere Frist „läuft noch“: ausstehende Protokolle wären für immer änderbar gewesen
+    expect(aenderbar({ frist: '', absender: absender('ausstehend') }, '2026-11-01T11:59:00.000Z', jetzt)).toBe('ausstehend')
+    expect(aenderbar({ frist: '', absender: JSON.stringify(absender('ausstehend')) }, '2026-11-01T11:59:00.000Z', jetzt)).toBe('ausstehend')
+  })
+
+  it('geht nicht mehr, wenn es ohne Unterschrift abgeschlossen ist', () => {
+    expect(aenderbar({ frist: '', absender: absender('ohne_unterschrift') }, '2026-11-01T11:59:00.000Z', jetzt)).toBe('abgelaufen')
+  })
+
+  it('rechnet ältere Protokolle ohne Frist ab dem Anlegen', () => {
+    expect(aenderbar({}, '2026-11-01 10:00:00.000Z', jetzt)).toBe('ja')
+    expect(aenderbar({}, '2026-10-30 10:00:00.000Z', jetzt)).toBe('abgelaufen')
   })
 })
 

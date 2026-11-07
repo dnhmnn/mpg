@@ -11,10 +11,23 @@
 // Abgesendet wird am Ende des letzten Zettels. Was dabei entsteht, ist
 // derselbe Datensatz, den das alte Formular anlegt — Unitas und der Ausdruck
 // lesen ihn ohne Änderung.
+//
+// Abgesendet wird über die Route des Servers (Bauplan v2, 4.4): Absender mit
+// Passwort, angemeldet oder Name frei, je nach Einstellung der Organisation.
+// Was ohne Netz liegen bleibt, schickt die Warteschlange über der Seite
+// (src/pages/public/absender/Warteschlange.tsx), nie diese Maske mit einem
+// fremden Token. In der App (`imApp`, Unitas „Neues Protokoll“) liegt der
+// Entwurf je Person, nicht je Gerät.
 
-import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useOrg } from '../OrgPublicLayout'
 import { pb } from '../../../lib/pocketbase'
+import { aktuelleTokenId } from '../../../lib/formular/api'
+import { useFormularStand } from '../../../lib/formular/stand'
+import { gepruefterPayload } from '../../../lib/formular/absender'
+import { ABSENDER_TEXTE } from '../absender/texte'
+import { AbmeldenNachSenden, Textknopf } from '../absender/AbsenderFeld'
 import { AELRD_ABSCHNITTE, aelrdFeld, type AelrdFeld } from '../../../katalog/aelrd'
 import { istSpiegelFeld } from '../../../katalog/aelrdSpiegel'
 import { offeneErwartung, offenePflicht, pflichtKarte, type Stand } from '../../../katalog/pflicht'
@@ -31,8 +44,8 @@ import Massnahmen from './Massnahmen'
 import Verlauf from './Verlauf'
 import Adresse from './Adresse'
 import Gcs from './Gcs'
-import Absenden from './Absenden'
-import { fristLaeuft, fristText, warteschlange, warteschlangeLeeren } from './absenden'
+import Absenden, { aenderbar, type Gesendet } from './Absenden'
+import { fristRestText } from './absenden'
 import Pupillen from './Pupillen'
 import Zeitstrahl from './Zeitstrahl'
 import { adresseSetzen } from './adresse'
@@ -266,6 +279,7 @@ function Block({ id, titel, teile, zeigeSchritt, felder, werte, setzen, aktion, 
 export default function Doku({
   protokollId: ausProps, nurLesen: nichtSchreiben = false,
   markieren = false, markiert = [], onMarkieren, hervorgehoben = [], pdfZuerst = false, hinweis = '',
+  imApp = false,
 }: {
   /** Ein bestehendes Protokoll — sonst steht die Kennung in ?id=. */
   protokollId?: string
@@ -306,35 +320,60 @@ export default function Doku({
    * füllt den Bildschirm, und sonst stünde er hinter ihr.
    */
   hinweis?: string
+  /**
+   * In der angemeldeten App (Unitas „Neues Protokoll“): der Entwurf liegt je
+   * Person (`doku_entwurf_<org>_u_<id>`), nach dem Absenden geht es zurück zu
+   * Unitas.
+   */
+  imApp?: boolean
 } = {}) {
   /* Wer markiert, liest: ein Protokoll wird durch eine Rückfrage nicht
      geändert. */
   const nurLesen = nichtSchreiben || markieren
   const { org, orgCode } = useOrg()
+  const navigate = useNavigate()
+  /** In der angemeldeten App (neu aus Unitas oder ein Protokoll über „Bearbeiten“). */
+  const inApp = imApp || Boolean(ausProps)
+  /** Unter diesem Namen liegt der Entwurf: je Organisation, in der App je Person. */
+  const [entwurfOrt] = useState(() => (imApp ? `${orgCode}_u_${aktuelleTokenId()}` : orgCode))
+  /** Eine Kennung in Props oder ?id=: dann wird geändert, nicht neu abgesendet. */
+  const [idVorab] = useState(() => ausProps || (new URLSearchParams(window.location.search).get('id') ?? ''))
   /*
    * Der Entwurf aus dem Gerät wird gleich beim Aufbau gelesen, nicht in einem
    * Effekt: sonst stünde die Maske einen Augenblick leer da, und ein Tippen
    * in dieser Lücke ginge gegen den leeren Stand.
    */
   const [werte, setWerteRoh] = useState<Werte>(
-    () => (nurLesen || ausProps ? {} : entwurfLesen(window.localStorage, orgCode)?.werte ?? {}),
+    // Mit ?id= gilt der Entwurf des Geräts nicht (er gehört zum zuletzt Angefangenen)
+    () => (nurLesen || idVorab ? {} : entwurfLesen(window.localStorage, entwurfOrt)?.werte ?? {}),
   )
   /** Beim Ansehen schreibt niemand — der Weg dorthin ist schlicht zu. */
   const setWerte: typeof setWerteRoh = nurLesen ? () => {} : setWerteRoh
   /** Der Stand des wiederhergestellten Entwurfs — bis er weggetippt wird. */
   const [wiederhergestellt, setWiederhergestellt] = useState(
-    () => (nurLesen || ausProps ? '' : entwurfLesen(window.localStorage, orgCode)?.stand ?? ''),
+    () => (nurLesen || idVorab ? '' : entwurfLesen(window.localStorage, entwurfOrt)?.stand ?? ''),
   )
   /** Wenn das Gerät nichts behalten will, muss die Maske es sagen. */
   const [sichertNicht, setSichertNicht] = useState(false)
   /** Nach dem Absenden: die Nummer, oder leer, wenn es in der Warteschlange liegt. */
-  const [gesendet, setGesendet] = useState<{ nummer: string; offline: boolean } | null>(null)
+  const [gesendet, setGesendet] = useState<Gesendet | null>(null)
+  /** „Anderer Absender“: ohne Token senden, obwohl dieses Gerät angemeldet ist. */
+  const [anderer, setAnderer] = useState(false)
+  /** Kennung des neuen Satzes: entsteht beim ersten Versuch, neu nach dem Zurücksetzen. */
+  const [kennung, setKennung] = useState('')
+  /*
+   * Was der Server zum Absender sagt (Modus, angemeldet erkannt). Beim Ansehen
+   * und beim Ändern eines abgesendeten Protokolls wird nicht gefragt.
+   */
+  const { stand, alterServer } = useFormularStand(nurLesen || idVorab ? '' : orgCode, { mitAnmeldung: !anderer, org })
   /**
    * Ein schon abgesendetes Protokoll, das in seiner Frist geändert wird.
    *
    * Unitas verweist mit ?id= hierher. Ohne Kennung entsteht ein neues.
    */
   const [protokollId, setProtokollId] = useState('')
+  /** `created` des geladenen Protokolls: die Frist älterer Sätze rechnet ab hier. */
+  const [angelegt, setAngelegt] = useState('')
   const [laedt, setLaedt] = useState(false)
   const [ladefehler, setLadefehler] = useState('')
   const [suche, setSuche] = useState('')
@@ -354,14 +393,54 @@ export default function Doku({
    */
   useEffect(() => {
     // Beim Ansehen entsteht kein Entwurf: sonst überschriebe ein Blick in ein
-    // fremdes Protokoll das eigene angefangene.
-    if (nurLesen || ausProps) return
+    // fremdes Protokoll das eigene angefangene. Ebenso beim Ändern über ?id=:
+    // sonst läge das abgesendete Protokoll danach als Entwurf auf dem Gerät
+    // und ginge beim nächsten Absenden ein zweites Mal raus.
+    // Nach dem Absenden nicht mehr: sonst läge das Gesendete wieder als Entwurf da
+    if (nurLesen || idVorab || gesendet) return
     const uhr = setTimeout(() => {
-      const ging = entwurfSchreiben(window.localStorage, orgCode, werte)
+      const ging = entwurfSchreiben(window.localStorage, entwurfOrt, werte)
       setSichertNicht(!ging)
     }, 400)
     return () => clearTimeout(uhr)
-  }, [werte, orgCode, nurLesen, ausProps])
+  }, [werte, entwurfOrt, nurLesen, idVorab, gesendet])
+
+  /*
+   * Angemeldet erkannt und das Feld Unterschrift leer: einmal mit dem
+   * Kontonamen vorbelegen. Nach „Anderer Absender“ nicht, und nie über
+   * etwas, das schon dasteht.
+   */
+  const vorbelegt = useRef(false)
+  /** Der Name, mit dem das Feld vorbelegt wurde (nur der wird bei „Anderer Absender“ wieder geleert). */
+  const vorbelegterName = useRef('')
+  useEffect(() => {
+    const name = stand?.angemeldet?.name?.trim()
+    if (!name || anderer || nurLesen || idVorab || vorbelegt.current) return
+    vorbelegt.current = true
+    setWerteRoh((v) => {
+      if (String(v.unterschrift ?? '').trim()) return v
+      vorbelegterName.current = name
+      return { ...v, unterschrift: name }
+    })
+  }, [stand, anderer, nurLesen, idVorab])
+
+  /*
+   * „Anderer Absender“: der vorbelegte Kontoname gehört nicht der Person, die
+   * jetzt abgibt. Steht er noch unverändert im Feld Unterschrift, wird er
+   * geleert; sonst tippte sie ihr Passwort zum fremden Namen und sperrte nach
+   * fünf Versuchen dessen Bestätigung (Befund Client-Abläufe 9). Zurück zu
+   * „Doch angemeldet senden“ belegt ein leeres Feld wieder vor.
+   */
+  function andererWaehlen(v: boolean) {
+    setAnderer(v)
+    if (v) {
+      const vor = vorbelegterName.current
+      if (vor) setWerte((w) => (String(w.unterschrift ?? '').trim() === vor ? { ...w, unterschrift: '' } : w))
+      vorbelegterName.current = ''
+    } else {
+      vorbelegt.current = false
+    }
+  }
 
   /*
    * Was dieses Protokoll verlangt, hängt an ihm selbst: ein Fehleinsatz
@@ -371,17 +450,11 @@ export default function Doku({
   const verlangt = useMemo(() => pflichtKarte(werte), [werte])
 
   /*
-   * Was ohne Netz liegen geblieben ist, geht beim nächsten Öffnen raus —
-   * gleichgültig, in welcher der beiden Masken es entstanden ist.
+   * Was ohne Netz liegen geblieben ist, schickt die Warteschlange über der
+   * Seite (OrgPublicLayout, in der App Unitas und ProtokollMaske), auch das
+   * aus der alten Warteschlange `offline_queue_<org>`. Diese Maske sendet
+   * nichts nach, schon gar nicht mit dem Token, das gerade angemeldet ist.
    */
-  useEffect(() => {
-    if (nurLesen || !navigator.onLine) return
-    const liegend = warteschlange(window.localStorage, orgCode)
-    if (liegend.length === 0) return
-    Promise.all(liegend.map(({ type, ...satz }) => pb.collection('patients').create(satz)))
-      .then(() => warteschlangeLeeren(window.localStorage, orgCode))
-      .catch(() => { /* bleibt liegen, nächster Versuch beim nächsten Öffnen */ })
-  }, [orgCode, nurLesen])
 
   /*
    * Mit ?id= wird ein bestehendes Protokoll geöffnet — in seiner Frist. Der
@@ -395,13 +468,19 @@ export default function Doku({
     setLaedt(true)
     pb.collection('patients').getOne(id)
       .then((rec) => {
-        const p = typeof rec.payload === 'string' ? JSON.parse(rec.payload) : (rec.payload ?? {})
-        setWerteRoh(p as Werte)
+        // payload als Text oder doppelt kodiert; den Absender nur mit passendem Statusfeld (gepruefterPayload)
+        const p = gepruefterPayload(rec as unknown as Record<string, unknown>)
+        if (!p && typeof rec.payload === 'string' && rec.payload.trim()) throw new Error('payload unlesbar')
+        setWerteRoh((p ?? {}) as Werte)
+        setAngelegt(String(rec.created ?? ''))
         setWiederhergestellt('')
       })
       .catch(() => setLadefehler('Dieses Protokoll ließ sich nicht öffnen.'))
       .finally(() => setLaedt(false))
   }, [ausProps])
+
+  /** Ob ein geladenes Protokoll noch geändert werden darf (Frist, Unterschrift ausstehend). */
+  const aenderZustand = protokollId ? aenderbar(werte, angelegt) : 'ja'
 
   const setzen = (id: string, w: unknown) => setWerte((v) => ({ ...v, [id]: w }))
   /** Die Felder, die die Maßnahmen-Maske schreibt — sie stehen dort, nicht einzeln. */
@@ -602,7 +681,9 @@ export default function Doku({
             <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {org.org_name} · {fertig} von {imWeg.length} Feldern
               {nurLesen ? ' · nur ansehen' : ''}
-              {protokollId && !nurLesen ? ` · ${fristLaeuft(werte) ? `Änderungsfrist ${fristText(werte)}` : 'Frist abgelaufen'}` : ''}
+              {protokollId && !nurLesen && !laedt ? ` · ${
+                aenderZustand === 'ja' ? `Änderungsfrist ${fristRestText(werte, angelegt)}`
+                  : aenderZustand === 'ausstehend' ? 'wartet auf Unterschrift' : 'Frist abgelaufen'}` : ''}
               {pflichtOffen.length > 0 ? ` · ${pflichtOffen.length} Pflichtangaben offen` : ''}
               {pflichtOffen.length === 0 && erwartungOffen.length > 0 ? ` · ${erwartungOffen.length} erwartet` : ''}
               {hinweis ? ` · ${hinweis}` : ''}
@@ -684,7 +765,7 @@ export default function Doku({
             <button
               type="button"
               onClick={() => {
-                entwurfVerwerfen(window.localStorage, orgCode)
+                entwurfVerwerfen(window.localStorage, entwurfOrt)
                 setWerte({})
                 setWiederhergestellt('')
               }}
@@ -710,10 +791,11 @@ export default function Doku({
             {ladefehler}
           </div>
         ) : null}
-        {protokollId && !fristLaeuft(werte) ? (
+        {protokollId && !nurLesen && !laedt && !ladefehler && aenderZustand !== 'ja' ? (
           <div style={{ marginBottom: 10, padding: '8px 11px', background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 10, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
-            Die Änderungsfrist ist abgelaufen — das Protokoll ist eingereicht.
-            Änderungen gehen von hier nicht mehr hinaus.
+            {aenderZustand === 'ausstehend'
+              ? ABSENDER_TEXTE.aendernAusstehend
+              : 'Die Änderungsfrist ist abgelaufen. Das Protokoll ist eingereicht, Änderungen gehen von hier nicht mehr hinaus.'}
           </div>
         ) : null}
         {sichertNicht ? (
@@ -757,7 +839,7 @@ export default function Doku({
               felder={aktuell.felder}
               werte={werte} setzen={setzen} aktion={aktionFuer(aktuell.id)}
               ersatz={{
-                besatzung: <Besatzung orgId={org.id} werte={werte} onSetzen={besetzen} />,
+                besatzung: <Besatzung orgCode={orgCode} werte={werte} onSetzen={besetzen} mitAnmeldung={!anderer} />,
                 // Der Verlauf ist ein eigener Schritt des Maßnahmen-Zettels,
                 // nicht eine Karte darüber: sonst stünde er auf jedem Schritt.
                 'massnahmen-verlauf': <Massnahmen werte={werte} setWerte={setWerte} />,
@@ -824,12 +906,16 @@ export default function Doku({
               */}
             {aktuell.id === 'abschluss' && !nurLesen && !laedt && !ladefehler ? (
               <Absenden
-                werte={werte} orgId={org.id} orgCode={orgCode} protokollId={protokollId}
+                werte={werte} orgId={org.id} orgCode={orgCode} protokollId={protokollId} angelegt={angelegt}
+                stand={stand} alterServer={alterServer}
+                anderer={anderer} onAnderer={andererWaehlen}
+                kennung={kennung} onKennung={setKennung}
                 onSpringen={zumBlock}
-                onGesendet={(nummer, offline) => {
-                  entwurfVerwerfen(window.localStorage, orgCode)
+                onGesendet={(g) => {
+                  // Ein geändertes Protokoll hat keinen Entwurf auf dem Gerät
+                  if (!g.geaendert) entwurfVerwerfen(window.localStorage, entwurfOrt)
                   setWiederhergestellt('')
-                  setGesendet({ nummer, offline })
+                  setGesendet(g)
                 }}
               />
             ) : null}
@@ -867,25 +953,51 @@ export default function Doku({
         >
           <div style={{ fontSize: 44, fontWeight: 800, color: ROT, lineHeight: 1 }}>✓</div>
           <div style={{ fontSize: 17, fontStyle: 'italic', fontWeight: 700, color: TEXT, marginTop: 12 }}>
-            {gesendet.offline ? 'Auf dem Gerät gesichert' : 'Protokoll abgesendet'}
+            {gesendet.offline ? 'Auf dem Gerät gesichert' : gesendet.geaendert ? 'Änderungen übernommen' : 'Protokoll abgesendet'}
           </div>
           <div style={{ fontSize: 13, fontStyle: 'italic', color: GRAU, marginTop: 6, maxWidth: 320, lineHeight: 1.5 }}>
             {gesendet.offline
-              ? 'Ohne Netz — es geht beim nächsten Öffnen mit Verbindung raus.'
-              : 'Es steht jetzt in Unitas, bei der eingetragenen Besatzung.'}
+              ? (gesendet.meldung || 'Ohne Netz gespeichert. Geht raus, sobald wieder Netz da ist.')
+              : gesendet.geaendert
+                ? 'Die Änderungsfrist bleibt, wie sie war.'
+                : gesendet.alterWeg
+                  ? ABSENDER_TEXTE.alterWegGesendet
+                  : gesendet.absender?.status === 'bestaetigt'
+                    ? 'Es steht jetzt in Unitas, bei der erkannten Besatzung und beim Absender.'
+                    : 'Es steht jetzt in Unitas, bei der erkannten Besatzung.'}
           </div>
           {gesendet.nummer ? (
             <div style={{ fontSize: 15, fontWeight: 700, color: ROT, marginTop: 10, fontVariantNumeric: 'tabular-nums' }}>
               {gesendet.nummer}
             </div>
           ) : null}
-          <button
-            type="button"
-            onClick={() => { setWerte({}); setGesendet(null); zumBlock('patient') }}
-            style={{ marginTop: 22, padding: '13px 22px', background: ROT_GRUND, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}
-          >
-            Neues Protokoll
-          </button>
+          {gesendet.geaendert ? (
+            <button
+              type="button" onClick={() => setGesendet(null)}
+              style={{ marginTop: 22, padding: '13px 22px', background: ROT_GRUND, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}
+            >
+              Schließen
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                // Das nächste Protokoll bekommt eine neue Kennung und fängt beim eigenen Namen an
+                setWerte({}); setKennung(''); setAnderer(false); vorbelegt.current = false
+                setGesendet(null); zumBlock('patient')
+              }}
+              style={{ marginTop: 22, padding: '13px 22px', background: ROT_GRUND, border: 'none', borderRadius: 12, color: '#fff', fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', cursor: 'pointer' }}
+            >
+              Neues Protokoll
+            </button>
+          )}
+          {inApp ? (
+            <div style={{ marginTop: 14 }}>
+              <Textknopf onClick={() => navigate('/unitas')}>{ABSENDER_TEXTE.zurueckUnitas}</Textknopf>
+            </div>
+          ) : null}
+          {/* Fremdes Gerät: wer angemeldet gesendet hat, meldet sich hier wieder ab */}
+          {!inApp ? <AbmeldenNachSenden /> : null}
         </div>
       ) : null}
 

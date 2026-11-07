@@ -116,6 +116,8 @@ function App() {
           * gleich erfasst und gleich geändert. Das alte Formular bleibt unter
           * /protokoll-alt/:patientId erreichbar.
           */}
+        {/* Neues Protokoll aus Unitas, angemeldet gesendet (Bauplan v2, 4.9); vor /protokoll/:patientId */}
+        <Route path="/protokoll/neu" element={<ProtokollMaske neu />} />
         <Route path="/protokoll/:patientId" element={<ProtokollMaske />} />
         <Route path="/protokoll-alt/:patientId" element={<ProtokollBearbeiten />} />
         <Route path="/protokoll-2" element={<Suspense fallback={null}><AelrdProtokoll /></Suspense>} />

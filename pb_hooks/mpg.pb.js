@@ -321,10 +321,18 @@ onRecordCreateRequest((e) => {
   if (e.record.collection().name === "mpg_defects" && !e.hasSuperuserAuth()) {
     if (e.record.getString("status") !== "open") throw new BadRequestError("Ein Defekt wird offen angelegt.")
     if (meldung) {
-      // Nur der Name: Die Kennung in einer Meldung von außen stammt aus dem Formular ohne
-      // Anmeldung und ist nicht geprüft
+      // Die Kennung des Melders nur, wenn der Server ihn bestätigt hat (Passwort, Anmeldung oder
+      // nachgereichte Unterschrift, reporter_status, formular.pb.js). Sonst nur der Name: Eine
+      // nicht bestätigte Kennung beweist nicht, wer gemeldet hat. reporter_status zählt nur, wenn
+      // formular.pb.js geladen ist (Merker beim Start): Ohne die Datei (Rücknahme) setzt niemand
+      // das Feld, und die offene Create-Regel nähme einen gefälschten Wert an.
+      let melderId = ""
+      try {
+        const aktiv = $app.store().get("responda:formular_aktiv") === true
+        if (aktiv && meldung.getString("reporter_status") === "bestaetigt") melderId = meldung.getString("reporter_user_id")
+      } catch (err) { melderId = "" }
       try { e.record.set("reported_by", meldung.getString("reporter_name") || "Externe Meldung") } catch (err) { /* Feld fehlt */ }
-      try { e.record.set("reported_by_id", "") } catch (err) { /* Feld fehlt */ }
+      try { e.record.set("reported_by_id", melderId) } catch (err) { /* Feld fehlt */ }
     } else if (e.auth) {
       try { e.record.set("reported_by", e.auth.getString("name") || e.auth.getString("email")) } catch (err) { /* Feld fehlt */ }
       try { e.record.set("reported_by_id", e.auth.id) } catch (err) { /* Feld fehlt — dann eben nicht */ }
@@ -402,7 +410,8 @@ onRecordUpdateRequest((e) => {
         if (da) throw new BadRequestError("Aus dieser Meldung ist schon ein Defekt entstanden — sie wird bestätigt, nicht abgelehnt.")
       }
     }
-    const fest = ["device_id", "device_name", "organization_id", "reporter_name", "reporter_user_id", "description", "severity"]
+    // reporter_status setzt nur der Server (formular.pb.js: Absenden, Unterschreiben)
+    const fest = ["device_id", "device_name", "organization_id", "reporter_name", "reporter_user_id", "reporter_status", "description", "severity"]
     if (alt.getString("status") !== "pending") fest.push("rejected_reason")
     for (const f of fest) {
       try { e.record.set(f, alt.getString(f)) } catch (err) { /* Feld fehlt */ }

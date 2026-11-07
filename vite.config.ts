@@ -30,6 +30,20 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/api\/(batch|collections\/eks_)/i,
             handler: 'NetworkOnly',
           },
+          // Die Formular-Routen antworten je Person (wer angemeldet ist, was
+          // auf die eigene Unterschrift wartet). Eine gespeicherte Antwort
+          // zeigte einem zweiten Menschen am Gerät den Stand des ersten.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/responda\//i,
+            handler: 'NetworkOnly',
+          },
+          // Wer vor dem Schreiben frisch lesen muss (form_config), hängt
+          // frisch=1 an. Eine Antwort aus dem Zwischenspeicher wäre ein alter
+          // Stand, der beim Speichern das Neuere überschriebe.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/.*[?&]frisch=1(&|$)/i,
+            handler: 'NetworkOnly',
+          },
           // Das Lager hält offline einen eigenen Zwischenspeicher. Eine gecachte
           // Antwort würde als Erfolg gewertet und einen 24 Stunden alten Bestand
           // als aktuell ausgeben.

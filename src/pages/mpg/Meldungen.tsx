@@ -6,9 +6,20 @@ import { darfBeheben } from '../../lib/mpg/rechte'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
 import { Aktionen, Karte, Leer, Reiter, SCHWERE_RAND, SchwereMarke, fmtDate, knopfLeise, kursivGrau, relativeDate, useBreit } from './teile'
-import type { Defect } from './typen'
+import { abzeichenStil, melder, type Defect, type ExternalReport } from './typen'
 
 type Teil = 'eingang' | 'offen' | 'behoben'
+
+/** „vor 2 Std. · Anna Berg · Name nicht geprüft“ und bei ausstehender Unterschrift das Abzeichen. */
+export function MelderZeile({ r, style }: { r: ExternalReport; style?: React.CSSProperties }) {
+  const mz = melder(r)
+  return (
+    <div style={{ ...kursivGrau, display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 8, rowGap: 2, ...style }}>
+      <span>{relativeDate(r.created)} · {mz.zeile}</span>
+      {mz.abzeichen && <span style={abzeichenStil(mz.abzeichen.farbe)}>{mz.abzeichen.text}</span>}
+    </div>
+  )
+}
 
 export default function Meldungen() {
   const m = useMpg()
@@ -63,7 +74,7 @@ export default function Meldungen() {
                 <SchwereMarke severity={r.severity} />
               </div>
               <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1.45 }}>{r.description}</div>
-              <div style={{ ...kursivGrau, marginTop: 6 }}>{relativeDate(r.created)} · {r.reporter_name || 'Anonym'}</div>
+              <MelderZeile r={r} style={{ marginTop: 6 }} />
               {m.unklareBestaetigung(r.id) && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-fehler-text)', marginTop: 4 }}>Bestätigung nicht sicher gespeichert — bitte erneut senden</div>}
             </div>
             {m.darfVerwalten && (

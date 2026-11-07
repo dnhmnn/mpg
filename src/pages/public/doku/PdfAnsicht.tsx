@@ -10,6 +10,7 @@
 // suchen.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { ABSENDER_ABZEICHEN, absenderAusObjekt } from '../../../lib/formular/absender'
 
 const ROT = 'var(--lbf-akzent)'
 /** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
@@ -85,6 +86,16 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
 
   const faktor = eingepasst && breite > 0 ? Math.min(1, breite / BOGEN_BREITE) : 1
 
+  /*
+   * Ist der Absender nicht bestätigt, steht das über dem Bogen (Bauplan v2,
+   * 4.4). Der gedruckte Bogen selbst bleibt, wie er ist (ÄLRD-Layout).
+   */
+  const absender = absenderAusObjekt(werte.absender)
+  const absenderHinweis = absender?.status === 'ausstehend'
+    ? `Absender nicht bestätigt. Das Protokoll wartet auf die Unterschrift von ${absender.name.trim() || 'dem Absender'}.`
+    : absender?.status === 'ohne_unterschrift' ? 'Ohne Unterschrift des Absenders abgeschlossen.' : ''
+  const abzeichen = absender ? ABSENDER_ABZEICHEN[absender.status] : null
+
   return (
     <div
       role="dialog" aria-label="Protokoll ansehen"
@@ -139,6 +150,17 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
             style={{ background: 'transparent', border: 'none', color: GRAU, fontSize: 24, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit', padding: '0 2px' }}>×</button>
         )}
       </header>
+
+      {absenderHinweis ? (
+        <div style={{ flexShrink: 0, margin: '10px 12px 0', padding: '9px 12px', background: 'var(--lbf-card)', borderLeft: `3px solid ${abzeichen?.farbe ?? GRAU}`, borderRadius: 8 }}>
+          {abzeichen ? (
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: abzeichen.farbe, marginBottom: 3 }}>
+              {abzeichen.text}
+            </div>
+          ) : null}
+          <div style={{ fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.45 }}>{absenderHinweis}</div>
+        </div>
+      ) : null}
 
       {blockiert ? (
         <div style={{ flexShrink: 0, margin: '10px 12px 0', padding: '9px 12px', background: 'var(--lbf-card)', borderLeft: '3px solid #d97706', borderRadius: 8, fontSize: 12, color: TEXT }}>

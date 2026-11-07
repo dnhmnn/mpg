@@ -3,6 +3,7 @@ import { pb } from '../lib/pocketbase'
 import { ROLES, getRoleTemplate } from '../lib/apps'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { istEigeneRolleId, vorlageBereinigen } from '../lib/rollen'
+import { anzahlAlle } from '../lib/formular/warteschlange'
 import type { User } from '../types'
 
 /**
@@ -138,17 +139,10 @@ export function useAuth() {
   async function logout() {
     // EKS hält Einsatzdaten lokal. localStorage.clear() darf sie nicht stillschweigend vernichten.
     const pending = Number(localStorage.getItem('eks_pending_count') || '0')
-    // Ohne Netz abgeschickte Protokolle warten im lokalen Speicher (offline_queue_<org>)
-    // und gingen mit localStorage.clear() verloren
-    let protokolle = 0
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i)
-        if (!k || !k.startsWith('offline_queue_')) continue
-        const q = JSON.parse(localStorage.getItem(k) || '[]')
-        if (Array.isArray(q)) protokolle += q.length
-      }
-    } catch { /* unlesbar: nicht zählen */ }
+    // Ohne Netz abgeschickte Formulare warten im lokalen Speicher (formular_warteschlange_<org>,
+    // aus älteren Fassungen offline_queue_<org>) und gingen mit localStorage.clear() verloren
+    let formulare = 0
+    try { formulare = anzahlAlle(localStorage) } catch { /* unlesbar: nicht zählen */ }
     // Offline vorgemerkte Lager-Buchungen (IndexedDB) bleiben auf dem Gerät und hängen an der
     // Person, die sie erfasst hat. Gezählt wird nur, was die Abmeldende betrifft.
     let lagerEigene = 0, lagerProbleme = 0, lagerKollegen = 0
@@ -174,7 +168,7 @@ export function useAuth() {
     if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
     if (mpg.unklar > 0) warnungen.push(`Im MPG ${mpg.unklar === 1 ? 'ist eine Speicherung' : `sind ${mpg.unklar} Speicherungen`} (Prüfung, Defektmeldung, Sperre, Freigabe oder Ähnliches) nicht sicher angekommen — bitte vorher im MPG erneut senden.`)
     if (mpg.entwurf) warnungen.push('Eine begonnene MPG-Prüfung ist noch nicht gespeichert.')
-    if (protokolle > 0) warnungen.push(`${protokolle} Protokoll${protokolle === 1 ? ' wartet' : 'e warten'} noch auf diesem Gerät auf die Übertragung.`)
+    if (formulare > 0) warnungen.push(formulare === 1 ? 'Ein ausgefülltes Formular wartet noch auf diesem Gerät auf das Senden.' : `${formulare} ausgefüllte Formulare warten noch auf diesem Gerät auf das Senden.`)
     const lagerTeile: string[] = []
     if (lagerEigene > 0) lagerTeile.push(`${lagerEigene} deiner Lager-Buchungen ${lagerEigene === 1 ? 'ist' : 'sind'} noch nicht übertragen. Sie bleiben auf diesem Gerät und gehen raus, sobald du dich hier wieder anmeldest — oder jemand aus deiner Organisation sie unter deinem Namen überträgt. Besser vorher mit Netz übertragen (Lager → Abzeichen).`)
     if (lagerProbleme > 0) lagerTeile.push(`${lagerProbleme} deiner Lager-Buchungen ${lagerProbleme === 1 ? 'braucht' : 'brauchen'} eine Entscheidung (teilweise übertragen oder abgelehnt) — siehe Lager → Abzeichen.`)

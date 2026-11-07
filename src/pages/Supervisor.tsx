@@ -553,7 +553,7 @@ export default function Supervisor() {
         permissions_migrated: true,
         organization_id: selectedOrg.id,
         organization_name: selectedOrg.org_name,
-        emailVisibility: true
+        emailVisibility: false
       })
       setNewUserMsg('Benutzer erstellt.')
       setNewUserName('')

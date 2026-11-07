@@ -1838,7 +1838,7 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
       notizen: teilnehmerForm.notizen || '',
       role: 'teilnehmer',
       permissions: permissions,
-      emailVisibility: true,
+      emailVisibility: false,
       verified: false,
       organization_id: user?.organization_id,
       password: randomPassword,

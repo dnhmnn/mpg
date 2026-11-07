@@ -96,7 +96,7 @@ export default function Chat() {
           if (otherId) {
             try {
               const u = await pb.collection('users').getOne(otherId)
-              return { ...ch, other_user_name: u.name || u.email }
+              return { ...ch, other_user_name: u.name || sichtbareEmail(u.email) || 'Unbekannt' }
             } catch {}
           }
         }
@@ -568,9 +568,9 @@ export default function Chat() {
             <div className="chat-contacts-list">
               {filteredContacts.map(u => (
                 <div key={u.id} className="chat-contact-item" onClick={() => startDM(u)}>
-                  <div className="chat-avatar-sm">{(u.name || u.email)[0].toUpperCase()}</div>
+                  <div className="chat-avatar-sm">{(u.name || sichtbareEmail(u.email) || '?')[0].toUpperCase()}</div>
                   <div>
-                    <div className="chat-contact-name">{u.name || u.email}</div>
+                    <div className="chat-contact-name">{u.name || sichtbareEmail(u.email) || 'Unbekannt'}</div>
                     {u.name && sichtbareEmail(u.email) && <div className="chat-contact-email">{sichtbareEmail(u.email)}</div>}
                   </div>
                 </div>

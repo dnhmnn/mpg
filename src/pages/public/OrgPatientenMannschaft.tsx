@@ -1,19 +1,17 @@
-import { useState, useRef, useEffect } from 'react'
-import { mitFassung, NEUE_FASSUNG } from '../../lib/protokoll'
-import { pb } from '../../lib/pocketbase'
+// Besatzung und QR-Code der alten Patientendoku (Bauplan v2, 4.5).
+//
+// Hier entsteht KEIN Datensatz mehr vor dem Absenden. Früher legte „Mannschaft
+// speichern“ einen Entwurf in PocketBase an, und die Maske schrieb ihn laufend
+// nach; das ging ohne jeden Absender. Jetzt gibt die Besatzung ihre Namen nach
+// oben (`onMannschaft`), der QR-Code bleibt im Gerät (`onQrSaved`). Beides geht
+// erst mit dem Absenden raus, über den Server, der den Absender prüft und die
+// Besatzung verknüpft. Der Patientenzugang über den Code gilt deshalb erst nach
+// dem Absenden.
+
+import { useEffect, useState } from 'react'
 import { inp, lbl } from './pubStyles'
-import { MIN_ZEICHEN, neueSuche } from './mitgliederSuche'
-
-type UserHit = { id: string; name: string }
-type Selection = UserHit | null
-type Pos = 'tf' | 'm1' | 'm2' | 'm3'
-
-const FIELDS: { key: Pos; label: string }[] = [
-  { key: 'tf', label: 'Teamführer' },
-  { key: 'm1', label: 'Mannschaft 1' },
-  { key: 'm2', label: 'Mannschaft 2' },
-  { key: 'm3', label: 'Mannschaft 3' },
-]
+import BesatzungNamen from './absender/BesatzungNamen'
+import type { Namen } from './doku/besatzung'
 
 const iconMannschaft = (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -29,128 +27,6 @@ const iconQR = (
   </svg>
 )
 
-function UserSearch({ label, orgId, value, onChange }: {
-  label: string; orgId: string; value: Selection; onChange: (u: Selection) => void
-}) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<UserHit[]>([])
-  const [open, setOpen] = useState(false)
-  const [manualMode, setManualMode] = useState(false)
-  const [manualName, setManualName] = useState('')
-  const timer = useRef<ReturnType<typeof setTimeout>>()
-  const ref = useRef<HTMLDivElement>(null)
-  const [suche] = useState(neueSuche)
-
-  useEffect(() => () => { clearTimeout(timer.current); suche.abbrechen() }, [suche])
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
-
-  function confirmManual() {
-    if (!manualName.trim()) return
-    onChange({ id: '', name: manualName.trim() })
-    setManualName('')
-    setManualMode(false)
-  }
-
-  function onInput(q: string) {
-    setQuery(q)
-    clearTimeout(timer.current)
-    if (q.trim().length < MIN_ZEICHEN) { suche.abbrechen(); setResults([]); setOpen(false); return }
-    timer.current = setTimeout(async () => {
-      try {
-        const liste = await suche.suchen(orgId, q)
-        if (liste === null) return
-        setResults(liste)
-        setOpen(true)
-      } catch {
-        setResults([])
-        setOpen(false)
-        setManualMode(true)
-      }
-    }, 350)
-  }
-
-  function select(u: UserHit) {
-    suche.abbrechen()
-    onChange(u)
-    setQuery('')
-    setResults([])
-    setOpen(false)
-  }
-
-  if (manualMode && !value) {
-    return (
-      <div>
-        <label style={lbl}>{label}</label>
-        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-          <input
-            style={{ ...inp, flex: 1, margin: 0 }}
-            type="text"
-            value={manualName}
-            onChange={e => setManualName(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), confirmManual())}
-            placeholder="Name eingeben…"
-            autoFocus
-          />
-          <button type="button" onClick={confirmManual}
-            style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 10, padding: '0 14px', fontWeight: 700, cursor: 'pointer', fontSize: 14, fontFamily: 'inherit' }}>
-            OK
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div ref={ref} style={{ position: 'relative' }}>
-      <label style={lbl}>{label}</label>
-      {value ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6, background: 'var(--bg-subtle)', border: '0.5px solid var(--border-medium)', borderRadius: 10, padding: '8px 12px' }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-            {value.name.charAt(0).toUpperCase()}
-          </div>
-          <span style={{ flex: 1, fontWeight: 600, color: 'var(--text)', fontSize: 14 }}>{value.name}</span>
-          <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
-        </div>
-      ) : (
-        <input
-          style={inp}
-          type="text"
-          value={query}
-          onChange={e => onInput(e.target.value)}
-          placeholder="Name suchen…"
-          onFocus={() => results.length > 0 && setOpen(true)}
-        />
-      )}
-      {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, boxShadow: 'var(--shadow-md)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
-          {results.map(u => (
-            <button key={u.id} type="button" onMouseDown={() => select(u)} style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--border)', fontFamily: 'inherit' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-hover)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'none')}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--accent)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
-                {u.name.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{u.name}</div>
-            </button>
-          ))}
-        </div>
-      )}
-      {open && results.length === 0 && query.trim() && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '10px 12px', fontSize: 14, color: 'var(--text-secondary)', zIndex: 50, marginTop: 2 }}>
-          Kein Benutzer gefunden
-        </div>
-      )}
-    </div>
-  )
-}
-
 const btnPrimary = (disabled: boolean): React.CSSProperties => ({
   background: disabled ? 'var(--bg-hover)' : 'var(--accent)',
   color: disabled ? 'var(--text-secondary)' : '#fff',
@@ -160,101 +36,39 @@ const btnPrimary = (disabled: boolean): React.CSSProperties => ({
 })
 
 export default function OrgPatientenMannschaft({
-  orgId, orgCode, onDraftCreated, onQrSaved,
+  orgCode, namen, onMannschaft, mitAnmeldung = false, onQrSaved, qrGespeichert = '',
 }: {
-  orgId: string
   orgCode: string
-  onDraftCreated: (id: string, mannschaft: Record<string, { id: string; name: string } | null>) => void
+  /** Die vier Namen, wie sie in der Maske stehen. */
+  namen: Namen
+  /** Jede Änderung geht sofort nach oben; „Besatzung übernehmen“ bestätigt es nur sichtbar. */
+  onMannschaft: (namen: Namen) => void
+  /** Namensprüfung mit Token (angemeldet, nicht „Anderer Absender“). */
+  mitAnmeldung?: boolean
   onQrSaved?: (code: string, created: string) => void
+  /** Ein schon gemerkter Code (aus dem Entwurf). */
+  qrGespeichert?: string
 }) {
-  const [sel, setSel] = useState<Record<Pos, Selection>>({ tf: null, m1: null, m2: null, m3: null })
-  const [savingMannschaft, setSavingMannschaft] = useState(false)
-  const [mannschaftSaved, setMannschaftSaved] = useState(false)
-  const [mannschaftOffline, setMannschaftOffline] = useState('')
+  const [uebernommen, setUebernommen] = useState(false)
+  const [qrCode, setQrCode] = useState(qrGespeichert)
+  const [qrSaved, setQrSaved] = useState(Boolean(qrGespeichert))
+  const [qrFehler, setQrFehler] = useState('')
+  // Ein Code aus dem Entwurf kommt erst nach dem Einhängen an
+  useEffect(() => {
+    if (qrGespeichert) { setQrCode(qrGespeichert); setQrSaved(true) }
+  }, [qrGespeichert])
 
-  const [qrCode, setQrCode] = useState('')
-  const [savingQr, setSavingQr] = useState(false)
-  const [qrSaved, setQrSaved] = useState(false)
-  const [qrOffline, setQrOffline] = useState('')
-
-  const draftIdRef = useRef<string | null>(null)
-
-  function set(pos: Pos, u: Selection) {
-    setSel(s => ({ ...s, [pos]: u }))
-    setMannschaftSaved(false)
+  function aendern(n: Namen) {
+    onMannschaft(n)
+    setUebernommen(false)
   }
 
-  async function saveMannschaft() {
-    setSavingMannschaft(true)
-    setMannschaftOffline('')
-    const mannschaft = Object.fromEntries(
-      FIELDS.map(f => [f.key, sel[f.key] ? { id: sel[f.key]!.id, name: sel[f.key]!.name } : null])
-    )
-    if (!navigator.onLine) {
-      const queue = JSON.parse(localStorage.getItem(`offline_queue_${orgCode}`) || '[]')
-      queue.push({ type: 'draft', payload: { mannschaft }, status: 'offen', organization_id: orgId })
-      localStorage.setItem(`offline_queue_${orgCode}`, JSON.stringify(queue))
-      setMannschaftSaved(true)
-      setMannschaftOffline('Offline gespeichert – wird beim nächsten Öffnen übermittelt.')
-      setSavingMannschaft(false)
-      return
-    }
-    try {
-      if (draftIdRef.current) {
-        await pb.collection('patients').update(draftIdRef.current, { payload: { mannschaft } })
-      } else {
-        const rec = await pb.collection('patients').create({
-          title: `Entwurf – ${new Date().toLocaleDateString('de-DE')}`,
-          // Die Fassung des Formulars, das diesen Entwurf später füllt —
-          // sonst bliebe ein liegengebliebener Entwurf in der falschen
-          // Ansicht hängen.
-          payload: mitFassung({ mannschaft }, NEUE_FASSUNG),
-          status: 'offen',
-          organization_id: orgId,
-        })
-        draftIdRef.current = rec.id
-        onDraftCreated(rec.id, mannschaft)
-      }
-      setMannschaftSaved(true)
-    } catch (e: any) {
-      alert('Fehler: ' + e.message)
-    } finally {
-      setSavingMannschaft(false)
-    }
-  }
-
-  async function saveQr() {
+  function saveQr() {
     const code = qrCode.trim()
-    if (code.length !== 4) { alert('Bitte eine 4-stellige Nummer eingeben.'); return }
-    setSavingQr(true)
-    setQrOffline('')
-    const created = new Date().toISOString()
-    if (!navigator.onLine) {
-      onQrSaved?.(code, created)
-      setQrSaved(true)
-      setQrOffline('Offline gespeichert – wird beim Absenden übermittelt.')
-      setSavingQr(false)
-      return
-    }
-    try {
-      if (draftIdRef.current) {
-        // Merge access_code into existing draft payload
-        const existing = await pb.collection('patients').getOne(draftIdRef.current)
-        const existingPayload = typeof existing.payload === 'string'
-          ? JSON.parse(existing.payload)
-          : existing.payload ?? {}
-        await pb.collection('patients').update(draftIdRef.current, {
-          payload: { ...existingPayload, access_code: code, access_code_created: created },
-        })
-      }
-      // Always propagate up so final form submit includes it
-      onQrSaved?.(code, created)
-      setQrSaved(true)
-    } catch (e: any) {
-      alert('Fehler: ' + e.message)
-    } finally {
-      setSavingQr(false)
-    }
+    if (code.length !== 4) { setQrFehler('Bitte eine 4-stellige Nummer eingeben.'); return }
+    setQrFehler('')
+    onQrSaved?.(code, new Date().toISOString())
+    setQrSaved(true)
   }
 
   return (
@@ -265,21 +79,14 @@ export default function OrgPatientenMannschaft({
           {iconMannschaft} Mannschaft
         </div>
         <div style={{ padding: '1rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '1rem', marginBottom: '1rem' }}>
-            {FIELDS.map(f => (
-              <UserSearch key={f.key} label={f.label} orgId={orgId} value={sel[f.key]} onChange={u => set(f.key, u)} />
-            ))}
+          <div style={{ marginBottom: '1rem' }}>
+            <BesatzungNamen orgCode={orgCode} namen={namen} onNamen={aendern} mitAnmeldung={mitAnmeldung} spalten />
           </div>
-          {mannschaftOffline && (
-            <div style={{ background: 'var(--lbf-warn-grund-4)', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: 'var(--lbf-warn-text-4)', marginBottom: '.75rem' }}>
-              {mannschaftOffline}
-            </div>
-          )}
-          {mannschaftSaved ? (
-            <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ Mannschaft gespeichert</div>
+          {uebernommen ? (
+            <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>Übernommen.</div>
           ) : (
-            <button type="button" disabled={savingMannschaft} onClick={saveMannschaft} style={btnPrimary(savingMannschaft)}>
-              {savingMannschaft ? 'Speichert…' : 'Mannschaft speichern'}
+            <button type="button" onClick={() => { onMannschaft(namen); setUebernommen(true) }} style={btnPrimary(false)}>
+              Besatzung übernehmen
             </button>
           )}
         </div>
@@ -309,17 +116,22 @@ export default function OrgPatientenMannschaft({
               Rettungsdienst kann das Protokoll 24 h einsehen.
             </span>
           </div>
-          {qrOffline && (
+          {qrFehler && (
             <div style={{ background: 'var(--lbf-warn-grund-4)', border: '0.5px solid #eab308', borderRadius: 8, padding: '8px 12px', fontSize: '.85rem', color: 'var(--lbf-warn-text-4)', marginBottom: '.75rem' }}>
-              {qrOffline}
+              {qrFehler}
             </div>
           )}
           {qrSaved ? (
-            <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>✓ QR-Code {qrCode} verknüpft</div>
+            <div>
+              <div style={{ color: '#16a34a', fontWeight: 600, fontSize: '.9rem' }}>QR-Code {qrCode} gemerkt</div>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>
+                Der Zugang über den Code gilt, sobald das Protokoll abgesendet ist.
+              </div>
+            </div>
           ) : (
-            <button type="button" disabled={savingQr || qrCode.length !== 4} onClick={saveQr}
-              style={btnPrimary(savingQr || qrCode.length !== 4)}>
-              {savingQr ? 'Speichert…' : 'QR-Code speichern'}
+            <button type="button" disabled={qrCode.length !== 4} onClick={saveQr}
+              style={btnPrimary(qrCode.length !== 4)}>
+              QR-Code merken
             </button>
           )}
         </div>

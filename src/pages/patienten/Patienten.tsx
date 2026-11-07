@@ -13,7 +13,16 @@ import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
 import { EMPTY_PAYLOAD, EMPTY_NACH, parsePayload, fmtDate } from './types'
 import { archivHindernis, offeneRueckfragen, rueckfragen } from '../public/doku/rueckfrage'
 import { fristEnde, fristRestText } from '../public/doku/absenden'
-import { sichtbareEmail } from '../../lib/apps'
+import {
+  ABSENDER_ABZEICHEN, absenderLesen, absenderZeile, darfOhneUnterschrift, gepruefterPayload, wartetAufUnterschrift, type AbsenderEintrag,
+} from '../../lib/formular/absender'
+import {
+  WARTET_HINWEIS, abschlussLesen, abschlussZeile, besatzungZeile, mannschaftNachtragen, mannschaftNachtragenZeigen, selbstFreigabeFaellig,
+  zurueckgewiesenZeile,
+} from '../../lib/formular/verwaltung'
+import { namenLesen } from '../public/doku/besatzung'
+import UnterschreibenDialog from '../../components/UnterschreibenDialog'
+import OhneUnterschriftDialog from '../../components/OhneUnterschriftDialog'
 
 type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
 
@@ -37,6 +46,32 @@ interface AccessLogEntry {
 
 const TEN_YEARS_MS = 10 * 365.25 * 24 * 60 * 60 * 1000
 
+/** Absender eines Protokolls (null: alter Satz ohne Angabe). */
+function absenderVon(pat: Patient): AbsenderEintrag | null {
+  return absenderLesen(pat as unknown as Record<string, unknown>, 'patients')
+}
+
+/** Zeile „Absender: …“ und Abzeichen nach Bauplan v2, 1.14; bei alten Sätzen nichts. */
+function AbsenderZeile({ absender }: { absender: AbsenderEintrag | null }) {
+  if (!absender) return null
+  const abzeichen = ABSENDER_ABZEICHEN[absender.status]
+  // Mit Abzeichen nur der Name: den Zustand sagt das Abzeichen, nicht noch einmal der Zusatz
+  const zeile = abzeichen ? (absender.name.trim() || 'ohne Namen') : absenderZeile(absender, 'ohne Namen')
+  return (
+    <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: -6, marginBottom: 10, lineHeight: 1.45 }}>
+      <span style={{ marginRight: abzeichen ? 8 : 0 }}>Absender: {zeile}</span>
+      {abzeichen ? (
+        <span style={{ display: 'inline-block', fontStyle: 'normal', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: abzeichen.farbe }}>{abzeichen.text}</span>
+      ) : null}
+      {absender.status === 'ausstehend' && absender.zurueckgewiesen ? (
+        <div style={{ marginTop: 6, padding: '7px 10px', borderRadius: 8, background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', color: 'var(--lbf-warn-text)' }}>
+          {zurueckgewiesenZeile(absender.zurueckgewiesen.name || absender.name)}
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 export default function Patienten() {
   const { user, loading, logout } = useAuth()
 
@@ -54,6 +89,9 @@ export default function Patienten() {
 
   const [protokollSheet, setProtokollSheet] = useState<Patient | null>(null)
   const [mannschaftModal, setMannschaftModal] = useState<Patient | null>(null)
+  /** Unterschreiben (eigene Kennung als Absender) oder ohne Unterschrift abschließen (Leitung, Recht patienten). */
+  const [unterschreibenFuer, setUnterschreibenFuer] = useState<Patient | null>(null)
+  const [ohneFuer, setOhneFuer] = useState<Patient | null>(null)
   const [mannSearch, setMannSearch] = useState<Record<string, string>>({})
   const [mannResults, setMannResults] = useState<Record<string, any[]>>({})
   const [mannPicked, setMannPicked] = useState<Record<string, any>>({})
@@ -106,15 +144,22 @@ export default function Patienten() {
         pb.collection('patients').getFullList({ filter: `status="freigegeben"&&organization_id="${org}"`, sort: '-created' }),
         pb.collection('patient_docs_nacherfassung').getFullList({ filter: `status="offen"&&organization_id="${org}"`, sort: '-created' }),
       ])
-      // Auto-freigabe: offen records older than 24h
+      /*
+       * Selbstfreigabe nach Ablauf der Frist (payload.frist, sonst Anlegen +
+       * 24 Stunden). Was auf eine Unterschrift wartet, bleibt offen; das gibt
+       * auch der Server nicht frei. Lehnt der Server ab, bleibt der Satz in
+       * der offenen Liste, statt zu verschwinden.
+       */
       const now = Date.now()
       const stillOpen: Patient[] = []
       for (const p of openList as unknown as Patient[]) {
-        if (now - new Date(p.created).getTime() > 24 * 3600 * 1000) {
+        if (selbstFreigabeFaellig(gepruefterPayload(p as any), p.created, now)) {
           try {
             await pb.collection('patients').update(p.id, { status: 'freigegeben' })
             freiList.push({ ...p, status: 'freigegeben' } as any)
-          } catch {}
+          } catch {
+            stillOpen.push(p)
+          }
         } else {
           stillOpen.push(p)
         }
@@ -240,6 +285,8 @@ export default function Patienten() {
 
   async function archiveWithSig(sig: string) {
     if (!currentPatient) return
+    // Der Server lehnt es ohnehin ab; so steht der Grund gleich da
+    if (wartetAufUnterschrift(gepruefterPayload(currentPatient as any))) { flash(WARTET_HINWEIS, 'error'); return }
     try {
       await pb.collection('patients').update(currentPatient.id, {
         status: 'archiviert',
@@ -293,9 +340,10 @@ export default function Patienten() {
     if (!mannschaftModal || text.length < 2) { setMannResults(prev => ({ ...prev, [role]: [] })); return }
     try {
       const results = await pb.collection('users').getFullList({
-        // Suchtext als Parameter; erzeugte Platzhalter-Adressen (Personen ohne E-Mail) zählen nicht
-        filter: pb.filter('organization_id = {:org} && (name ~ {:t} || (email ~ {:t} && email !~ "@kein-email.intern"))', { org: (mannschaftModal as any).organization_id, t: text }),
-        fields: 'id,name,email',
+        // Nur nach Namen (E-Mails sind für andere Mitglieder verborgen, Bauplan v2, 1.17) und nur,
+        // wen der Server als Besatzung verknüpft: aktiv, keine Teilnehmer, kein Supervisor (2.4)
+        filter: pb.filter('organization_id = {:org} && name ~ {:t} && role != "teilnehmer" && supervisor != true && disabled != true && (expires_at = "" || expires_at > @now)', { org: (mannschaftModal as any).organization_id, t: text }),
+        fields: 'id,name',
         sort: 'name',
       })
       setMannResults(prev => ({ ...prev, [role]: results }))
@@ -307,11 +355,8 @@ export default function Patienten() {
     setSavingMannschaft(true)
     try {
       const pl = parsePayload((mannschaftModal as any).payload)
-      const existingMann = (pl as any).mannschaft || {}
-      const newMann = { ...existingMann }
-      for (const role of ['tf','m1','m2','m3']) {
-        if (mannPicked[role]) newMann[role] = { id: mannPicked[role].id, name: mannPicked[role].name }
-      }
+      // Verschachtelt mit Kennung und flach mit demselben Namen (Befund 9): sonst gewinnt am Server der alte flache Name
+      const mitBesatzung = mannschaftNachtragen(pl as unknown as Record<string, unknown>, mannPicked)
       const adminName = (user as any)?.name || user?.email || 'Admin'
       const rq = {
         id: Date.now().toString(),
@@ -322,7 +367,7 @@ export default function Patienten() {
       }
       const existingRQs = pl.rueckfragen || []
       await pb.collection('patients').update(mannschaftModal.id, {
-        payload: { ...pl, mannschaft: newMann, rueckfragen: [...existingRQs, rq] }
+        payload: { ...mitBesatzung, rueckfragen: [...existingRQs, rq] }
       })
       flash('Mannschaft gespeichert', 'success')
       setMannschaftModal(null)
@@ -853,16 +898,18 @@ export default function Patienten() {
                     {freigegebenPatients.map(pat => {
                       const p = parsePayload(pat.payload)
                       const patName = [p.name, p.vorname].filter(Boolean).join(' ')
-                      const m = (pat as any).payload?.mannschaft || {}
-                      const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                      const crew = besatzungZeile((pat as any).payload, ', ')
                       const displayName = patName || crew || pat.title || 'Unbekannt'
+                      const absender = absenderVon(pat)
+                      const abschluss = abschlussLesen(gepruefterPayload(pat as any))
+                      const wartet = wartetAufUnterschrift(gepruefterPayload(pat as any))
                       const rqs: any[] = Array.isArray((pat as any).payload?.rueckfragen) ? (pat as any).payload.rueckfragen : []
                       const sns: any[] = Array.isArray((pat as any).payload?.stellungnahmen) ? (pat as any).payload.stellungnahmen : []
                       // Vermerke des Systems zählen nicht: sie verlangen keine
                       // Stellungnahme und halten das Archivieren nicht auf.
                       const offeneRQ = offeneRueckfragen((pat as any).payload)
                       const openRQ = offeneRQ.length
-                      const hindernis = archivHindernis((pat as any).payload)
+                      const hindernis = wartet ? WARTET_HINWEIS : archivHindernis((pat as any).payload)
                       const canSign = !hindernis
                       const changedCount = ((pat as any).payload?._changed_fields || []).length
                       return (
@@ -886,13 +933,22 @@ export default function Patienten() {
                               {sns.length > 0 ? ` · ${sns.length} Stellungnahme${sns.length !== 1 ? 'n' : ''}` : ''}
                               {changedCount > 0 ? ` · ${changedCount} Änderung${changedCount !== 1 ? 'en' : ''}` : ''}
                             </div>
+                            <AbsenderZeile absender={absender} />
+                            {abschluss ? <div className="pat-card-meta" style={{ marginTop: -4 }}>{abschlussZeile(abschluss)}</div> : null}
                             {hindernis ? <div className="pat-hinweis">{hindernis}</div> : null}
                           </div>
                           <div className="pat-card-footer">
                             <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
-                            <button className="pat-btn" onClick={() => setRueckfrageModal(pat)}>
-                              {openRQ > 0 ? `Rückfrage (${openRQ})` : 'Rückfrage'}
-                            </button>
+                            {/* Solange es auf die Unterschrift wartet, ändert niemand den Inhalt, auch keine Rückfrage */}
+                            {!wartet && (
+                              <button className="pat-btn" onClick={() => setRueckfrageModal(pat)}>
+                                {openRQ > 0 ? `Rückfrage (${openRQ})` : 'Rückfrage'}
+                              </button>
+                            )}
+                            {/* Nach „Ohne Unterschrift abschließen“ steht die Besatzung nur als Namen: hier verknüpfen */}
+                            {mannschaftNachtragenZeigen(pat as any) && (
+                              <button className="pat-btn" onClick={() => { setMannschaftModal(pat); setMannPicked((pat as any).payload?.mannschaft || {}) }}>Mannschaft nachtragen</button>
+                            )}
                             <div style={{ flex: 1 }} />
                             {/*
                               * Gegenzeichnen führt jetzt direkt zur Unterschrift.
@@ -925,29 +981,43 @@ export default function Patienten() {
                     {patients.map(pat => {
                       const p = parsePayload(pat.payload)
                       const patName = [p.name, p.vorname].filter(Boolean).join(' ')
-                      const m = (pat as any).payload?.mannschaft || {}
-                      const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(', ')
+                      const crew = besatzungZeile((pat as any).payload, ', ')
                       const displayName = patName || crew || pat.title || 'Unbekannt'
                       // Dieselbe Frist wie in Unitas: sie steht im Protokoll,
                       // ältere zählen ab dem Anlegen.
                       const restMs = fristEnde((pat as any).payload || {}, pat.created) - Date.now()
                       const frist = fristRestText((pat as any).payload || {}, pat.created)
+                      const absender = absenderVon(pat)
+                      // Wartet auf die Unterschrift des Absenders: keine Frist, kein Nachtragen, kein Freigeben
+                      const wartet = absender?.status === 'ausstehend'
+                      // Nach „Das war ich nicht“ unterschreibt die genannte Person nicht mehr
+                      const eigene = wartet && !absender!.zurueckgewiesen && !!user?.id && absender!.id === user.id
+                      const ohneErlaubt = wartet && darfOhneUnterschrift(user ?? null, user?.organization ?? null)
                       return (
-                        <div key={pat.id} className="pat-card offen">
+                        <div key={pat.id} className="pat-card offen" style={wartet ? { borderLeftColor: 'var(--lbf-warn-text-2)' } : undefined}>
                           <div className="pat-card-body">
                             <div className="pat-card-name">{displayName}</div>
                             <div className="pat-card-meta">
                               {crew ? <>{crew}<br /></> : null}
                               {fmtDate(pat.created)}
-                              {restMs > 0 ? ` · beim Teamführer, ${frist}` : ' · Freigabe ausstehend'}
+                              {wartet
+                                ? ''
+                                : restMs > 0 ? ` · beim Teamführer, ${frist}` : ' · Freigabe ausstehend'}
                             </div>
+                            <AbsenderZeile absender={absender} />
                           </div>
                           <div className="pat-card-footer">
-                            {!m.tf?.id && (
+                            {mannschaftNachtragenZeigen(pat as any) && (
                               <button className="pat-btn" onClick={() => { setMannschaftModal(pat); setMannPicked((pat as any).payload?.mannschaft || {}) }}>Mannschaft nachtragen</button>
+                            )}
+                            {ohneErlaubt && (
+                              <button className="pat-btn" onClick={() => setOhneFuer(pat)}>Ohne Unterschrift abschließen</button>
                             )}
                             <div style={{ flex: 1 }} />
                             <button className="pat-btn" onClick={() => setProtokollSheet(pat)}>Ansehen</button>
+                            {eigene && (
+                              <button className="pat-btn haupt" onClick={() => setUnterschreibenFuer(pat)}>Unterschreiben</button>
+                            )}
                           </div>
                         </div>
                       )
@@ -1046,6 +1116,9 @@ export default function Patienten() {
                                   ? `${(item.orig as Patient).admin_name} · ` : ''}
                                 {fmtDate(item.type === 'patient' ? (item.orig as Patient).updated : (item.orig as Nacherfassung).created)}
                               </div>
+                              {item.type === 'patient' && abschlussLesen(gepruefterPayload(item.orig as any)) ? (
+                                <div className="pat-card-meta" style={{ marginTop: -6 }}>{abschlussZeile(abschlussLesen(gepruefterPayload(item.orig as any))!)}</div>
+                              ) : null}
                               {archSns.length > 0 && (
                                 <div style={{ marginTop: 4 }}>
                                   <span style={{ fontStyle: 'italic', fontSize: 11, fontWeight: 700, color: '#16a34a' }}>
@@ -1182,6 +1255,8 @@ export default function Patienten() {
           type={detailsType}
           onClose={() => setShowDetails(false)}
           onEdit={detailsType === 'patient' && currentPatient && (currentPatient as any).status !== 'archiviert'
+            // Wartet es auf die Unterschrift des Absenders, lehnt der Server jede Änderung ab
+            && !wartetAufUnterschrift(gepruefterPayload(currentPatient as any))
             ? () => { setShowDetails(false); setShowEdit(true) }
             : undefined}
         />
@@ -1201,8 +1276,15 @@ export default function Patienten() {
                 <div>
                   <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>{sheetName}</div>
                   <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
-                    {(protokollSheet as any).status === 'offen' ? 'In Bearbeitung durch Teamleiter' : 'Freigegeben'}
+                    {wartetAufUnterschrift(gepruefterPayload(protokollSheet as any))
+                      ? `Wartet auf die Unterschrift von ${absenderVon(protokollSheet)?.name.trim() || 'dem Absender'}`
+                      : (protokollSheet as any).status === 'offen' ? 'In Bearbeitung durch Teamleiter' : 'Freigegeben'}
                   </div>
+                  {abschlussLesen(gepruefterPayload(protokollSheet as any)) ? (
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2, overflowWrap: 'anywhere' }}>
+                      {abschlussZeile(abschlussLesen(gepruefterPayload(protokollSheet as any))!)}
+                    </div>
+                  ) : null}
                 </div>
                 <button
                   onClick={() => setProtokollSheet(null)}
@@ -1244,9 +1326,14 @@ export default function Patienten() {
               {roles.map(({ key, label }) => {
                 const existing = (mannschaftModal as any).payload?.mannschaft?.[key]
                 const picked = mannPicked[key]
+                // Steht auf dem Bogen nur ein Name (ohne Konto), zeigen, welcher
+                const aufDemBogen = (namenLesen(pl as unknown as Record<string, unknown>) as Record<string, string>)[key] || ''
                 return (
                   <div key={key} style={{ marginBottom: 16 }}>
                     <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 6 }}>{label}</label>
+                    {!picked && !existing?.id && aufDemBogen ? (
+                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 6 }}>Auf dem Bogen: {aufDemBogen}</div>
+                    ) : null}
                     {picked ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8 }}>
                         <span style={{ flex: 1, fontStyle: 'italic', fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)' }}>{picked.name}</span>
@@ -1272,7 +1359,7 @@ export default function Patienten() {
                                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(var(--lbf-rot-rgb),0.04)')}
                                 onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
                               >
-                                <span style={{ fontStyle: 'italic', fontWeight: 700 }}>{u.name}</span> <span style={{ fontSize: 12, color: 'var(--warm-gray)' }}>{sichtbareEmail(u.email)}</span>
+                                <span style={{ fontStyle: 'italic', fontWeight: 700 }}>{u.name}</span>
                               </div>
                             ))}
                           </div>
@@ -1299,6 +1386,34 @@ export default function Patienten() {
               </div>
             </div>
           </div>
+        )
+      })()}
+
+      {/* Ausstehendes Protokoll: selbst unterschreiben (eigene Kennung) oder ohne Unterschrift abschließen */}
+      {unterschreibenFuer && (() => {
+        const pl = parsePayload((unterschreibenFuer as any).payload)
+        return (
+          <UnterschreibenDialog
+            key={unterschreibenFuer.id} formular="patienten" id={unterschreibenFuer.id} offen
+            titel={[pl.name, pl.vorname].filter(Boolean).join(' ') || unterschreibenFuer.title || undefined}
+            onZu={() => setUnterschreibenFuer(null)} onFertig={() => { void loadOpenData() }} onVeraltet={() => { void loadOpenData() }}
+          />
+        )
+      })()}
+      {ohneFuer && (() => {
+        const pl = parsePayload((ohneFuer as any).payload)
+        return (
+          <OhneUnterschriftDialog
+            key={ohneFuer.id} id={ohneFuer.id} offen absenderName={absenderVon(ohneFuer)?.name ?? ''}
+            titel={[pl.name, pl.vorname].filter(Boolean).join(' ') || ohneFuer.title || undefined}
+            onZu={() => setOhneFuer(null)}
+            onFertig={() => {
+              const name = [pl.name, pl.vorname].filter(Boolean).join(' ') || ohneFuer.title || 'Unbekannt'
+              void auditLog('ohne Unterschrift abgeschlossen', ohneFuer.id, 'patient', name)
+              void loadOpenData()
+            }}
+            onVeraltet={() => { void loadOpenData() }}
+          />
         )
       })()}
 

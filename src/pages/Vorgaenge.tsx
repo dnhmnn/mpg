@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
@@ -8,7 +8,16 @@ import {
   type TemplateFieldDef, type FormTemplate,
 } from './public/formSchema'
 import CirsVerwaltung from './vorgaenge/CirsVerwaltung'
-import { formularFrei } from '../lib/freigabe'
+import { formularFrei, modulFrei } from '../lib/freigabe'
+import { hatRecht } from '../lib/apps'
+import { absenderModus, darfFormulareEinstellen, type AbsenderModus, type FormularId } from '../lib/formular/absender'
+import { absenderSetzen, formConfigAendern, formConfigLesen } from '../lib/formular/einstellung'
+import { istFehler, mitgliederPruefung, type MitgliederPruefung } from '../lib/formular/api'
+import {
+  ABSENDER_MODI, ABSENDER_WAHL, VORGAENGE_TEXTE as VT, ausgeschaltetText, doppeltText, hatAbsenderWahl, karteAusSuche, koennenNichtText,
+  pruefEintraege, pruefEintragText, pruefungZeigen, vorgaengeReiter,
+} from '../lib/formular/verwaltung'
+import { orgFehler } from './benutzer/logik'
 
 type Tab = 'formulare' | 'editor' | 'cirs'
 type FType = 'text' | 'number' | 'date' | 'time' | 'select' | 'checkbox' | 'textarea'
@@ -21,8 +30,110 @@ const FIELD_TYPE_LABELS: Record<string, string> = {
 const STATIC_FORMS = [
   { id: 'patienten',     label: 'Patientendokumentation', desc: 'Notfalleinsatz dokumentieren', configurable: true  },
   { id: 'produktausgabe',label: 'Produktausgabe',         desc: 'Materialausgabe erfassen',     configurable: false },
+  { id: 'defektmeldung', label: 'Defektmeldung',          desc: 'Defekt an einem Medizinprodukt melden', configurable: false },
   { id: 'cirs',          label: 'CIRS-Meldung',           desc: 'Kritisches Ereignis melden',  configurable: false },
 ]
+
+const REITER_TEXT: Record<Tab, string> = { formulare: 'Formulare', editor: 'Protokoll-Felder', cirs: 'CIRS' }
+
+/** Ein Textknopf im LBF-Stil (Akzent, fett, ohne Rahmen); `farbe` für Listenzeilen, die zur Person führen. */
+function Textknopf({ children, onClick, farbe }: { children: React.ReactNode; onClick: () => void; farbe?: string }) {
+  return (
+    <button type="button" onClick={onClick} style={{ background: 'none', border: 'none', padding: 0, fontFamily: 'inherit', fontSize: 12, fontWeight: farbe ? 400 : 700, color: farbe ?? 'var(--lbf-akzent)', cursor: 'pointer', textAlign: 'left', textDecoration: farbe ? 'underline' : 'none', textDecorationColor: 'rgba(var(--lbf-rot-rgb),0.3)', textUnderlineOffset: 3 }}>
+      {children}
+    </button>
+  )
+}
+
+/**
+ * Wer ein Formular abgibt (Bauplan v2, 3.3): zwei Wahlknöpfe, ihre Erklärung
+ * und im Modus Passwort die Zählung, wie viele Mitglieder nicht mit Passwort
+ * bestätigen können. Ohne Schreibrecht nur die Anzeige.
+ */
+function AbsenderWahl({ formular, label, modus, darf, onWahl, pruefung, offen, onOffen, benutzerLink, onBenutzer, onPerson }: {
+  formular: FormularId
+  label: string
+  modus: AbsenderModus
+  darf: boolean
+  onWahl: (m: AbsenderModus) => void
+  pruefung: MitgliederPruefung | null
+  offen: boolean
+  onOffen: () => void
+  benutzerLink: boolean
+  onBenutzer: () => void
+  /** Eine Person in der Benutzerverwaltung öffnen (nur mit `benutzerLink`). */
+  onPerson: (id: string) => void
+}) {
+  const n = pruefung ? pruefung.koennen_nicht : 0
+  const doppelt = pruefung ? pruefung.doppelt ?? 0 : 0
+  const liste = pruefEintraege(pruefung)
+  return (
+    <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', padding: '10px 14px 12px' }}>
+      <div id={`absender-${formular}`} style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 8 }}>{VT.abschnitt}</div>
+      {darf ? (
+        <>
+          <div role="radiogroup" aria-label={`Absender ${label}`} style={{ display: 'flex', gap: 8 }}>
+            {ABSENDER_MODI.map((m) => {
+              const an = m === modus
+              return (
+                <button
+                  key={m} type="button" role="radio" aria-checked={an} onClick={() => { if (!an) onWahl(m) }}
+                  style={{
+                    flex: 1, minWidth: 0, padding: '9px 8px', borderRadius: 8, lineHeight: 1.25,
+                    border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)',
+                    background: an ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'transparent',
+                    color: an ? 'var(--lbf-akzent)' : 'var(--lbf-text)', fontWeight: an ? 700 : 400,
+                    fontSize: 13, fontFamily: 'inherit', cursor: an ? 'default' : 'pointer',
+                  }}
+                >
+                  {ABSENDER_WAHL[m].knopf}
+                </button>
+              )
+            })}
+          </div>
+          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 8, lineHeight: 1.45 }}>{ABSENDER_WAHL[modus].erklaerung}</div>
+        </>
+      ) : (
+        <>
+          <div style={{ fontSize: 13, color: 'var(--lbf-text)' }}>{ABSENDER_WAHL[modus].anzeige}</div>
+          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 4, lineHeight: 1.45 }}>{VT.ohneSchreibrecht}</div>
+        </>
+      )}
+      {/* Zählung nur im Modus Passwort und nur mit Antwort des Servers; sonst entfällt die Zeile still */}
+      {modus === 'passwort' && pruefung ? (
+        !pruefungZeigen(pruefung) ? (
+          <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 8 }}>{koennenNichtText(0)}</div>
+        ) : (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 12, color: n > 0 ? 'var(--lbf-warn-text-2)' : 'var(--warm-gray)', fontStyle: n > 0 ? 'normal' : 'italic', lineHeight: 1.45 }}>
+              {koennenNichtText(n)}
+            </div>
+            {doppelt > 0 ? (
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', lineHeight: 1.45, marginTop: 4 }}>{doppeltText(doppelt)}</div>
+            ) : null}
+            <div style={{ marginTop: 4 }}>
+              <Textknopf onClick={onOffen}>{offen ? VT.ausblenden : VT.anzeigen}</Textknopf>
+            </div>
+            {offen ? (
+              <div style={{ marginTop: 6 }}>
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+                  {liste.map((e) => (
+                    <li key={e.id} style={{ fontSize: 12, color: 'var(--lbf-text)', padding: '4px 0', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', overflowWrap: 'anywhere' }}>
+                      {/* Gleich lautende Zeilen: über die Person in der Benutzerverwaltung unterscheidbar */}
+                      {benutzerLink ? <Textknopf onClick={() => onPerson(e.id)} farbe="var(--lbf-text)">{pruefEintragText(e)}</Textknopf> : pruefEintragText(e)}
+                    </li>
+                  ))}
+                </ul>
+                <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>{VT.hinweisBenutzer}</div>
+                {benutzerLink ? <div style={{ marginTop: 4 }}><Textknopf onClick={onBenutzer}>{VT.zurBenutzerverwaltung}</Textknopf></div> : null}
+              </div>
+            ) : null}
+          </div>
+        )
+      ) : null}
+    </div>
+  )
+}
 
 const pik = (ch: React.ReactNode, sz = 18) => (
   <svg width={sz} height={sz} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>{ch}</svg>
@@ -30,7 +141,7 @@ const pik = (ch: React.ReactNode, sz = 18) => (
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button type="button" onClick={() => onChange(!on)} style={{
+    <button type="button" role="switch" aria-checked={on} onClick={() => onChange(!on)} style={{
       width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
       background: on ? 'var(--lbf-akzent-grund)' : 'var(--lbf-border)', position: 'relative',
       transition: 'background .2s', flexShrink: 0, padding: 0,
@@ -62,10 +173,42 @@ export default function Vorgaenge() {
   // Form config (for Notaufnahme-Protokoll + hidden_forms)
   const [cfg, setCfg] = useState<FormConfig>(DEFAULT_FORM_CONFIG)
   const [saving, setSaving] = useState(false)
+  /** Kurze Rückmeldung im Kopf („Gespeichert“). */
   const [msg, setMsg] = useState('')
+  /** Fehler beim Speichern, unter den Reitern (kann länger sein). */
+  const [fehler, setFehler] = useState('')
+  const msgUhr = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  /*
+   * Schreiben ohne Überschreiben (Bauplan v2, 3.2): jede Änderung ist eine
+   * Funktion, die auf dem frisch gelesenen Stand läuft (formConfigAendern).
+   * Die Änderungen laufen nacheinander, damit zwei schnelle Klicks sich nicht
+   * gegenseitig überschreiben. Angezeigt wird sofort; geht etwas schief,
+   * zeigt die Seite wieder den zuletzt gespeicherten Stand.
+   */
+  const gespeichert = useRef<FormConfig>(DEFAULT_FORM_CONFIG)
+  const kette = useRef<Promise<void>>(Promise.resolve())
+  const offeneAenderungen = useRef(0)
+
+  // Absender: Zählung der Mitglieder, die nicht mit Passwort bestätigen können (einmal je Seitenaufruf)
+  const [pruefung, setPruefung] = useState<MitgliederPruefung | null>(null)
+  const [pruefungOffen, setPruefungOffen] = useState('')
+  const darfEinstellen = darfFormulareEinstellen(user ?? null)
+
+  // ?karte=<formular>: aus MPG und Lager hierher, die Karte zeigen und kurz hervorheben (3.4)
+  const karte = karteAusSuche(suchParameter.get('karte'))
+  const [hervor, setHervor] = useState('')
+  const karteGezeigt = useRef(false)
+  const hervorUhr = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Ohne Modul Vorgänge: nur die Standardformulare (und der Feld-Editor, wenn Patienten frei ist)
+  const orgFuerModule = orgDaten ?? user?.organization ?? null
+  const vorgaengeFrei = modulFrei(orgFuerModule, 'dokumente')
+  const reiter = vorgaengeReiter({ vorgaengeFrei, patientenFrei: formularFrei(orgFuerModule, 'patienten') })
 
   // Nav
   const [tab, setTab] = useState<Tab>(() => suchParameter.get('bereich') === 'cirs' || startMeldung ? 'cirs' : 'formulare')
+  useEffect(() => { if (!reiter.includes(tab)) setTab('formulare') }, [reiter.join(','), tab])
 
   // Notaufnahme editor state
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
@@ -100,13 +243,37 @@ export default function Vorgaenge() {
         setOrgName(org.org_name || '')
         setOrgCode(org.org_code || '')
         setOrgDaten(org)
-        if (org.form_config) {
-          setCfg({ ...DEFAULT_FORM_CONFIG, ...(org.form_config as FormConfig) })
-        }
+        // form_config als Objekt, Text oder doppelt kodiert
+        const gelesen: FormConfig = { ...DEFAULT_FORM_CONFIG, ...formConfigLesen(org.form_config) }
+        gespeichert.current = gelesen
+        if (offeneAenderungen.current === 0) setCfg(gelesen)
       })
       .catch(() => {})
     loadTemplates()
   }, [user?.organization_id])
+
+  useEffect(() => {
+    if (!user?.id || !darfEinstellen) { setPruefung(null); return }
+    let aktiv = true
+    // Fehler (alter Server, kein Recht, Netz): die Zeile entfällt still
+    mitgliederPruefung().then((r) => { if (aktiv) setPruefung(istFehler(r) ? null : r.wert) })
+    return () => { aktiv = false }
+  }, [user?.id, darfEinstellen])
+
+  // Die Karte aus ?karte= in Sicht holen, sobald sie da ist, und 2 Sekunden hervorheben
+  useEffect(() => {
+    if (!karte || karteGezeigt.current || !orgDaten || tab !== 'formulare') return
+    const el = document.getElementById(`karte-${karte}`)
+    if (!el) return
+    karteGezeigt.current = true
+    el.scrollIntoView({ block: 'center' })
+    setHervor(karte)
+    hervorUhr.current = setTimeout(() => setHervor(''), 2000)
+  }, [karte, orgDaten, tab, cfg])
+  useEffect(() => () => {
+    if (hervorUhr.current) clearTimeout(hervorUhr.current)
+    if (msgUhr.current) clearTimeout(msgUhr.current)
+  }, [])
 
   async function loadTemplates() {
     if (!user?.organization_id) return
@@ -123,43 +290,61 @@ export default function Vorgaenge() {
 
   // ── Form config helpers ──────────────────────────────────────────────────
 
-  const saveConfig = useCallback(async (newCfg: FormConfig) => {
+  function kurzMelden(text: string) {
+    setMsg(text)
+    if (msgUhr.current) clearTimeout(msgUhr.current)
+    msgUhr.current = setTimeout(() => setMsg(''), 2000)
+  }
+
+  /** Eine Änderung an form_config: sofort zeigen, auf dem frischen Stand speichern, nacheinander. */
+  const aendern = useCallback((fn: (c: FormConfig) => FormConfig) => {
     if (!orgId) return
+    setCfg((c) => fn(c))
+    setFehler('')
+    offeneAenderungen.current += 1
     setSaving(true)
-    try {
-      await pb.collection('organizations').update(orgId, { form_config: newCfg })
-      setMsg('Gespeichert')
-      setTimeout(() => setMsg(''), 2000)
-    } catch {
-      setMsg('Fehler beim Speichern')
-      setTimeout(() => setMsg(''), 3000)
-    } finally { setSaving(false) }
+    kette.current = kette.current.then(async () => {
+      try {
+        gespeichert.current = await formConfigAendern(orgId, fn)
+        kurzMelden(VT.gespeichert)
+      } catch (e) {
+        setFehler(orgFehler(e))
+      } finally {
+        offeneAenderungen.current -= 1
+        if (offeneAenderungen.current === 0) {
+          setCfg(gespeichert.current)
+          setSaving(false)
+        }
+      }
+    })
   }, [orgId])
 
+  /** Eintrag in einer Liste setzen oder entfernen, ohne Doppel. */
+  const mitOhne = (liste: string[] | undefined, wert: string, an: boolean) => {
+    const ohne = (liste || []).filter((x) => x !== wert)
+    return an ? [...ohne, wert] : ohne
+  }
+
   function toggleHiddenForm(formId: string, hide: boolean) {
-    const next: FormConfig = {
-      ...cfg,
-      hidden_forms: hide
-        ? [...(cfg.hidden_forms || []), formId]
-        : (cfg.hidden_forms || []).filter(f => f !== formId),
-    }
-    setCfg(next)
-    saveConfig(next)
+    aendern((c) => ({ ...c, hidden_forms: mitOhne(c.hidden_forms, formId, hide) }))
   }
 
   function toggleSection(sectionId: string, hide: boolean) {
-    const next: FormConfig = { ...cfg, hidden_sections: hide ? [...cfg.hidden_sections, sectionId] : cfg.hidden_sections.filter(s => s !== sectionId) }
-    setCfg(next); saveConfig(next)
+    aendern((c) => ({ ...c, hidden_sections: mitOhne(c.hidden_sections, sectionId, hide) }))
   }
 
   function toggleField(fieldId: string, hide: boolean) {
-    const next: FormConfig = { ...cfg, hidden_fields: hide ? [...cfg.hidden_fields, fieldId] : cfg.hidden_fields.filter(f => f !== fieldId) }
-    setCfg(next); saveConfig(next)
+    aendern((c) => ({ ...c, hidden_fields: mitOhne(c.hidden_fields, fieldId, hide) }))
   }
 
   function toggleRequired(fieldId: string, required: boolean) {
-    const next: FormConfig = { ...cfg, required_fields: required ? [...cfg.required_fields, fieldId] : cfg.required_fields.filter(f => f !== fieldId) }
-    setCfg(next); saveConfig(next)
+    aendern((c) => ({ ...c, required_fields: mitOhne(c.required_fields, fieldId, required) }))
+  }
+
+  /** Absender eines Formulars wählen; geschrieben wird immer der gewählte Wert (3.1). */
+  function absenderWaehlen(formular: FormularId, modus: AbsenderModus) {
+    if (cfg.absender?.[formular] === modus) return
+    aendern((c) => absenderSetzen(c, formular, modus))
   }
 
   function addCustomField(sectionId: string) {
@@ -170,16 +355,14 @@ export default function Vorgaenge() {
       options: newField.fieldType === 'select' ? newFieldOptions.split('\n').map(s => s.trim()).filter(Boolean) : undefined,
       required: newField.required ?? false,
     }
-    const next: FormConfig = { ...cfg, custom_fields: [...cfg.custom_fields, field] }
-    setCfg(next); saveConfig(next)
+    aendern((c) => ({ ...c, custom_fields: [...(c.custom_fields || []).filter((f) => f.id !== field.id), field] }))
     setShowAddField(null)
     setNewField({ fieldType: 'text', required: false })
     setNewFieldOptions('')
   }
 
   function deleteCustomField(fieldId: string) {
-    const next: FormConfig = { ...cfg, custom_fields: cfg.custom_fields.filter(f => f.id !== fieldId) }
-    setCfg(next); saveConfig(next)
+    aendern((c) => ({ ...c, custom_fields: (c.custom_fields || []).filter((f) => f.id !== fieldId) }))
   }
 
   // ── Template helpers ─────────────────────────────────────────────────────
@@ -218,8 +401,7 @@ export default function Vorgaenge() {
       await loadTemplates()
       setBuilderOpen(false)
     } catch (e: unknown) {
-      setMsg('Fehler: ' + (e as Error).message)
-      setTimeout(() => setMsg(''), 3000)
+      setFehler('Fehler: ' + (e as Error).message)
     } finally { setTSaving(false) }
   }
 
@@ -424,12 +606,12 @@ export default function Vorgaenge() {
           <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>{today}</div>
         </div>
         {saving && <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Speichern…</div>}
-        {msg && <div style={{ fontSize: 11, color: msg.startsWith('Fehler') ? '#dc2626' : '#16a34a', fontWeight: 700 }}>{msg}</div>}
+        {!saving && msg && <div role="status" style={{ fontSize: 11, color: '#16a34a', fontWeight: 700 }}>{msg}</div>}
       </div>
 
       {/* Tab bar */}
       <div style={{ display: 'flex', background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
-        {([['formulare', 'Formulare'], ['editor', 'Protokoll-Felder'], ['cirs', 'CIRS']] as [Tab, string][]).map(([t, label]) => (
+        {reiter.map((t) => [t, REITER_TEXT[t]] as [Tab, string]).map(([t, label]) => (
           <button key={t} onClick={() => setTab(t)} style={{
             flex: 1, padding: '12px 4px 10px', border: 'none', background: 'none', cursor: 'pointer',
             fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.05em', whiteSpace: 'nowrap',
@@ -445,10 +627,22 @@ export default function Vorgaenge() {
         ))}
       </div>
 
-      {/* ── CIRS ── immer geladen: der Reiter zeigt die Zahl der neuen Meldungen */}
-      <div style={{ display: tab === 'cirs' ? 'block' : 'none', padding: '20px 16px calc(32px + env(safe-area-inset-bottom))', maxWidth: 760, margin: '0 auto' }}>
-        <CirsVerwaltung user={user} orgId={orgId || user?.organization_id || null} orgName={orgName} startMeldung={startMeldung} onZahlen={setCirsZahlen} />
-      </div>
+      {/* Fehler beim Speichern: der angezeigte Stand ist wieder der zuletzt gespeicherte */}
+      {fehler && (
+        <div style={{ maxWidth: 640, margin: '12px auto 0', padding: '0 16px', boxSizing: 'border-box' }}>
+          <div role="alert" style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', color: 'var(--lbf-warn-text)', fontSize: 13, fontStyle: 'italic', lineHeight: 1.45, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{fehler}</span>
+            <button type="button" onClick={() => setFehler('')} aria-label="Hinweis schließen" style={{ background: 'none', border: 'none', padding: 0, color: 'var(--lbf-warn-text)', fontSize: 16, lineHeight: 1, cursor: 'pointer', fontFamily: 'inherit' }}>×</button>
+          </div>
+        </div>
+      )}
+
+      {/* ── CIRS ── immer geladen: der Reiter zeigt die Zahl der neuen Meldungen (nur mit Modul Vorgänge) */}
+      {vorgaengeFrei && (
+        <div style={{ display: tab === 'cirs' ? 'block' : 'none', padding: '20px 16px calc(32px + env(safe-area-inset-bottom))', maxWidth: 760, margin: '0 auto' }}>
+          <CirsVerwaltung user={user} orgId={orgId || user?.organization_id || null} orgName={orgName} startMeldung={startMeldung} onZahlen={setCirsZahlen} />
+        </div>
+      )}
 
       <div style={{ padding: '20px 16px', maxWidth: 640, margin: '0 auto', display: tab === 'cirs' ? 'none' : 'block' }}>
 
@@ -457,22 +651,45 @@ export default function Vorgaenge() {
           <>
             {/* Static forms */}
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 10 }}>Standardformulare</div>
-            {STATIC_FORMS.filter(form => formularFrei(orgDaten ?? user?.organization, form.id)).map(form => {
+            {STATIC_FORMS.filter(form => formularFrei(orgFuerModule, form.id)).map(form => {
               const isHidden = (cfg.hidden_forms || []).includes(form.id)
+              const mitWahl = hatAbsenderWahl(form.id)
+              const modus = mitWahl ? absenderModus(cfg, form.id as FormularId) : 'frei'
+              // Nur der Farbton des Schattens wechselt beim Hervorheben, sonst bewegt sich nichts
+              const ring = hervor === form.id ? 'rgba(var(--lbf-rot-rgb),0.25)' : 'rgba(var(--lbf-rot-rgb),0)'
               return (
-                <div key={form.id} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${isHidden ? 'rgba(var(--lbf-grau-rgb),0.35)' : 'var(--lbf-akzent)'}`, padding: '12px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: isHidden ? 'var(--warm-gray)' : 'var(--lbf-text)', fontStyle: isHidden ? 'italic' : 'normal' }}>{form.label}</div>
-                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{isHidden ? 'Aus, auch über Links und QR-Codes nicht erreichbar' : form.desc}</div>
+                <div key={form.id} id={`karte-${form.id}`} style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: `0 0 0 2px ${ring}, 0 1px 4px rgba(0,0,0,0.07)`, transition: 'box-shadow 0.4s ease', borderLeft: `3px solid ${isHidden ? 'rgba(var(--lbf-grau-rgb),0.35)' : 'var(--lbf-akzent)'}`, marginBottom: 10, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, fontSize: 14, color: isHidden ? 'var(--warm-gray)' : 'var(--lbf-text)', fontStyle: isHidden ? 'italic' : 'normal' }}>{form.label}</div>
+                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{isHidden ? ausgeschaltetText(form.id) : form.desc}</div>
+                    </div>
+                    {form.configurable && !isHidden && reiter.includes('editor') && (
+                      <button onClick={() => setTab('editor')} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Felder</button>
+                    )}
+                    <Toggle on={!isHidden} onChange={v => toggleHiddenForm(form.id, !v)} />
                   </div>
-                  {form.configurable && !isHidden && (
-                    <button onClick={() => setTab('editor')} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', background: 'rgba(var(--lbf-rot-rgb),0.06)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>Felder</button>
-                  )}
-                  <Toggle on={!isHidden} onChange={v => toggleHiddenForm(form.id, !v)} />
+                  {mitWahl && !isHidden ? (
+                    <AbsenderWahl
+                      formular={form.id as FormularId} label={form.label} modus={modus} darf={darfEinstellen}
+                      onWahl={(m) => absenderWaehlen(form.id as FormularId, m)}
+                      pruefung={pruefung} offen={pruefungOffen === form.id}
+                      onOffen={() => setPruefungOffen(pruefungOffen === form.id ? '' : form.id)}
+                      benutzerLink={hatRecht(user ?? null, 'unitarii')} onBenutzer={() => navigate('/unitarii')}
+                      onPerson={(id) => navigate(`/unitarii?seite=person&id=${encodeURIComponent(id)}`)}
+                    />
+                  ) : null}
+                  {form.id === 'cirs' && !isHidden ? (
+                    <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.08)', padding: '10px 14px 12px' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 6 }}>{VT.abschnitt}</div>
+                      <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>{VT.cirs}</div>
+                    </div>
+                  ) : null}
                 </div>
               )
             })}
 
+            {vorgaengeFrei && (<>
             {/* Custom templates */}
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', margin: '22px 0 10px' }}>Eigene Vorlagen</div>
 
@@ -515,11 +732,12 @@ export default function Vorgaenge() {
               {pik(<><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></>, 16)}
               Neue Vorlage erstellen
             </button>
+            </>)}
 
             <div style={{ padding: '12px 14px', background: 'rgba(var(--lbf-rot-rgb),0.04)', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: 4 }}>Info</div>
               <div style={{ fontSize: 13, color: 'var(--warm-gray)', lineHeight: 1.5 }}>
-                Aktive Formulare erscheinen auf der Seite deiner Organisation <span style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)' }}>{orgName}</span>. Eigene Vorlagen lassen sich per Link direkt teilen.
+                Aktive Formulare erscheinen auf der Seite deiner Organisation <span style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)' }}>{orgName}</span>.{vorgaengeFrei ? ' Eigene Vorlagen lassen sich per Link direkt teilen.' : ''}
               </div>
             </div>
           </>

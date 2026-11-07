@@ -189,7 +189,7 @@ export default function PersonSeite({ k, editingUser }: { k: BvKontext; editingU
           password: unbekannt,
           passwordConfirm: unbekannt,
           organization_id: user!.organization_id,
-          emailVisibility: true,
+          emailVisibility: false,
           // Die Rechte stehen schon fest — die Übernahme beim ersten Login (useAuth) entfällt
           permissions_migrated: true,
         })

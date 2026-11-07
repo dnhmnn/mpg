@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
 import { istDivi } from '../../lib/protokoll'
+import { escapeHtml } from '../../lib/aelrdDruck'
 import { PubSection } from '../public/pubStyles'
 const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
 
@@ -17,6 +18,27 @@ const pik = (ch: React.ReactNode, sz = 18) => (
     {ch}
   </svg>
 )
+
+/**
+ * Für die Ausdrucke unten (window.open + document.write, gleiche Herkunft): jeder Text aus dem
+ * Satz HTML-sicher, rekursiv. Der payload eines offenen Protokolls ist ohne Anmeldung
+ * schreibbar; ein Wert wie `x" onerror="…` liefe sonst im Fenster der Leitung.
+ */
+export function druckSicher<T>(x: T): T {
+  if (typeof x === 'string') return escapeHtml(x).replace(/'/g, '&#39;') as unknown as T
+  if (Array.isArray(x)) return x.map((v) => druckSicher(v)) as unknown as T
+  if (x && typeof x === 'object') {
+    const o: Record<string, unknown> = {}
+    for (const [k, v] of Object.entries(x as Record<string, unknown>)) o[k] = druckSicher(v)
+    return o as T
+  }
+  return x
+}
+
+/** Eine gezeichnete Unterschrift nur als eingebettetes Bild (data:image/…;base64), sonst leer. */
+export function bildQuelle(x: unknown): string {
+  return typeof x === 'string' && /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]*$/i.test(x) ? x : ''
+}
 
 function F({ label, value, ch }: { label: string; value?: string | number | boolean | null; ch?: boolean }) {
   if (!value && value !== 0) return null
@@ -69,8 +91,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
     if (!w) return
 
     if (type === 'patient') {
-      const pd = doc as Patient
-      const p = parsePayload(pd.payload)
+      const roh = parsePayload((doc as Patient).payload)
 
       // Fassung 2.0 wird auf dem ÄLRD-Bogen gedruckt, und zwar ohne
       // Uebersetzung: diese Protokolle tragen bereits die Feldnamen des
@@ -79,13 +100,18 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       //
       // Fassung 1.0 bleibt beim gewachsenen Ausdruck — ein rechtlich
       // bedeutsames Dokument wird nicht nachtraeglich umgeformt.
-      if (istDivi(p)) {
-        // Die Druckvorlagen sind gross und werden nur hier gebraucht.
+      if (istDivi(roh)) {
+        // Die Druckvorlagen sind gross und werden nur hier gebraucht (sie entschärfen selbst).
         const { aelrdHtml } = await import('../../lib/aelrdProtokoll')
-        w.document.write(aelrdHtml(p as Record<string, unknown>))
+        w.document.write(aelrdHtml(roh as Record<string, unknown>))
         w.document.close()
         return
       }
+      // Alter Ausdruck: alles HTML-sicher, Unterschriften nur als eingebettete Bilder
+      const pd = druckSicher(doc as Patient)
+      const p = druckSicher(roh)
+      p.signature = bildQuelle(roh.signature)
+      pd.admin_unterschrift = bildQuelle((doc as Patient).admin_unterschrift)
       const pChf = new Set<string>(p._changed_fields || [])
       const pTfChf = new Set<string>(p._tf_changed_fields || [])
       const gcsTotal = (p.gcs_e || 0) + (p.gcs_v || 0) + (p.gcs_m || 0)
@@ -345,7 +371,8 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
     }
 
     // Nacherfassung
-    const nd = doc as Nacherfassung
+    const nd = druckSicher(doc as Nacherfassung)
+    nd.nacherfasst_unterschrift = bildQuelle((doc as Nacherfassung).nacherfasst_unterschrift)
     const body = `
       <h1 style="font-size:18px;margin-bottom:16px">Nacherfassung</h1>
       <table>

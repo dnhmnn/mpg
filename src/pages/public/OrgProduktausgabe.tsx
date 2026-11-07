@@ -1,16 +1,37 @@
+// Produktausgabe (öffentliches Formular): Artikel, die im Einsatz verbraucht
+// wurden, an die Lagerverwaltung melden.
+//
+// Absender nach Bauplan Formulare v2 (4.2, 4.7): angemeldet, mit Passwort oder
+// Name frei, je nach Einstellung der Organisation. Gesendet wird nur über
+// src/lib/formular/versand.ts (Route /absenden, ohne Netz in die
+// Warteschlange, bei altem Server der alte Weg); die Maske legt nie selbst an.
+
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubWrap, PubSendBar, PubSection, PubHeader, field, inp, lbl } from './pubStyles'
-import { MIN_ZEICHEN, neueSuche } from './mitgliederSuche'
+import { PubWrap, PubSendBar, PubSection, field, inp, lbl } from './pubStyles'
+import AbsenderFeld, { AbmeldenNachSenden, absenderAngabe, sendeKnopfText } from './absender/AbsenderFeld'
+import { warteschlangeMelden } from './absender/Warteschlange'
+import { useFormularStand } from '../../lib/formular/stand'
+import { neueKennung } from '../../lib/formular/api'
+import { ablegenMitMeldung, sendenOderAblegen } from '../../lib/formular/versand'
+import type { NeuerEintrag } from '../../lib/formular/warteschlange'
+import { absenderZeile, type AbsenderEintrag, type AbsenderModus } from '../../lib/formular/absender'
+import { ABSENDER_TEXTE, modusAusStand } from './absender/texte'
+import { EINSATZ_MAX, absenderPruefen, ausgabeAlt, ausgabeDaten, ausgabePruefen } from './formularDaten'
 
-const today = () => new Date().toISOString().slice(0, 10)
+/** Heutiges Datum in Ortszeit (nicht UTC: kurz nach Mitternacht stünde sonst der Vortag da). */
+const today = () => {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 interface InventoryItem { id: string; name: string; unit: string }
-interface UserHit { id: string; name: string }
 interface Location { id: string; name: string }
 type Pos = { qty: number; name: string; item_id: string; unit: string }
+/** Was nach dem Senden gezeigt wird: angekommen oder auf dem Gerät abgelegt. */
+type Fertig = { art: 'gesendet'; absender: string } | { art: 'abgelegt'; meldung: string }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -19,82 +40,6 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
         {title}
       </div>
       <div style={{ padding: '1rem' }}>{children}</div>
-    </div>
-  )
-}
-
-function UserSearch({ orgId, value, onChange }: {
-  orgId: string; value: UserHit | null; onChange: (u: UserHit | null) => void
-}) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<UserHit[]>([])
-  const [open, setOpen] = useState(false)
-  const timer = useRef<ReturnType<typeof setTimeout>>()
-  const ref = useRef<HTMLDivElement>(null)
-  const [suche] = useState(neueSuche)
-
-  useEffect(() => () => { clearTimeout(timer.current); suche.abbrechen() }, [suche])
-
-  useEffect(() => {
-    function onClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onClick)
-    return () => document.removeEventListener('mousedown', onClick)
-  }, [])
-
-  function onInput(q: string) {
-    setQuery(q)
-    clearTimeout(timer.current)
-    if (q.trim().length < MIN_ZEICHEN) { suche.abbrechen(); setResults([]); setOpen(false); return }
-    timer.current = setTimeout(async () => {
-      try {
-        const liste = await suche.suchen(orgId, q)
-        if (liste === null) return
-        setResults(liste)
-        setOpen(true)
-      } catch {
-        setResults([])
-        setOpen(true)
-      }
-    }, 350)
-  }
-
-  function select(u: UserHit) {
-    suche.abbrechen(); onChange(u); setQuery(''); setResults([]); setOpen(false)
-  }
-
-  return (
-    <div ref={ref} style={{ position: 'relative', marginTop: 8 }}>
-      {value ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '8px 12px' }}>
-          <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
-            {value.name.charAt(0).toUpperCase()}
-          </div>
-          <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', color: 'var(--lbf-text)', fontSize: 14 }}>{value.name}</span>
-          <button type="button" onClick={() => onChange(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 18, lineHeight: 1, padding: '0 2px' }}>×</button>
-        </div>
-      ) : (
-        <input style={inp} type="text" value={query} onChange={e => onInput(e.target.value)} placeholder="Name suchen…" />
-      )}
-      {open && results.length > 0 && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, overflow: 'hidden', marginTop: 2 }}>
-          {results.map(u => (
-            <button key={u.id} type="button" onMouseDown={() => select(u)}
-              style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', background: 'none', border: 'none', padding: '10px 12px', cursor: 'pointer', textAlign: 'left', borderBottom: '0.5px solid var(--lbf-border-light)', fontFamily: 'inherit' }}>
-              <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--lbf-akzent-grund)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontStyle: 'italic', fontSize: 13, flexShrink: 0 }}>
-                {u.name.charAt(0).toUpperCase()}
-              </div>
-              <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)' }}>{u.name}</div>
-            </button>
-          ))}
-        </div>
-      )}
-      {open && results.length === 0 && query.trim() && (
-        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--lbf-card)', border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '10px 12px', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', zIndex: 50, marginTop: 2 }}>
-          Kein Benutzer gefunden
-        </div>
-      )}
     </div>
   )
 }
@@ -158,18 +103,36 @@ function ArticleSearch({ inventoryItems, onSelect }: {
   )
 }
 
+/** Textknopf im LBF-Stil: Akzent, fett, ohne Rahmen. */
+const textKnopf: React.CSSProperties = { background: 'none', border: 'none', padding: '6px 0', color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }
+
+
 export default function OrgProduktausgabe() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
   const [einsatz, setEinsatz] = useState('')
   const [datum, setDatum] = useState(today())
-  const [selectedUser, setSelectedUser] = useState<UserHit | null>(null)
   const [positions, setPositions] = useState<Partial<Pos>[]>([{ qty: 1 }])
   const [sending, setSending] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [fertig, setFertig] = useState<Fertig | null>(null)
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([])
   const [locations, setLocations] = useState<Location[]>([])
   const [selectedLagerId, setSelectedLagerId] = useState('')
+
+  // Absender (4.2): Name, Passwort nur im Zustand dieses einen Versuchs, nie gespeichert
+  const [name, setName] = useState('')
+  const [passwort, setPasswort] = useState('')
+  const [anderer, setAnderer] = useState(false)
+  const [fehler, setFehler] = useState('')
+  const [ablegenAnbieten, setAblegenAnbieten] = useState(false)
+  /** Nach „gesperrt“: wie lange die Sperre läuft und was der Server sagte (für die Ablage). */
+  const sperre = useRef<{ sekunden?: number; text: string } | null>(null)
+  // Kennung des Satzes: entsteht beim ersten Versuch und bleibt bis „Neue Ausgabe“
+  const kennung = useRef('')
+  const { stand, alterServer } = useFormularStand(orgCode, { mitAnmeldung: !anderer, org })
+  const angemeldet = !anderer && !!stand?.angemeldet
+  // Derselbe Modus, nach dem AbsenderFeld das Passwortfeld zeigt; beim alten Server gibt es keins
+  const modus: AbsenderModus = alterServer ? 'frei' : modusAusStand(stand, 'produktausgabe')
 
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
@@ -205,62 +168,126 @@ export default function OrgProduktausgabe() {
     setPositions(p => p.map((r, j) => j === i ? { ...r, name: item.name, item_id: item.id, unit: item.unit } : r)),
     [])
 
+  /** Der Eintrag für Versand und Warteschlange (1.18): daten für die Route, alt für den alten Weg. */
+  function eintrag(angabe: ReturnType<typeof absenderAngabe>): NeuerEintrag {
+    if (!kennung.current) kennung.current = neueKennung()
+    const angemeldetId = angabe.mitAnmeldung ? stand?.angemeldet?.id ?? '' : ''
+    const absenderName = (angabe.absender?.name ?? '').trim() || (angabe.mitAnmeldung ? stand?.angemeldet?.name ?? '' : name.trim())
+    const lagerName = locations.find(l => l.id === selectedLagerId)?.name ?? ''
+    return {
+      id: kennung.current,
+      formular: 'produktausgabe',
+      orgCode,
+      orgId: org.id,
+      absenderName,
+      angemeldetId,
+      daten: ausgabeDaten(einsatz, datum, selectedLagerId, positions),
+      alt: ausgabeAlt(einsatz, datum, selectedLagerId, positions, { lagerName, absender: { id: angemeldetId, name: absenderName }, orgId: org.id }),
+    }
+  }
+
+  function fertigMelden(f: Fertig) {
+    setFertig(f)
+    setFehler('')
+    setAblegenAnbieten(false)
+    // Die Karte der Warteschlange sofort zeigen, nicht erst beim nächsten Durchgang
+    if (f.art === 'abgelegt') warteschlangeMelden()
+  }
+
   async function submit() {
-    const filled = positions.filter((p): p is Pos => !!(p.item_id && p.name && (p.qty ?? 0) > 0))
-    if (!einsatz || !datum || !filled.length || !selectedUser) {
-      alert('Bitte Einsatznummer, Datum, mindestens einen Artikel und einen Benutzer auswählen.')
-      return
-    }
-    if (!selectedLagerId) {
-      alert('Bitte einen Verbrauchsort auswählen.')
-      return
-    }
+    if (sending) return
+    setFehler('')
+    setAblegenAnbieten(false)
+    const pruef = ausgabePruefen(ausgabeDaten(einsatz, datum, selectedLagerId, positions))
+      || absenderPruefen({ angemeldet, name, modus, passwort, online: navigator.onLine !== false, alterServer })
+    if (pruef) { setFehler(pruef); return }
+    const angabe = absenderAngabe({ stand, formular: 'produktausgabe', anderer, name, passwort })
+    const e = eintrag(angabe)
     setSending(true)
     try {
-      const deDate = datum.split('-').reverse().join('.')
-      const lagerName = locations.find(l => l.id === selectedLagerId)?.name ?? ''
-      await pb.collection('product_outputs').create({
-        title: `Produktausgabe ${einsatz} (${deDate})`,
-        payload: {
-          einsatz, datum,
-          user_id: selectedUser.id,
-          user_name: selectedUser.name,
-          lager_id: selectedLagerId,
-          lager_name: lagerName,
-          positionen: filled,
-        },
-        status: 'offen',
-        organization_id: org.id,
-      })
-      setSuccess(true)
-    } catch (e: any) {
-      alert('Fehler: ' + e.message)
+      const r = await sendenOderAblegen(e, angabe, { modus })
+      if (r.art === 'gesendet') {
+        const absender: AbsenderEintrag | null = r.absender
+        fertigMelden({ art: 'gesendet', absender: absenderZeile(absender, e.absenderName) })
+      } else if (r.art === 'abgelegt') {
+        fertigMelden({ art: 'abgelegt', meldung: r.meldung })
+      } else if (r.art === 'nicht_abgelegt') {
+        setFehler(r.meldung)
+      } else {
+        setFehler(r.meldung)
+        setAblegenAnbieten(r.ablegenAnbieten)
+        sperre.current = r.ablegenAnbieten ? { sekunden: r.sekunden, text: r.meldung } : null
+      }
     } finally {
+      // Nach jedem Versuch leeren (4.2)
+      setPasswort('')
       setSending(false)
     }
   }
 
-  function reset() {
-    setEinsatz(''); setDatum(today()); setSelectedUser(null)
-    setPositions([{ qty: 1 }]); setSuccess(false); setSelectedLagerId('')
+  /** Nach zu vielen falschen Passwörtern: auf dem Gerät ablegen, die Warteschlange fragt später erneut. */
+  function aufGeraetAblegen() {
+    const angabe = absenderAngabe({ stand, formular: 'produktausgabe', anderer, name, passwort: '' })
+    const r = ablegenMitMeldung(eintrag(angabe), { modus, mitAnmeldung: angabe.mitAnmeldung, anlass: 'gesperrt', sekunden: sperre.current?.sekunden, text: sperre.current?.text })
+    if (r.gespeichert) fertigMelden({ art: 'abgelegt', meldung: r.meldung })
+    else { setFehler(r.meldung); setAblegenAnbieten(false) }
   }
 
-  if (success) return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid #16a34a', borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
-        <div style={{ width: 52, height: 52, background: 'rgba(22,163,74,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
+  /** Modus Passwort, kein Passwort zur Hand: ohne Passwort ablegen (Befund Client-Abläufe 5). */
+  function ohnePasswortAblegen() {
+    if (sending) return
+    setFehler('')
+    setAblegenAnbieten(false)
+    const pruef = ausgabePruefen(ausgabeDaten(einsatz, datum, selectedLagerId, positions))
+      || absenderPruefen({ angemeldet: false, name, modus: 'frei', passwort: '', online: true, alterServer })
+    if (pruef) { setFehler(pruef); return }
+    setPasswort('')
+    const angabe = absenderAngabe({ stand, formular: 'produktausgabe', anderer: true, name, passwort: '' })
+    const r = ablegenMitMeldung(eintrag(angabe), { modus, mitAnmeldung: false, anlass: 'ohne_passwort' })
+    if (r.gespeichert) fertigMelden({ art: 'abgelegt', meldung: r.meldung })
+    else setFehler(r.meldung)
+  }
+
+  function reset() {
+    setEinsatz(''); setDatum(today())
+    setPositions([{ qty: 1 }]); setFertig(null); setSelectedLagerId(locations.length === 1 ? locations[0].id : '')
+    setPasswort(''); setFehler(''); setAblegenAnbieten(false)
+    // Neue Ausgabe, neue Kennung (4.2); der Name bleibt für die nächste Ausgabe stehen
+    kennung.current = ''
+  }
+
+  if (fertig) {
+    const gesendet = fertig.art === 'gesendet'
+    return (
+      // Oben im Fluss, nicht auf 100dvh zentriert: steht darüber die Karte der Warteschlange, bleibt die Bestätigung sichtbar
+      <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '20px 16px 40px', boxSizing: 'border-box' }}>
+        <div style={{ background: 'var(--lbf-card)', borderLeft: `3px solid ${gesendet ? '#16a34a' : 'var(--lbf-akzent)'}`, borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
+          <div style={{ width: 52, height: 52, background: gesendet ? 'rgba(22,163,74,0.1)' : 'var(--lbf-akzent-weich)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            {gesendet ? (
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            ) : (
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--lbf-akzent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/>
+              </svg>
+            )}
+          </div>
+          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>{gesendet ? 'Erfolgreich gespeichert' : 'Auf dem Gerät gespeichert'}</div>
+          <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: gesendet && fertig.absender ? 8 : 24, lineHeight: 1.5 }}>
+            {gesendet ? 'Die Ausgabe wurde an die Lagerverwaltung weitergeleitet.' : fertig.meldung}
+          </div>
+          {gesendet && fertig.absender && (
+            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginBottom: 24 }}>Absender: {fertig.absender}</div>
+          )}
+          <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={reset}>
+            Neue Ausgabe
+          </button>
+          <AbmeldenNachSenden />
         </div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>Erfolgreich gespeichert</div>
-        <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24 }}>Die Ausgabe wurde an die Lagerverwaltung weitergeleitet.</div>
-        <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={reset}>
-          Neue Ausgabe
-        </button>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)' }}>
@@ -281,7 +308,7 @@ export default function OrgProduktausgabe() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }}>
             <div style={field}>
               <label style={lbl}>Einsatznummer *
-                <input style={inp} type="text" placeholder="z.B. 2025-001" value={einsatz} onChange={e => setEinsatz(e.target.value)} />
+                <input style={inp} type="text" placeholder="z.B. 2025-001" maxLength={EINSATZ_MAX} value={einsatz} onChange={e => setEinsatz(e.target.value)} />
               </label>
             </div>
             <div style={field}>
@@ -351,13 +378,36 @@ export default function OrgProduktausgabe() {
           )}
         </Card>
 
-        <Card title="Ausgetragen von">
-          <label style={lbl}>Benutzer *</label>
-          <UserSearch orgId={org.id} value={selectedUser} onChange={setSelectedUser} />
-        </Card>
+        <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '1rem' }}>
+          <AbsenderFeld
+            orgCode={orgCode}
+            formular="produktausgabe"
+            stand={stand}
+            alterServer={alterServer}
+            name={name}
+            onName={setName}
+            passwort={passwort}
+            onPasswort={setPasswort}
+            anderer={anderer}
+            onAnderer={(v) => { setAnderer(v); setPasswort('') }}
+            onSenden={() => { void submit() }}
+            onAblegen={ohnePasswortAblegen}
+          />
+        </div>
+
+        {fehler && (
+          <div role="alert" style={{ background: 'var(--lbf-fehler-grund)', border: '0.5px solid rgba(220,38,38,0.2)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: 'var(--lbf-fehler-text)', fontStyle: 'italic', marginBottom: '.75rem', lineHeight: 1.5 }}>
+            {fehler}
+            {ablegenAnbieten && (
+              <div style={{ marginTop: 6 }}>
+                <button type="button" onClick={aufGeraetAblegen} style={{ ...textKnopf, fontStyle: 'normal' }}>{ABSENDER_TEXTE.ablegen}</button>
+              </div>
+            )}
+          </div>
+        )}
 
       </PubWrap>
-      <PubSendBar onSubmit={submit} sending={sending} label="An Lager senden" small />
+      <PubSendBar onSubmit={submit} sending={sending} label={sendeKnopfText({ stand, anderer }, 'An Lager senden')} small />
     </div>
   )
 }

@@ -1,16 +1,23 @@
-// Das Protokoll absenden.
+// Das Protokoll absenden: was die Maske dafür rechnet.
 //
-// Bis hierher war die Maske eine Vorschau: alles stand im Gerät, nichts kam
-// an. Jetzt entsteht daraus ein Datensatz in `patients` — derselbe, den das
-// alte Formular anlegt, mit demselben Status und derselben Form der
-// Besatzung. Unitas liest ihn ohne Änderung, der Ausdruck ebenso.
+// Abgesendet wird seit Bauplan v2 über die Route des Servers
+// (`formularSenden` in src/lib/formular/versand.ts): er prüft den Absender,
+// setzt Frist, Absendezeit und Besatzung selbst. Ohne Netz liegt das Protokoll
+// in der Warteschlange `formular_warteschlange_<orgCode>` (ohne Passwort) und
+// geht von dort raus.
 //
-// OHNE NETZ wandert er in dieselbe Warteschlange, die das alte Formular
-// führt (`offline_queue_<orgCode>`), und wird beim nächsten Öffnen mit Netz
-// abgeschickt — von welcher der beiden Masken, ist gleichgültig.
+// Was hier bleibt:
+// - `titel`, `pruefen`, die Frist (`FRIST_MS`, Zwilling der Regeln am Server)
+//   und ihre Texte;
+// - `datensatz`: so sah der Satz aus, den die Maske früher selbst anlegte. Der
+//   alte Weg (Server ohne Formular-Routen, `altSatz` in versand.ts) legt genau
+//   diese Form an;
+// - die alte Warteschlange `offline_queue_<orgCode>`: ältere App-Stände legen
+//   dort ab, die neue Warteschlange übernimmt sie beim Lesen.
 
 import type { Werte } from './DokuFeld'
 import { mitFassung, NEUE_FASSUNG } from '../../../lib/protokoll'
+import { absenderAusObjekt, wartetAufUnterschrift } from '../../../lib/formular/absender'
 import { offenePflicht, offeneErwartung, type Stand } from '../../../katalog/pflicht'
 
 /**
@@ -95,8 +102,24 @@ export function fristText(payload: Werte, jetzt = new Date()): string {
 export function fristEnde(payload: Werte, angelegt: string): number {
   const frist = typeof payload.frist === 'string' ? Date.parse(payload.frist) : NaN
   if (Number.isFinite(frist)) return frist
-  const an = Date.parse(angelegt)
+  // PocketBase schreibt „2026-10-31 13:20:05.120Z“; nicht jeder Browser liest das Leerzeichen
+  const an = Date.parse(String(angelegt ?? '').replace(' ', 'T'))
   return Number.isFinite(an) ? an + FRIST_MS : 0
+}
+
+/**
+ * Ob ein schon abgesendetes Protokoll noch geändert werden darf.
+ *
+ * - `ausstehend`: es wartet auf die Unterschrift des Absenders; bis dahin
+ *   ändert niemand etwas (der Server lehnt es ab). Seine Frist ist leer, und
+ *   leer hieß früher „läuft“; deshalb steht dieser Fall vorn.
+ * - `abgelaufen`: Frist vorbei, oder ohne Unterschrift abgeschlossen (dann
+ *   ist es freigegeben).
+ */
+export function aenderbar(payload: Werte, angelegt: string, jetzt = Date.now()): 'ja' | 'ausstehend' | 'abgelaufen' {
+  if (wartetAufUnterschrift(payload)) return 'ausstehend'
+  if (absenderAusObjekt(payload.absender)?.status === 'ohne_unterschrift') return 'abgelaufen'
+  return fristEnde(payload, angelegt) > jetzt ? 'ja' : 'abgelaufen'
 }
 
 /** Was von der Frist übrig ist, in Worten — auch für ältere Protokolle. */

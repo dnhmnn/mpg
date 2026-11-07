@@ -285,8 +285,8 @@ Das geht ohne Anmeldung nicht mehr (Create verlangt Lager). Betroffen wären nur
 Organisationen ganz ohne Standort — die haben auch keine Artikel, das Formular
 war dort ohnehin nicht nutzbar.
 
-Das Formular sucht außerdem Benutzer ohne Anmeldung (`users` List) — ebenfalls
-Paket 5.
+Das Formular sucht keine Benutzer mehr: Den Absender prüft der Server
+(`/api/responda/formular/…`, Abschnitt „Öffentliche Formulare: Absender“).
 
 ### Hook `pb_hooks/lager.pb.js`
 
@@ -372,7 +372,8 @@ gesperrte und abgelaufene Konten melden sich nicht an und erneuern kein Token:
 disabled != true && (expires_at = "" || expires_at > @now)
 ```
 
-List und View von `users` bleiben, wie sie sind (siehe Formular oben).
+List und View von `users`: bis zur Einführung der Absender offen; danach schließt der Owner sie
+(Abschnitt „users: List und View schließen“ unter „Öffentliche Formulare: Absender“).
 
 **Rechte-Übernahme beim ersten Login.** `src/hooks/useAuth.ts` schreibt bei
 Konten ohne `permissions_migrated` einmal die Rechte der Rolle in das eigene
@@ -657,8 +658,11 @@ Superuser korrigieren:
   `user_id` im Gerätebuch, Melder und „behoben von“ am Defekt — samt Kennung,
   wenn die empfohlenen Felder angelegt sind. Ein mitgeschickter Wert wird
   überschrieben, auch in Sammelbuchungen. Beim Bestätigen einer Meldung steht als
-  Melder der Name aus der Meldung; die Kennung bleibt leer, denn das Formular
-  ohne Anmeldung kann sie nicht prüfen.
+  Melder der Name aus der Meldung; die Kennung (`reported_by_id`) nur, wenn der
+  Server den Melder bestätigt hat (`reporter_status = "bestaetigt"`: Passwort,
+  Anmeldung oder nachgereichte Unterschrift, siehe „Öffentliche Formulare:
+  Absender“), sonst bleibt sie leer. `reporter_status` setzt nur der Server; ein
+  Update über die API stellt es zurück.
 - Defekte: immer offen angelegt; „behoben“ ist endgültig. Gerät, Melder und
   Organisation bleiben, wie angelegt — ein Defekt lässt sich nicht auf ein
   anderes Gerät umhängen. Nach dem Beheben bleiben auch Beschreibung, Schwere,
@@ -1032,3 +1036,247 @@ der anderen Organisation und ohne Anmeldung.
 Zusammen **1601 Prüfungen je Version, alle bestanden**. Gegenprobe mit der
 weiten Regel `id = @request.auth.organization_id` (jedes Mitglied darf alles an
 der eigenen Organisation, jeder Angemeldete legt an): 702 schlagen an.
+
+## Öffentliche Formulare: Absender
+
+Patientendoku (`/doku`, `/patienten`, `/patienten-alt`, `/schnelldoku`), Produktausgabe und
+Defektmeldung senden über eigene Routen unter `/api/responda/formular/…`. Der Server
+entscheidet, wer Absender ist, und setzt Status, Frist, Absender und Besatzung selbst:
+
+- **angemeldet** (Token eines aktiven Mitglieds dieser Organisation): die angemeldete Person,
+  bestätigt. Gilt auch, wenn das öffentliche Formular ausgeschaltet ist (`hidden_forms`
+  heißt „öffentlicher Link aus“); dann zählt nur, ob das Modul frei ist.
+- **Modus „passwort“** (Voreinstellung der Patientendoku, sofort für alle Organisationen):
+  voller Name und Passwort des Mitglieds, bestätigt. Aus der Warteschlange eines Geräts geht es
+  auch ohne Passwort als **„Unterschrift ausstehend“**, aber nur, wenn der Name genau zu einem
+  Mitglied passt; die Besatzung steht dann nur als Namen da, bis der Absender angemeldet
+  unterschreibt.
+- **Modus „frei“** (Voreinstellung von Produktausgabe und Defektmeldung): ein Name; passt er
+  genau auf ein Mitglied, wird er verknüpft und als „nicht bestätigt“ markiert, sonst „ohne
+  Konto“.
+
+Die Wahl steht je Formular in `organizations.form_config.absender`
+(`{ "patienten": "passwort", "produktausgabe": "frei", "defektmeldung": "frei" }`); fehlt sie
+oder ist sie unlesbar, gilt die Voreinstellung. Schreiben dürfen sie wie bisher alle, die
+`form_config` ändern dürfen (Update-Regel von `organizations`).
+
+Den Namensabgleich macht nur der Server (`normName` in `pb_hooks/formular-regeln.js`): Groß
+und klein, Leerzeichen, „Berg, Anna“ und „Anna Berg“, Umlaute und ae/oe/ue, ß und ss, Akzente,
+Bindestriche und Apostrophe zählen gleich. Dazu Unicode NFKC (Vollbreite, Ligaturen,
+mathematische Buchstaben), unsichtbare Zeichen fallen weg (Nullbreiten, Richtungszeichen wie LRM,
+Variantenwähler, Füller), und Buchstaben anderer Schriften, die wie lateinische aussehen, zählen
+als lateinische (Auszug der Verwechsler nach Unicode UTS 39: „Аnna Berg“ mit kyrillischem А ist
+Anna Berg). Ein Name braucht Vor- und Nachnamen. Verknüpfbar ist
+ein Konto der Organisation, das nicht gesperrt und nicht abgelaufen ist, keine Teilnehmenden
+und kein Supervisor.
+
+### Felder
+
+Anlegen (*Plain text*, nicht Pflicht), **erst wenn die Hooks laufen** (Einführung Schritt 5). Ohne
+sie gibt es kein „Unterschrift ausstehend“, alles andere geht:
+
+| Sammlung | Feld | Werte |
+|---|---|---|
+| `patients` | `absender_status` | `bestaetigt`, `nicht_bestaetigt`, `ohne_konto`, `ausstehend`, `ohne_unterschrift`; leer bei alten Sätzen |
+| `product_outputs` | `absender_status` | wie oben (ohne `ohne_unterschrift`) |
+| `mpg_defect_reports` | `reporter_status` | wie oben (ohne `ohne_unterschrift`) |
+
+Die Felder sind der Index für „Wartet auf deine Unterschrift“ und die Obergrenze offener
+Einträge; die volle Angabe steht in `payload.absender` (Patienten, Produktausgabe:
+`{ id, name, status, weg, modus, am, feld }`, bei „ohne Unterschrift“ dazu `abschluss`). Der
+Server setzt sie, ein mitgeschickter Wert wird überschrieben. Server und App glauben
+`payload.absender` nur, wenn `absender_status` denselben Status trägt; ein `payload.absender`
+ohne passendes Feld (aus der Zeit ohne Hooks) gilt als alter Satz.
+
+Vor den Hooks setzt niemand die Felder, und die Create- und Update-Regeln sind offen: Wer sie
+vorher anlegt, lässt jeden „bestätigt“ oder „ausstehend“ mit fremdem Absender eintragen. Deshalb
+leert der **erste Start** von `formular.pb.js` einmal alle gesetzten Statusfelder (Anzahl im Log,
+`[formular] Erster Start`; Merker `responda_formular_start.txt` im Datenverzeichnis, danach nie
+wieder). Fehlt `formular.pb.js` später (Rücknahme), hält `formular-felder.pb.js` die Felder dicht.
+
+### Hook-Dateien
+
+| Datei | Zweck |
+|---|---|
+| `formular-regeln.js` | Regeln als reine Funktionen (Namensabgleich, Absender, Besatzung, Drossel, Datenprüfung). Prüffälle: `src/lib/__tests__/formularRegeln.test.ts` |
+| `formular.pb.js` | die Routen unten, der Schutz direkter API-Aufrufe, die gemeinsame Sperre mit der Anmeldung (auth-with-password), der Aufräum-Lauf der Drossel, das einmalige Leeren beim ersten Start |
+| `formular-felder.pb.js` | nur ohne `formular.pb.js` (Rücknahme): Statusfelder bleiben leer bzw. wie sie waren, Absender bestehender Sätze bleibt; kommt ohne `formular-regeln.js` aus |
+| `mitglieder-namen.pb.js` | kein zweites aktives Mitglied gleichen Namens in einer Organisation (nach `normName`, also auch mit Verwechslern oder unsichtbaren Zeichen); Namen mit gemischten Schriften werden abgewiesen |
+| `doku-frist.pb.js` | Frist-Lauf, repariert (las den payload bisher falsch und schloss nie ab), lässt Ausstehendes liegen |
+| `mpg.pb.js` | `reported_by_id` nur bei bestätigtem Melder und nur, solange `formular.pb.js` läuft; `reporter_status` fest |
+
+Alle nach **`/opt/pb_hooks`** kopieren, PocketBase neu starten. Ein Syntaxfehler in einer Datei
+unter `pb_hooks` hält PocketBase beim Start an (geprüft auf 0.28.4 und 0.40.5): Nach dem Kopieren
+`GET /api/health` prüfen. Die CI startet beide Versionen mit `pb_hooks`
+(`scripts/hooks-rauchprobe.mjs`). Einführung Schritt für Schritt:
+`docs/formulare-absender-einfuehrung.md`.
+
+### Routen
+
+| Route | Wer | Was |
+|---|---|---|
+| `GET /api/responda/formular/{code}/stand` | alle | Einstellung je Formular, ob „ausstehend“ geht, `angemeldet` bei Mitglieds-Token |
+| `POST /api/responda/formular/{code}/name` | alle (gedrosselt) | `{ vollstaendig, gefunden, eindeutig }`, nur ja/nein, keine Liste, keine E-Mail |
+| `POST /api/responda/formular/{code}/absenden` | alle (gedrosselt) | ein Weg für alle drei Formulare; Kennung vom Client, doppelt gesendet mit gleichen Daten: `bereits: true` |
+| `GET /api/responda/formular/unterschriften` | Mitglied | was auf die eigene Unterschrift wartet |
+| `POST /api/responda/formular/unterschreiben` | Mitglied, nur das Ziel selbst | bestätigt nachträglich, Frist ab jetzt, Besatzung wird verknüpft |
+| `POST /api/responda/formular/zurueckweisen` | Mitglied, nur das Ziel selbst | „Das war ich nicht“ statt zu unterschreiben. Patientendoku: wartet weiter, aber nicht mehr auf diese Person (`payload.absender.zurueckgewiesen`), die Leitung schließt sie ohne Unterschrift ab. Produktausgabe und Meldung: danach `ohne_konto` unter dem eingetragenen Namen, Kennung geleert |
+| `POST /api/responda/formular/ohne-unterschrift` | Leitung, Recht `patienten` (auch befristet), Supervisor | Notausgang für ausstehende Patientenprotokolle, Pflicht-Begründung (10 bis 500 Zeichen), Satz wird freigegeben |
+| `GET /api/responda/formular/mitglieder-pruefung` | wer Formulare einstellen darf | `koennen_nicht`: wer nicht mit Passwort bestätigen kann (Name unvollständig, ohne E-Mail); `doppelt`: Namen, die es mehrfach gibt (Passwort geht, Besatzung und „ohne Passwort“ nicht) |
+| `GET /api/responda/formular/diagnose` | nur Superuser | `realIP`, IP-Topf, Trusted proxy, Felder, Größe des Speichers |
+
+Antworten im Fehlerfall: `{ "status", "message", "grund", … }`; `message` ist deutsch und
+wird in der App unverändert gezeigt. Der Hook gibt nie ein Token aus und schreibt nie Passwort,
+Begründung oder Body ins Log. Er ist keine Anmeldung: Konten mit Anmeldung per Passwort und
+E-Mail-Code bestätigen ein Formular mit dem Passwort allein.
+
+Frist der Patientenprotokolle: 24 Stunden ab Eingang beim Server (bestätigt, nicht bestätigt,
+ohne Konto). „Ausstehend“ hat keine Frist; sie beginnt mit dem Unterschreiben. Solange ein Satz
+aussteht, lehnt der Server jede Änderung am payload und jeden Statuswechsel ab, auch von der
+Leitung (sonst ließe er sich ohne Unterschrift archivieren).
+
+### Schutz direkter API-Aufrufe
+
+Solange die Create-Regeln der drei Sammlungen offen sind (alte App-Stände legen direkt an),
+prüfen Hooks jede API- und Batch-Anfrage (Superuser ausgenommen):
+
+- **Anlegen ohne Mitglieds-Token:** Organisation aktiv und Formular an und öffentlich, sonst
+  403; gedrosselt wie die Route. Modus „passwort“: **403** „Diese Fassung der App kann nicht mehr
+  absenden. Bitte zuerst den Entwurf speichern, dann die App neu öffnen.“ Modus „frei“: Absender
+  nach dem Namen im Satz, leerer Name wird „ohne Konto“. Produktausgabe und Meldung: Ort,
+  Artikel und Gerät müssen zur Organisation gehören (Gerät nicht außer Betrieb), Namen und
+  Einheiten aus dem Bestand. Status vom Server. Die alte Maske (`ausfueller_name`, auch mit
+  `protokoll_version` 2) wird am Feld „Name Ausfüller“ erkannt. Ein abgelehnter Teil rollt den
+  ganzen Batch zurück.
+- **Anlegen mit Mitglieds-Token:** Modul frei, sonst 403; Absender ist die angemeldete Person.
+- **Ändern `patients`:** Absender, Frist, `abgesendet`, Prüfsumme und Änderungsliste bleiben,
+  wie der Server sie gesetzt hat, ebenso `absender_status` und `organization_id`. Ohne
+  Mitglieds-Token bleibt der Status, und der Inhalt eines bestätigten oder ohne Unterschrift
+  abgeschlossenen Satzes lässt sich nicht ändern (403); ebenso eines Satzes, der nicht mehr offen
+  oder dessen Frist abgelaufen ist (403, „abgeschlossen“; so überschreibt auch eine übernommene
+  Änderung alter App-Stände nichts Freigegebenes). Rückfragen und Stellungnahmen ändern nur
+  Mitglieder. Bei solchen gesperrten Sätzen bleiben ohne Mitglieds-Token auch alle anderen Felder
+  (Titel, Gegenzeichnung `admin_name`, `admin_datum`, `admin_unterschrift`); bei ausstehenden für
+  jeden alle außer payload und Status. Die Gegenzeichnung setzt ohne Mitglieds-Token niemand,
+  auch nicht bei offenen Sätzen oder beim Anlegen (der Ausdruck der Patientenverwaltung zeigt sie
+  als Bild). Druckname und gezeichnete Unterschrift bleiben beim bestätigten Absender, wenn
+  jemand anderes ändert. Die Besatzung behält unveränderte Verknüpfungen; Kennungen übernimmt der
+  Server nur aus Anfragen eines Mitglieds, passend zu einem verknüpfbaren Mitglied. Ein leeres
+  flaches Feld (`mannschaft_tf` …) heißt „nicht angegeben“: Dann gilt der verschachtelte Name,
+  geräumt ist ein Posten erst, wenn beide leer sind. Jede Änderung steht in `payload.aenderungen`. Ein Body nur mit `status` lässt den payload unberührt; ein
+  unlesbarer payload führt nie zu einem Fehler.
+- **Ändern `product_outputs`:** Absender und Empfänger (`user_id`, `user_name`) bleiben. Ein
+  Body nur mit `status` (Lager „Ausbuchen“ im Batch) bleibt unberührt.
+- **`mpg_defect_reports`:** `reporter_status` gehört zu den festen Feldern in `mpg.pb.js`.
+
+### Drossel und Sperre
+
+Im Speicher des Servers, nach einem Neustart leer. Anonyme Anfragen zählen je IP-Topf (IPv4 je
+Adresse, IPv6 je /64), IPv6 zusätzlich je /48, angemeldete je Konto. Jede Passwortprüfung wird vor
+dem Prüfen atomar reserviert, auch gleichzeitige Anfragen prüfen nie mehr als erlaubt. Die
+normale Anmeldung (`auth-with-password` von `users`) zählt mit denselben Zählern, sonst ließe
+sich die Sperre dort umgehen.
+
+| Zweck | Grenze |
+|---|---|
+| Namensprüfung | anonym 120 je 5 Minuten, Mitglied 200 |
+| Absenden (Route und direkte API) | anonym 60 je 10 Minuten, Mitglied 120 |
+| „ausstehend“ | 20 je IP-Topf und Stunde, 10 je Ziel-Mitglied und Stunde, höchstens 20 offen je Ziel |
+| Passwort je Konto und IP-Topf | 5 Prüfungen, mit der 5. 15 Minuten Sperre (dieses Konto von dieser Adresse); auch 20 gleichzeitige Anfragen prüfen höchstens 5 |
+| Passwort je Konto | 30 Prüfungen über alle Adressen, dann 15 Minuten Sperre für Adressen, die das Konto schon falsch versucht haben; eine Adresse ohne eigene Fehlversuche darf weiter prüfen (niemand sperrt ein Konto aus der Ferne) |
+| Passwort je IP-Topf | 30 falsche je 15 Minuten über alle Konten, dann 15 Minuten Sperre; unbekannte Namen zählen nicht; ein richtiges Passwort gibt seinen Platz zurück |
+| je IPv6-/48 | Namensprüfung 500, Absenden 240, Passwort 100 je Fenster, höchstens 1 % des Speichers |
+| Unterschriften-Liste, Unterschreiben, Mitglieder-Prüfung | 120, 30, 30 je 10 Minuten und Konto |
+| Speicher | über 50000 Einträge zuerst sofort aufräumen (höchstens alle 30 Sekunden); bleibt er voll, werden nur anonyme Anfragen abgewiesen |
+
+Ein 429 beim Absenden ist kein Verlust: Die App legt den Eintrag auf das Gerät und versucht es
+nach der genannten Zeit erneut. Aufräumen alle 10 Minuten (`responda_formular_aufraeumen`).
+
+### Trusted proxy
+
+Läuft PocketBase hinter einem Proxy, kommen ohne Einstellung alle Anfragen von derselben
+internen Adresse, und alle teilen sich einen Topf (gemeinsame Drossel, gemeinsame Sperre).
+Deshalb **bevor die Hooks liegen**: unter *Settings → Trusted proxy* den Kopf des Proxys
+eintragen (meist `X-Forwarded-For` oder `X-Real-IP`, bei Cloudflare `CF-Connecting-IP`). Ohne
+echten Proxy nichts eintragen, sonst ließe sich die Adresse über den Kopf fälschen (geprüft).
+Prüfen: `GET /api/responda/formular/diagnose` mit Superuser-Token zeigt bei `realIP` die eigene
+öffentliche Adresse und keine `warnung`. Ohne Einstellung schreibt der Hook beim ersten Aufruf
+nach dem Start eine Warnung ins Log.
+
+### Rücknahme
+
+Nur `formular.pb.js` aus `/opt/pb_hooks` entfernen und neu starten (`mitglieder-namen.pb.js` kann
+bei Bedarf mit raus). Die App erkennt den alten Server und legt wieder direkt an; Geräte, die den
+neuen Server in den letzten 24 Stunden gesehen haben, halten ihre Einträge so lange auf dem Gerät.
+`doku-frist.pb.js` läuft ohne `formular.pb.js` und sogar ohne `formular-regeln.js` weiter
+(eingebauter Rückfall) und lässt ausstehende Protokolle liegen.
+
+Die Felder bleiben, ebenso **`formular-felder.pb.js` und `mpg.pb.js`**: Sie halten die
+Statusfelder dicht, solange `formular.pb.js` fehlt (Merker `responda:formular_aktiv` fehlt). Neue
+Sätze bekommen kein Statusfeld; bei bestehenden bleiben Feld, Organisation und die Schlüssel des
+Servers im payload; bestätigte und ohne Unterschrift abgeschlossene ändert ohne Anmeldung
+niemand, ausstehende niemand; `reported_by_id` setzt `mpg.pb.js` dann nie. Wer stattdessen alle
+Dateien aus der Sicherung zurückspielt, löscht vorher die drei Felder; bei einer
+Wiedereinführung legt er sie wieder erst nach den Hooks an.
+
+### users: List und View schließen
+
+Owner-Schritt 7 der Einführung, frühestens 7 Tage nach dem Kopieren der Hooks. Vorher den
+bisherigen Wert von List und View notieren (für die Rücknahme). Voraussetzung: Kein öffentliches
+Formular liest `users` mehr (mit diesem Paket erfüllt). Die Routen lesen über den Server und
+hängen nicht an dieser Regel.
+
+**List und View**
+```
+@request.auth.id != "" && (id = @request.auth.id || @request.auth.supervisor = true || (organization_id != "" && organization_id = @request.auth.organization_id && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now)))
+```
+
+- Ohne Anmeldung: List 200 mit 0 Einträgen, View 404.
+- Mitglieder sehen die Konten ihrer Organisation, Supervisor alle, jeder seinen eigenen Satz
+  (auch ohne Organisation, auch gesperrt). Anmelden und Token erneuern gehen weiter.
+- Danach `node scripts/emails-verbergen.mjs` (Probelauf, zeigt die Zahl), dann mit
+  `--ausfuehren`: setzt `emailVisibility = false` bei allen Konten. Wer die Manage-Regel erfüllt
+  (Leitung, Benutzerverwaltung, Supervisor), sieht E-Mails weiter; andere Mitglieder nicht. Neue
+  Konten legt die App schon mit `emailVisibility: false` an.
+- Ein Filter `email ~ …` trifft verborgene Adressen still nicht; die Suchen der
+  Patientenverwaltung gehen deshalb nur noch nach Namen.
+
+Prüfen: ohne Anmeldung liefert `GET /api/collections/users/records` keine Einträge; Anmelden,
+Benutzerverwaltung, Patientenverwaltung (Mannschaft nachtragen) und Unitas gehen.
+
+### Geprüft
+
+Gegen **PocketBase 0.28.4 und 0.40.5** mit Sammlungen und Regeln wie in Produktion (offene
+Create-Regeln der Formulare, `users`-Regeln dieses Dokuments) und sieben Organisationen (Voreinstellung,
+umgekehrte Einstellung, nur Patienten, inaktiv, öffentliche Formulare aus, alles mit Passwort,
+Namensbeispiele): Namensabgleich (alle Beispiele, Einschleusung, Gleichlauf PocketBase und Node
+Zeichen für Zeichen, ebenso Prüfsumme und IP-Topf), Absender in allen Fällen, Sperre auch bei 20
+gleichzeitigen falschen Passwörtern (höchstens 5 Prüfungen), 48 gleichzeitige an 12 Konten
+(genau 30 Prüfungen), Anmeldung teilt die Sperre, verteilte Fehlversuche sperren kein Konto aus
+der Ferne, Drossel je Topf und Konto, IPv6 je /64 und je /48, Obergrenze des Speichers (auch
+sofortiges Aufräumen), Verwechsler und unsichtbare Zeichen im Namens-Hook, Titel und
+Gegenzeichnung gesperrter Sätze, leere flache Besatzungsfelder, alte Maske im Modus frei, „ausstehend“ mit allen Grenzen, Unterschreiben (auch zwei
+gleichzeitig), ohne Unterschrift abschließen, übernommene Änderungen alter Stände, direkte
+API-Aufrufe (Anlegen, Ändern, Batch, Lager „Ausbuchen“, unlesbare payloads), Frist-Lauf über mehr
+als 200 offene Protokolle, Namens-Hook, `users` List/View geschlossen und `emailVisibility`, kein
+Passwort im Log; dazu eigene Starts ohne `formular.pb.js` (Rücknahme), ohne `formular-regeln.js`,
+ohne die Felder `absender_status`/`reporter_status` und ein Lebenslauf auf demselben
+Datenverzeichnis (Felder vor den Hooks gefälscht, erster Start leert, Rücknahme hält dicht,
+Wiedereinführung leert nicht noch einmal). **781 Prüfungen je Version, alle bestanden.**
+Gegenprobe ohne `formular.pb.js`: 315 von 692 schlagen an.
+
+## Öffentliche Formulare: später schließen
+
+Noch **nicht** ausführen. Erst, wenn keine alten App-Stände mehr direkt anlegen (frühestens nach
+dem 31.01.2027, dem Enddatum des alten Wegs in der App, `ALTER_SERVER_BIS`) und im Log keine
+direkten Anlagen mehr auftauchen:
+
+1. Create-Regel von `patients`, `product_outputs` und `mpg_defect_reports` auf **gesperrt**
+   (Schloss, null). Dann legt nur noch der Server über die Routen an. Vorher die bisherigen
+   Werte notieren.
+2. Danach erst, mit eigenen Routen: anonymes Update, View und List von `patients` (Bearbeiten mit
+   `?id=`, Patientenzugang `/p/:code`), List/View von `inventory_items` und
+   `inventory_locations` (Artikelliste der Produktausgabe), List/View von `mpg_devices`
+   (Geräteliste der Defektmeldung).
+
+Rücknahme: die notierten Regeln wieder eintragen.

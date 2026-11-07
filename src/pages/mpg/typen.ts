@@ -1,9 +1,11 @@
 // Datensätze des MPG-Moduls (PocketBase-Collections mpg_*) und feste Vorgaben.
 
+import type { CSSProperties } from 'react'
 import type { Aenderung, EreignisArt } from '../../lib/mpg/aktionen'
 import type { KontrollAngaben } from '../../lib/mpg/kontrollen'
 import type { Intervall } from '../../lib/mpg/fristen'
 import type { Pruefpunkt } from '../../lib/mpg/pruefung'
+import { ABSENDER_ABZEICHEN, absenderLesen, type AbsenderStatus } from '../../lib/formular/absender'
 
 export type Severity = 'low' | 'medium' | 'high' | 'critical'
 export type DefectStatus = 'open' | 'in_progress' | 'resolved'
@@ -93,11 +95,47 @@ export interface ExternalReport {
   device_name: string
   organization_id: string
   reporter_name?: string
+  /** Mitglied, auf das der Absender passt (vom Server gesetzt; leer ohne Verknüpfung) */
+  reporter_user_id?: string
+  /** Absender-Status (vom Server, pb_hooks/formular.pb.js): bestaetigt, nicht_bestaetigt, ohne_konto, ausstehend; fehlt bei alten Meldungen */
+  reporter_status?: string
   description: string
   severity: Severity
   status: ExternalReportStatus
   rejected_reason?: string
   created: string
+}
+
+/**
+ * Zusatz hinter dem Namen des Melders. Im MPG steht daneben der Knopf „Bestätigen“ (die
+ * Meldung annehmen); „nicht bestätigt“ hielte man dort für den Zustand der Meldung. Gemeint
+ * ist nur, dass niemand geprüft hat, wer gemeldet hat (Befund Client-Abläufe 13).
+ */
+export const MELDER_ZUSATZ: Record<AbsenderStatus, string> = {
+  bestaetigt: '',
+  nicht_bestaetigt: 'Name nicht geprüft',
+  ohne_konto: 'ohne Konto',
+  ausstehend: '',
+  ohne_unterschrift: '',
+}
+
+/**
+ * Wer eine Meldung von außen abgegeben hat, wie der Server es festhält
+ * (reporter_status, Bauplan Formulare 1.14): „Anna Berg · Name nicht geprüft“,
+ * ohne Namen „Anonym“; bei „Unterschrift ausstehend“ der Name mit Abzeichen.
+ * Alte Meldungen ohne Status zeigen nur den Namen.
+ */
+export function melder(r: Pick<ExternalReport, 'reporter_name' | 'reporter_user_id' | 'reporter_status'>): { zeile: string; abzeichen: { text: string; farbe: string } | null } {
+  const e = absenderLesen(r as Record<string, unknown>, 'mpg_defect_reports')
+  return {
+    zeile: e ? [e.name.trim() || 'Anonym', MELDER_ZUSATZ[e.status]].filter(Boolean).join(' · ') : (r.reporter_name || '').trim() || 'Anonym',
+    abzeichen: e ? ABSENDER_ABZEICHEN[e.status] : null,
+  }
+}
+
+/** Abzeichen des Absenders (10px Versalien, nicht kursiv) in der Farbe aus ABSENDER_ABZEICHEN. */
+export function abzeichenStil(farbe: string): CSSProperties {
+  return { fontStyle: 'normal', fontSize: 10, fontWeight: 700, color: farbe, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }
 }
 
 export const DEVICE_TYPES = ['AED', 'Defibrillator', 'Patientenmonitor', 'Beatmungsgerät', 'Absaugpumpe', 'Spritzenpumpe', 'Infusionspumpe', 'Sauerstoffgerät', 'Pulsoximeter', 'Blutdruckmessgerät', 'Thermometer', 'BZ-Gerät', 'Transportinkubator', 'Externer Schrittmacher', 'Sonstiges']

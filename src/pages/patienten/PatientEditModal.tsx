@@ -4,7 +4,7 @@ import type { Patient, PatientPayload, Medication, VitalRow } from './types'
 import { PubSection, inp, sel, ta, field, lbl } from '../public/pubStyles'
 import { pb } from '../../lib/pocketbase'
 import { useAuth } from '../../hooks/useAuth'
-import { sichtbareEmail } from '../../lib/apps'
+import { besatzungSetzen, type Posten } from '../public/doku/besatzung'
 
 interface RQ { id: string; frage: string; created_by?: string; status: 'offen' | 'beantwortet'; created: string }
 interface SN { id: string; rueckfrage_id: string; text: string; created: string }
@@ -123,25 +123,30 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
     if (text.length < 2) { setMannResults(prev => ({ ...prev, [role]: [] })); return }
     try {
       const results = await pb.collection('users').getFullList({
-        // Suchtext als Parameter; erzeugte Platzhalter-Adressen (Personen ohne E-Mail) zählen nicht
-        filter: pb.filter('organization_id = {:org} && (name ~ {:t} || (email ~ {:t} && email !~ "@kein-email.intern"))', { org: (patient as any).organization_id, t: text }),
-        fields: 'id,name,email',
+        // Nur nach Namen (E-Mails sind für andere Mitglieder verborgen, Bauplan v2, 1.17) und nur,
+        // wen der Server als Besatzung verknüpft: aktiv, keine Teilnehmer, kein Supervisor (2.4)
+        filter: pb.filter('organization_id = {:org} && name ~ {:t} && role != "teilnehmer" && supervisor != true && disabled != true && (expires_at = "" || expires_at > @now)', { org: (patient as any).organization_id, t: text }),
+        fields: 'id,name',
         sort: 'name',
       })
       setMannResults(prev => ({ ...prev, [role]: results }))
     } catch { setMannResults(prev => ({ ...prev, [role]: [] })) }
   }
 
+  /*
+   * Setzen und Räumen schreiben verschachtelt und flach zugleich
+   * (`besatzungSetzen`, Bauplan v2, 4.10): Der Server behält eine Kennung nur,
+   * wenn flacher und verschachtelter Name zusammenpassen; sonst gilt der
+   * flache Name vom Bogen.
+   */
   function pickMannUser(role: string, u: any) {
-    const updated = { ...(lp.mannschaft || {}), [role]: { id: u.id, name: u.name, persnr: u.persnr || '' } }
-    setLp(prev => ({ ...prev, mannschaft: updated }))
+    setLp(prev => besatzungSetzen(prev as unknown as Record<string, unknown>, role as Posten['pos'], { id: String(u.id ?? ''), name: String(u.name ?? '') }) as unknown as PatientPayload)
     setMannSearch(prev => ({ ...prev, [role]: '' }))
     setMannResults(prev => ({ ...prev, [role]: [] }))
   }
 
   function clearMannUser(role: string) {
-    const updated = { ...(lp.mannschaft || {}), [role]: null }
-    setLp(prev => ({ ...prev, mannschaft: updated }))
+    setLp(prev => besatzungSetzen(prev as unknown as Record<string, unknown>, role as Posten['pos'], null) as unknown as PatientPayload)
   }
 
   function Cb({ k, label }: { k: keyof PatientPayload; label: string }) {
@@ -189,7 +194,7 @@ export default function PatientEditModal({ patient, payload: initialPayload, ori
               <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 10, zIndex: 200, maxHeight: 200, overflowY: 'auto', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', marginTop: 2 }}>
                 {results.map((u: any) => (
                   <div key={u.id} onMouseDown={() => pickMannUser(role, u)} style={{ padding: '9px 14px', cursor: 'pointer', fontSize: 14, borderBottom: '0.5px solid var(--border)' }}>
-                    {u.name}<span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 6 }}>{sichtbareEmail(u.email)}</span>
+                    {u.name}
                   </div>
                 ))}
               </div>

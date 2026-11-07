@@ -38,7 +38,7 @@ export default function ZugangSeite({ k }: { k: BvKontext }) {
         name: tempForm.name.trim(), email: tempForm.email.trim(),
         password: tempForm.password, passwordConfirm: tempForm.password,
         ...geordnet, permissions: soll,
-        organization_id: user!.organization_id, emailVisibility: true,
+        organization_id: user!.organization_id, emailVisibility: false,
         disabled: false, expires_at: expIso, permissions_migrated: true,
       })
       k.schliessen()

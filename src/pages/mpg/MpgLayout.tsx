@@ -2,6 +2,7 @@
 // (HEUTE · GERÄTE · MELDUNGEN · MEHR), ab 960 px eine Seitenleiste. Darunter die Seite.
 
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import FormularEinstellungLink from '../../components/FormularEinstellungLink'
 import { Blaetter } from './blaetter'
 import { useMpg } from './MpgDaten'
 import { ICON, SCHRIFT, abschnittKopf, pik, useBreit } from './teile'
@@ -89,6 +90,8 @@ export default function MpgLayout() {
                     </NavLink>
                   )
                 })}
+                {/* Ohne Modul Vorgänge der einzige Weg zur Einstellung des Formulars (Bauplan Formulare 3.4) */}
+                {g.titel === 'Einrichtung' && <FormularEinstellungLink formular="defektmeldung" user={m.user} kompakt />}
               </div>
             ))}
           </nav>

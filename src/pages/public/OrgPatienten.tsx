@@ -1,7 +1,24 @@
+// Die alte Patientendoku (/patienten-alt), bis die neue Maske im Dienst bestanden hat.
+//
+// Seit Bauplan v2 (4.5) entsteht hier kein Datensatz mehr vor dem Absenden:
+// kein Entwurf in PocketBase, kein Nachschreiben. Die Maske speichert nur im
+// Gerät (1,5 Sekunden nach jeder Änderung unter `patientendoku_<org>`) und
+// sendet am Ende einmal über den Server, der den Absender prüft (Passwort,
+// angemeldet oder Name frei) und die Besatzung verknüpft. Ohne Netz liegt das
+// Protokoll in der Warteschlange des Geräts, ohne Passwort.
+
 import { useRef, useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
+import { useFormularStand } from '../../lib/formular/stand'
+import { neueKennung } from '../../lib/formular/api'
+import { ablegenMitMeldung, sendenOderAblegen } from '../../lib/formular/versand'
+import type { NeuerEintrag } from '../../lib/formular/warteschlange'
+import AbsenderFeld, { AbmeldenNachSenden, Textknopf, absenderAngabe, sendeKnopfText, vorDemSenden } from './absender/AbsenderFeld'
+import { warteschlangeMelden } from './absender/Warteschlange'
+import { ABSENDER_TEXTE, modusAusStand } from './absender/texte'
+import { KEINE_NAMEN, namenFelder, namenLesen, type Namen } from './doku/besatzung'
+import { protokollnummer } from './doku/absenden'
 import { PubHeader, PubWrap, PubSection, inp, sel, ta, field, lbl } from './pubStyles'
 import AelrdFelder from './AelrdFelder'
 import { AELRD_ERGAENZUNG } from './aelrdErgaenzung'
@@ -9,6 +26,7 @@ import { mehrfachZusammenfassen } from '../../lib/aelrdFormular'
 import { payloadZusammenfuehren } from '../../lib/payloadZusammenfuehren'
 import { NEUE_FASSUNG, mitFassung } from '../../lib/protokoll'
 import { DEFAULT_FORM_CONFIG, SECTION_STEP_MAP, type FormConfig, type CustomFieldDef } from './formSchema'
+import { formConfigLesen } from '../../lib/formular/einstellung'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 import EinsatzTimeline from './EinsatzTimeline'
 import AnamneseAssistent from './AnamneseAssistent'
@@ -69,13 +87,10 @@ export default function OrgPatienten() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
 
-  const cfg: FormConfig = useMemo(() => {
-    if ((org as any).form_config) {
-      try { return { ...DEFAULT_FORM_CONFIG, ...((org as any).form_config as FormConfig) } }
-      catch { return DEFAULT_FORM_CONFIG }
-    }
-    return DEFAULT_FORM_CONFIG
-  }, [org])
+  const cfg: FormConfig = useMemo(
+    () => ({ ...DEFAULT_FORM_CONFIG, ...formConfigLesen((org as { form_config?: unknown }).form_config) }),
+    [org],
+  )
 
   // Helper to hide fields/sections
   const hide = (id: string) => cfg.hidden_fields.includes(id)
@@ -101,16 +116,31 @@ export default function OrgPatienten() {
   // Entwurf sie vorbelegt, braucht es seine Werte und einen key, der das
   // Neurendern ausloest — defaultValue greift sonst nur beim ersten Rendern.
   const [entwurf, setEntwurf] = useState<Record<string, unknown> | null>(null)
-  const [draftId, setDraftId] = useState<string | null>(null)
-  const [draftMannschaft, setDraftMannschaft] = useState<Record<string, { id: string; name: string } | null>>({})
+  /** Die Besatzung als Namen; verknüpft wird am Server beim Absenden. */
+  const [mannschaft, setMannschaft] = useState<Namen>(KEINE_NAMEN)
   const [savedQrCode, setSavedQrCode] = useState('')
   const [savedQrCreated, setSavedQrCreated] = useState('')
   const [sending, setSending] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
+  /** Meldung nach dem Absenden ohne Netz („Ohne Netz gespeichert …“). */
+  const [ablageMeldung, setAblageMeldung] = useState('')
+  /** Absender: Name (Feld „Name Ausfüller“), Passwort nur im Zustand, „Anderer Absender“. */
+  const [absenderName, setAbsenderName] = useState('')
+  const [passwort, setPasswort] = useState('')
+  const [anderer, setAnderer] = useState(false)
+  const [sendeMeldung, setSendeMeldung] = useState('')
+  const [ablage, setAblage] = useState<{ e: NeuerEintrag; mitAnmeldung: boolean; sekunden?: number; text: string } | null>(null)
+  /** Kennung des neuen Satzes: entsteht beim ersten Versuch, neu nach „Neues Formular“. */
+  const kennungRef = useRef('')
+  const { stand, alterServer } = useFormularStand(orgCode, { mitAnmeldung: !anderer, org })
+  const modus = modusAusStand(stand, 'patienten')
   const [alarmzeit, setAlarmzeit] = useState(now())
   const [einsatzAdresse, setEinsatzAdresse] = useState('')
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
-  const draftIdRef = useRef<string | null>(null)
+  /** Solange ein Entwurf wiederhergestellt wird, nicht zurückschreiben. */
+  const stelltHer = useRef(false)
+  /** Ab der ersten Änderung nach dem Öffnen wird im Gerät gespeichert. */
+  const ersteRunde = useRef(true)
   const refS3   = useRef<HTMLInputElement>(null)
   const refS4   = useRef<HTMLInputElement>(null)
   const refUeg  = useRef<HTMLInputElement>(null)
@@ -151,28 +181,23 @@ export default function OrgPatienten() {
     const up = () => { drawing = false; setSigUrl(canvas.toDataURL()) }
     canvas.addEventListener('pointerdown', down); canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerup', up)
     return () => { canvas.removeEventListener('pointerdown', down); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerup', up) }
-  }, [])
+    // Nach „Neues Formular“ ist die Zeichenfläche eine neue: wieder anbinden
+  }, [success])
 
-  useEffect(() => {
-    if (!navigator.onLine) return
-    const key = `offline_queue_${orgCode}`
-    const queue: any[] = JSON.parse(localStorage.getItem(key) || '[]')
-    if (!queue.length) return
-    Promise.all(queue.map((item: any) => {
-      const { type, ...data } = item
-      return pb.collection('patients').create(data)
-    })).then(() => localStorage.removeItem(key)).catch(() => {})
-  }, [orgCode])
-
-  useEffect(() => { draftIdRef.current = draftId }, [draftId])
+  // Was ohne Netz liegen geblieben ist, schickt die Warteschlange über der
+  // Seite (OrgPublicLayout), auch das aus `offline_queue_<org>` älterer Stände.
 
   // Restore draft from localStorage on mount
   useEffect(() => {
-    const raw = localStorage.getItem('patientendoku_' + orgCode)
+    let raw: string | null = null
+    try { raw = localStorage.getItem('patientendoku_' + orgCode) } catch { /* ohne Speicher */ }
     if (!raw) return
     try {
       const d = JSON.parse(raw)
+      stelltHer.current = true
       setEntwurf(d)
+      setMannschaft(namenLesen(d))
+      if (typeof d.ausfueller_name === 'string') setAbsenderName(d.ausfueller_name)
       if (Array.isArray(d.medications))    setMeds(d.medications)
       if (Array.isArray(d.dauermedikation)) setDauerMeds(d.dauermedikation)
       if (Array.isArray(d.verlauf) && d.verlauf.length) setVerlauf(d.verlauf)
@@ -218,8 +243,9 @@ export default function OrgPatienten() {
           if (el?.value) mwSnap[n] = el.value
         })
         if (Object.keys(mwSnap).length) setMesswerte(mwSnap)
+        stelltHer.current = false
       })
-    } catch {}
+    } catch { stelltHer.current = false }
   }, [orgCode])
 
   useEffect(() => {
@@ -235,13 +261,25 @@ export default function OrgPatienten() {
     setVerlaufText(parts.length ? `Erstwerte: ${parts.join(', ')}` : '')
   }, [verlauf[0].zeit, verlauf[0].rr_sys, verlauf[0].rr_dia, verlauf[0].hf, verlauf[0].spo2, verlauf[0].etco2, verlauf[0].o2, verlauf[0].schmerz])
 
+  /*
+   * 1,5 Sekunden nach jeder Änderung im Gerät speichern, nie am Server. Der
+   * Zeitgeber ruft die jeweils neueste collectData (über den Ref), sonst
+   * schriebe er den Stand von vor dem Tippen.
+   */
+  const sammeln = useRef<() => Record<string, unknown>>(() => ({}))
   function scheduleAutoSave() {
+    if (stelltHer.current) return
     clearTimeout(autoSaveTimer.current)
-    autoSaveTimer.current = setTimeout(async () => {
-      const id = draftIdRef.current; if (!id || !navigator.onLine) return
-      try { await pb.collection('patients').update(id, { payload: collectData() }) } catch {}
+    autoSaveTimer.current = setTimeout(() => {
+      try { localStorage.setItem('patientendoku_' + orgCode, JSON.stringify(sammeln.current())) } catch { /* Speicher voll: Knopf „Speichern“ sagt es */ }
     }, 1500)
   }
+  useEffect(() => () => clearTimeout(autoSaveTimer.current), [])
+  // Änderungen, die nicht über ein Formularfeld laufen (Listen, Unterschrift, Besatzung, Absender)
+  useEffect(() => {
+    if (ersteRunde.current) { ersteRunde.current = false; return }
+    scheduleAutoSave()
+  }, [meds, dauerMeds, verlauf, photos, sigUrl, notfallText, mannschaft, absenderName, savedQrCode])
 
   function clearSig() {
     const canvas = canvasRef.current; if (!canvas) return
@@ -262,7 +300,9 @@ export default function OrgPatienten() {
     data.verlauf = verlauf.filter(r => r.zeit || r.rr_sys || r.hf)
     data.photos = photos
     data.signature = sigUrl
-    data.mannschaft = draftMannschaft
+    // Die Besatzung als Namen; Kennungen setzt nur der Server
+    Object.assign(data, namenFelder(mannschaft))
+    data.ausfueller_name = absenderName
     if (savedQrCode) {
       data.access_code = savedQrCode
       data.access_code_created = savedQrCreated
@@ -273,39 +313,127 @@ export default function OrgPatienten() {
     // Auf dem geladenen Entwurf aufbauen: ein Feld, das inzwischen
     // ausgeblendet wurde, soll nicht verschwinden, nur weil es gerade
     // nicht im DOM steht.
-    return mitFassung(payloadZusammenfuehren(entwurf ?? {}, mehrfachZusammenfassen(data)), NEUE_FASSUNG)
+    const aus = mitFassung(payloadZusammenfuehren(entwurf ?? {}, mehrfachZusammenfassen(data)), NEUE_FASSUNG)
+    // Ältere Entwürfe führten die Besatzung verschachtelt mit Kennungen aus der
+    // Suche; die zählen nicht mehr
+    delete (aus as Record<string, unknown>).mannschaft
+    return aus
   }
+  sammeln.current = collectData
 
   function saveLocal() {
-    localStorage.setItem('patientendoku_' + orgCode, JSON.stringify(collectData()))
-    alert('Entwurf gespeichert!')
+    try {
+      localStorage.setItem('patientendoku_' + orgCode, JSON.stringify(collectData()))
+      alert('Entwurf auf diesem Gerät gespeichert.')
+    } catch {
+      alert('Dieses Gerät hat den Entwurf nicht gespeichert (Speicher voll oder gesperrt).')
+    }
+  }
+
+  /** Alles zurück auf leer, mit neuer Kennung (nach dem Absenden oder „Formular zurücksetzen“). */
+  function leeren() {
+    clearTimeout(autoSaveTimer.current)
+    try { localStorage.removeItem('patientendoku_' + orgCode) } catch { /* nichts gespeichert */ }
+    kennungRef.current = ''
+    setEntwurf(null)
+    setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 })
+    setMannschaft(KEINE_NAMEN); setSavedQrCode(''); setSavedQrCreated('')
+    setNotfallText(''); setAbsenderName(''); setPasswort(''); setAnderer(false)
+    setSendeMeldung(''); setAblage(null)
+    // Die Zeichenfläche kann gerade fehlen (Erfolgsseite): die Unterschrift trotzdem vergessen
+    setSigUrl(''); setVerlaufText(''); setMesswerte({}); setSnapMesswerte({})
+    setAlarmzeit(now()); setEinsatzAdresse(''); setActiveStep(0)
+    // Das Leeren selbst ist keine Änderung: kein leerer Entwurf mit alter Alarmzeit
+    ersteRunde.current = true
+  }
+
+  /** Das Protokoll für Versand und Warteschlange, oder null, wenn Pflichtangaben fehlen (mit Hinweis). */
+  function eintragBauen(absender: string): { e: NeuerEintrag } | null {
+    const data = collectData()
+    const name = data.name as string; const vorname = data.vorname as string; const geb = data.gebdatum as string
+    if (!name || !vorname || !geb) { alert('Bitte Name, Vorname und Geburtsdatum ausfüllen.'); return null }
+    const id = kennungRef.current || (kennungRef.current = neueKennung())
+    return { e: { id, formular: 'patienten', maske: 'alt', orgCode, orgId: org.id, absenderName: absender, angemeldetId: '', daten: { title: `Patientendoku: ${vorname} ${name}`, payload: data } } }
+  }
+
+  /** Nach dem Ablegen auf dem Gerät: Entwurf weg, Karte der Warteschlange sofort zeigen. */
+  function nachAblage(meldung: string) {
+    clearTimeout(autoSaveTimer.current)
+    try { localStorage.removeItem('patientendoku_' + orgCode) } catch { /* egal */ }
+    warteschlangeMelden()
+    setAblageMeldung(meldung)
+    setSuccess('OFFLINE')
+  }
+
+  /** Modus Passwort, kein Passwort zur Hand: ohne Passwort ablegen (Befund Client-Abläufe 5). */
+  function ohnePasswortAblegen() {
+    if (sending) return
+    setAblage(null)
+    if (!absenderName.trim()) { setSendeMeldung('Bitte einen Namen eintragen.'); return }
+    const b = eintragBauen(absenderName.trim())
+    if (!b) return
+    setPasswort('')
+    const r = ablegenMitMeldung(b.e, { modus, mitAnmeldung: false, anlass: 'ohne_passwort' })
+    if (!r.gespeichert) { setSendeMeldung(r.meldung); return }
+    nachAblage(r.meldung)
   }
 
   async function submit() {
+    if (sending) return
+    setAblage(null)
     const data = collectData()
     const name = data.name as string; const vorname = data.vorname as string; const geb = data.gebdatum as string
     if (!name || !vorname || !geb) { alert('Bitte Name, Vorname und Geburtsdatum ausfüllen.'); return }
+    const online = navigator.onLine !== false
+    const vorher = vorDemSenden({ stand, alterServer, formular: 'patienten', anderer, name: absenderName, passwort, online })
+    if (vorher) { setSendeMeldung(vorher); return }
     setSending(true)
-    if (!navigator.onLine) {
-      const key = `offline_queue_${orgCode}`
-      const queue = JSON.parse(localStorage.getItem(key) || '[]')
-      queue.push({ type: 'full', title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen', organization_id: org.id, draftId })
-      localStorage.setItem(key, JSON.stringify(queue))
-      setSending(false)
-      setSuccess('OFFLINE')
-      return
+    setSendeMeldung('')
+    const id = kennungRef.current || (kennungRef.current = neueKennung())
+    const angabe = absenderAngabe({ stand, formular: 'patienten', anderer, name: absenderName, passwort })
+    // Das Passwort lebt nur in diesem Aufruf
+    setPasswort('')
+    const e: NeuerEintrag = {
+      id, formular: 'patienten', maske: 'alt', orgCode, orgId: org.id,
+      absenderName: angabe.mitAnmeldung ? (stand?.angemeldet?.name ?? '') : absenderName.trim(),
+      angemeldetId: '',
+      daten: { title: `Patientendoku: ${vorname} ${name}`, payload: data },
     }
     try {
-      let rec: any
-      if (draftId) {
-        rec = await pb.collection('patients').update(draftId, { title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen' })
+      const r = await sendenOderAblegen(e, angabe, { modus })
+      if (r.art === 'gesendet') {
+        // Ein noch laufender Zeitgeber schriebe das Gesendete sonst als Entwurf zurück
+        clearTimeout(autoSaveTimer.current)
+        try { localStorage.removeItem('patientendoku_' + orgCode) } catch { /* egal */ }
+        setSuccess(protokollnummer(r.id))
+      } else if (r.art === 'abgelegt') {
+        nachAblage(r.meldung)
       } else {
-        rec = await pb.collection('patients').create({ title: `Patientendoku: ${vorname} ${name}`, payload: data, status: 'offen', organization_id: org.id })
+        setSendeMeldung(r.meldung)
+        if (r.art === 'fehler' && r.ablegenAnbieten) setAblage({ e, mitAnmeldung: angabe.mitAnmeldung, sekunden: r.sekunden, text: r.meldung })
       }
-      setSuccess(`PAT-${new Date().getFullYear()}-${rec.id.slice(0, 8)}`)
-    } catch (e: any) { alert('Fehler: ' + e.message) }
-    finally { setSending(false) }
+    } finally { setSending(false) }
   }
+
+  function aufGeraetAblegen() {
+    if (!ablage) return
+    const r = ablegenMitMeldung(ablage.e, { modus, mitAnmeldung: ablage.mitAnmeldung, anlass: 'gesperrt', sekunden: ablage.sekunden, text: ablage.text })
+    setAblage(null)
+    if (!r.gespeichert) { setSendeMeldung(r.meldung); return }
+    nachAblage(r.meldung)
+  }
+
+  /*
+   * Angemeldet erkannt und „Name Ausfüller“ leer: einmal mit dem Kontonamen
+   * vorbelegen (nicht nach „Anderer Absender“).
+   */
+  const vorbelegt = useRef(false)
+  useEffect(() => {
+    const n = stand?.angemeldet?.name?.trim()
+    if (!n || anderer || vorbelegt.current) return
+    vorbelegt.current = true
+    setAbsenderName((a) => a.trim() ? a : n)
+  }, [stand, anderer])
 
   function renderCustomFields(sectionId: string) {
     return (
@@ -347,15 +475,18 @@ export default function OrgPatienten() {
       })
   }
 
+  // Oben im Fluss, nicht auf 100dvh zentriert: steht darüber die Karte der Warteschlange, bleibt die Bestätigung sichtbar
   if (success) return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '20px 16px 40px', boxSizing: 'border-box' }}>
       <div style={{ background: 'var(--lbf-card)', borderLeft: `3px solid ${success === 'OFFLINE' ? '#d97706' : '#16a34a'}`, borderRadius: 12, padding: 32, textAlign: 'center', maxWidth: 400, width: '100%', boxShadow: '0 2px 16px rgba(0,0,0,0.07)' }}>
         <div style={{ width: 52, height: 52, background: success === 'OFFLINE' ? 'rgba(217,119,6,0.1)' : 'rgba(22,163,74,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
           {success === 'OFFLINE' ? pik(<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></>, 26) : pik(<polyline points="20 6 9 17 4 12"/>, 26)}
         </div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>{success === 'OFFLINE' ? 'Offline gespeichert' : 'Erfolgreich übermittelt'}</div>
-        <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24 }}>{success === 'OFFLINE' ? 'Wird beim nächsten Öffnen automatisch übermittelt.' : success}</div>
-        <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={() => { setSuccess(null); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig() }}>Neues Formular</button>
+        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', marginBottom: 8 }}>{success === 'OFFLINE' ? 'Auf dem Gerät gespeichert' : 'Erfolgreich übermittelt'}</div>
+        <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginBottom: 24, lineHeight: 1.5 }}>{success === 'OFFLINE' ? (ablageMeldung || 'Geht raus, sobald wieder Netz da ist.') : success}</div>
+        <button style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', letterSpacing: '0.02em' }} onClick={() => { leeren(); setAblageMeldung(''); setSuccess(null); vorbelegt.current = false }}>Neues Formular</button>
+        {/* Fremdes Gerät: wer angemeldet gesendet hat, meldet sich hier wieder ab */}
+        <AbmeldenNachSenden abstand={16} />
       </div>
     </div>
   )
@@ -422,7 +553,7 @@ export default function OrgPatienten() {
             </button>
           ))}
           <div style={{ borderTop: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', marginTop: '.5rem', paddingTop: '.75rem' }}>
-            <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 }); clearSig(); setMenuOpen(false) } }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '.55rem .8rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'transparent', color: 'var(--warm-gray)' }}>
+            <button onClick={() => { if (confirm('Formular zurücksetzen?')) { formRef.current?.reset(); leeren(); clearSig(); setMenuOpen(false) } }} style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%', padding: '.55rem .8rem', borderRadius: 8, border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, background: 'transparent', color: 'var(--warm-gray)' }}>
               {pik(<><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></>, 15)} Formular zurücksetzen
             </button>
           </div>
@@ -434,9 +565,11 @@ export default function OrgPatienten() {
       {/* Step 0: Mannschaft */}
       <div style={{ display: currentOrigStep === 1 ? undefined : 'none' }}>
         <OrgPatientenMannschaft
-          orgId={org.id}
           orgCode={orgCode}
-          onDraftCreated={(id, mann) => { setDraftId(id); setDraftMannschaft(mann) }}
+          namen={mannschaft}
+          onMannschaft={setMannschaft}
+          mitAnmeldung={!anderer}
+          qrGespeichert={savedQrCode}
           onQrSaved={(code, created) => { setSavedQrCode(code); setSavedQrCreated(created) }}
         />
       </div>
@@ -1131,7 +1264,8 @@ export default function OrgPatienten() {
         <div style={{ display: currentOrigStep === 20 ? undefined : 'none' }}>
           <PubSection title="Unterschrift" open icon={pik(<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>)}>
             <div style={grid}>
-              <label style={lbl}>Name Ausfüller<input style={inp} name="ausfueller_name" type="text" /></label>
+              {/* Der Name des Ausfüllers steht unter dem Formular im Abschnitt Absender:
+                  dort wird er geprüft, und das Passwortfeld darf in keinem <form> stehen. */}
               <label style={lbl}>Datum/Uhrzeit<input style={inp} name="ausfueller_zeit" type="datetime-local" defaultValue={now()} /></label>
             </div>
             <div style={{ marginTop: '.75rem', border: '0.5px dashed rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 12, padding: '.75rem', background: 'rgba(var(--lbf-rot-rgb),0.04)' }}>
@@ -1145,6 +1279,30 @@ export default function OrgPatienten() {
         </div>
 
       </form>
+
+      {/* Absender: auf dem letzten Schritt, außerhalb des <form> (Passwortfeld, 4.2) */}
+      {activeStep === totalSteps - 1 ? (
+        <div style={{ background: 'var(--lbf-card)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '.85rem 1rem 1rem' }}>
+          <AbsenderFeld
+            orgCode={orgCode} formular="patienten" stand={stand} alterServer={alterServer}
+            name={absenderName} onName={setAbsenderName} nameLabel="Name Ausfüller"
+            passwort={passwort} onPasswort={setPasswort}
+            anderer={anderer} onAnderer={setAnderer}
+            onSenden={() => { void submit() }}
+            onAblegen={ohnePasswortAblegen}
+          />
+          {sendeMeldung ? (
+            <div style={{ padding: '8px 11px', marginTop: 4, background: 'var(--lbf-warn-grund)', border: '0.5px solid #fde047', borderRadius: 8, fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-warn-text)', lineHeight: 1.45 }}>
+              {sendeMeldung}
+            </div>
+          ) : null}
+          {ablage ? (
+            <div style={{ marginTop: 8 }}>
+              <Textknopf onClick={aufGeraetAblegen}>{ABSENDER_TEXTE.ablegen}</Textknopf>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
     </PubWrap>
 
     {/* Bottom navigation */}
@@ -1177,10 +1335,10 @@ export default function OrgPatienten() {
         ) : (
           <button
             disabled={sending}
-            onClick={submit}
+            onClick={() => { void submit() }}
             style={{ ...btnNav, background: sending ? 'rgba(var(--lbf-rot-rgb),0.15)' : 'var(--lbf-akzent-grund)', border: 'none', color: '#fff', cursor: sending ? 'not-allowed' : 'pointer', opacity: sending ? 0.7 : 1 }}
           >
-            {sending ? 'Sende…' : 'Absenden'}
+            {sending ? 'Sende…' : sendeKnopfText({ stand, anderer })}
           </button>
         )}
       </div>

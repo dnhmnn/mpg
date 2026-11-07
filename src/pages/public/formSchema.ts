@@ -1,3 +1,5 @@
+import type { AbsenderModus, FormularId } from '../../lib/formular/absender'
+
 export interface FieldDef {
   id: string
   label: string
@@ -27,6 +29,8 @@ export interface FormConfig {
   required_fields: string[]
   custom_fields: CustomFieldDef[]
   hidden_forms: string[]
+  /** Absender je Formular (Bauplan v2, 3.1); fehlt er, gilt ABSENDER_VOREINSTELLUNG (src/lib/formular/absender.ts). */
+  absender?: Partial<Record<FormularId, AbsenderModus>>
 }
 
 export const DEFAULT_FORM_CONFIG: FormConfig = {

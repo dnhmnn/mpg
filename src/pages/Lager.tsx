@@ -12,6 +12,8 @@ import { pbFehlerText } from '../lib/pbFehler'
 import { darfLager, darfLagerVerwalten, darfStornieren } from '../lib/lagerRechte'
 import { ergebnisAusJournal, type LogZeile } from '../lib/lagerLogbuch'
 import StatusBar from '../components/StatusBar'
+import FormularEinstellungLink from '../components/FormularEinstellungLink'
+import { ABSENDER_ABZEICHEN, absenderLesen, absenderZeile, einstellungsLinkZeigen } from '../lib/formular/absender'
 
 // Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
 const LagerStats = lazy(() => import('../components/LagerStats'))
@@ -3239,6 +3241,9 @@ export default function Lager() {
               <button className="lager-btn primary" onClick={addLocation}>Standort hinzufügen</button>
             </div>
 
+            {/* Absender der Produktausgabe einstellen: nur ohne Modul Vorgänge (Bauplan Formulare 3.4) */}
+            {einstellungsLinkZeigen(user, user?.organization) && <div style={{ marginBottom: 24 }}><FormularEinstellungLink formular="produktausgabe" user={user} /></div>}
+
             {/* Meine Benachrichtigungen */}
             <div style={{ borderTop: '0.5px solid var(--lbf-border)', paddingTop: 18 }}>
               <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Meine Benachrichtigungen</div>
@@ -5145,6 +5150,10 @@ export default function Lager() {
                   const isBusy = buchendId === output.id
                   const isEditing = editingOutputId === output.id
                   const selectedLocId = outputLagerIds[output.id] || currentLocationId || ''
+                  // Empfänger: der Absender, wie der Server ihn festhält (Bauplan Formulare 1.14); alte Ausgaben nur mit Namen
+                  const absender = absenderLesen(output as unknown as Record<string, unknown>, 'product_outputs')
+                  const empfaenger = absenderZeile(absender, (p.user_name ?? `${p.vorname ?? ''} ${p.nachname ?? ''}`).trim())
+                  const abzeichen = absender ? ABSENDER_ABZEICHEN[absender.status] : null
 
                   return (
                     <div key={output.id} style={{ background: 'var(--lbf-fuss)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', borderRadius: 14, padding: 16 }}>
@@ -5152,8 +5161,11 @@ export default function Lager() {
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)' }}>Einsatz {p.einsatz}</div>
                           <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
-                            {deDate} · {p.user_name ?? `${p.vorname ?? ''} ${p.nachname ?? ''}`.trim()}
+                            {deDate} · {empfaenger}
                           </div>
+                          {abzeichen && (
+                            <div style={{ fontSize: 10, fontWeight: 700, color: abzeichen.farbe, textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>{abzeichen.text}</div>
+                          )}
                         </div>
                         {/* Abzeichen bleibt fest: Schriftfarbe #854d0e hat kein Thema-Gegenstueck, Grund und Schrift nur gemeinsam tauschbar */}
                         <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--lbf-warn-grund-4)', color: 'var(--lbf-warn-text-4)', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offen</span>

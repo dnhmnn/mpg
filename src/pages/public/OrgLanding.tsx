@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { useOrg } from './OrgPublicLayout'
+import { angemeldeteSitzung, useOrg } from './OrgPublicLayout'
 import { pb } from '../../lib/pocketbase'
 import { formularFrei } from '../../lib/freigabe'
+import { angemeldetTrotzAusgeschaltet } from '../../lib/formular/absender'
+import { formConfigLesen } from '../../lib/formular/einstellung'
 import type { FormTemplate } from './formSchema'
 
 const STATIC_ITEMS = [
@@ -76,7 +78,8 @@ const CHEVRON = (
 export default function OrgLanding() {
   const { org, orgCode } = useOrg()
   const logoUrl = org.logo ? pb.files.getUrl(org, org.logo) : null
-  const hiddenForms: string[] = (org.form_config as any)?.hidden_forms || []
+  const verborgen = formConfigLesen(org.form_config).hidden_forms
+  const hiddenForms: string[] = Array.isArray(verborgen) ? verborgen : []
 
   const [customTemplates, setCustomTemplates] = useState<FormTemplate[]>([])
 
@@ -87,8 +90,12 @@ export default function OrgLanding() {
     }).then(setCustomTemplates).catch(() => {})
   }, [org.id])
 
-  // Ausgeblendet (Vorgänge → Formulare) oder Modul nicht freigeschaltet (Supervisor)
-  const visibleStatic = STATIC_ITEMS.filter(item => !hiddenForms.includes(item.id) && formularFrei(org, item.id))
+  // Ausgeblendet (Vorgänge → Formulare) oder Modul nicht freigeschaltet (Supervisor). Ausgeblendet heißt nur
+  // „öffentlicher Link aus“: angemeldete Mitglieder dieser Organisation sehen Patientendoku, Produktausgabe
+  // und Defektmeldung weiter, wie FormularFrei sie durchlässt (Befund Client-Abläufe 11).
+  const sitzung = angemeldeteSitzung()
+  const visibleStatic = STATIC_ITEMS.filter(item => formularFrei(org, item.id)
+    && (!hiddenForms.includes(item.id) || angemeldetTrotzAusgeschaltet(sitzung, org.id, item.id)))
   const hasAnyForm = visibleStatic.length > 0 || customTemplates.length > 0
 
   return (

@@ -3,7 +3,7 @@
 // Sie wird einmal eingetragen und steht danach an zwei Stellen, weil zwei
 // Dinge an ihr hängen:
 //
-// DER BOGEN druckt vier Namen — `mannschaft_tf` und `mannschaft_1..3`. Das
+// DER BOGEN druckt vier Namen: `mannschaft_tf` und `mannschaft_1..3`. Das
 // sind gewöhnliche Textfelder des Katalogs; sie zählen im Fortschritt mit und
 // landen im Ausdruck.
 //
@@ -11,9 +11,13 @@
 // seiner Liste findet: `['tf','m1','m2','m3'].some(k => mannschaft[k]?.id ===
 // user.id)`. Dafür braucht es die Benutzerkennung, nicht den Namen.
 //
-// Ein von Hand getippter Name hat keine Kennung und gibt deshalb auch keine
-// Einsicht. Das ist richtig so — die Maske sagt es nur ausdrücklich, damit
-// niemand sich darauf verlässt.
+// KENNUNGEN SETZT NUR DER SERVER (Bauplan v2, 2.5). Die Maske schreibt Namen;
+// beim Absenden verknüpft der Server jeden Namen, der genau auf ein aktives
+// Mitglied passt, und baut `mannschaft` neu. Eine Kennung, die die Maske
+// mitschickt, zählt bei anonymem Senden nie. Beim Ändern eines geladenen
+// Protokolls behält ein unveränderter Name seine Verknüpfung. Deshalb räumt
+// `besatzungSetzen` mit leerer Kennung den verschachtelten Eintrag: wer einen
+// Namen ändert, lässt ihn am Server neu auflösen.
 
 import type { Werte } from './DokuFeld'
 
@@ -98,4 +102,25 @@ export function einsichtIds(werte: Werte): string[] {
 export function besatzungLeer(werte: Werte): boolean {
   const besetzt = besatzungLesen(werte)
   return POSTEN.every((p) => !besetzt[p.pos])
+}
+
+/** Die vier Namen der Besatzung, je Posten (alte Maske, Schnelldoku). */
+export type Namen = Record<Posten['pos'], string>
+
+export const KEINE_NAMEN: Namen = { tf: '', m1: '', m2: '', m3: '' }
+
+/** Die vier Namen aus einer Nutzlast: der flache Name zuerst, sonst der verschachtelte (ältere Entwürfe). */
+export function namenLesen(werte: Werte): Namen {
+  const b = besatzungLesen(werte)
+  return { tf: b.tf?.name ?? '', m1: b.m1?.name ?? '', m2: b.m2?.name ?? '', m3: b.m3?.name ?? '' }
+}
+
+/**
+ * Die vier Namen als flache Felder des Bogens (`mannschaft_tf`, `mannschaft_1..3`),
+ * getrimmt. Kennungen setzt nur der Server (Bauplan v2, 2.5).
+ */
+export function namenFelder(namen: Partial<Namen>): Record<string, string> {
+  const aus: Record<string, string> = {}
+  for (const p of POSTEN) aus[p.feld] = String(namen[p.pos] ?? '').trim()
+  return aus
 }

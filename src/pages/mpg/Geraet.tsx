@@ -18,6 +18,7 @@ import { useLadestand } from './Ladestand'
 import { PruefungEintrag } from './PruefungEintrag'
 import { GeraetebuchEintrag } from './GeraetebuchEintrag'
 import { AUFBEWAHRUNG_JAHRE } from './blaetter'
+import { MelderZeile } from './Meldungen'
 import {
   Abschnitt, Aktionen, Karte, Leer, Marke, Reiter, SCHWERE_RAND, STUFE_FARBE, SchwereMarke, SeitenKopf, ZustandMarke,
   fmtDate, fmtDateTime, knopfGefahr, knopfLeise, knopfRand, knopfVoll, kursivGrau, relativeDate, useBreit,
@@ -269,7 +270,7 @@ function Ueberblick({ device }: { device: Device }) {
               <Karte key={r.id} rand={SCHWERE_RAND[r.severity]}>
                 <div style={{ padding: '12px 14px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><div style={{ fontSize: 14 }}>{r.description}</div><SchwereMarke severity={r.severity} /></div>
-                  <div style={{ ...kursivGrau, marginTop: 4 }}>{relativeDate(r.created)} · {r.reporter_name || 'Anonym'}</div>
+                  <MelderZeile r={r} style={{ marginTop: 4 }} />
                   {m.unklareBestaetigung(r.id) && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-fehler-text)', marginTop: 4 }}>Bestätigung nicht sicher gespeichert — bitte erneut senden</div>}
                 </div>
                 {m.darfVerwalten && (

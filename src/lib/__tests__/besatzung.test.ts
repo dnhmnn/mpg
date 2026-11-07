@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  POSTEN, besatzungLesen, besatzungLeer, besatzungSetzen, einsichtIds,
+  POSTEN, besatzungLesen, besatzungLeer, besatzungSetzen, einsichtIds, namenFelder, namenLesen,
 } from '../../pages/public/doku/besatzung'
 import { AELRD_ABSCHNITTE, aelrdFeld } from '../../katalog/aelrd'
 
@@ -103,5 +103,19 @@ describe('Die Besatzung des Protokolls', () => {
     expect(w.mannschaft_2).toBe('')
     expect(besatzungLesen(w).m2).toBeNull()
     expect(einsichtIds(w)).toEqual([])
+  })
+})
+
+describe('Besatzung als Namen (alte Maske, Schnelldoku; Bauplan v2, 4.5, 4.6)', () => {
+  it('schreibt nur die flachen Felder des Bogens, getrimmt, nie eine Kennung', () => {
+    const f = namenFelder({ tf: '  Anna Berg ', m1: 'Max Mayer', m2: '', m3: undefined as unknown as string })
+    expect(f).toEqual({ mannschaft_tf: 'Anna Berg', mannschaft_1: 'Max Mayer', mannschaft_2: '', mannschaft_3: '' })
+    expect(f).not.toHaveProperty('mannschaft')
+  })
+
+  it('liest flache Namen zuerst, ältere Entwürfe aus der verschachtelten Form', () => {
+    expect(namenLesen({ mannschaft_tf: 'Anna Berg', mannschaft: { tf: { id: 'u1', name: 'Jemand' } } }).tf).toBe('Anna Berg')
+    expect(namenLesen({ mannschaft: { m2: { id: 'u2', name: 'Max Mayer' } } })).toEqual({ tf: '', m1: '', m2: 'Max Mayer', m3: '' })
+    expect(namenLesen({})).toEqual({ tf: '', m1: '', m2: '', m3: '' })
   })
 })

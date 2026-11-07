@@ -1,6 +1,8 @@
 // MEHR (Telefon): alles, was nicht täglich gebraucht wird.
 
 import { Link } from 'react-router-dom'
+import FormularEinstellungLink from '../../components/FormularEinstellungLink'
+import { useMpg } from './MpgDaten'
 import { ICON, Karte, kursivGrau, pik } from './teile'
 
 const ZIELE = [
@@ -10,6 +12,7 @@ const ZIELE = [
 ]
 
 export default function Mehr() {
+  const m = useMpg()
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {ZIELE.map(z => (
@@ -24,6 +27,8 @@ export default function Mehr() {
           </Link>
         </Karte>
       ))}
+      {/* Nur ohne Modul Vorgänge und mit dem Recht, Formulare einzustellen (Bauplan Formulare 3.4) */}
+      <FormularEinstellungLink formular="defektmeldung" user={m.user} />
     </div>
   )
 }

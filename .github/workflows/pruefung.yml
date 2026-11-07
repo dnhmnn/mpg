@@ -45,3 +45,14 @@ jobs:
             node --check "$f" || { echo "Syntaxfehler in $f"; fehler=1; }
           done
           exit $fehler
+
+      - name: Server-Hooks in PocketBase starten (0.28.4 und 0.40.5)
+        # Ein Syntaxfehler in pb_hooks hält PocketBase beim Start an; node --check findet nicht
+        # alles, was die JSVM ablehnt. Die Probe startet beide Versionen mit pb_hooks auf einem
+        # leeren Verzeichnis und prüft, dass die Formular-Routen und der Frist-Lauf geladen sind.
+        run: |
+          for v in 0.28.4 0.40.5; do
+            curl -fsSL -o "$RUNNER_TEMP/pb-$v.zip" "https://github.com/pocketbase/pocketbase/releases/download/v$v/pocketbase_${v}_linux_amd64.zip"
+            unzip -q -o "$RUNNER_TEMP/pb-$v.zip" -d "$RUNNER_TEMP/pb-$v"
+            node scripts/hooks-rauchprobe.mjs --bin "$RUNNER_TEMP/pb-$v/pocketbase" || exit 1
+          done

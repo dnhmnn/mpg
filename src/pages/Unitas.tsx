@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, lazy, Suspense } from 'react'
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react'
 import PocketBase from 'pocketbase'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -7,6 +7,15 @@ import { vermerken } from '../lib/einfuehrung'
 import { getTheme, setTheme, type ThemeMode } from '../lib/theme'
 import { fristEnde, fristRestText } from './public/doku/absenden'
 import { offeneRueckfragen } from './public/doku/rueckfrage'
+import { formularFrei } from '../lib/freigabe'
+import {
+  ABSENDER_ABZEICHEN, ABSENDER_ZUSATZ, absenderLesen, absenderZeile, darfBearbeiten, gepruefterPayload, istMeinProtokoll, jsonLesen,
+  kannAngemeldetSenden, type FormularId,
+} from '../lib/formular/absender'
+import { istFehler, offeneUnterschriften, type Unterschrift } from '../lib/formular/api'
+import { UNITAS_TEXTE, besatzungZeile, datumLang, gedrosselt, statText, unterschriftenNach, unterschriftTitel } from '../lib/formular/verwaltung'
+import Warteschlange from './public/absender/Warteschlange'
+import UnterschreibenDialog from '../components/UnterschreibenDialog'
 const ProtokollFenster = lazy(() => import('../components/ProtokollFenster'))
 const RueckfrageFenster = lazy(() => import('../components/RueckfrageFenster'))
 
@@ -53,6 +62,7 @@ interface ProductOutput {
   payload: {
     einsatz: string
     datum: string
+    user_id?: string
     user_name?: string
     positionen: Array<{ qty: number; name: string; unit?: string; item_id?: string }>
   }
@@ -65,6 +75,8 @@ interface DefectReport {
   severity: string
   status: 'pending' | 'confirmed' | 'rejected' | string
   reporter_user_id: string
+  reporter_name?: string
+  reporter_status?: string
   rejected_reason?: string
   created: string
 }
@@ -135,21 +147,56 @@ export default function Unitas() {
   const [savingEmail, setSavingEmail] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
 
+  /**
+   * Was auf die Unterschrift dieser Person wartet (Bauplan v2, 1.6, 4.9), über
+   * alle drei Formulare. Nur für Konten, deren Token als Mitglied zählt.
+   */
+  const [unterschriften, setUnterschriften] = useState<Unterschrift[]>([])
+  const [unterschreibenFuer, setUnterschreibenFuer] = useState<{ formular: FormularId; id: string; titel: string } | null>(null)
+  /** Aufgeklappte Zusammenfassung einer wartenden Produktausgabe oder Meldung. */
+  const [aufgeklappt, setAufgeklappt] = useState('')
+  const kannSenden = kannAngemeldetSenden(user ?? null)
+  const orgDaten = (user as any)?.organization as Record<string, unknown> | undefined
+  const orgCode = typeof orgDaten?.org_code === 'string' ? orgDaten.org_code : ''
+  /** „Neues Protokoll“: unabhängig vom öffentlichen Link (hidden_forms), nur Modul und Konto (PO-Entscheidung 3). */
+  const neuesProtokoll = kannSenden && formularFrei(orgDaten ?? null, 'patienten')
+  const offen = unterschriftenNach(unterschriften)
+
+  const unterschriftenLaden = useCallback(async () => {
+    const r = await offeneUnterschriften()
+    if (istFehler(r)) {
+      // Kein Mitglied, alter Server: nichts zu unterschreiben. Netz, Drossel: die Liste bleibt, wie sie war.
+      if (r.grund === 'nicht_angemeldet' || r.grund === 'alter_server' || r.grund === 'nicht_berechtigt') setUnterschriften([])
+      return
+    }
+    setUnterschriften(r.wert)
+  }, [])
+
+  /** Neu laden höchstens alle 30 Sekunden, nachlaufend (Befund 22); `sofort` beim Einhängen und nach dem Unterschreiben. */
+  const unterschriftenDrossel = useRef<ReturnType<typeof gedrosselt> | null>(null)
+  useEffect(() => {
+    if (!user?.id || !kannSenden) { setUnterschriften([]); return }
+    const d = gedrosselt(() => { void unterschriftenLaden() }, 30_000)
+    unterschriftenDrossel.current = d
+    d.sofort()
+    return () => { d.stoppen(); unterschriftenDrossel.current = null }
+  }, [user?.id, kannSenden, unterschriftenLaden])
+
   const loadPatients = useCallback(async () => {
     if (!user?.organization_id) return
     try {
-      const isMine = (p: any) => {
-        const pl = typeof p.payload === 'string' ? JSON.parse(p.payload) : (p.payload || {})
-        return ['tf','m1','m2','m3'].some((k: string) => pl.mannschaft?.[k]?.id === user!.id)
-      }
+      // Mit Kennung in der Besatzung oder als (nicht) bestätigter Absender; was auf eine Unterschrift wartet, nie
+      // Absender nur mit passendem Statusfeld (gepruefterPayload): ein payload.absender aus der Zeit ohne Hooks zählt nicht
+      const isMine = (p: any) => istMeinProtokoll(gepruefterPayload(p), user!.id)
+      const lesbar = (p: any) => ({ ...p, payload: (jsonLesen(p.payload) as Record<string, unknown> | null) ?? {} })
       const [open, freed, archived] = await Promise.all([
         pb.collection('patients').getFullList({ filter: `status = "offen" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-open-${Date.now()}` }),
         pb.collection('patients').getFullList({ filter: `status = "freigegeben" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-freed-${Date.now()}` }),
         pb.collection('patients').getFullList({ filter: `status = "archiviert" && organization_id = "${user.organization_id}"`, sort: '-created', requestKey: `unitas-pats-arch-${Date.now()}` }),
       ])
-      setMyPatients((open as any[]).filter(isMine))
-      setMyFreigegebenPatients((freed as any[]).filter(isMine))
-      setMyArchivedPatients((archived as any[]).filter(isMine))
+      setMyPatients((open as any[]).map(lesbar).filter(isMine))
+      setMyFreigegebenPatients((freed as any[]).map(lesbar).filter(isMine))
+      setMyArchivedPatients((archived as any[]).map(lesbar).filter(isMine))
     } catch { /* ignore */ }
   }, [user])
 
@@ -166,7 +213,7 @@ export default function Unitas() {
 
   useEffect(() => {
     if (!user?.organization_id) return
-    pb.collection('patients').subscribe('*', () => { loadPatients() }, { requestKey: null } as any)
+    pb.collection('patients').subscribe('*', () => { loadPatients(); unterschriftenDrossel.current?.anstossen() }, { requestKey: null } as any)
     return () => { pb.collection('patients').unsubscribe('*') }
   }, [user, loadPatients])
 
@@ -230,34 +277,46 @@ export default function Unitas() {
       // Meine Patientenprotokolle (wo ich in der Mannschaft bin)
       await loadPatients()
 
-      // Produktausgaben des Benutzers (client-seitig gefiltert da JSON-Feld)
-      try {
-        if (user?.organization_id) {
-          const outputs = await pb.collection('product_outputs').getFullList({
-            filter: `organization_id = "${user.organization_id}"`,
-            sort: '-created',
-            requestKey: `unitas-outputs-${Date.now()}`,
-          })
-          setMyOutputs((outputs as any[]).filter(o => o.payload?.user_id === user!.id))
-        }
-      } catch { /* ignore */ }
-
-      // Defektmeldungen des Benutzers
-      try {
-        if (user?.organization_id) {
-          const reports = await pb.collection('mpg_defect_reports').getFullList({
-            filter: `organization_id = "${user.organization_id}"`,
-            sort: '-created',
-            requestKey: `unitas-reports-${Date.now()}`,
-          })
-          setMyReports((reports as any[]).filter(r => r.reporter_user_id === user!.id))
-        }
-      } catch { /* ignore */ }
+      await loadVorgaenge()
     } catch (e: any) {
       console.error(e)
     } finally {
       setLoading(false)
     }
+  }
+
+  /** Meine Produktausgaben und Meldungen (client-seitig gefiltert, da JSON-Feld). Wartende stehen getrennt darüber. */
+  async function loadVorgaenge() {
+    if (!user?.organization_id) return
+    try {
+      const outputs = await pb.collection('product_outputs').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created',
+        requestKey: `unitas-outputs-${Date.now()}`,
+      })
+      const lesbar = (o: any) => ({ ...o, payload: (jsonLesen(o.payload) as Record<string, unknown> | null) ?? {} })
+      setMyOutputs((outputs as any[]).map(lesbar).filter(o => o.payload?.user_id === user!.id))
+    } catch { /* ignore */ }
+    try {
+      const reports = await pb.collection('mpg_defect_reports').getFullList({
+        filter: `organization_id = "${user.organization_id}"`,
+        sort: '-created',
+        requestKey: `unitas-reports-${Date.now()}`,
+      })
+      // Eine wartende Meldung trägt die Kennung schon, steht aber unter „Wartet auf deine Unterschrift“
+      setMyReports((reports as any[]).filter(r => r.reporter_user_id === user!.id && r.reporter_status !== 'ausstehend'))
+    } catch { /* ignore */ }
+  }
+
+  /** Freigeben in Unitas; der Server lehnt ab, was nicht (mehr) geht. */
+  async function freigeben(p: PatientRecord) {
+    try {
+      await pb.collection('patients').update(p.id, { status: 'freigegeben' })
+      showMsg('Protokoll freigegeben', 'success')
+    } catch (e: any) {
+      showMsg(e?.response?.message || 'Freigeben ging nicht. Bitte erneut versuchen.', 'error')
+    }
+    loadPatients()
   }
 
   async function saveKontaktEmail() {
@@ -296,7 +355,8 @@ export default function Unitas() {
   const openOutputs = myOutputs.filter(o => o.status === 'offen').length
   const pendingReportsCount = myReports.filter(r => r.status === 'pending').length
   const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
-  const protokolleBadge = myPatients.length + myArchivedPatients.length
+  const protokolleBadge = myPatients.length + myArchivedPatients.length + offen.patienten.length
+  const vorgaengeWarten = offen.produktausgabe.length + offen.defektmeldung.length
 
   const firstName = user?.name?.split(' ')[0] || ''
 
@@ -353,6 +413,9 @@ export default function Unitas() {
 
       <div style={{ maxWidth: '640px', margin: '0 auto', padding: '20px 16px calc(88px + env(safe-area-inset-bottom))' }}>
 
+        {/* Was auf diesem Gerät auf das Senden wartet (Bauplan v2, 4.3); leer: nichts */}
+        {orgCode && <Warteschlange orgCode={orgCode} org={orgDaten} eingebettet />}
+
         {/* ÜBERSICHT */}
         {tab === 'uebersicht' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 22 }}>
@@ -368,8 +431,21 @@ export default function Unitas() {
             </div>
 
             {/* Stat cards — editorial big numbers */}
-            {(myPatients.length + myFreigegebenPatients.length + openOutputs > 0) && (
-              <div style={{ display: 'grid', gridTemplateColumns: openOutputs > 0 && (myPatients.length + myFreigegebenPatients.length) > 0 ? '1fr 1fr' : '1fr', gap: 12 }}>
+            {(myPatients.length + myFreigegebenPatients.length + openOutputs + unterschriften.length > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: [unterschriften.length > 0, openOutputs > 0, (myPatients.length + myFreigegebenPatients.length) > 0].filter(Boolean).length > 1 ? '1fr 1fr' : '1fr', gap: 12 }}>
+                {unterschriften.length > 0 && (
+                  <button onClick={() => setTab(offen.patienten.length > 0 ? 'protokolle' : 'vorgaenge')} style={{
+                    background: 'var(--lbf-card)', borderRadius: 12, padding: '18px 20px',
+                    border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                    boxShadow: 'var(--lbf-shadow)',
+                  }}>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>{UNITAS_TEXTE.statLabel}</div>
+                    <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>
+                      {unterschriften.length}
+                    </div>
+                    <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 6 }}>{statText(unterschriften.length)}</div>
+                  </button>
+                )}
                 {(myPatients.length + myFreigegebenPatients.length) > 0 && (
                   <button onClick={() => setTab('protokolle')} style={{
                     background: 'var(--lbf-card)', borderRadius: 12, padding: '18px 20px',
@@ -447,8 +523,41 @@ export default function Unitas() {
         {tab === 'protokolle' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 
-            {myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && (
+            {/* Neues Protokoll: angemeldet senden, auch wenn der öffentliche Link aus ist (Bauplan v2, 4.9) */}
+            {neuesProtokoll && (
+              <button onClick={() => navigate('/protokoll/neu')} style={{
+                width: '100%', padding: '13px 16px', border: 'none', borderRadius: 12, marginBottom: 12,
+                background: 'var(--lbf-akzent-grund)', color: '#fff', fontFamily: 'inherit', cursor: 'pointer',
+                fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+              }}>
+                {UNITAS_TEXTE.neuesProtokoll}
+              </button>
+            )}
+
+            {myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && offen.patienten.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '60px 0', fontSize: 15, fontStyle: 'italic' }}>Keine Protokolle vorhanden</div>
+            )}
+
+            {/* Wartet auf deine Unterschrift: erst danach gilt man als Absender und sieht die Besatzung das Protokoll */}
+            {offen.patienten.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>{UNITAS_TEXTE.wartetTitel}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+                  {offen.patienten.map(u => (
+                    <div key={u.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid var(--lbf-warn-text-2)' }}>
+                      <div style={{ padding: '13px 16px 12px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: ABSENDER_ABZEICHEN.ausstehend!.farbe, marginBottom: 5 }}>{ABSENDER_ABZEICHEN.ausstehend!.text}</div>
+                        <div style={{ fontWeight: 700, fontSize: 17, fontStyle: 'italic', color: 'var(--text)', lineHeight: 1.2, overflowWrap: 'anywhere' }}>{unterschriftTitel(u)}</div>
+                        <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>{datumLang(u.angelegt)}</div>
+                      </div>
+                      <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid var(--lbf-border-light)' }}>
+                        <button onClick={() => navigate(`/protokoll/${u.id}?ansehen=1`)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{UNITAS_TEXTE.ansehen}</button>
+                        <button onClick={() => setUnterschreibenFuer({ formular: 'patienten', id: u.id, titel: unterschriftTitel(u) })} style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{UNITAS_TEXTE.unterschreiben}</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             )}
 
             {/* In Bearbeitung */}
@@ -458,15 +567,18 @@ export default function Unitas() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {[...myPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
                     const m = p.payload?.mannschaft || {}
-                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(' · ')
+                    const crew = besatzungZeile(p.payload)
                     const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
                     // Die Frist steht im Protokoll, vom Absenden an gerechnet;
                     // ältere kennen sie nicht und zählen ab dem Anlegen.
                     const restMs = fristEnde(p.payload || {}, p.created) - Date.now()
                     const fristText = fristRestText(p.payload || {}, p.created)
                     const isExpiringSoon = restMs > 0 && restMs <= 4 * 3600000
-                    const isTF = m.tf?.id === user?.id
-                    const canEdit = isTF && restMs > 0
+                    const absender = absenderLesen(p as unknown as Record<string, unknown>, 'patients')
+                    // Teamführer oder bestätigter Absender: für sie läuft die Frist
+                    const isTF = m.tf?.id === user?.id || (absender?.status === 'bestaetigt' && absender.id === user?.id)
+                    const canEdit = !!user?.id && darfBearbeiten(gepruefterPayload(p as unknown as Record<string, unknown>), p.created, user.id)
+                    const absenderHinweis = absender && ABSENDER_ZUSATZ[absender.status] ? absenderZeile(absender, '') : ''
                     const openRQs = offeneRueckfragen(p.payload)
                     return (
                       <div key={p.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: 'var(--lbf-shadow)', borderLeft: '3px solid var(--lbf-akzent)' }}>
@@ -484,6 +596,7 @@ export default function Unitas() {
                             {isTF && ` · ${restMs > 0 ? `${fristText} bearbeitbar` : 'Änderungsfrist abgelaufen'}`}
                           </div>
                           {crew && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{crew}</div>}
+                          {absenderHinweis && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>Absender: {absenderHinweis}</div>}
                         </div>
                         {openRQs.length > 0 && (
                           <div style={{ background: 'var(--lbf-warn-grund)', borderTop: '0.5px solid #fde68a', borderBottom: '0.5px solid #fde68a', padding: '9px 16px' }}>
@@ -502,7 +615,7 @@ export default function Unitas() {
                           )}
                           {canEdit && (
                             <>
-                              <button onClick={async () => { await pb.collection('patients').update(p.id, { status: 'freigegeben' }); showMsg('Protokoll freigegeben', 'success'); loadPatients() }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              <button onClick={() => { void freigeben(p) }} style={{ background: '#16a34a', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>
                                 Freigeben
                               </button>
                               <button onClick={() => navigate(`/protokoll/${p.id}`)} style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>Bearbeiten</button>
@@ -526,8 +639,7 @@ export default function Unitas() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Freigegeben</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
                   {[...myFreigegebenPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
-                    const m = p.payload?.mannschaft || {}
-                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(' · ')
+                    const crew = besatzungZeile(p.payload)
                     const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
                     const allRQs: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
                     const openRQs = offeneRueckfragen(p.payload)
@@ -589,8 +701,7 @@ export default function Unitas() {
                 <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, paddingBottom: 6, paddingTop: 4 }}>Archiviert</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {[...myArchivedPatients].sort((a, b) => new Date(b.created).getTime() - new Date(a.created).getTime()).map(p => {
-                    const m = p.payload?.mannschaft || {}
-                    const crew = ['tf','m1','m2','m3'].map((k: string) => m[k]?.name).filter(Boolean).join(' · ')
+                    const crew = besatzungZeile(p.payload)
                     const patName = [p.payload?.vorname, p.payload?.name].filter(Boolean).join(' ')
                     const allRQsA: any[] = Array.isArray(p.payload?.rueckfragen) ? p.payload.rueckfragen : []
                     const openRQsA = offeneRueckfragen(p.payload)
@@ -653,9 +764,30 @@ export default function Unitas() {
           <div>
             {/* Produktausgaben */}
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginBottom: 16 }}>Produktausgaben</div>
-            {myOutputs.length === 0 ? (
+            {offen.produktausgabe.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
+                {offen.produktausgabe.map(u => {
+                  const auf = aufgeklappt === u.id
+                  return (
+                    <div key={u.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-warn-text-2)' }}>
+                      <div style={{ padding: '14px 16px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: ABSENDER_ABZEICHEN.ausstehend!.farbe, marginBottom: 4 }}>{ABSENDER_ABZEICHEN.ausstehend!.text}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)', overflowWrap: 'anywhere' }}>{unterschriftTitel(u)}</div>
+                        <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{datumLang(u.angelegt)}</div>
+                        {auf && u.zusammenfassung && <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, marginTop: 8, overflowWrap: 'anywhere' }}>{u.zusammenfassung}</div>}
+                      </div>
+                      <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid var(--lbf-border-light)' }}>
+                        <button onClick={() => setAufgeklappt(auf ? '' : u.id)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{auf ? UNITAS_TEXTE.zuklappen : UNITAS_TEXTE.ansehen}</button>
+                        <button onClick={() => setUnterschreibenFuer({ formular: 'produktausgabe', id: u.id, titel: unterschriftTitel(u) })} style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{UNITAS_TEXTE.unterschreiben}</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {myOutputs.length === 0 ? (offen.produktausgabe.length > 0 ? null : (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Produktausgaben vorhanden</div>
-            ) : (
+            )) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {myOutputs.map(output => {
                   const p = output.payload
@@ -666,19 +798,21 @@ export default function Unitas() {
                     ignoriert: { label: 'Ignoriert', bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)' },
                   }
                   const cfg = statusCfg[output.status] ?? statusCfg['ignoriert']
+                  const absender = absenderLesen(output as unknown as Record<string, unknown>, 'product_outputs')
                   return (
                     <div key={output.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-akzent)' }}>
                       <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
                         <div>
                           <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)' }}>Einsatz {p.einsatz}</div>
                           <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{deDate}</div>
+                          {absender && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>Absender: {absenderZeile(absender, p.user_name || '')}</div>}
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '3px 9px' }}>
                           {cfg.label}
                         </span>
                       </div>
                       <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        {p.positionen.map((pos, idx) => (
+                        {(Array.isArray(p.positionen) ? p.positionen : []).map((pos, idx) => (
                           <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0', borderBottom: idx < p.positionen.length - 1 ? '0.5px solid rgba(0,0,0,0.06)' : 'none' }}>
                             <span style={{ color: 'var(--text)' }}>{pos.name}</span>
                             <span style={{ fontStyle: 'italic', color: 'var(--warm-gray)' }}>{pos.qty}× {pos.unit ?? ''}</span>
@@ -693,9 +827,30 @@ export default function Unitas() {
 
             {/* Defektmeldungen */}
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: 28, marginBottom: 16 }}>Defektmeldungen</div>
-            {myReports.length === 0 ? (
+            {offen.defektmeldung.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 10 }}>
+                {offen.defektmeldung.map(u => {
+                  const auf = aufgeklappt === u.id
+                  return (
+                    <div key={u.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-warn-text-2)' }}>
+                      <div style={{ padding: '14px 16px' }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: ABSENDER_ABZEICHEN.ausstehend!.farbe, marginBottom: 4 }}>{ABSENDER_ABZEICHEN.ausstehend!.text}</div>
+                        <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)', overflowWrap: 'anywhere' }}>{unterschriftTitel(u)}</div>
+                        <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{datumLang(u.angelegt)}</div>
+                        {auf && u.zusammenfassung && <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, marginTop: 8, overflowWrap: 'anywhere' }}>{u.zusammenfassung}</div>}
+                      </div>
+                      <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid var(--lbf-border-light)' }}>
+                        <button onClick={() => setAufgeklappt(auf ? '' : u.id)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{auf ? UNITAS_TEXTE.zuklappen : UNITAS_TEXTE.ansehen}</button>
+                        <button onClick={() => setUnterschreibenFuer({ formular: 'defektmeldung', id: u.id, titel: unterschriftTitel(u) })} style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{UNITAS_TEXTE.unterschreiben}</button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            {myReports.length === 0 ? (offen.defektmeldung.length > 0 ? null : (
               <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--warm-gray)', fontSize: 14, fontStyle: 'italic' }}>Keine Defektmeldungen vorhanden</div>
-            ) : (
+            )) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {myReports.map(report => {
                   const statusCfg: Record<string, { label: string; bg: string; color: string; border: string; borderLeft: string }> = {
@@ -704,6 +859,7 @@ export default function Unitas() {
                     rejected:  { label: 'Abgelehnt',  bg: 'rgba(0,0,0,0.04)', color: 'var(--warm-gray)', border: 'rgba(0,0,0,0.08)', borderLeft: 'rgba(var(--lbf-grau-rgb),0.35)' },
                   }
                   const cfg = statusCfg[report.status] ?? statusCfg['rejected']
+                  const absender = absenderLesen(report as unknown as Record<string, unknown>, 'mpg_defect_reports')
                   return (
                     <div key={report.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: `3px solid ${cfg.borderLeft}` }}>
                       <div style={{ padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '0.5px solid rgba(0,0,0,0.06)' }}>
@@ -712,6 +868,7 @@ export default function Unitas() {
                           <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>
                             {new Date(report.created).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                           </div>
+                          {absender && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>Absender: {absenderZeile(absender, report.reporter_name || '')}</div>}
                         </div>
                         <span style={{ fontSize: 11, fontWeight: 700, background: cfg.bg, color: cfg.color, border: `1px solid ${cfg.border}`, borderRadius: 999, padding: '3px 9px', flexShrink: 0 }}>
                           {cfg.label}
@@ -836,7 +993,7 @@ export default function Unitas() {
             icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> },
           ...(hasLernbar ? [{ id: 'lernbar', label: 'Lernbar', badge: lernbarBadge,
             icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg> }] : []),
-          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs + pendingReportsCount,
+          { id: 'vorgaenge', label: 'Vorgänge', badge: openOutputs + pendingReportsCount + vorgaengeWarten,
             icon: (a: boolean) => <svg width="20" height="20" viewBox="0 0 24 24" style={{ fill: a ? 'var(--lbf-akzent)' : 'none', stroke: a ? 'var(--lbf-akzent)' : 'var(--warm-gray)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg> },
           ...(hasMPG ? [{ id: 'hub', label: 'Hub', badge: 0,
             icon: (a: boolean) => (
@@ -923,6 +1080,21 @@ export default function Unitas() {
           </Suspense>
         )
       })()}
+
+      {/* Unterschreiben: Protokoll, Produktausgabe oder Meldung, die auf diese Person warten */}
+      {unterschreibenFuer && (
+        <UnterschreibenDialog
+          key={`${unterschreibenFuer.formular}-${unterschreibenFuer.id}`}
+          formular={unterschreibenFuer.formular} id={unterschreibenFuer.id} titel={unterschreibenFuer.titel}
+          offen onZu={() => setUnterschreibenFuer(null)}
+          onFertig={() => {
+            unterschriftenDrossel.current?.sofort()
+            if (unterschreibenFuer.formular === 'patienten') loadPatients()
+            else void loadVorgaenge()
+          }}
+          onVeraltet={() => unterschriftenDrossel.current?.sofort()}
+        />
+      )}
 
       {/* Stellungnahme — links die Rückfrage, rechts das Protokoll mit den
           angetippten Feldern. Geändert wird am Protokoll nichts. */}

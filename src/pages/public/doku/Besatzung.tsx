@@ -1,167 +1,86 @@
-// Die Besatzung eintragen — einmal, für das ganze Protokoll.
+// Die Besatzung eintragen, einmal, für das ganze Protokoll.
 //
-// Vier Posten, jeder entweder ein Benutzer der Organisation oder ein Name von
-// Hand. Der Unterschied ist nicht kosmetisch: nur ein Benutzer bringt eine
-// Kennung mit, und nur die Kennung öffnet das Protokoll später in Unitas.
-// Deshalb steht am Posten, was er bewirkt, statt dass beides gleich aussieht.
+// Vier Posten, jeder ein Name. Ob der Name zu einem Mitglied gehört, sagt die
+// Prüfzeile darunter: der Server antwortet nur ja, mehrfach oder nein, nie mit
+// einer Liste. Verknüpft wird beim Absenden am Server (Bauplan v2, 2.5); nur
+// ein erkannter Name öffnet das Protokoll später in Unitas. Die Fußzeile zählt,
+// wie viele das sind, damit sich niemand auf eine Einsicht verlässt, die es
+// nicht gibt.
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Werte } from './DokuFeld'
-import { POSTEN, besatzungLesen, einsichtIds, type Besetzung, type Posten } from './besatzung'
-import { MIN_ZEICHEN, neueSuche, type Mitglied } from '../mitgliederSuche'
+import { POSTEN, besatzungLesen, type Besetzung, type Posten } from './besatzung'
+import NamensFeld from '../absender/NamensFeld'
+import { besatzungFusszeile } from '../absender/texte'
+import type { NamensErgebnis } from '../../../lib/formular/api'
 
-const ROT = 'var(--lbf-akzent)'
-/** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
-const ROT_GRUND = 'var(--lbf-akzent-grund)'
-const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
-const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
-
-/** Ein Posten: besetzt zeigen oder suchen lassen. */
-function Platz({ posten, person, orgId, onSetzen }: {
+/** Ein Posten: ein Namensfeld mit Prüfzeile. */
+function Platz({ posten, person, orgCode, mitAnmeldung, onSetzen, onErgebnis }: {
   posten: Posten
   person: Besetzung | null
-  orgId: string
+  orgCode: string
+  mitAnmeldung: boolean
   onSetzen: (person: Besetzung | null) => void
+  onErgebnis: (r: NamensErgebnis | null, text: string) => void
 }) {
-  const [frage, setFrage] = useState('')
-  const [treffer, setTreffer] = useState<Mitglied[]>([])
-  const [sucht, setSucht] = useState(false)
-  const [fehler, setFehler] = useState(false)
-  const uhr = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const [suche] = useState(neueSuche)
+  /*
+   * Der getippte Text bleibt hier, der gespeicherte Name ist getrimmt: sonst
+   * verschwände beim Tippen das Leerzeichen zwischen Vor- und Nachnamen.
+   * Von außen (Räumen, geladenes Protokoll, Entwurf) wird nur übernommen,
+   * was sich wirklich unterscheidet.
+   */
+  const aussen = person?.name ?? ''
+  const [text, setText] = useState(aussen)
+  useEffect(() => {
+    setText((t) => (t.trim() === aussen.trim() ? t : aussen))
+  }, [aussen])
 
-  useEffect(() => () => { clearTimeout(uhr.current); suche.abbrechen() }, [suche])
-
-  function tippen(q: string) {
-    setFrage(q)
-    clearTimeout(uhr.current)
-    setFehler(false)
-    if (q.trim().length < MIN_ZEICHEN) { suche.abbrechen(); setTreffer([]); setSucht(false); return }
-    setSucht(true)
-    uhr.current = setTimeout(async () => {
-      try {
-        const liste = await suche.suchen(orgId, q)
-        if (liste === null) return
-        setTreffer(liste)
-        setSucht(false)
-      } catch {
-        // Ohne Netz gibt es keine Liste — der Name geht trotzdem, nur ohne
-        // Einsicht. Das sagt der Hinweis unter dem Feld.
-        setTreffer([])
-        setFehler(true)
-        setSucht(false)
-      }
-    }, 300)
-  }
-
-  function nehmen(p: Besetzung | null) {
-    suche.abbrechen()
-    onSetzen(p)
-    setFrage('')
-    setTreffer([])
-    setFehler(false)
-  }
-
-  if (person) {
-    const mitKonto = person.id !== ''
-    return (
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
-          {posten.label}
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'var(--lbf-card)', border: `0.5px solid ${LINIE}`, borderRadius: 8, padding: '8px 10px' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 28, height: 28, flexShrink: 0, borderRadius: 14,
-            background: mitKonto ? ROT_GRUND : 'transparent',
-            border: mitKonto ? 'none' : `1px solid ${LINIE}`,
-            color: mitKonto ? '#fff' : GRAU, fontSize: 13, fontWeight: 700,
-          }}>
-            {person.name.charAt(0).toUpperCase()}
-          </span>
-          <span style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ display: 'block', fontSize: 15, fontStyle: 'italic', fontWeight: 700, color: TEXT }}>
-              {person.name}
-            </span>
-            <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: mitKonto ? ROT : GRAU }}>
-              {mitKonto ? 'sieht das Protokoll in Unitas' : 'Name ohne Konto — keine Einsicht'}
-            </span>
-          </span>
-          <button
-            type="button" onClick={() => nehmen(null)} aria-label={`${posten.label} räumen`}
-            style={{ background: 'none', border: 'none', color: GRAU, fontSize: 20, lineHeight: 1, padding: '0 3px', cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            ×
-          </button>
-        </div>
-      </div>
-    )
-  }
-
-  const getippt = frage.trim()
   return (
-    <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: GRAU, marginBottom: 4 }}>
-        {posten.label}
-      </div>
-      <input
-        type="text" value={frage} onChange={(e) => tippen(e.target.value)}
-        placeholder="Name suchen oder eintragen"
-        autoComplete="off"
-        style={{ width: '100%', padding: '9px 10px', background: 'var(--lbf-input-bg)', border: `0.5px solid ${LINIE}`, borderRadius: 8, fontFamily: 'inherit', fontSize: 16, color: TEXT, boxSizing: 'border-box' }}
-      />
-      {getippt.length >= 2 ? (
-        <div style={{ border: `0.5px solid ${LINIE}`, borderTop: 'none', borderRadius: '0 0 8px 8px', background: 'var(--lbf-card)', overflow: 'hidden' }}>
-          {treffer.map((t) => (
-            <button
-              key={t.id} type="button" onClick={() => nehmen({ id: t.id, name: t.name })}
-              style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%', padding: '8px 10px', background: 'transparent', border: 'none', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.06)', textAlign: 'left', fontFamily: 'inherit', cursor: 'pointer' }}
-            >
-              <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, flexShrink: 0, borderRadius: 13, background: ROT_GRUND, color: '#fff', fontSize: 12, fontWeight: 700 }}>
-                {t.name.charAt(0).toUpperCase()}
-              </span>
-              <span style={{ minWidth: 0, fontSize: 14, fontStyle: 'italic', fontWeight: 700, color: TEXT }}>{t.name}</span>
-            </button>
-          ))}
-          {/* Immer erreichbar, nicht erst wenn die Suche nichts findet:
-              Praktikanten, Helfer anderer Organisationen und der Notarzt
-              haben kein Konto, stehen aber auf dem Bogen. */}
-          <button
-            type="button" onClick={() => nehmen({ id: '', name: getippt })}
-            style={{ display: 'block', width: '100%', padding: '8px 10px', background: 'var(--lbf-fuss)', border: 'none', textAlign: 'left', fontFamily: 'inherit', fontSize: 13, color: TEXT, cursor: 'pointer' }}
-          >
-            „{getippt}“ ohne Konto eintragen
-            <span style={{ display: 'block', fontSize: 11, fontStyle: 'italic', color: GRAU }}>
-              {sucht ? 'sucht noch …' : fehler ? 'Suche nicht erreichbar — steht nur auf dem Bogen' : 'steht auf dem Bogen, sieht das Protokoll aber nicht'}
-            </span>
-          </button>
-        </div>
-      ) : null}
-    </div>
+    <NamensFeld
+      orgCode={orgCode} formular="patienten" wert={text}
+      onWert={(t) => { setText(t); onSetzen(t.trim() ? { id: '', name: t } : null) }}
+      onLeeren={() => { setText(''); onSetzen(null) }}
+      zweck="besatzung" modus="passwort" mitAnmeldung={mitAnmeldung}
+      label={posten.label} platzhalter="Vor- und Nachname"
+      verknuepft={!!person?.id} onErgebnis={onErgebnis}
+    />
   )
 }
 
-export default function Besatzung({ orgId, werte, onSetzen }: {
-  orgId: string
+export default function Besatzung({ orgCode, werte, onSetzen, mitAnmeldung = false }: {
+  orgCode: string
   werte: Werte
   onSetzen: (pos: Posten['pos'], person: Besetzung | null) => void
+  /** Namensprüfung mit Token (angemeldet in der App, wenn das öffentliche Formular aus ist). */
+  mitAnmeldung?: boolean
 }) {
   const besetzt = besatzungLesen(werte)
-  const einsicht = einsichtIds(werte).length
+  const [ergebnis, setErgebnis] = useState<Record<string, { r: NamensErgebnis | null; text: string }>>({})
+
+  // Erkannt: schon verknüpft (geladenes Protokoll) oder für genau diesen Namen
+  // eindeutig geprüft; dieselbe Person auf zwei Posten zählt einmal
+  const erkannt = new Set(
+    POSTEN.filter((p) => {
+      const b = besetzt[p.pos]
+      if (!b) return false
+      const e = ergebnis[p.pos]
+      return b.id !== '' || (e?.r?.eindeutig === true && e.text.trim() === b.name.trim())
+    }).map((p) => besetzt[p.pos]!.name.trim().toLowerCase()),
+  ).size
+
   return (
     <div style={{ marginBottom: 6 }}>
       {POSTEN.map((p) => (
-        <Platz key={p.pos} posten={p} person={besetzt[p.pos]} orgId={orgId}
-          onSetzen={(person) => onSetzen(p.pos, person)} />
+        <Platz
+          key={p.pos} posten={p} person={besetzt[p.pos]} orgCode={orgCode} mitAnmeldung={mitAnmeldung}
+          onSetzen={(person) => onSetzen(p.pos, person)}
+          onErgebnis={(r, text) => setErgebnis((e) => ({ ...e, [p.pos]: { r, text } }))}
+        />
       ))}
       <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, lineHeight: 1.45, marginTop: 2 }}>
-        {einsicht === 0
-          ? 'Noch niemand mit Konto eingetragen — das Protokoll erscheint damit in keiner Unitas-Liste.'
-          : einsicht === 1
-            ? 'Ein Besatzungsmitglied findet das Protokoll in Unitas wieder.'
-            : `${einsicht} Besatzungsmitglieder finden das Protokoll in Unitas wieder.`}
+        {besatzungFusszeile(erkannt)}
       </div>
     </div>
   )
