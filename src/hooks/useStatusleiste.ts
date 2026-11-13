@@ -7,14 +7,17 @@
 //   Ohne kopf (Startseite): html und body tragen das Dunkelrot.
 //   Mit kopf (Seiten mit Rahmen der Benutzerverwaltung): html und body bleiben immer hell,
 //   damit unten nie Rot erscheint (kurze Seiten, schnelles Wischen). Die Statusleiste färbt
-//   der feste rote Streifen .bv-statusleiste (benutzer/stil.ts, dort steht die Regel von
-//   WebKit): Er liegt über dem roten Kopf und unter dem hellen Blatt, ganz ohne Umschalten.
-//   Am iPhone ausprobiert und verworfen: html/body rot, solange der Kopf zu sehen ist (unten
+//   der rote Kopf selbst: Er ist position: sticky ohne top (klebt nie), und Safari nimmt die
+//   Farbe eines klebenden Elements am oberen Rand (benutzer/stil.ts, dort steht die Regel von
+//   WebKit). Kommt das helle Blatt oben an, gilt der helle Hintergrund. Ganz ohne Umschalten.
+//   Am iPhone ausprobiert und verworfen: ein fester roter Streifen oben (2 px: nicht erkannt,
+//   roter Strich; 12 px über dem Kopf: verdeckte beim Scrollen Titel und Knöpfe),
+//   html/body rot, solange der Kopf zu sehen ist (unten
 //   roter Balken auf kurzen Seiten, oder viel Leerraum als Ausgleich), auf hell wechseln,
 //   solange der Kopf noch zu sehen ist (Statusleiste hell), ein fester Streifen unten
 //   (Safari-Leiste deckend), Nachfedern abschalten, nur html hell (Safari nimmt body).
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
-//   Leiste; der feste rote Streifen hält die Farbe auch beim Scrollen.
+//   Leiste; nur dort hält ein fester roter Streifen (.bv-statusleiste) die Farbe beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
 import { useEffect } from 'react'
 

@@ -24,20 +24,21 @@ export const BV_CSS = `
 .bv :focus-visible{ outline: 2px solid var(--lbf-akzent); outline-offset: 2px; }
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
-/* Statusleiste: fester roter Streifen am oberen Rand. Safari 26 färbt die Statusleiste nach dem
-   festen Element, das in der Mitte des oberen Rands, 4 px unter der Kante, zuoberst liegt (WebKit,
-   LocalFrameView::fixedContainerEdges); sonst nach dem Hintergrund von body. Der Streifen ist
-   deshalb 12 px hoch (über 10 px zählt seine eigene Farbe) und liegt in der Malreihenfolge über
-   dem roten Kopf und unter dem hellen Blatt: ohne z-index, vor beiden im DOM; das Blatt ist
-   position: relative und deckt ihn beim Scrollen ab. So ist er nie als Strich zu sehen, und
-   sobald das Blatt oben ankommt, gilt für die Statusleiste wieder der helle Hintergrund.
-   Kein z-index setzen und im Kopf nichts positionieren, sonst stimmt die Reihenfolge nicht. */
-.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 12px); background: var(--lbf-kopf); pointer-events: none; }
-/* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
-@media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
+/* Statusleiste (Uhr, WLAN, Akku). Safari 26 färbt sie nach dem Element, das in der Mitte des oberen
+   Rands, 4 px unter der Kante, zuoberst liegt: Gehört es zu einem festen oder klebenden Element
+   (position: fixed oder sticky, fast so breit wie der Bildschirm), gilt dessen Farbe, sonst der
+   Hintergrund von body (WebKit, LocalFrameView::fixedContainerEdges). Deshalb ist der rote Kopf
+   position: sticky, aber ohne top: Er klebt nie und scrollt ganz normal mit, zählt für Safari
+   aber als klebendes Element, auch wenn gerade sein Titel oder ein Knopf am Rand liegt. Schiebt
+   sich das helle Blatt (position: relative, später im DOM, malt darüber) an den Rand, gilt der
+   helle Hintergrund von body. Kein fester Streifen im Browser: Er lag über dem Kopf und verdeckte
+   beim Scrollen Titel und Knöpfe. Nur als App vom Homebildschirm liegt die Seite unter Uhr und
+   Akku; dort hält ein fester roter Streifen in genau dieser Höhe die Farbe. */
+.bv-statusleiste{ display: none; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--lbf-kopf); pointer-events: none; }
+@media (display-mode: standalone){ .bv-statusleiste{ display: block; z-index: 70; } }
 
 /* Kopf */
-.bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
+.bv-kopf{ position: sticky; background: var(--lbf-kopf); color: var(--lbf-kopf-text);
   padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 38px max(16px, env(safe-area-inset-left)); }
 .bv-kopf-innen{ max-width: 760px; margin: 0 auto; }
 .bv-zeile1{ display: flex; align-items: center; gap: 12px; min-height: 48px; }

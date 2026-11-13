@@ -138,20 +138,23 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
     scheint durch, kein deckender Streifen. Auch auf kurzen Seiten und beim schnellen Wischen.
   - Kein Extra-Platz unter dem Inhalt.
 - So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body bleiben immer hell. Die
-  Statusleiste färbt der feste rote Streifen `.bv-statusleiste` (12 px hoch). Er liegt in der
-  Malreihenfolge über dem roten Kopf und unter dem hellen Blatt: ohne `z-index`, im DOM vor
-  beiden, das Blatt ist `position: relative`. Beim Scrollen deckt ihn das Blatt ab.
+  Statusleiste färbt der rote Kopf selbst: `.bv-kopf` ist `position: sticky` ohne `top` (klebt nie,
+  scrollt normal), Safari zählt ihn aber als klebendes Element. Kommt das helle Blatt
+  (`position: relative`, später im DOM) oben an, gilt der helle Hintergrund. Kein Skript schaltet
+  um, im Browser gibt es keinen festen Streifen. Nur als App vom Homebildschirm hält ein fester
+  Streifen `.bv-statusleiste` in Höhe der Uhr-Zeile die Farbe.
 - Die Regel von Safari 26 dahinter (WebKit, `LocalFrameView::fixedContainerEdges`): Geprüft wird
-  die Mitte jedes Rands, 4 px von der Kante. Liegt dort zuoberst ein festes oder klebendes
-  Element (mindestens 90 % breit; über 10 px hoch zählt seine eigene Farbe), färbt es die
-  Leiste an diesem Rand. Sonst gilt der Hintergrund von `body`, oben wie unten.
-- Deshalb: dem Streifen keinen `z-index` geben, im Kopf nichts positionieren, nichts Festes an
-  den unteren Rand legen.
+  die Mitte jedes Rands, 4 px von der Kante. Gehört das Element, das dort zuoberst liegt, zu einem
+  festen oder klebenden Element (mindestens 90 % breit), färbt dessen Hintergrund die Leiste an
+  diesem Rand. Sonst gilt der Hintergrund von `body`, oben wie unten.
+- Deshalb: `.bv-kopf` bleibt `position: sticky`; nichts Festes an den oberen oder unteren Rand
+  legen; html/body nicht rot färben.
 - Am iPhone ausprobiert und verworfen (nicht noch einmal versuchen):
   - html/body rot, solange der Kopf zu sehen ist: unten roter Balken auf kurzen Seiten; als
     Ausgleich ein höheres Blatt (Reserve) gab viel Leerraum unter dem Inhalt.
-  - Der Streifen nur 2 px hoch oder mit `z-index` über dem Blatt: Safari erkennt ihn nicht
-    (Statusleiste hell), und beim Scrollen steht er als roter Strich über dem Inhalt.
+  - Ein fester roter Streifen oben: 2 px hoch erkennt Safari ihn nicht (Statusleiste hell) und
+    er steht beim Scrollen als roter Strich über dem Inhalt; 12 px hoch über dem Kopf verdeckt
+    er beim Scrollen Titel und Knöpfe.
   - Auf hell wechseln, solange der Kopf noch zu sehen ist: Statusleiste hell.
   - Ein fester heller Streifen am unteren Rand: Safari-Leiste deckend.
   - Nachfedern abschalten (`overscroll-behavior`).
