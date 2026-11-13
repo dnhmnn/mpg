@@ -243,7 +243,11 @@ describe('Tresor: zwei Fenster', () => {
     await Promise.all([A.geschrieben(), B.geschrieben()])
     await Promise.all([aHat, bHat2])
     expect([...a.daten.keys()].sort()).toEqual([ID1, ID2, ID3].map((i) => ablageSchluessel(Q, i)))
-    for (const K of [A, B]) expect(JSON.parse(K.getItem(Q)!).map((e: { id: string }) => e.id).sort()).toEqual([ID1, ID2, ID3])
+    // Jedes Fenster lädt nach jeder Nachricht des anderen neu. Das erste Neuladen kann vor dem Schreiben
+    // des anderen liegen, deshalb warten, bis beide alle drei zeigen (bleibt einer zurück, schlägt es fehl)
+    await vi.waitFor(() => {
+      for (const K of [A, B]) expect(JSON.parse(K.getItem(Q)!).map((e: { id: string }) => e.id).sort()).toEqual([ID1, ID2, ID3])
+    }, { timeout: 3000, interval: 10 })
 
     // Entfernen in einem Fenster kommt im anderen an
     const bHat3 = neuGeladen(B)

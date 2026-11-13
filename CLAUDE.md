@@ -137,24 +137,27 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   - Die untere Safari-Leiste ist nie rot und bleibt durchsichtig wie in Dateien: Der Inhalt
     scheint durch, kein deckender Streifen. Auch auf kurzen Seiten und beim schnellen Wischen.
   - Kein Extra-Platz unter dem Inhalt.
-- So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body bleiben immer hell. Die
-  Statusleiste färbt der rote Kopf selbst: `.bv-kopf` ist `position: sticky` ohne `top` (klebt nie,
-  scrollt normal), Safari zählt ihn aber als klebendes Element. Kommt das helle Blatt
-  (`position: relative`, später im DOM) oben an, gilt der helle Hintergrund. Kein Skript schaltet
-  um, im Browser gibt es keinen festen Streifen. Nur als App vom Homebildschirm hält ein fester
-  Streifen `.bv-statusleiste` in Höhe der Uhr-Zeile die Farbe.
-- Die Regel von Safari 26 dahinter (WebKit, `LocalFrameView::fixedContainerEdges`): Geprüft wird
-  die Mitte jedes Rands, 4 px von der Kante. Gehört das Element, das dort zuoberst liegt, zu einem
-  festen oder klebenden Element (mindestens 90 % breit), färbt dessen Hintergrund die Leiste an
-  diesem Rand. Sonst gilt der Hintergrund von `body`, oben wie unten.
-- Deshalb: `.bv-kopf` bleibt `position: sticky`; nichts Festes an den oberen oder unteren Rand
-  legen; html/body nicht rot färben.
+- Die Regeln von Safari 26, aus dem Quelltext von WebKit (`LocalFrameView::fixedContainerEdges`,
+  `Page::updateFixedContainerEdges`, `RenderLayer::hitTestLayer`):
+  1. Geprüft wird die Mitte jedes Rands, 4 px von der Kante. Gewöhnlicher Inhalt wird dabei
+     übersprungen: Ein festes oder klebendes Element (`fixed`, `sticky`) wird dort auch gefunden,
+     wenn etwas darüber liegt. Es muss mindestens 90 % breit sein; über 10 px hoch zählt sein
+     eigener Hintergrund.
+  2. Findet Safari am Rand nichts mehr, behält es die letzte Farbe, solange das zuletzt gefundene
+     Element noch dargestellt wird. Erst ohne dieses Element (`display: none`) gilt wieder der
+     Hintergrund von `body`, oben wie unten.
+- So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body bleiben immer hell. Oben färbt
+  der feste rote Streifen `.bv-statusleiste` (12 px). `useStatusleiste` setzt `data-bv-kopf` an
+  `<html>`, solange der rote Kopf zu sehen ist; nur dann wird der Streifen dargestellt. Er liegt
+  über dem Hintergrund des Kopfs, aber unter dessen Inhalt (`.bv-kopf-innen`) und unter dem Blatt
+  (beide `position: relative`, der Streifen ohne `z-index` und im DOM davor).
 - Am iPhone ausprobiert und verworfen (nicht noch einmal versuchen):
   - html/body rot, solange der Kopf zu sehen ist: unten roter Balken auf kurzen Seiten; als
     Ausgleich ein höheres Blatt (Reserve) gab viel Leerraum unter dem Inhalt.
-  - Ein fester roter Streifen oben: 2 px hoch erkennt Safari ihn nicht (Statusleiste hell) und
-    er steht beim Scrollen als roter Strich über dem Inhalt; 12 px hoch über dem Kopf verdeckt
-    er beim Scrollen Titel und Knöpfe.
+  - Der Streifen immer dargestellt, oder der Kopf selbst `position: sticky`: Die Statusleiste
+    bleibt beim Scrollen rot (Regel 2).
+  - Der Streifen mit `z-index` über dem Inhalt: verdeckt Titel und Knöpfe, roter Strich über
+    dem Blatt. Nur 2 px hoch: Safari findet ihn nicht, die Statusleiste ist hell.
   - Auf hell wechseln, solange der Kopf noch zu sehen ist: Statusleiste hell.
   - Ein fester heller Streifen am unteren Rand: Safari-Leiste deckend.
   - Nachfedern abschalten (`overscroll-behavior`).

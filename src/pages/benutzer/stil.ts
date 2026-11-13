@@ -24,23 +24,33 @@ export const BV_CSS = `
 .bv :focus-visible{ outline: 2px solid var(--lbf-akzent); outline-offset: 2px; }
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
-/* Statusleiste (Uhr, WLAN, Akku). Safari 26 färbt sie nach dem Element, das in der Mitte des oberen
-   Rands, 4 px unter der Kante, zuoberst liegt: Gehört es zu einem festen oder klebenden Element
-   (position: fixed oder sticky, fast so breit wie der Bildschirm), gilt dessen Farbe, sonst der
-   Hintergrund von body (WebKit, LocalFrameView::fixedContainerEdges). Deshalb ist der rote Kopf
-   position: sticky, aber ohne top: Er klebt nie und scrollt ganz normal mit, zählt für Safari
-   aber als klebendes Element, auch wenn gerade sein Titel oder ein Knopf am Rand liegt. Schiebt
-   sich das helle Blatt (position: relative, später im DOM, malt darüber) an den Rand, gilt der
-   helle Hintergrund von body. Kein fester Streifen im Browser: Er lag über dem Kopf und verdeckte
-   beim Scrollen Titel und Knöpfe. Nur als App vom Homebildschirm liegt die Seite unter Uhr und
-   Akku; dort hält ein fester roter Streifen in genau dieser Höhe die Farbe. */
-.bv-statusleiste{ display: none; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--lbf-kopf); pointer-events: none; }
-@media (display-mode: standalone){ .bv-statusleiste{ display: block; z-index: 70; } }
+/* Statusleiste (Uhr, WLAN, Akku) in Safari 26. Die Regeln stehen im Quelltext von WebKit
+   (LocalFrameView::fixedContainerEdges, Page::updateFixedContainerEdges, RenderLayer::hitTestLayer):
+   1. Geprüft wird die Mitte des oberen Rands, 4 px unter der Kante. Gewöhnlicher Inhalt wird dabei
+      übersprungen: Gefunden wird ein festes oder klebendes Element (fixed, sticky) auch dann, wenn
+      etwas anderes darüber liegt. Es muss fast so breit sein wie der Bildschirm; ist es über 10 px
+      hoch, zählt sein eigener Hintergrund.
+   2. Findet Safari dort nichts mehr, behält es die letzte Farbe, solange das zuletzt gefundene
+      Element noch dargestellt wird. Erst ohne dieses Element (display: none) gilt wieder der
+      Hintergrund von body, oben wie unten.
+   Deshalb färbt hier ein eigener roter Streifen die Statusleiste, und useStatusleiste nimmt ihn
+   mit data-bv-kopf an <html> aus der Darstellung, sobald der rote Kopf weggescrollt ist. Dann wird
+   die Statusleiste hell wie die Seite. Der Streifen ist 12 px hoch und liegt über dem Hintergrund
+   des Kopfs, aber unter dessen Inhalt und unter dem Blatt (beide position: relative und später im
+   DOM, der Streifen ohne z-index): Er ist so rot wie der Kopf und verdeckt nichts.
+   Nicht tun: den Kopf selbst sticky machen oder den Streifen stehen lassen (die Leiste bleibt beim
+   Scrollen rot), dem Streifen einen z-index geben (er verdeckt Titel und Knöpfe oder liegt als
+   Strich über dem Blatt), ihn dünner als 5 px machen (Safari findet ihn nicht). */
+.bv-statusleiste{ display: none; position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 12px); background: var(--lbf-kopf); pointer-events: none; }
+html[data-bv-kopf] .bv-statusleiste{ display: block; }
+/* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort immer, vorn und genau so hoch */
+@media (display-mode: standalone){ .bv-statusleiste{ display: block; z-index: 70; height: env(safe-area-inset-top); } }
 
 /* Kopf */
-.bv-kopf{ position: sticky; background: var(--lbf-kopf); color: var(--lbf-kopf-text);
+.bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
   padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 38px max(16px, env(safe-area-inset-left)); }
-.bv-kopf-innen{ max-width: 760px; margin: 0 auto; }
+/* position: relative: Der Inhalt des Kopfs malt über dem roten Streifen der Statusleiste (siehe oben) */
+.bv-kopf-innen{ max-width: 760px; margin: 0 auto; position: relative; }
 .bv-zeile1{ display: flex; align-items: center; gap: 12px; min-height: 48px; }
 .bv .bv-rund{ width: 44px; height: 44px; border-radius: 50%; background: var(--lbf-kopf-feld); color: var(--lbf-kopf-text); display: grid; place-items: center; flex-shrink: 0; }
 .bv .bv-rund.hell{ background: var(--lbf-kopf-text); color: var(--lbf-kopf); }
