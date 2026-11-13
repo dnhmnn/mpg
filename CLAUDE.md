@@ -134,12 +134,13 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - Safari am iPhone (iOS 26) muss so aussehen wie in der Benutzerverwaltung:
   - Die Statusleiste (Uhr, WLAN, Akku) ist dunkelrot, solange der rote Kopf zu sehen ist.
   - Beim Scrollen keine rote Linie oder Kante oben.
-  - Die untere Safari-Leiste ist nie rot und bleibt beim Scrollen durchsichtig wie in Dateien:
-    Der Inhalt scheint durch, kein deckender Streifen. Nur in Ruhe (ganz oben, Leiste
-    aufgeklappt) liegt am unteren Rand ein heller Streifen (`.bv-bodenkante`, `data-bv-ruhe`),
-    sonst färbt Safari den Rand unter der Leiste rot.
-  - Auch kurze Seiten: Die Seite reicht bis unter die Leiste (`100lvh`), und am Seitenende wird
-    der Hintergrund hell (`useStatusleiste`, `endeErreicht`).
+  - Die untere Safari-Leiste ist nie rot und bleibt durchsichtig wie in Dateien: Der Inhalt
+    scheint durch, kein deckender Streifen.
+  - Kurze Seiten verhalten sich wie lange: Das helle Blatt (`.bv-blatt`) ist mindestens so hoch
+    wie der Bildschirm, der rote Kopf scrollt also ganz weg, bevor das Seitenende kommt.
+  - Am iPhone schon ausprobiert und verworfen: ein fester heller Streifen am unteren Rand (macht
+    die Safari-Leiste deckend) und ein Wechsel auf hellen Hintergrund, solange der rote Kopf
+    noch zu sehen ist (macht die Statusleiste hell).
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
   Scrollen und ganz unten.
 

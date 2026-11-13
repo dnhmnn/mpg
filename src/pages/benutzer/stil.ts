@@ -8,9 +8,7 @@ export const BV_CSS = `
   --bv-linie: rgba(var(--lbf-grau-rgb), 0.2);
   --bv-feldrand: rgba(var(--lbf-grau-rgb), 0.4);
   --bv-schalter-aus: rgba(var(--lbf-grau-rgb), 0.26);
-  /* Bis unter die untere Safari-Leiste (größte Höhe, lvh): Auf kurzen Seiten läge dort sonst
-     der rote Hintergrund von html/body hinter dem Seitenende (useStatusleiste). */
-  min-height: 100vh; min-height: 100lvh;
+  min-height: 100vh; min-height: 100dvh;
   display: flex; flex-direction: column;
   background: var(--warm-bg); color: var(--lbf-text);
   font-size: 15px; line-height: 1.3; font-variant-numeric: tabular-nums;
@@ -32,12 +30,6 @@ export const BV_CSS = `
 .bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
 /* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
 @media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
-/* Unten: In Ruhe (ganz oben, Safari-Leiste aufgeklappt) färbt Safari 26 den Rand unter der Leiste
-   nach einem festen Element am unteren Rand, das dort zuoberst liegt, sonst nach dem roten html/body.
-   Dieser helle Streifen hält den Rand dann hell. Beim Scrollen ist er weg (kein data-bv-ruhe), damit
-   der Inhalt durch die eingeklappte Leiste scheint wie in Dateien. Die Aktionsleiste liegt darüber. */
-.bv-bodenkante{ display: none; position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--warm-bg); z-index: 45; pointer-events: none; }
-html[data-bv-ruhe] .bv-bodenkante{ display: block; }
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
@@ -59,6 +51,10 @@ html[data-bv-ruhe] .bv-bodenkante{ display: block; }
 
 /* Blatt */
 .bv-blatt{ flex: 1; background: var(--warm-bg); border-radius: 24px 24px 0 0; margin-top: -24px; position: relative;
+  /* Mindestens so hoch wie der Bildschirm (plus die 24 px unter dem Kopf): Auch kurze Seiten
+     scrollen wie eine lange Liste, bis der rote Kopf weg ist. Erst dann wird html/body hell
+     (useStatusleiste), und unter der Safari-Leiste liegt bis dahin immer das helle Blatt. */
+  min-height: calc(100vh + 24px); min-height: calc(100lvh + 24px);
   padding: 20px max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .bv-blatt.mitleiste{ padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .bv-innen{ max-width: 760px; margin: 0 auto; }
