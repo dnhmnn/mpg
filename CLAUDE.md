@@ -136,14 +136,18 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   - Beim Scrollen keine rote Linie oder Kante oben.
   - Die untere Safari-Leiste ist nie rot und bleibt durchsichtig wie in Dateien: Der Inhalt
     scheint durch, kein deckender Streifen.
+  - Kurze Seiten verhalten sich wie lange: Das helle Blatt (`.bv-blatt`) ist höher als der
+    Bildschirm (mit Reserve über den unteren Rand hinaus), der rote Kopf scrollt also ganz weg,
+    bevor das Seitenende kommt. Sonst scheint kurz vor dem Ende das Rot unten durch.
   - Am iPhone schon ausprobiert und verworfen: ein fester heller Streifen am unteren Rand (macht
     die Safari-Leiste deckend) und ein Wechsel auf hellen Hintergrund, solange der rote Kopf
     noch zu sehen ist (macht die Statusleiste hell).
   - Ebenfalls verworfen: das Nachfedern am Seitenende abschalten (`overscroll-behavior`). Das
     Federn bleibt, wie es ist.
-  - `html` bleibt immer hell, nur `body` trägt das Rot (`useStatusleiste`): Hinter dem
-    Seitenende liegt so nie Rot, auch auf kurzen Seiten und beim schnellen Wischen.
-  - Kein Extra-Platz unter dem Inhalt (keine Reserve, keine Mindesthöhe über `100dvh` hinaus).
+  - Ebenfalls verworfen: `html` immer hell und nur `body` rot. Safari färbt den unteren Rand nach
+    `body`; ohne den Platz unter dem Inhalt war der rote Balken unten sofort wieder da.
+  - Bleibt: Bei sehr schnellem Wischen bis ans Ende einer kurzen Seite kann unten kurz Rot
+    aufzucken (Safari federt nach, bevor die Farbe wechselt). Lange Seiten erreichen das Ende nicht.
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
   Scrollen und ganz unten.
 
