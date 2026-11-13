@@ -2,18 +2,20 @@
 //
 // Drei Wege, je nach Browser — alle beim Verlassen der Seite zurückgesetzt:
 // - Android und Safari bis iOS 18 nehmen <meta name="theme-color">.
-// - Safari ab iOS 26 kennt theme-color nicht mehr und nimmt die Hintergrundfarbe
-//   von html/body. Deshalb bekommen html und body das Dunkelrot, solange der rote
-//   Kopf (kopf, ein CSS-Selektor) oben zu sehen ist. Ist er weggescrollt, gilt wieder
-//   der helle Hintergrund (blatt): Dann scheint der Inhalt durch die Leisten wie auf
-//   jeder anderen Seite, und die untere Leiste wird nie rot. Ohne kopf bleibt es rot.
-//   Kurze Seiten verhalten sich wie lange: Das helle Blatt ist mindestens so hoch wie der
-//   Bildschirm (.bv-blatt in benutzer/stil.ts), der Kopf scrollt also auch dort ganz weg,
-//   bevor das Seitenende erreicht ist. Nicht tun (am iPhone ausprobiert): auf hell wechseln,
-//   solange der Kopf noch zu sehen ist (die Statusleiste wird dann hell), oder einen festen
-//   Streifen an den unteren Rand legen (die Safari-Leiste wird dann deckend).
+// - Safari ab iOS 26 kennt theme-color nicht mehr. Es färbt oben und unten nach der
+//   Hintergrundfarbe von body, außer ein festes Element liegt am Rand zuoberst.
+//   Ohne kopf (Startseite): html und body tragen das Dunkelrot.
+//   Mit kopf (Seiten mit Rahmen der Benutzerverwaltung): html und body bleiben immer hell,
+//   damit unten nie Rot erscheint (kurze Seiten, schnelles Wischen). Die Statusleiste färbt
+//   der feste rote Streifen .bv-statusleiste (benutzer/stil.ts): Solange der rote Kopf die
+//   Uhr-Zeile ganz füllt, setzt der Hook data-bv-kopf an <html>, und der Streifen liegt vorn.
+//   Danach liegt er hinter der Seite, und der Inhalt scheint durch die Leisten.
+//   Am iPhone ausprobiert und verworfen: html/body rot, solange der Kopf zu sehen ist (unten
+//   roter Balken auf kurzen Seiten, oder viel Leerraum als Ausgleich), auf hell wechseln,
+//   solange der Kopf noch zu sehen ist (Statusleiste hell), ein fester Streifen unten
+//   (Safari-Leiste deckend), Nachfedern abschalten, nur html hell (Safari nimmt body).
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
-//   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
+//   Leiste; der feste rote Streifen hält die Farbe auch beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
 import { useEffect } from 'react'
 
@@ -36,9 +38,12 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       const t = oben ? token : blatt
       const farbe = getComputedStyle(document.documentElement).getPropertyValue(t).trim()
       if (farbe) m.content = farbe
-      // Als CSS-Variable, folgt also der Darstellung
-      document.documentElement.style.backgroundColor = `var(${t})`
-      document.body.style.backgroundColor = `var(${t})`
+      // Als CSS-Variable, folgt also der Darstellung. Mit kopf bleiben html/body hell, den roten
+      // Streifen oben schaltet data-bv-kopf vor oder zurück
+      const hg = kopf ? blatt : t
+      document.documentElement.style.backgroundColor = `var(${hg})`
+      document.body.style.backgroundColor = `var(${hg})`
+      document.documentElement.toggleAttribute('data-bv-kopf', !!kopf && oben)
     }
     // Ist der rote Kopf noch zu sehen? Höchstens einmal je Bild prüfen, nur bei einem Wechsel neu setzen
     let geplant = 0
@@ -47,7 +52,9 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       geplant = requestAnimationFrame(() => {
         geplant = 0
         const el = document.querySelector(kopf)
-        const jetzt = el ? el.getBoundingClientRect().bottom > 0 : window.scrollY < 1
+        // Füllt der rote Kopf die Uhr-Zeile noch ganz? (Höhe des Streifens = Uhr-Zeile)
+        const zeile = document.querySelector('.bv-statusleiste')?.getBoundingClientRect().height ?? 0
+        const jetzt = el ? el.getBoundingClientRect().bottom > zeile : window.scrollY < 1
         if (jetzt !== oben) { oben = jetzt; setzen() }
       })
     }
@@ -72,6 +79,7 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       else m.content = vorher
       document.documentElement.style.backgroundColor = html
       document.body.style.backgroundColor = body
+      document.documentElement.removeAttribute('data-bv-kopf')
     }
   }, [token, kopf, blatt])
 }

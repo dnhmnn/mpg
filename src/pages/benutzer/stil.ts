@@ -24,10 +24,13 @@ export const BV_CSS = `
 .bv :focus-visible{ outline: 2px solid var(--lbf-akzent); outline-offset: 2px; }
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
-/* Statusleiste: fester Streifen in der Höhe der Uhr-Zeile (nur als App vom Homebildschirm > 0) */
-/* Im Browser liegt der Streifen hinter der Seite (z-index -1): Safari 26 erkennt ihn am Rand
-   und färbt die Leiste danach, zu sehen ist er nicht — beim Scrollen also keine Linie. */
+/* Statusleiste: fester roter Streifen in der Höhe der Uhr-Zeile. Safari 26 färbt die Statusleiste
+   nach einem festen Element, das oben am Rand zuoberst liegt. Solange der rote Kopf die Uhr-Zeile
+   ganz füllt (useStatusleiste setzt data-bv-kopf an <html>), liegt der Streifen deshalb vorn; er ist
+   so rot wie der Kopf darunter und fällt nicht auf. Ist der Kopf weg, liegt er hinter der Seite
+   (z-index -1), damit beim Scrollen keine rote Kante über dem Inhalt steht. html/body bleiben hell. */
 .bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
+html[data-bv-kopf] .bv-statusleiste{ z-index: 70; }
 /* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
 @media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
 
@@ -51,12 +54,6 @@ export const BV_CSS = `
 
 /* Blatt */
 .bv-blatt{ flex: 1; background: var(--warm-bg); border-radius: 24px 24px 0 0; margin-top: -24px; position: relative;
-  /* Höher als der Bildschirm: Auch kurze Seiten scrollen wie eine lange Liste, bis der rote Kopf
-     weg ist. Erst dann wird html/body hell (useStatusleiste), und bis dahin liegt unter der
-     Safari-Leiste immer das helle Blatt. Die Reserve (120 px und der Rand unter der Home-Leiste)
-     braucht es, weil 100lvh am iPhone nicht bis ganz unten reicht: Ohne sie war kurz vor dem
-     Wegscrollen des Kopfs das Seitenende erreicht, und darunter schien das Rot durch. */
-  min-height: calc(100vh + 144px); min-height: calc(100lvh + 144px + env(safe-area-inset-bottom));
   padding: 20px max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .bv-blatt.mitleiste{ padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .bv-innen{ max-width: 760px; margin: 0 auto; }

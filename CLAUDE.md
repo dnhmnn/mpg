@@ -132,22 +132,21 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   `BV_CSS` (`src/pages/benutzer/stil.ts`) und `useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })`.
   Keinen eigenen Kopf, keine eigene Statusleisten-Lösung bauen.
 - Safari am iPhone (iOS 26) muss so aussehen wie in der Benutzerverwaltung:
-  - Die Statusleiste (Uhr, WLAN, Akku) ist dunkelrot, solange der rote Kopf zu sehen ist.
+  - Die Statusleiste (Uhr, WLAN, Akku) ist dunkelrot, solange der rote Kopf darunter liegt.
   - Beim Scrollen keine rote Linie oder Kante oben.
   - Die untere Safari-Leiste ist nie rot und bleibt durchsichtig wie in Dateien: Der Inhalt
-    scheint durch, kein deckender Streifen.
-  - Kurze Seiten verhalten sich wie lange: Das helle Blatt (`.bv-blatt`) ist höher als der
-    Bildschirm (mit Reserve über den unteren Rand hinaus), der rote Kopf scrollt also ganz weg,
-    bevor das Seitenende kommt. Sonst scheint kurz vor dem Ende das Rot unten durch.
-  - Am iPhone schon ausprobiert und verworfen: ein fester heller Streifen am unteren Rand (macht
-    die Safari-Leiste deckend) und ein Wechsel auf hellen Hintergrund, solange der rote Kopf
-    noch zu sehen ist (macht die Statusleiste hell).
-  - Ebenfalls verworfen: das Nachfedern am Seitenende abschalten (`overscroll-behavior`). Das
-    Federn bleibt, wie es ist.
-  - Ebenfalls verworfen: `html` immer hell und nur `body` rot. Safari färbt den unteren Rand nach
-    `body`; ohne den Platz unter dem Inhalt war der rote Balken unten sofort wieder da.
-  - Bleibt: Bei sehr schnellem Wischen bis ans Ende einer kurzen Seite kann unten kurz Rot
-    aufzucken (Safari federt nach, bevor die Farbe wechselt). Lange Seiten erreichen das Ende nicht.
+    scheint durch, kein deckender Streifen. Auch auf kurzen Seiten und beim schnellen Wischen.
+  - Kein Extra-Platz unter dem Inhalt.
+- So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body bleiben immer hell. Die
+  Statusleiste färbt der feste rote Streifen `.bv-statusleiste`; er liegt vorn, solange der rote
+  Kopf die Uhr-Zeile füllt (`data-bv-kopf` an `<html>`), danach hinter der Seite.
+- Am iPhone ausprobiert und verworfen (nicht noch einmal versuchen):
+  - html/body rot, solange der Kopf zu sehen ist: unten roter Balken auf kurzen Seiten; als
+    Ausgleich ein höheres Blatt (Reserve) gab viel Leerraum unter dem Inhalt.
+  - Auf hell wechseln, solange der Kopf noch zu sehen ist: Statusleiste hell.
+  - Ein fester heller Streifen am unteren Rand: Safari-Leiste deckend.
+  - Nachfedern abschalten (`overscroll-behavior`).
+  - Nur `html` hell, `body` rot: Safari färbt nach `body`, der rote Balken blieb.
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
   Scrollen und ganz unten.
 
