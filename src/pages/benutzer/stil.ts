@@ -51,10 +51,12 @@ export const BV_CSS = `
 
 /* Blatt */
 .bv-blatt{ flex: 1; background: var(--warm-bg); border-radius: 24px 24px 0 0; margin-top: -24px; position: relative;
-  /* Mindestens so hoch wie der Bildschirm (plus die 24 px unter dem Kopf): Auch kurze Seiten
-     scrollen wie eine lange Liste, bis der rote Kopf weg ist. Erst dann wird html/body hell
-     (useStatusleiste), und unter der Safari-Leiste liegt bis dahin immer das helle Blatt. */
-  min-height: calc(100vh + 24px); min-height: calc(100lvh + 24px);
+  /* Höher als der Bildschirm: Auch kurze Seiten scrollen wie eine lange Liste, bis der rote Kopf
+     weg ist. Erst dann wird html/body hell (useStatusleiste), und bis dahin liegt unter der
+     Safari-Leiste immer das helle Blatt. Die Reserve (120 px und der Rand unter der Home-Leiste)
+     braucht es, weil 100lvh am iPhone nicht bis ganz unten reicht: Ohne sie war kurz vor dem
+     Wegscrollen des Kopfs das Seitenende erreicht, und darunter schien das Rot durch. */
+  min-height: calc(100vh + 144px); min-height: calc(100lvh + 144px + env(safe-area-inset-bottom));
   padding: 20px max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .bv-blatt.mitleiste{ padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .bv-innen{ max-width: 760px; margin: 0 auto; }
