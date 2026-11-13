@@ -87,6 +87,8 @@ Der Auftragnehmer trifft geeignete technische und organisatorische Maßnahmen ge
 **Weitergabekontrolle:**
 - Alle Verbindungen verschlüsselt via TLS 1.2/1.3 (HTTPS)
 - Keine Weitergabe von Daten an Dritte ohne Weisung des Auftraggebers
+- Was ohne Netz auf einem Gerät abgelegt wird (Formulare, begonnene Protokolle), liegt dort verschlüsselt im Browser (AES-GCM), bis es gesendet oder verworfen ist; lässt ein Browser die Verschlüsselung nicht zu, liegt es unverschlüsselt im Browser, und die App zeigt das an. Der Schlüssel liegt im selben Browserprofil; gegen das Auslesen der Gerätedateien schützen Gerätesperre und Geräteverschlüsselung, für die der Auftraggeber auf seinen Geräten sorgt
+- Patientendaten (Protokolle, Nacherfassungen, Zugriffs- und Änderungsprotokolle), Einsätze, Benutzerkonten, Chat und Notizen legt die App nicht im Zwischenspeicher des Browsers ab. Der übrige Zwischenspeicher kann Namen von Mitgliedern enthalten; die App verwendet ihn höchstens 24 Stunden und löscht ihn beim Abmelden, beim Wechsel der angemeldeten Person und beim Start ohne Anmeldung
 
 **Eingabekontrolle:**
 - Protokollierung relevanter Zugriffe und Änderungen im System
@@ -104,7 +106,11 @@ Der Auftragnehmer ist berechtigt, die TOMs dem Stand der Technik entsprechend we
 
 ## § 6 — Unterauftragsverarbeiter
 
-(1) Der Auftragnehmer setzt zum Zeitpunkt des Vertragsschlusses **keine** Unterauftragsverarbeiter ein. Alle Daten werden auf dem eigenen Server des Auftragnehmers in Deutschland verarbeitet.
+(1) Der Auftragnehmer setzt zum Zeitpunkt des Vertragsschlusses für die Inhalte, die in Responda eingegeben werden, **keine** Unterauftragsverarbeiter ein. Diese Daten werden ausschließlich auf dem eigenen Server des Auftragnehmers in Deutschland verarbeitet.
+
+Die Dateien der App (Programmcode, Bilder, Schriften) liefert **Netlify, Inc.** (San Francisco, USA) aus. Dabei verarbeitet Netlify nur die technisch nötigen Verbindungsdaten der aufrufenden Geräte (IP-Adresse, Zeitpunkt, aufgerufene Datei, Browser), keine Inhalte. Eine Übermittlung dieser Verbindungsdaten in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.
+
+> Hinweis für den Betreiber (Plan Vorgänge 5.9): Ob Netlify wegen der Verbindungsdaten als Unterauftragsverarbeiter aufzuführen ist und welche Übermittlungsgrundlage gilt, ist rechtlich zu prüfen, bevor der Vertrag verwendet wird.
 
 (2) Beabsichtigt der Auftragnehmer, künftig Unterauftragsverarbeiter einzusetzen oder auszuwechseln, informiert er den Auftraggeber rechtzeitig (mindestens 4 Wochen vor Beginn). Der Auftraggeber kann gegen den Einsatz eines bestimmten Unterauftragsverarbeiters schriftlich Einspruch erheben.
 

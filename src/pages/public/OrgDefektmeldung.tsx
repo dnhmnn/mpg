@@ -5,12 +5,16 @@
 // Name frei, je nach Einstellung der Organisation. Gesendet wird nur über
 // src/lib/formular/versand.ts (Route /absenden, ohne Netz in die
 // Warteschlange, bei altem Server der alte Weg); die Maske legt nie selbst an.
+//
+// Felder nach der Einstellung der Organisation (Plan Vorgänge 4.2): Bezeichnung und
+// Hilfetext der Kernfelder, Reihenfolge und eigene Felder aus form_config.formulare.
+// Eigene Felder nur, wenn der Server sie nimmt (Feld mpg_defect_reports.eigene, `faehig`).
 
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { useOrg } from './OrgPublicLayout'
-import { PubWrap, PubSendBar, inp, lbl, ta } from './pubStyles'
+import { PubSection, PubWrap, PubSendBar, inp, lbl, ta } from './pubStyles'
 import { istAusserBetrieb } from '../../lib/mpg/zustand'
 import AbsenderFeld, { AbmeldenNachSenden, absenderAngabe, sendeKnopfText } from './absender/AbsenderFeld'
 import { warteschlangeMelden } from './absender/Warteschlange'
@@ -20,7 +24,10 @@ import { ablegenMitMeldung, sendenOderAblegen } from '../../lib/formular/versand
 import type { NeuerEintrag } from '../../lib/formular/warteschlange'
 import { absenderZeile, type AbsenderEintrag, type AbsenderModus } from '../../lib/formular/absender'
 import { ABSENDER_TEXTE, modusAusStand } from './absender/texte'
-import { BESCHREIBUNG_MAX, absenderPruefen, meldungAlt, meldungDaten, meldungPruefen } from './formularDaten'
+import { BESCHREIBUNG_MAX, absenderPruefen, eigeneAngaben, meldungAlt, meldungDaten, meldungPruefen, type EigeneEingabe } from './formularDaten'
+import { bausteine, standardKonfig, werteBereinigen } from '../../lib/formular/felder'
+import FeldEingabe from './felder/FeldEingabe'
+import { eigeneAngeboten, eigeneFelder, feldElementId, felderPruefen, fokusAuf, gruppieren, serverFeld } from './felder/pruefen'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 
@@ -35,16 +42,22 @@ const SEVERITY_CFG: Record<Severity, { label: string; desc: string; color: strin
   critical: { label: 'Kritisch', desc: 'Sicherheitsrelevanter Defekt', color: 'rgb(var(--lbf-defekt-rgb))', bg: 'rgba(var(--lbf-defekt-rgb),0.12)'  },
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, hilfe, children }: { title: string; hilfe?: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
       <div style={{ padding: '.85rem 1rem', fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
         {title}
       </div>
-      <div style={{ padding: '1rem' }}>{children}</div>
+      <div style={{ padding: '1rem' }}>
+        {hilfe ? <div style={hilfeStil}>{hilfe}</div> : null}
+        {children}
+      </div>
     </div>
   )
 }
+
+/** Hilfetext aus der Einstellung: klein in Zweitfarbe (nicht kursiv). */
+const hilfeStil: React.CSSProperties = { fontSize: 12, color: 'var(--warm-gray)', lineHeight: 1.45, margin: '0 0 10px', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400 }
 
 /** Textknopf im LBF-Stil: Akzent, fett, ohne Rahmen. */
 const textKnopf: React.CSSProperties = { background: 'none', border: 'none', padding: '6px 0', color: 'var(--lbf-akzent)', fontWeight: 700, fontSize: 13, fontFamily: 'inherit', cursor: 'pointer' }
@@ -81,6 +94,32 @@ export default function OrgDefektmeldung() {
   // Derselbe Modus, nach dem AbsenderFeld das Passwortfeld zeigt; beim alten Server gibt es keins
   const modus: AbsenderModus = alterServer ? 'frei' : modusAusStand(stand, 'defektmeldung')
 
+  // Felder nach der Einstellung; eigene nur, wenn der Server sie nimmt (sonst gingen sie verloren)
+  const konfig = standardKonfig(org.form_config, 'defektmeldung')
+  const mitEigenen = eigeneAngeboten('defektmeldung', { stand, alterServer })
+  const alleBausteine = bausteine(konfig, 'defektmeldung')
+  const bs = mitEigenen ? alleBausteine : alleBausteine.filter((b) => b.art === 'kern')
+  const eigene = eigeneFelder(bs)
+  const [werte, setWerte] = useState<Record<string, unknown>>({})
+  const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
+  function wertSetzen(id: string, w: unknown) {
+    setWerte((p) => ({ ...p, [id]: w }))
+    if (feldFehler[id]) setFeldFehler((p) => { const n = { ...p }; delete n[id]; return n })
+  }
+  function eigeneEingabe(): EigeneEingabe | undefined {
+    return eigene.length ? { version: konfig.version, werte: werteBereinigen(eigene, werte) } : undefined
+  }
+  function eigenePruefen(): boolean {
+    const p = felderPruefen(eigene, werte)
+    setFeldFehler(p.fehler)
+    if (p.erster) fokusAuf(p.erster)
+    return !p.erster
+  }
+  const kernLabel = (id: string, sonst: string) => {
+    const b = bs.find((x) => x.art === 'kern' && x.id === id)
+    return b && b.art === 'kern' ? b.label : sonst
+  }
+
   function ladeGeraete() {
     setListe('laedt')
     pb.collection('mpg_devices').getFullList<DeviceSummary>({
@@ -104,6 +143,7 @@ export default function OrgDefektmeldung() {
     if (!kennung.current) kennung.current = neueKennung()
     const angemeldetId = angabe.mitAnmeldung ? stand?.angemeldet?.id ?? '' : ''
     const absenderName = (angabe.absender?.name ?? '').trim() || (angabe.mitAnmeldung ? stand?.angemeldet?.name ?? '' : name.trim())
+    const e = eigeneEingabe()
     return {
       id: kennung.current,
       formular: 'defektmeldung',
@@ -111,8 +151,8 @@ export default function OrgDefektmeldung() {
       orgId: org.id,
       absenderName,
       angemeldetId,
-      daten: meldungDaten(selectedId, description, severity),
-      alt: meldungAlt(selectedId, description, severity, { deviceName: geraeteName.current, absender: { id: angemeldetId, name: absenderName }, orgId: org.id }),
+      daten: meldungDaten(selectedId, description, severity, e),
+      alt: meldungAlt(selectedId, description, severity, { deviceName: geraeteName.current, absender: { id: angemeldetId, name: absenderName }, orgId: org.id, eigene: e ? eigeneAngaben(eigene, e) : undefined }),
     }
   }
 
@@ -130,10 +170,12 @@ export default function OrgDefektmeldung() {
     setAblegenAnbieten(false)
     if (liste === 'laedt') { setError('Die Geräteliste lädt noch. Bitte einen Moment warten.'); return }
     // Ohne geladene Liste zählt das Gerät aus dem Link (QR): die Meldung soll nicht am Netz scheitern
-    if (!selectedId || (liste === 'ok' && !selectedDevice)) { setError('Bitte ein Gerät auswählen.'); return }
-    const pruef = meldungPruefen(meldungDaten(selectedId, description, severity))
+    if (!selectedId || (liste === 'ok' && !selectedDevice)) { setError(geraetFehlt()); return }
+    const eigeneOk = eigenePruefen()
+    const pruef = kernText(meldungPruefen(meldungDaten(selectedId, description, severity)))
       || absenderPruefen({ angemeldet, name, modus, passwort, online: navigator.onLine !== false, alterServer })
     if (pruef) { setError(pruef); return }
+    if (!eigeneOk) return
     setSending(true)
     try {
       // Ohne Liste das eine Gerät nachschlagen: Name für die Meldung, außer Betrieb genommen: nein.
@@ -155,7 +197,10 @@ export default function OrgDefektmeldung() {
       } else if (r.art === 'nicht_abgelegt') {
         setError(r.meldung)
       } else {
-        setError(r.meldung)
+        // Ein eigenes Feld, das der Server ablehnt: der Text am Feld
+        const f = serverFeld(r.feld, 'eigene')
+        if (r.grund === 'daten' && f && eigene.some((d) => d.id === f)) { setFeldFehler((p) => ({ ...p, [f]: r.meldung })); fokusAuf(f) }
+        else setError(r.meldung)
         setAblegenAnbieten(r.ablegenAnbieten)
         sperre.current = r.ablegenAnbieten ? { sekunden: r.sekunden, text: r.meldung } : null
       }
@@ -180,10 +225,12 @@ export default function OrgDefektmeldung() {
     setError('')
     setAblegenAnbieten(false)
     if (liste === 'laedt') { setError('Die Geräteliste lädt noch. Bitte einen Moment warten.'); return }
-    if (!selectedId || (liste === 'ok' && !selectedDevice)) { setError('Bitte ein Gerät auswählen.'); return }
-    const pruef = meldungPruefen(meldungDaten(selectedId, description, severity))
+    if (!selectedId || (liste === 'ok' && !selectedDevice)) { setError(geraetFehlt()); return }
+    const eigeneOk = eigenePruefen()
+    const pruef = kernText(meldungPruefen(meldungDaten(selectedId, description, severity)))
       || absenderPruefen({ angemeldet: false, name, modus: 'frei', passwort: '', online: true, alterServer })
     if (pruef) { setError(pruef); return }
+    if (!eigeneOk) return
     setPasswort('')
     geraeteName.current = selectedDevice?.name || geraeteName.current
     const angabe = absenderAngabe({ stand, formular: 'defektmeldung', anderer: true, name, passwort: '' })
@@ -192,7 +239,21 @@ export default function OrgDefektmeldung() {
     else setError(r.meldung)
   }
 
+  /** Die festen Texte der Vorprüfung mit der Bezeichnung der Organisation, wenn sie umbenannt hat. */
+  function geraetFehlt(): string {
+    const l = kernLabel('device_id', 'Gerät')
+    return l === 'Gerät' ? 'Bitte ein Gerät auswählen.' : `Bitte „${l}“ auswählen.`
+  }
+  function kernText(t: string): string {
+    if (t === 'Bitte ein Gerät auswählen.') return geraetFehlt()
+    const l = kernLabel('description', 'Beschreibung')
+    if (t === 'Bitte den Defekt beschreiben.' && l !== 'Beschreibung') return `Bitte „${l}“ ausfüllen.`
+    return t
+  }
+
   function reset() {
+    setWerte({})
+    setFeldFehler({})
     setFertig(null)
     setDescription('')
     setSeverity('medium')
@@ -255,73 +316,92 @@ export default function OrgDefektmeldung() {
       </header>
 
       <PubWrap>
-        {/* Gerät */}
-        <Card title="Gerät *">
-          <label style={lbl}>
-            Medizinprodukt auswählen
-            {liste === 'fehler' ? (
-              <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
-                <span>{selectedId ? 'Geräteliste nicht geladen. Das Gerät aus dem Link wird gemeldet.' : 'Geräteliste konnte nicht geladen werden.'}</span>
-                <button type="button" onClick={ladeGeraete} style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', fontStyle: 'normal' }}>Erneut laden</button>
-              </div>
-            ) : devices.length === 0 ? (
-              <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{liste === 'laedt' ? 'Lädt …' : 'Keine Geräte gefunden'}</div>
-            ) : (
-              <select
-                value={selectedId}
-                onChange={e => setSelectedId(e.target.value)}
-                style={{ ...inp, appearance: 'none', WebkitAppearance: 'none' }}
-              >
-                <option value="">Gerät auswählen</option>
-                {devices.map(d => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}{d.location ? ` · ${d.location}` : ''} ({d.type})
-                  </option>
-                ))}
-              </select>
-            )}
-          </label>
-        </Card>
-
-        {/* Beschreibung */}
-        <Card title="Beschreibung">
-          <label style={lbl}>
-            Was ist defekt? *
-            <textarea
-              value={description}
-              maxLength={BESCHREIBUNG_MAX}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Was genau ist defekt? Wie macht sich das Problem bemerkbar?"
-              rows={4}
-              style={ta}
-            />
-          </label>
-        </Card>
-
-        {/* Schweregrad */}
-        <Card title="Schweregrad">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-            {(Object.entries(SEVERITY_CFG) as [Severity, typeof SEVERITY_CFG[Severity]][]).map(([key, cfg]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSeverity(key)}
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 10,
-                  border: `1.5px solid ${severity === key ? cfg.color : 'var(--lbf-border)'}`,
-                  background: severity === key ? cfg.bg : 'transparent',
-                  cursor: 'pointer',
-                  fontFamily: 'inherit',
-                  textAlign: 'left' as const,
-                }}
-              >
-                <div style={{ fontWeight: 700, fontSize: 13, color: cfg.color }}>{cfg.label}</div>
-                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{cfg.desc}</div>
-              </button>
-            ))}
-          </div>
-        </Card>
+        {gruppieren(bs, 'defektmeldung').map((g, gi) => {
+          const b = g.teile[0]
+          if (g.block === 'device_id' && b.art === 'kern') {
+            return (
+              <Card key={`b-${gi}`} title={`${b.label} *`} hilfe={b.hilfe}>
+                <label style={lbl}>
+                  Medizinprodukt auswählen
+                  {liste === 'fehler' ? (
+                    <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400, display: 'flex', alignItems: 'center', gap: 10, justifyContent: 'space-between' }}>
+                      <span>{selectedId ? 'Geräteliste nicht geladen. Das Gerät aus dem Link wird gemeldet.' : 'Geräteliste konnte nicht geladen werden.'}</span>
+                      <button type="button" onClick={ladeGeraete} style={{ background: 'none', border: 'none', color: 'var(--lbf-akzent)', fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer', fontStyle: 'normal' }}>Erneut laden</button>
+                    </div>
+                  ) : devices.length === 0 ? (
+                    <div style={{ ...inp, marginTop: 6, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{liste === 'laedt' ? 'Lädt …' : 'Keine Geräte gefunden'}</div>
+                  ) : (
+                    <select
+                      id={feldElementId('device_id')}
+                      value={selectedId}
+                      onChange={e => setSelectedId(e.target.value)}
+                      style={{ ...inp, appearance: 'none', WebkitAppearance: 'none' }}
+                    >
+                      <option value="">Gerät auswählen</option>
+                      {devices.map(d => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}{d.location ? ` · ${d.location}` : ''} ({d.type})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </label>
+              </Card>
+            )
+          }
+          if (g.block === 'description' && b.art === 'kern') {
+            return (
+              <Card key={`b-${gi}`} title={b.label} hilfe={b.hilfe}>
+                <label style={lbl}>
+                  Was ist defekt? *
+                  <textarea
+                    id={feldElementId('description')}
+                    value={description}
+                    maxLength={BESCHREIBUNG_MAX}
+                    onChange={e => setDescription(e.target.value)}
+                    placeholder="Was genau ist defekt? Wie macht sich das Problem bemerkbar?"
+                    rows={4}
+                    style={ta}
+                  />
+                </label>
+              </Card>
+            )
+          }
+          if (g.block === 'severity' && b.art === 'kern') {
+            return (
+              <Card key={`b-${gi}`} title={b.label} hilfe={b.hilfe}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  {(Object.entries(SEVERITY_CFG) as [Severity, typeof SEVERITY_CFG[Severity]][]).map(([key, cfg]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSeverity(key)}
+                      style={{
+                        padding: '12px 14px',
+                        borderRadius: 10,
+                        border: `1.5px solid ${severity === key ? cfg.color : 'var(--lbf-border)'}`,
+                        background: severity === key ? cfg.bg : 'transparent',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                        textAlign: 'left' as const,
+                      }}
+                    >
+                      <div style={{ fontWeight: 700, fontSize: 13, color: cfg.color }}>{cfg.label}</div>
+                      <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{cfg.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            )
+          }
+          return (
+            <PubSection key={`g-${gi}`} title={g.titel} open>
+              {g.teile.map((t) => t.art === 'eigen' ? (
+                <FeldEingabe key={t.feld.id} feld={t.feld} wert={werte[t.feld.id]} onWert={(w) => wertSetzen(t.feld.id, w)} fehler={feldFehler[t.feld.id]} />
+              ) : null)}
+            </PubSection>
+          )
+        })}
 
         {/* Absender, zuletzt: direkt über dem Sendeknopf (4.2) */}
         <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '1rem' }}>

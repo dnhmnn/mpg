@@ -14,7 +14,8 @@ vi.mock('../pocketbase', () => ({
   },
 }))
 
-const { formConfigLesen, formConfigAendern, absenderSetzen } = await import('../formular/einstellung')
+const { formConfigLesen, formConfigAendern, absenderSetzen, standardSetzen } = await import('../formular/einstellung')
+const { standardKonfig } = await import('../formular/felder')
 const { DEFAULT_FORM_CONFIG } = await import('../../pages/public/formSchema')
 const { absenderModus } = await import('../formular/absender')
 
@@ -69,5 +70,66 @@ describe('form_config ändern, ohne zu überschreiben', () => {
 
   it('absenderSetzen: kaputtes absender wird ersetzt', () => {
     expect(absenderSetzen({ ...DEFAULT_FORM_CONFIG, absender: 'kaputt' as never }, 'patienten', 'frei').absender).toEqual({ patienten: 'frei' })
+  })
+})
+
+describe('standardSetzen: Einstellung eines Standardformulars (Plan Vorgänge 1.2)', () => {
+  const fahrzeug = { id: 'e_k3j9x0a1', typ: 'text' as const, label: 'Fahrzeug', pflicht: true }
+
+  it('schreibt normalisiert nach formulare.<formular>; andere Formulare und Schlüssel bleiben', () => {
+    const cfg = { ...DEFAULT_FORM_CONFIG, hidden_forms: ['cirs'], formulare: { cirs: { v: 1, version: 2, felder: { warum: { aus: true } }, reihenfolge: [], eigene: [] } }, fremd: 1 } as never
+    const neu = standardSetzen(cfg, 'produktausgabe', (k) => ({ ...k, eigene: [...k.eigene, fahrzeug] }))
+    expect(neu.hidden_forms).toEqual(['cirs'])
+    expect((neu as unknown as { fremd: number }).fremd).toBe(1)
+    expect(neu.formulare?.cirs).toEqual({ v: 1, version: 2, felder: { warum: { aus: true } }, reihenfolge: [], eigene: [] })
+    expect(neu.formulare?.produktausgabe).toEqual({
+      v: 1, version: 1, felder: {}, reihenfolge: ['einsatz', 'datum', 'positionen', 'lager_id', 'e_k3j9x0a1'], eigene: [fahrzeug],
+    })
+    // Gelesen ergibt dasselbe
+    expect(standardKonfig(neu, 'produktausgabe')).toEqual(neu.formulare?.produktausgabe)
+  })
+
+  it('Version: zählt bei eigenen Feldern und bei aus/Pflicht der Kernfelder, nicht bei Bezeichnung, Hilfetext, Reihenfolge', () => {
+    let cfg = standardSetzen(DEFAULT_FORM_CONFIG, 'cirs', (k) => k)
+    const v = () => standardKonfig(cfg, 'cirs').version
+    expect(v()).toBe(0)
+    const schritte: [string, (k: ReturnType<typeof standardKonfig>) => ReturnType<typeof standardKonfig>, number][] = [
+      ['eigenes Feld anlegen', (k) => ({ ...k, eigene: [fahrzeug] }), 1],
+      ['Bezeichnung des eigenen Felds', (k) => ({ ...k, eigene: [{ ...fahrzeug, label: 'Wagen' }] }), 0],
+      ['Hilfetext des eigenen Felds', (k) => ({ ...k, eigene: [{ ...fahrzeug, label: 'Wagen', hilfe: 'Funkrufname' }] }), 0],
+      ['Pflicht des eigenen Felds', (k) => ({ ...k, eigene: [{ ...k.eigene[0], pflicht: false }] }), 1],
+      ['Art des eigenen Felds', (k) => ({ ...k, eigene: [{ ...k.eigene[0], typ: 'auswahl', optionen: ['RTW 1', 'RTW 2'] }] }), 1],
+      ['Optionen', (k) => ({ ...k, eigene: [{ ...k.eigene[0], optionen: ['RTW 1', 'RTW 2', 'KTW'] }] }), 1],
+      ['eigenes Feld ausblenden', (k) => ({ ...k, eigene: [{ ...k.eigene[0], aus: true }] }), 1],
+      ['Kernfeld umbenennen', (k) => ({ ...k, felder: { ...k.felder, ort: { label: 'Wo?' } } }), 0],
+      ['Kernfeld Hilfetext', (k) => ({ ...k, felder: { ...k.felder, ort: { label: 'Wo?', hilfe: 'Halle, Fahrzeug' } } }), 0],
+      ['Kernfeld ausblenden', (k) => ({ ...k, felder: { ...k.felder, ort: { ...k.felder.ort, aus: true } } }), 1],
+      ['Kernfeld Pflicht', (k) => ({ ...k, felder: { ...k.felder, warum: { pflicht: true } } }), 1],
+      ['Reihenfolge', (k) => ({ ...k, reihenfolge: [...k.reihenfolge].reverse() }), 0],
+      ['Unzulässiges (aus an festem Feld)', (k) => ({ ...k, felder: { ...k.felder, was: { aus: true } } }), 0],
+      ['eigenes Feld entfernen', (k) => ({ ...k, eigene: [], reihenfolge: k.reihenfolge.filter((x) => x !== fahrzeug.id) }), 1],
+    ]
+    for (const [name, fn, plus] of schritte) {
+      const vorher = v()
+      cfg = standardSetzen(cfg, 'cirs', fn)
+      expect([name, v()]).toEqual([name, vorher + plus])
+    }
+    // Unzulässiges fiel beim Schreiben weg
+    expect(standardKonfig(cfg, 'cirs').felder.was).toBeUndefined()
+  })
+
+  it('kaputte Einstellung: von der Vorgabe aus; das Original bleibt unberührt', () => {
+    const kaputt = { ...DEFAULT_FORM_CONFIG, formulare: 'kaputt' } as never
+    const neu = standardSetzen(kaputt, 'defektmeldung', (k) => ({ ...k, eigene: [fahrzeug] }))
+    expect(neu.formulare?.defektmeldung?.eigene).toEqual([fahrzeug])
+    const cfg = { ...DEFAULT_FORM_CONFIG, formulare: { cirs: { v: 1, version: 1, felder: {}, reihenfolge: [], eigene: [] } } } as never
+    standardSetzen(cfg, 'cirs', (k) => { k.eigene.push(fahrzeug); return k })
+    expect((cfg as { formulare: { cirs: { eigene: unknown[] } } }).formulare.cirs.eigene).toEqual([])
+  })
+
+  it('mit formConfigAendern: auf dem frischen Stand, eine fremde Änderung bleibt', async () => {
+    server.form_config = { hidden_forms: ['patienten'], formulare: { cirs: { felder: { ort: { aus: true } } } } }
+    await formConfigAendern('org1', (c) => standardSetzen(c, 'produktausgabe', (k) => ({ ...k, felder: { einsatz: { label: 'Auftragsnummer' } } })))
+    expect(server.form_config).toMatchObject({ hidden_forms: ['patienten'], formulare: { cirs: { felder: { ort: { aus: true } } }, produktausgabe: { felder: { einsatz: { label: 'Auftragsnummer' } }, version: 0 } } })
   })
 })

@@ -7,8 +7,11 @@ vi.mock('../pocketbase', () => ({ pb: { baseURL: 'https://api.test', authStore: 
 
 const {
   ausgabeDaten, ausgabeAlt, ausgabeTitel, ausgefuellt, meldungDaten, meldungAlt, schwere, datumGueltig, ausgabePruefen, meldungPruefen, absenderPruefen,
+  eigeneAngaben, cirsFehler, cirsLeer, cirsPruefen, cirsSatz, CIRS_KERN,
   EINSATZ_MAX, MENGE_MAX, POSITIONEN_MAX, BESCHREIBUNG_MAX,
 } = await import('../../pages/public/formularDaten')
+const { bausteine, standardKonfig, werteBereinigen } = await import('../formular/felder')
+const { eigeneFelder } = await import('../../pages/public/felder/pruefen')
 const { altSatz } = await import('../formular/versand')
 type Warteeintrag = import('../formular/warteschlange').Warteeintrag
 
@@ -207,6 +210,122 @@ describe('Vorprüfung in der Maske passt zum Server (datenPruefen)', () => {
     for (const t of texte) {
       expect(t).not.toBe('')
       expect(t).not.toMatch(GEDANKENSTRICHE)
+    }
+  })
+})
+
+// ── Eigene Felder der Organisation (Plan Vorgänge 1.3, 4.2) ─────────────────
+
+describe('eigene Felder in Produktausgabe und Defektmeldung', () => {
+  const cfg = {
+    formulare: {
+      produktausgabe: {
+        v: 1, version: 3, felder: { einsatz: { label: 'Auftragsnummer' } }, reihenfolge: [],
+        eigene: [
+          { id: 'e_k3j9x0a1', typ: 'text', label: 'Fahrzeug', pflicht: true },
+          { id: 'e_schicht1', typ: 'auswahl', label: 'Schicht', optionen: ['Tag', 'Nacht'] },
+          { id: 'e_aus00001', typ: 'text', label: 'Alt', aus: true },
+        ],
+      },
+      defektmeldung: { v: 1, version: 1, felder: {}, reihenfolge: [], eigene: [{ id: 'e_ort00001', typ: 'text', label: 'Standort' }] },
+    },
+  }
+  const kp = standardKonfig(cfg, 'produktausgabe')
+  const felder = eigeneFelder(bausteine(kp, 'produktausgabe'))
+  const roh = { e_k3j9x0a1: '  RTW 1 ', e_schicht1: 'Nacht', e_aus00001: 'verworfen', e_fremd: 'x' }
+  const eigene = { version: kp.version, werte: werteBereinigen(felder, roh) }
+
+  it('ohne eigene Felder bleibt daten wie bisher (kein Schlüssel eigene)', () => {
+    expect('eigene' in ausgabeDaten('E-1', '2026-10-31', 'l1', POS)).toBe(false)
+    expect('eigene' in meldungDaten('d1', 'x', 'low')).toBe(false)
+  })
+  it('daten.eigene = { version, werte } (bereinigt, ohne Ausgeblendetes); der Server nimmt es an und baut den Schnappschuss', () => {
+    const d = ausgabeDaten('E-1', '2026-10-31', 'l1', POS, eigene)
+    expect(d.eigene).toEqual({ version: 3, werte: { e_k3j9x0a1: 'RTW 1', e_schicht1: 'Nacht' } })
+    const bestand = { orte: { l1: { organization_id: 'org1', archiviert: false, name: 'RTW 1' } }, artikel: { i1: { organization_id: 'org1', archiviert: false, name: 'Mull', unit: 'Stk' }, i3: { organization_id: 'org1', archiviert: false, name: 'H', unit: 'Paar' } } }
+    const server = R.datenPruefenMitEigenen('produktausgabe', d, bestand, { orgId: 'org1', formConfig: cfg })
+    expect(server.ok).toBe(true)
+    // Der alte Weg legt dieselben Angaben ab wie der Server
+    expect(eigeneAngaben(felder, eigene)).toEqual(server.daten.eigene)
+    // Pflichtfeld leer bei aktueller Fassung: der Server lehnt ab, die Maske hätte es vorher gesagt
+    const leer = R.datenPruefenMitEigenen('produktausgabe', ausgabeDaten('E-1', '2026-10-31', 'l1', POS, { version: 3, werte: {} }), bestand, { orgId: 'org1', formConfig: cfg })
+    expect(leer).toMatchObject({ ok: false, feld: 'eigene.e_k3j9x0a1', text: 'Bitte „Fahrzeug“ ausfüllen.' })
+  })
+  it('ausgabeAlt und meldungAlt legen die Angaben mit Schnappschuss ab; altSatz behält sie', () => {
+    const angaben = eigeneAngaben(felder, eigene)
+    expect(angaben.felder.map((f) => f.id)).toEqual(['e_k3j9x0a1', 'e_schicht1'])
+    const alt = ausgabeAlt('E-1', '2026-10-31', 'l1', POS, { lagerName: 'RTW 1', absender: { id: '', name: 'Anna Berg' }, orgId: 'org1', eigene: angaben })
+    expect((alt.payload as Record<string, unknown>).eigene).toEqual(angaben)
+    const e: Warteeintrag = {
+      v: 2, id: 'abcdefghij01234', formular: 'produktausgabe', orgCode: 'wache1', orgId: 'org1', angelegt: '2026-10-31T12:00:00.000Z',
+      absenderName: 'Anna Berg', angemeldetId: '', versuche: 0, daten: ausgabeDaten('E-1', '2026-10-31', 'l1', POS, eigene), alt,
+    }
+    expect((altSatz(e).satz.payload as Record<string, unknown>).eigene).toEqual(angaben)
+    const km = standardKonfig(cfg, 'defektmeldung')
+    const mf = eigeneFelder(bausteine(km, 'defektmeldung'))
+    const me = { version: km.version, werte: werteBereinigen(mf, { e_ort00001: 'Wache Nord' }) }
+    const md = meldungDaten('d1', 'Akku', 'high', me)
+    expect(md.eigene).toEqual({ version: 1, werte: { e_ort00001: 'Wache Nord' } })
+    const malt = meldungAlt('d1', 'Akku', 'high', { deviceName: 'C3', absender: { id: '', name: 'A B' }, orgId: 'org1', eigene: eigeneAngaben(mf, me) })
+    expect(malt.eigene).toEqual({ v: 1, version: 1, felder: [{ id: 'e_ort00001', typ: 'text', label: 'Standort' }], werte: { e_ort00001: 'Wache Nord' } })
+    const satz = altSatz({ v: 2, id: 'abcdefghij01234', formular: 'defektmeldung', orgCode: 'w', orgId: 'org1', angelegt: '', absenderName: 'A B', angemeldetId: '', versuche: 0, daten: md, alt: malt }).satz
+    expect(satz.eigene).toEqual(malt.eigene)
+  })
+  it('eine Kopie, nie das Objekt der Maske', () => {
+    const werte = { e_k3j9x0a1: 'RTW 1' }
+    const d = ausgabeDaten('E-1', '2026-10-31', 'l1', POS, { version: 1, werte })
+    werte.e_k3j9x0a1 = 'anders'
+    expect(d.eigene?.werte.e_k3j9x0a1).toBe('RTW 1')
+  })
+})
+
+describe('CIRS: Kernfelder nach Einstellung, eigene Felder', () => {
+  const cfg = {
+    formulare: {
+      cirs: {
+        v: 1, version: 2, reihenfolge: [],
+        felder: { warum: { aus: true }, kategorie: { aus: true }, ort: { pflicht: false }, folgen: { pflicht: true, label: 'Was folgte?' } },
+        eigene: [{ id: 'e_einsatz1', typ: 'janein', label: 'Im Einsatz?', pflicht: true }],
+      },
+    },
+  }
+  const k = standardKonfig(cfg, 'cirs')
+  const bs = bausteine(k, 'cirs')
+
+  it('Pflicht nach Einstellung; „Was ist passiert?“ immer; ausgeblendet nie; Datum geprüft', () => {
+    const m = { ...cirsLeer('2026-11-07'), schwere: 'mittel', was: 'Kabel lose', folgen: '' }
+    expect(cirsPruefen(m, bs)).toEqual({ feld: 'folgen', text: 'Bitte „Was folgte?“ ausfüllen.' })
+    expect(cirsPruefen({ ...m, folgen: 'Nichts' }, bs)).toBeNull()
+    expect(cirsPruefen({ ...m, folgen: 'Nichts', was: ' ' }, bs)).toEqual({ feld: 'was', text: 'Bitte „Was ist passiert?“ ausfüllen.' })
+    expect(cirsPruefen({ ...m, folgen: 'Nichts', datum: '2026-02-30' }, bs)?.feld).toBe('datum')
+    expect(cirsPruefen({ ...m, folgen: 'Nichts', datum: '' }, bs)?.feld).toBe('datum')
+    // Alle Fehler auf einmal, in Formularfolge (die Maske zeigt jeden am Feld)
+    expect(Object.keys(cirsFehler({ ...m, was: '', datum: '2026-02-30' }, bs))).toEqual(['datum', 'was', 'folgen'])
+    expect(cirsFehler({ ...m, folgen: 'Nichts' }, bs)).toEqual({})
+    // ohne Einstellung: wie bisher Datum, Ort, Kategorie, Schweregrad, Was Pflicht
+    const vorgabe = bausteine(standardKonfig(null, 'cirs'), 'cirs')
+    expect(cirsPruefen({ ...cirsLeer('2026-11-07'), was: 'x' }, vorgabe)?.feld).toBe('ort')
+  })
+  it('cirsSatz: ausgeblendete Kernfelder leer, Texte getrimmt, eigene als { version, werte }; der Hook baut daraus die Angaben', () => {
+    const m = { ...cirsLeer('2026-11-07'), ort: ' Halle ', kategorie: 'material', warum: 'versteckt', was: ' Kabel lose ', folgen: 'Nichts' }
+    const werte = werteBereinigen(eigeneFelder(bs), { e_einsatz1: true })
+    const satz = cirsSatz(m, bs, { orgId: 'org1', heute: '2026-11-07', eigene: { version: k.version, werte } })
+    const p = satz.payload as Record<string, unknown>
+    expect(Object.keys(p).sort()).toEqual([...CIRS_KERN, 'eigene'].sort())
+    expect(p).toMatchObject({ ort: 'Halle', kategorie: '', warum: '', was: 'Kabel lose', datum: '2026-11-07', eigene: { version: 2, werte: { e_einsatz1: true } } })
+    expect(satz).toMatchObject({ title: 'CIRS-Meldung (07.11.2026)', status: 'offen', organization_id: 'org1' })
+    const hook = R.cirsEigene(cfg, p.eigene)
+    expect(hook).toEqual({ ok: true, eigene: { v: 1, version: 2, felder: [{ id: 'e_einsatz1', typ: 'janein', label: 'Im Einsatz?', pflicht: true }], werte: { e_einsatz1: true } } })
+    // ohne eigene Felder kein Schlüssel; mit Kategorie der alte Titel
+    const ohne = cirsSatz({ ...cirsLeer('2026-11-07'), kategorie: 'material', was: 'x' }, bausteine(standardKonfig(null, 'cirs'), 'cirs'), { orgId: 'o', heute: '2026-11-07' })
+    expect('eigene' in (ohne.payload as object)).toBe(false)
+    expect(ohne.title).toBe('CIRS: material (07.11.2026)')
+  })
+  it('Texte ohne Gedankenstriche', () => {
+    const t = [cirsPruefen({ ...cirsLeer(''), was: 'x' }, bs)?.text, cirsPruefen({ ...cirsLeer('x'), was: 'x', folgen: 'y' }, bs)?.text, cirsPruefen({ ...cirsLeer('2026-11-07'), was: 'x'.repeat(4001), folgen: 'y' }, bs)?.text]
+    for (const x of t) {
+      expect(x).toBeTruthy()
+      expect(x).not.toMatch(GEDANKENSTRICHE)
     }
   })
 })

@@ -13,7 +13,16 @@
 // Entwurf abgesendet oder verworfen wird — auf einem geteilten Tablet also
 // möglicherweise für den Nächsten sichtbar. Deshalb drei Dinge: der Entwurf
 // sagt beim Öffnen, dass er da ist, er lässt sich mit einem Griff verwerfen,
-// und nach einem Tag verfällt er von selbst.
+// und nach einem Tag verfällt er: Er wird nicht mehr angeboten und beim nächsten
+// Start der App vom Gerät genommen (entwuerfeAufraeumen in src/lib/tresor.ts).
+// Ohne Anmeldung eines Mitglieds setzt die Maske ihn nicht von selbst ein, sondern
+// fragt erst, ohne Patientendaten zu zeigen (EntwurfFrage.tsx, Review F7).
+// Er liegt verschlüsselt: die Maske schreibt über `entwurfSpeicher()` in den Tresor
+// (AES-GCM in IndexedDB), eine Suche in den Browser-Dateien findet keine Klartexte.
+// Wer die Dateien des Browsers selbst ausliest, findet dort allerdings auch den
+// Schlüssel (siehe tresor.ts). Geht es im Browser nicht, bleibt es bei localStorage.
+
+import { entwurfNachruecken, ENTWURF_FRIST_MS as FRIST, tresorWeiche } from '../../../lib/tresor'
 
 export type Entwurf = {
   /** Wann zuletzt geschrieben wurde — ISO. */
@@ -22,13 +31,28 @@ export type Entwurf = {
 }
 
 /** Nach dieser Zeit gilt ein Entwurf als vergessen und wird nicht mehr angeboten. */
-export const ENTWURF_FRIST_MS = 24 * 60 * 60 * 1000
+export const ENTWURF_FRIST_MS = FRIST
 
 /** Ein Speicher, wie der Browser ihn stellt — nur das, was hier gebraucht wird. */
 export type Speicher = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
 export function entwurfSchluessel(orgCode: string): string {
   return `doku_entwurf_${orgCode}`
+}
+
+/** Kein Speicher auf dem Gerät (privates Fenster, gesperrt): Lesen gibt nichts, Schreiben scheitert hörbar. */
+const OHNE_SPEICHER: Speicher = {
+  getItem: () => null,
+  setItem: () => { throw new Error('Kein Speicher auf diesem Gerät.') },
+  removeItem: () => {},
+}
+
+/**
+ * Der Speicher des Entwurfs: der Tresor (verschlüsselt), sonst localStorage, sonst einer, der
+ * nichts behält (dann meldet `entwurfSchreiben` false und die Maske sagt es).
+ */
+export function entwurfSpeicher(): Speicher {
+  return tresorWeiche() ?? OHNE_SPEICHER
 }
 
 /** Ob überhaupt etwas drinsteht, das sich zu behalten lohnt. */
@@ -84,9 +108,24 @@ export function entwurfLesen(speicher: Speicher, orgCode: string, jetzt = new Da
   const werte = (e as Entwurf).werte
   if (typeof stand !== 'string' || !werte || typeof werte !== 'object') return null
   const alter = jetzt.getTime() - new Date(stand).getTime()
-  if (!Number.isFinite(alter) || alter < 0 || alter > ENTWURF_FRIST_MS) return null
+  if (!Number.isFinite(alter)) return null
+  // Auch ein Zeitpunkt in der Zukunft (Uhr des Geräts verstellt) verfällt nach der Frist
+  if (Math.abs(alter) > ENTWURF_FRIST_MS) {
+    // Verfallen: nicht mehr anbieten und vom Gerät nehmen (Patientendaten liegen nicht länger als nötig)
+    try { speicher.removeItem(entwurfSchluessel(orgCode)) } catch { /* bleibt verfallen, wird nie angeboten */ }
+    return null
+  }
   if (!lohntSichzuBehalten(werte)) return null
   return { stand, werte }
+}
+
+/**
+ * Den Entwurf suchen: Liegt unter dem Schlüssel nichts, rückt ein beim Öffnen des Tresors
+ * aufgehobener nach (Review F6). Dann wie entwurfLesen.
+ */
+export function entwurfFinden(speicher: Speicher, orgCode: string, jetzt = new Date()): Entwurf | null {
+  try { entwurfNachruecken(entwurfSchluessel(orgCode)) } catch { /* ohne */ }
+  return entwurfLesen(speicher, orgCode, jetzt)
 }
 
 export function entwurfVerwerfen(speicher: Speicher, orgCode: string): void {

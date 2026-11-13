@@ -46,6 +46,16 @@ interface AccessLogEntry {
 
 const TEN_YEARS_MS = 10 * 365.25 * 24 * 60 * 60 * 1000
 
+/**
+ * Text, wenn die Protokolle nicht geladen werden konnten. Protokolle liegen nie im
+ * Zwischenspeicher des Browsers (vite.config.ts, NetworkOnly für `patients`): ohne Netz
+ * soll klar dastehen, warum die Liste leer bleibt.
+ */
+function ladeFehlerText(e: any): string {
+  if (e?.status === 0 && !e?.isAbort) return 'Ohne Netz lassen sich die Protokolle gerade nicht laden.'
+  return 'Fehler beim Laden: ' + (e?.message ?? '')
+}
+
 /** Absender eines Protokolls (null: alter Satz ohne Angabe). */
 function absenderVon(pat: Patient): AbsenderEintrag | null {
   return absenderLesen(pat as unknown as Record<string, unknown>, 'patients')
@@ -117,10 +127,20 @@ export default function Patienten() {
 
   const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
+  /** Offene Protokolle ohne Netz nicht geladen (sie liegen nie im Zwischenspeicher, vite.config.ts). */
+  const [ohneNetz, setOhneNetz] = useState(false)
   const [archivLoaded, setArchivLoaded] = useState(false)
   const [auditLoaded, setAuditLoaded] = useState(false)
 
   useEffect(() => { if (user) loadOpenData() }, [user])
+
+  // Kommt das Netz zurück, die offenen Protokolle gleich neu laden
+  useEffect(() => {
+    if (!ohneNetz) return
+    const wieder = () => { void loadOpenData() }
+    window.addEventListener('online', wieder)
+    return () => window.removeEventListener('online', wieder)
+  }, [ohneNetz])
 
   useEffect(() => {
     if (!user) return
@@ -167,8 +187,10 @@ export default function Patienten() {
       setPatients(stillOpen)
       setFreigegebenPatients(freiList as unknown as Patient[])
       setNacherfassungen(nachs as unknown as Nacherfassung[])
+      setOhneNetz(false)
     } catch (e: any) {
-      flash('Fehler beim Laden: ' + e.message, 'error')
+      if (e?.status === 0 && !e?.isAbort) setOhneNetz(true)
+      flash(ladeFehlerText(e), 'error')
     } finally {
       setDataLoading(false)
     }
@@ -186,7 +208,7 @@ export default function Patienten() {
       setArchivedNach(aNachs as unknown as Nacherfassung[])
       setArchivLoaded(true)
     } catch (e: any) {
-      flash('Fehler beim Laden: ' + e.message, 'error')
+      flash(ladeFehlerText(e), 'error')
     }
   }
 
@@ -883,8 +905,14 @@ export default function Patienten() {
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
                 <polyline points="14 2 14 8 20 8"/>
               </svg>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', marginBottom: '6px', fontSize: 15 }}>Keine offenen Protokolle</div>
-              <div>Neue Protokolle werden hier angezeigt, sobald sie eingereicht werden.</div>
+              {ohneNetz ? (
+                <div data-probe="patienten-ohne-netz">Ohne Netz lassen sich die Protokolle gerade nicht laden. Sie erscheinen wieder, sobald Netz da ist.</div>
+              ) : (
+                <>
+                  <div style={{ fontStyle: 'italic', fontWeight: 700, color: 'var(--lbf-text)', marginBottom: '6px', fontSize: 15 }}>Keine offenen Protokolle</div>
+                  <div>Neue Protokolle werden hier angezeigt, sobald sie eingereicht werden.</div>
+                </>
+              )}
             </div>
           ) : (
             <>
@@ -1253,6 +1281,7 @@ export default function Patienten() {
         <DetailsModal
           doc={detailsDoc}
           type={detailsType}
+          formConfig={(user?.organization as { form_config?: unknown } | undefined)?.form_config}
           onClose={() => setShowDetails(false)}
           onEdit={detailsType === 'patient' && currentPatient && (currentPatient as any).status !== 'archiviert'
             // Wartet es auf die Unterschrift des Absenders, lehnt der Server jede Änderung ab

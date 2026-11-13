@@ -1,24 +1,24 @@
 // Eine CIRS-Meldung mit ihrer Bearbeitung: Phase, Meldung, Bewertung,
-// Zuständigkeit und Frist, Maßnahmen, Verlauf.
+// Zuständigkeit und Frist, Maßnahmen, Verlauf. Als ganze Seite über der Liste,
+// im Stil der Benutzerverwaltung (Bauplan Vorgänge, 3.9): dunkelroter Kopf mit
+// Zurück, Flächen mit Zeilen, Status als Wort.
 //
-// Jeder Schritt wird sofort gespeichert — auf dem frisch gelesenen Stand
+// Jeder Schritt wird sofort gespeichert, auf dem frisch gelesenen Stand
 // (siehe speichern in CirsVerwaltung). Was der Melder geschrieben hat, ist
-// hier nur zu lesen.
+// hier nur zu lesen, auch seine eigenen Felder.
 
 import { useEffect, useRef, useState } from 'react'
-import type React from 'react'
 import {
   HAEUFIGKEITEN, KATEGORIEN, PHASEN, SCHWEREGRADE,
-  bewertungSetzen, fallPrioritaet, fristSetzen, fristUeberschritten, geltendeKategorie, gueltigerTag, inTagen,
-  istAbgeschlossen, istUeberfaellig, kategorieName, massnahmeAbhaken, massnahmeHinzufuegen, massnahmeStreichen,
-  notizHinzufuegen, offeneMassnahmen, phaseName, phaseSetzen, prioritaet, schwereName, tagText, tageBisFrist,
+  bewertungSetzen, fallPrioritaet, fristSetzen, geltendeKategorie, gueltigerTag, inTagen,
+  istAbgeschlossen, istUeberfaellig, kategorieText, massnahmeAbhaken, massnahmeHinzufuegen, massnahmeStreichen,
+  notizHinzufuegen, offeneMassnahmen, phaseName, phaseSetzen, prioritaet, schwereText, tagText,
   zeitText, zustaendigSetzen,
   type Bearbeitung, type Bewertung, type CirsFall, type Haeufigkeit, type Person, type Phase, type Schritt, type Schwere,
-  type VerlaufArt,
 } from '../../lib/cirs'
-import {
-  Marke, PhaseMarke, PrioMarke, SCHRIFT, abschnittKopf, eingabe, feldName, karte, knopfLeise, knopfRand, knopfVollWenn, pik,
-} from './cirsTeile'
+import AngabenAnsicht from '../../components/AngabenAnsicht'
+import { Abschnitt, Feld, Hinweis, Leer, Notiz, Seite, VgIcon, WahlZeilen, Zeile } from './bausteine'
+import { FristText, KastenHaken, phaseKlasse, prioText, type KernAnzeige } from './cirsTeile'
 
 export type Bearbeiten = (schritt: (b: Bearbeitung, s: Schritt) => Bearbeitung) => Promise<boolean>
 
@@ -32,69 +32,33 @@ interface Props {
   fehler: string
   onSchliessen: () => void
   onDrucken: (mitMelder: boolean) => void
+  /** Bezeichnungen der Kernfelder nach der Einstellung und der eigenen Felder (Rückfall ohne Schnappschuss). */
+  anzeige?: { kern: Record<string, KernAnzeige>; eigene: Record<string, string> }
 }
 
-const VERLAUF_ZEICHEN: Record<VerlaufArt, React.ReactNode> = {
-  phase: <><polyline points="9 18 15 12 9 6" /></>,
-  zustaendig: <><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a7 7 0 0 1 16 0v1" /></>,
-  frist: <><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></>,
-  bewertung: <><path d="M12 2l3.1 6.3 6.9 1-5 4.9 1.2 6.8L12 17.8 5.8 21l1.2-6.8-5-4.9 6.9-1z" /></>,
-  massnahme: <><polyline points="9 11 12 14 22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>,
-  notiz: <><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></>,
-  abschluss: <><polyline points="20 6 9 17 4 12" /></>,
-}
-
-function Abschnitt({ titel, rechts, children }: { titel: string; rechts?: React.ReactNode; children: React.ReactNode }) {
+function Angabe({ name, wert, leer = 'Nicht angegeben' }: { name: string; wert?: string; leer?: string }) {
   return (
-    <section style={{ marginBottom: 22 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-        <div style={abschnittKopf}>{titel}</div>
-        {rechts}
-      </div>
-      <div style={{ ...karte, padding: '14px 16px' }}>{children}</div>
-    </section>
-  )
-}
-
-function Angabe({ name, wert }: { name: string; wert?: string }) {
-  return (
-    <div style={{ minWidth: 0 }}>
-      <div style={feldName}>{name}</div>
-      <div style={{ fontSize: 14, color: wert ? 'var(--lbf-text)' : 'var(--warm-gray)', marginTop: 2, overflowWrap: 'anywhere' }}>{wert || '—'}</div>
+    <div className="vg-angabe">
+      <span>{name}</span>
+      <p className={wert ? undefined : 'leer'}>{wert || leer}</p>
     </div>
   )
 }
 
-function Absatz({ name, wert }: { name: string; wert?: string }) {
-  if (!wert) return null
-  return (
-    <div style={{ marginTop: 12 }}>
-      <div style={feldName}>{name}</div>
-      <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginTop: 3, lineHeight: 1.55, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{wert}</div>
-    </div>
-  )
-}
-
-function FristText({ frist, heute, zu }: { frist: string; heute: Date; zu: boolean }) {
-  const tage = tageBisFrist(frist, heute)
-  const ueber = !zu && fristUeberschritten(frist, heute)
-  const rest = zu || tage === null ? '' : tage === 0 ? ' · heute fällig' : tage > 0 ? ` · in ${tage} Tag${tage === 1 ? '' : 'en'}` : ` · seit ${-tage} Tag${tage === -1 ? '' : 'en'} überfällig`
-  return <span style={{ color: ueber ? 'var(--lbf-fehler-text-2)' : 'inherit', fontWeight: ueber ? 700 : 'inherit' }}>{tagText(frist)}{rest}</span>
-}
-
-export default function CirsDetail({ fall, personen, ich, heute, speichern, beschaeftigt, fehler, onSchliessen, onDrucken }: Props) {
+export default function CirsDetail({ fall, personen, ich, heute, speichern, beschaeftigt, fehler, onSchliessen, onDrucken, anzeige }: Props) {
   const { meldung: m, bearbeitung: b } = fall
   const zu = istAbgeschlossen(b.phase)
   const offene = offeneMassnahmen(b)
+  const kern = (id: string, vorgabe: string): KernAnzeige => anzeige?.kern[id] ?? { label: vorgabe, sichtbar: true }
 
-  // Abschließen braucht einen Vermerk — erst fragen, dann speichern
+  // Abschließen braucht einen Vermerk: erst fragen, dann speichern
   const [schliessenAls, setSchliessenAls] = useState<Phase | null>(null)
   const [vermerk, setVermerk] = useState('')
   const [melderZeigen, setMelderZeigen] = useState(false)
   const [entwurf, setEntwurf] = useState<Bewertung>(b.bewertung)
   const [massnahme, setMassnahme] = useState({ text: '', verantwortlich: '', frist: '' })
   const [notiz, setNotiz] = useState('')
-  // Zuständig: die Auswahl kurz stehen lassen, bevor sie gespeichert wird — mit
+  // Zuständig: die Auswahl kurz stehen lassen, bevor sie gespeichert wird; mit
   // den Pfeiltasten wählt man sonst jede Person auf dem Weg dorthin mit aus
   const [zustaendigEntwurf, setZustaendigEntwurf] = useState(b.zustaendig?.id ?? '')
   useEffect(() => { setZustaendigEntwurf(b.zustaendig?.id ?? '') }, [fall.id, b.zustaendig?.id])
@@ -140,7 +104,7 @@ export default function CirsDetail({ fall, personen, ich, heute, speichern, besc
   const entwurfPrio = prioritaet(entwurf.schwere || gemeldeteSchwere, entwurf.haeufigkeit)
 
   async function phaseWaehlen(p: Phase) {
-    if (p === b.phase || beschaeftigt) return
+    if (p === b.phase || beschaeftigt) { setSchliessenAls(null); return }
     if (istAbgeschlossen(p)) { setSchliessenAls(p); return }
     setSchliessenAls(null)
     await speichern((x, s) => phaseSetzen(x, p, s))
@@ -173,11 +137,14 @@ export default function CirsDetail({ fall, personen, ich, heute, speichern, besc
   }
 
   const verlauf = [...b.verlauf].reverse()
+  const ueberfaellig = istUeberfaellig(fall, heute)
+  const prio = fallPrioritaet(fall)
+  const unterTitel = [phaseName(b.phase), prioText(prio), ueberfaellig ? 'überfällig' : ''].filter(Boolean).join(' · ')
 
-  // Ein Dialog: Fokus auf "Zurück", Escape schließt, Tab bleibt im Dialog
-  const zurueckKnopf = useRef<HTMLButtonElement>(null)
+  // Ein Dialog: Fokus auf Zurück, Escape schließt, Tab bleibt im Dialog
   const dialog = useRef<HTMLDivElement>(null)
-  useEffect(() => { zurueckKnopf.current?.focus() }, [fall.id])
+  useEffect(() => { dialog.current?.querySelector<HTMLButtonElement>('.bv-kopf button')?.focus() }, [fall.id])
+  useEffect(() => { dialog.current?.scrollTo?.(0, 0) }, [fall.id])
   useEffect(() => {
     const taste = (e: KeyboardEvent) => {
       if (e.key === 'Tab' && dialog.current) {
@@ -197,261 +164,263 @@ export default function CirsDetail({ fall, personen, ich, heute, speichern, besc
     return () => window.removeEventListener('keydown', taste)
   }, [onSchliessen, schliessenAls])
 
+  const kurzeAngaben = [
+    { id: 'datum', vorgabe: 'Ereignis am', wert: tagText(m.datum) },
+    { id: 'ort', vorgabe: 'Ort', wert: m.ort },
+    { id: 'kategorie', vorgabe: 'Kategorie', wert: m.kategorie ? kategorieText(m.kategorie) : '' },
+    { id: 'schwere', vorgabe: 'Schweregrad', wert: m.schwere ? schwereText(m.schwere) : '' },
+  ].map((x) => ({ ...x, k: kern(x.id, x.vorgabe) }))
+    // Ausgeblendete Felder nur, wenn die Meldung trotzdem einen Wert hat (vor dem Ausblenden gemeldet)
+    .filter((x) => x.wert || x.k.sichtbar)
+  const texte = [
+    { id: 'was', vorgabe: 'Was ist passiert?', wert: m.was },
+    { id: 'warum', vorgabe: 'Warum ist es passiert?', wert: m.warum },
+    { id: 'folgen', vorgabe: 'Folgen', wert: m.folgen },
+    { id: 'vorschlag', vorgabe: 'Vorschlag zur Vermeidung', wert: m.vorschlag },
+  ].filter((x) => x.wert)
+
+  const druckKnopf = (
+    <button type="button" className="bv-rund hell" aria-label="Drucken" title="Drucken" onClick={drucken}>
+      <VgIcon n="drucken" />
+    </button>
+  )
+
   return (
-    <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="cirs-detail-titel"
-      style={{ position: 'fixed', inset: 0, background: 'var(--warm-bg)', zIndex: 300, overflowY: 'auto', fontFamily: SCHRIFT }}>
-      {/* Kopf */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', padding: 'calc(env(safe-area-inset-top) + 12px) 16px 12px', display: 'flex', alignItems: 'center', gap: 12, position: 'sticky', top: 0, zIndex: 10 }}>
-        <button ref={zurueckKnopf} onClick={onSchliessen} aria-label="Zurück zur Liste" style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: 'var(--lbf-akzent)', display: 'flex' }}>
-          {pik(<polyline points="15 18 9 12 15 6" />)}
-        </button>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div id="cirs-detail-titel" style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{fall.nummer}</div>
-          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)' }}>Eingegangen {zeitText(fall.eingang)}</div>
-        </div>
-        {beschaeftigt && <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Speichern…</div>}
-        <button onClick={drucken} style={{ ...knopfRand, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px' }}>
-          {pik(<><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></>, 15)}
-          Drucken
-        </button>
-      </div>
+    <div ref={dialog} role="dialog" aria-modal="true" aria-label={`CIRS-Meldung ${fall.nummer}`} className="ein-overlay">
+      <Seite titel={fall.nummer} unter={`Eingegangen ${zeitText(fall.eingang)}`} zurueck={onSchliessen} zurueckLabel="Zurück zur Liste" rechts={druckKnopf}>
+        {fehler ? <div role="alert" className="ein-meldung fehler"><span>{fehler}</span></div> : null}
 
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '18px 16px calc(40px + env(safe-area-inset-bottom))' }}>
-        {fehler && (
-          <div role="alert" style={{ background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text)', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, marginBottom: 16 }}>{fehler}</div>
-        )}
-
-        {/* Titelzeile */}
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', lineHeight: 1.25 }}>
-            {kategorieName(geltendeKategorie(fall))}{m.ort ? ` · ${m.ort}` : ''}
-          </div>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-            <PhaseMarke phase={b.phase} />
-            <PrioMarke prio={fallPrioritaet(fall)} />
-            {istUeberfaellig(fall, heute) && <Marke grund="var(--lbf-fehler-grund)" schrift="var(--lbf-fehler-text)">Überfällig</Marke>}
-          </div>
+        <div className="bv-flaeche">
+          <Zeile
+            titel={`${kategorieText(geltendeKategorie(fall))}${m.ort ? ` · ${m.ort}` : ''}`}
+            unter={unterTitel}
+            rechts={beschaeftigt ? <span className="vg-rechts">Speichert…</span> : undefined}
+          />
         </div>
 
         {/* Phase */}
-        <Abschnitt titel="Phase">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {PHASEN.map((p) => {
-              const aktiv = p.wert === b.phase
-              return (
-                <button key={p.wert} onClick={() => phaseWaehlen(p.wert)} disabled={beschaeftigt} aria-pressed={aktiv}
-                  style={{
-                    padding: '8px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: aktiv ? 'default' : 'pointer',
-                    border: aktiv ? '1px solid transparent' : '1px solid rgba(var(--lbf-rot-rgb),0.18)',
-                    background: aktiv ? 'var(--lbf-akzent-grund)' : 'none', color: aktiv ? '#fff' : 'var(--lbf-akzent)',
-                  }}>{p.name}</button>
-              )
-            })}
-          </div>
-          {schliessenAls && (
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: '0.5px solid var(--lbf-border-light)' }}>
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={feldName}>{schliessenAls === 'abgeschlossen' ? 'Ergebnis — was wurde gelernt oder geändert?' : 'Warum besteht kein Handlungsbedarf?'}</span>
-                <textarea value={vermerk} onChange={(e) => setVermerk(e.target.value)} rows={3} autoFocus
-                  placeholder={schliessenAls === 'abgeschlossen' ? 'z.B. Checkliste ergänzt, Team in der Dienstbesprechung informiert' : 'z.B. Einzelfall, bereits geregelt durch …'}
-                  style={{ ...eingabe, resize: 'vertical', lineHeight: 1.5 }} />
-              </label>
-              {schliessenAls === 'abgeschlossen' && offene.length > 0 && (
-                <div style={{ fontSize: 12, color: 'var(--lbf-warn-text)', marginTop: 6 }}>
-                  {offene.length} Maßnahme{offene.length === 1 ? ' ist' : 'n sind'} noch offen.
-                </div>
-              )}
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <button onClick={() => setSchliessenAls(null)} style={knopfRand}>Abbrechen</button>
-                <button onClick={abschliessen} disabled={!vermerk.trim() || beschaeftigt}
-                  style={{ ...knopfVollWenn(!!vermerk.trim() && !beschaeftigt), flex: 1 }}>
+        <Abschnitt titel="Phase" />
+        <WahlZeilen<Phase>
+          label="Phase" wert={schliessenAls ?? b.phase} disabled={beschaeftigt}
+          optionen={PHASEN.map((p) => ({ wert: p.wert, titel: p.name }))}
+          onWahl={(p) => { void phaseWaehlen(p) }}
+        />
+        {schliessenAls ? (
+          <div className="bv-flaeche vg-abstand">
+            <div className="ein-innen">
+              <Feld label={schliessenAls === 'abgeschlossen' ? 'Ergebnis: Was wurde gelernt oder geändert?' : 'Warum besteht kein Handlungsbedarf?'} erst
+                hinweis={schliessenAls === 'abgeschlossen' && offene.length > 0 ? `${offene.length} Maßnahme${offene.length === 1 ? ' ist' : 'n sind'} noch offen.` : undefined}>
+                <textarea className="bv-eingabe" value={vermerk} onChange={(e) => setVermerk(e.target.value)} rows={3} autoFocus
+                  placeholder={schliessenAls === 'abgeschlossen' ? 'z. B. Checkliste ergänzt, Team in der Dienstbesprechung informiert' : 'z. B. Einzelfall, bereits geregelt durch …'} />
+              </Feld>
+              <div className="ein-knoepfe">
+                <button type="button" className="bv-knopf" onClick={() => setSchliessenAls(null)}>Abbrechen</button>
+                <button type="button" className="bv-knopf voll weit" onClick={() => { void abschliessen() }} disabled={!vermerk.trim() || beschaeftigt}>
                   {phaseName(schliessenAls)}
                 </button>
               </div>
             </div>
-          )}
-          {zu && b.abschluss && !schliessenAls && (
-            <div style={{ marginTop: 14, borderLeft: '3px solid #16a34a', background: 'var(--lbf-ok-grund)', borderRadius: '0 8px 8px 0', padding: '10px 12px' }}>
-              <div style={{ ...feldName, color: 'var(--lbf-ok-text)' }}>Ergebnis</div>
-              <div style={{ fontSize: 14, color: 'var(--lbf-text)', marginTop: 3, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{b.abschluss.text}</div>
-              <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 4 }}>{zeitText(b.abschluss.am)}{b.abschluss.von ? ` · ${b.abschluss.von}` : ''}</div>
-            </div>
-          )}
-        </Abschnitt>
+          </div>
+        ) : null}
+        {zu && b.abschluss && !schliessenAls ? (
+          <div className="vg-abstand">
+            <Notiz titel="Ergebnis">
+              <p className="ein-ergebnis">{b.abschluss.text}</p>
+              <p>{zeitText(b.abschluss.am)}{b.abschluss.von ? ` · ${b.abschluss.von}` : ''}</p>
+            </Notiz>
+          </div>
+        ) : null}
 
         {/* Meldung */}
-        <Abschnitt titel="Meldung" rechts={<span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>wie gemeldet</span>}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 12 }}>
-            <Angabe name="Ereignis am" wert={tagText(m.datum)} />
-            <Angabe name="Ort" wert={m.ort} />
-            <Angabe name="Kategorie" wert={m.kategorie ? kategorieName(m.kategorie) : undefined} />
-            <Angabe name="Schweregrad" wert={m.schwere ? schwereName(m.schwere) : undefined} />
-          </div>
-          <Absatz name="Was ist passiert?" wert={m.was} />
-          <Absatz name="Warum ist es passiert?" wert={m.warum} />
-          <Absatz name="Folgen" wert={m.folgen} />
-          <Absatz name="Vorschlag zur Vermeidung" wert={m.vorschlag} />
-          {(m.melder_name || m.melder_kontakt) && (
-            <div style={{ marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--lbf-border-light)' }}>
-              {melderZeigen ? (
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-                  <Angabe name="Melder" wert={m.melder_name} />
-                  <Angabe name="Kontakt" wert={m.melder_kontakt} />
-                  <button onClick={() => setMelderZeigen(false)} style={knopfLeise}>Verbergen</button>
-                </div>
-              ) : (
-                <button onClick={() => setMelderZeigen(true)} style={knopfLeise}>Melder hat Namen oder Kontakt angegeben — anzeigen</button>
-              )}
-            </div>
-          )}
-        </Abschnitt>
+        <Abschnitt titel="Meldung" rechts="wie gemeldet" />
+        <div className="bv-flaeche">
+          {kurzeAngaben.map((x) => <Angabe key={x.id} name={x.k.label} wert={x.wert} />)}
+          {texte.map((x) => <Angabe key={x.id} name={kern(x.id, x.vorgabe).label} wert={x.wert} />)}
+          {(m.melder_name || m.melder_kontakt) ? (
+            melderZeigen ? (
+              <>
+                <Angabe name="Melder" wert={m.melder_name} />
+                <Angabe name="Kontakt" wert={m.melder_kontakt} />
+                <Zeile titel="Angaben zum Melder verbergen" art="akzent" onClick={() => setMelderZeigen(false)} />
+              </>
+            ) : (
+              <Zeile titel="Angaben zum Melder anzeigen" unter="Der Melder hat Namen oder Kontakt angegeben." art="akzent" onClick={() => setMelderZeigen(true)} />
+            )
+          ) : null}
+        </div>
+        {fall.eigene ? (
+          <>
+            <h3 className="bv-gruppe">Weitere Angaben</h3>
+            <AngabenAnsicht angaben={fall.eigene} bezeichnung={anzeige?.eigene} nurAusgefuellt aelterTitel="Aus einer früheren Fassung des Formulars" />
+          </>
+        ) : null}
 
         {/* Bewertung */}
-        <Abschnitt titel="Bewertung" rechts={<PrioMarke prio={entwurfPrio} />}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12 }}>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={feldName}>Kategorie</span>
-              <select value={entwurf.kategorie ?? ''} onChange={(e) => setEntwurf((x) => ({ ...x, kategorie: e.target.value || undefined }))} style={eingabe}>
-                <option value="">Wie gemeldet ({kategorieName(m.kategorie)})</option>
-                {KATEGORIEN.map((k) => <option key={k.wert} value={k.wert}>{k.name}</option>)}
-              </select>
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={feldName}>Schweregrad</span>
-              <select value={entwurf.schwere ?? ''} onChange={(e) => setEntwurf((x) => ({ ...x, schwere: (e.target.value || undefined) as Schwere | undefined }))} style={eingabe}>
-                <option value="">Wie gemeldet ({schwereName(m.schwere)})</option>
-                {SCHWEREGRADE.map((s) => <option key={s.wert} value={s.wert}>{s.name} — {s.lang}</option>)}
-              </select>
-            </label>
-            <label style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={feldName}>Häufigkeit</span>
-              <select value={entwurf.haeufigkeit ?? ''} onChange={(e) => setEntwurf((x) => ({ ...x, haeufigkeit: (e.target.value || undefined) as Haeufigkeit | undefined }))} style={eingabe}>
-                <option value="">Nicht eingeschätzt</option>
-                {HAEUFIGKEITEN.map((h) => <option key={h.wert} value={h.wert}>{h.name}</option>)}
-              </select>
-            </label>
-          </div>
-          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 10, lineHeight: 1.5 }}>
-            Die Priorität ergibt sich aus Schweregrad und Häufigkeit. Die Angaben des Melders bleiben daneben erhalten.
-          </div>
-          {bewertungGeaendert && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-              <button onClick={() => setEntwurf(b.bewertung)} style={knopfRand}>Verwerfen</button>
-              <button onClick={() => speichern((x, s) => bewertungSetzen(x, entwurf, s))} disabled={beschaeftigt} style={{ ...knopfVollWenn(!beschaeftigt), flex: 1 }}>Bewertung übernehmen</button>
+        <Abschnitt titel="Bewertung" rechts={prioText(entwurfPrio) || undefined} />
+        <div className="bv-flaeche">
+          <div className="ein-innen">
+            <div className="ein-raster" style={{ marginTop: -12 }}>
+              <Feld label="Kategorie">
+                <div className="bv-auswahl">
+                  <select className="bv-eingabe" value={entwurf.kategorie ?? ''} onChange={(e) => setEntwurf((x) => ({ ...x, kategorie: e.target.value || undefined }))}>
+                    <option value="">{`Wie gemeldet (${kategorieText(m.kategorie)})`}</option>
+                    {KATEGORIEN.map((k) => <option key={k.wert} value={k.wert}>{k.name}</option>)}
+                  </select>
+                  <VgIcon n="runter" className="bv-klein" />
+                </div>
+              </Feld>
+              <Feld label="Schweregrad">
+                <div className="bv-auswahl">
+                  <select className="bv-eingabe" value={entwurf.schwere ?? ''} onChange={(e) => setEntwurf((x) => ({ ...x, schwere: (e.target.value || undefined) as Schwere | undefined }))}>
+                    <option value="">{`Wie gemeldet (${schwereText(m.schwere)})`}</option>
+                    {SCHWEREGRADE.map((s) => <option key={s.wert} value={s.wert}>{`${s.name}, ${s.lang}`}</option>)}
+                  </select>
+                  <VgIcon n="runter" className="bv-klein" />
+                </div>
+              </Feld>
+              <Feld label="Häufigkeit">
+                <div className="bv-auswahl">
+                  <select className="bv-eingabe" value={entwurf.haeufigkeit ?? ''} onChange={(e) => setEntwurf((x) => ({ ...x, haeufigkeit: (e.target.value || undefined) as Haeufigkeit | undefined }))}>
+                    <option value="">Nicht eingeschätzt</option>
+                    {HAEUFIGKEITEN.map((h) => <option key={h.wert} value={h.wert}>{h.name}</option>)}
+                  </select>
+                  <VgIcon n="runter" className="bv-klein" />
+                </div>
+              </Feld>
             </div>
-          )}
-        </Abschnitt>
+            {bewertungGeaendert ? (
+              <div className="ein-knoepfe">
+                <button type="button" className="bv-knopf" onClick={() => setEntwurf(b.bewertung)}>Verwerfen</button>
+                <button type="button" className="bv-knopf voll weit" onClick={() => speichern((x, s) => bewertungSetzen(x, entwurf, s))} disabled={beschaeftigt}>Bewertung übernehmen</button>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <Hinweis>Die Priorität ergibt sich aus Schweregrad und Häufigkeit. Die Angaben des Melders bleiben daneben erhalten.</Hinweis>
 
         {/* Zuständigkeit und Frist */}
-        <Abschnitt titel="Zuständigkeit und Frist">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label htmlFor="cirs-zustaendig" style={feldName}>Zuständig</label>
-              <select id="cirs-zustaendig" value={zustaendigEntwurf}
-                onChange={(e) => zustaendigWaehlen(e.target.value)}
-                onBlur={() => { if (zuweisenUhr.current !== undefined) zuweisen(zustaendigEntwurf) }} style={eingabe}>
-                <option value="">Niemand</option>
-                {b.zustaendig && !personen.some((p) => p.id === b.zustaendig!.id) && <option value={b.zustaendig.id}>{b.zustaendig.name}</option>}
-                {personen.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-              {ich && b.zustaendig?.id !== ich.id && (
-                <button onClick={() => { window.clearTimeout(zuweisenUhr.current); zuweisenUhr.current = undefined; speichern((x, s) => zustaendigSetzen(x, ich, s)) }} disabled={beschaeftigt} style={{ ...knopfLeise, alignSelf: 'flex-start' }}>Mir zuweisen</button>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <label htmlFor="cirs-frist" style={feldName}>Frist</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <input id="cirs-frist" type="date" value={fristEntwurf} disabled={beschaeftigt}
+        <Abschnitt titel="Zuständigkeit und Frist" />
+        <div className="bv-flaeche">
+          <div className="ein-innen">
+            <Feld label="Zuständig" erst>
+              <div className="bv-auswahl">
+                <select className="bv-eingabe" id="cirs-zustaendig" value={zustaendigEntwurf}
+                  onChange={(e) => zustaendigWaehlen(e.target.value)}
+                  onBlur={() => { if (zuweisenUhr.current !== undefined) zuweisen(zustaendigEntwurf) }}>
+                  <option value="">Niemand</option>
+                  {b.zustaendig && !personen.some((p) => p.id === b.zustaendig!.id) && <option value={b.zustaendig.id}>{b.zustaendig.name}</option>}
+                  {personen.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                <VgIcon n="runter" className="bv-klein" />
+              </div>
+            </Feld>
+            {ich && b.zustaendig?.id !== ich.id ? (
+              <button type="button" className="vg-textknopf" disabled={beschaeftigt}
+                onClick={() => { window.clearTimeout(zuweisenUhr.current); zuweisenUhr.current = undefined; speichern((x, s) => zustaendigSetzen(x, ich, s)) }}>
+                Mir zuweisen
+              </button>
+            ) : null}
+          </div>
+          <div className="ein-innen">
+            <Feld label="Frist" erst fehler={fristTaugt ? undefined : 'Kein gültiger Tag.'}
+              hinweis={b.frist ? <FristText frist={b.frist} heute={heute} zu={zu} /> : undefined}>
+              <div className="bv-reihe">
+                <input className={`bv-eingabe${fristTaugt ? '' : ' fehler'}`} id="cirs-frist" type="date" value={fristEntwurf} disabled={beschaeftigt}
                   onChange={(e) => setFristEntwurf(e.target.value)} onBlur={fristUebernehmen}
-                  onKeyDown={(e) => { if (e.key === 'Enter') fristUebernehmen() }}
-                  style={{ ...eingabe, flex: 1, width: 'auto', borderColor: fristTaugt ? undefined : 'var(--lbf-fehler-text-2)' }} />
-                {fristGeaendert && (
-                  <button onMouseDown={(e) => e.preventDefault()} onClick={fristUebernehmen} disabled={!fristTaugt || beschaeftigt}
-                    style={{ ...knopfVollWenn(fristTaugt && !beschaeftigt), padding: '8px 12px' }}>Übernehmen</button>
-                )}
+                  onKeyDown={(e) => { if (e.key === 'Enter') fristUebernehmen() }} />
+                {fristGeaendert ? (
+                  <button type="button" className="bv-knopf" onMouseDown={(e) => e.preventDefault()} onClick={fristUebernehmen} disabled={!fristTaugt || beschaeftigt}>Übernehmen</button>
+                ) : null}
               </div>
-              {!fristTaugt && <div style={{ fontSize: 12, color: 'var(--lbf-fehler-text-2)' }}>Kein gültiger Tag.</div>}
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {[7, 14, 30].map((t) => (
-                  <button key={t} onClick={() => speichern((x, s) => fristSetzen(x, inTagen(heute, t), s))} disabled={beschaeftigt} style={knopfLeise}>+{t} Tage</button>
-                ))}
-                {b.frist && <button onClick={() => speichern((x, s) => fristSetzen(x, null, s))} disabled={beschaeftigt} style={{ ...knopfLeise, color: 'var(--warm-gray)', background: 'none' }}>Keine</button>}
-              </div>
-              {b.frist && <div style={{ fontSize: 12, color: 'var(--warm-gray)' }}><FristText frist={b.frist} heute={heute} zu={zu} /></div>}
+            </Feld>
+            <div className="ein-knoepfe">
+              {[7, 14, 30].map((t) => (
+                <button key={t} type="button" className="bv-knopf" onClick={() => speichern((x, s) => fristSetzen(x, inTagen(heute, t), s))} disabled={beschaeftigt}>{`In ${t} Tagen`}</button>
+              ))}
+              {b.frist ? <button type="button" className="bv-knopf" onClick={() => speichern((x, s) => fristSetzen(x, null, s))} disabled={beschaeftigt}>Keine Frist</button> : null}
             </div>
           </div>
-        </Abschnitt>
+        </div>
 
         {/* Maßnahmen */}
-        <Abschnitt titel="Maßnahmen" rechts={b.massnahmen.length ? <span style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)' }}>{b.massnahmen.length - offene.length} von {b.massnahmen.length} erledigt</span> : undefined}>
-          {b.massnahmen.length === 0 && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12 }}>Noch keine Maßnahmen.</div>}
+        <Abschnitt titel="Maßnahmen" rechts={b.massnahmen.length ? `${b.massnahmen.length - offene.length} von ${b.massnahmen.length} erledigt` : undefined} />
+        <div className="bv-flaeche">
+          {b.massnahmen.length === 0 ? <Leer>Noch keine Maßnahmen.</Leer> : null}
           {b.massnahmen.map((x) => {
             const erledigt = !!x.erledigtAm
+            const unter = [
+              x.verantwortlich,
+              x.frist ? <span key="f">Frist <FristText frist={x.frist} heute={heute} zu={erledigt || zu} /></span> : null,
+              erledigt ? `erledigt ${zeitText(x.erledigtAm)}${x.erledigtVon ? `, ${x.erledigtVon}` : ''}` : null,
+            ].filter(Boolean)
             return (
-              <div key={x.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '10px 0', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
-                <button onClick={() => speichern((y, s) => massnahmeAbhaken(y, x.id, !erledigt, s))} disabled={beschaeftigt}
-                  aria-label={`${erledigt ? 'Wieder öffnen' : 'Erledigt'}: ${x.text}`} title={erledigt ? 'Als offen markieren' : 'Als erledigt abhaken'} aria-pressed={erledigt}
-                  style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1,
-                    border: erledigt ? 'none' : '1.5px solid rgba(var(--lbf-rot-rgb),0.3)', background: erledigt ? '#16a34a' : 'none', color: '#fff' }}>
-                  {erledigt && pik(<polyline points="20 6 9 17 4 12" />, 14)}
+              <div key={x.id} className="bv-z">
+                <button type="button" role="checkbox" aria-checked={erledigt} className="ein-haken" disabled={beschaeftigt}
+                  aria-label={`${erledigt ? 'Wieder öffnen' : 'Erledigt'}: ${x.text}`} title={erledigt ? 'Als offen markieren' : 'Als erledigt abhaken'}
+                  onClick={() => speichern((y, s) => massnahmeAbhaken(y, x.id, !erledigt, s))}>
+                  <span className="bv-kasten"><KastenHaken /></span>
                 </button>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: erledigt ? 'var(--warm-gray)' : 'var(--lbf-text)', textDecoration: erledigt ? 'line-through' : 'none', overflowWrap: 'anywhere' }}>{x.text}</div>
-                  <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>
-                    {x.verantwortlich}
-                    {x.frist && <>{x.verantwortlich ? ' · ' : ''}Frist <FristText frist={x.frist} heute={heute} zu={erledigt || zu} /></>}
-                    {erledigt && <>{x.verantwortlich || x.frist ? ' · ' : ''}erledigt {zeitText(x.erledigtAm)}{x.erledigtVon ? `, ${x.erledigtVon}` : ''}</>}
-                  </div>
-                </div>
-                {!erledigt && (
-                  <button onClick={() => { if (window.confirm(`Maßnahme „${x.text}" streichen?`)) speichern((y, s) => massnahmeStreichen(y, x.id, s)) }}
-                    disabled={beschaeftigt} aria-label={`Streichen: ${x.text}`}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', padding: 4, display: 'flex' }}>
-                    {pik(<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>, 15)}
+                <span className="bv-tx">
+                  <b className={`ein-lang${erledigt ? ' ein-durch' : ''}`}>{x.text}</b>
+                  {unter.length ? <small>{unter.map((u, i) => <span key={i}>{i ? ' · ' : ''}{u}</span>)}</small> : null}
+                </span>
+                {!erledigt ? (
+                  <button type="button" className="ein-klein" disabled={beschaeftigt} aria-label={`Streichen: ${x.text}`}
+                    onClick={() => { if (window.confirm(`Maßnahme „${x.text}“ streichen?`)) speichern((y, s) => massnahmeStreichen(y, x.id, s)) }}>
+                    <VgIcon n="kreuz" className="bv-klein" />
                   </button>
-                )}
+                ) : null}
               </div>
             )
           })}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-            <input value={massnahme.text} onChange={(e) => setMassnahme((x) => ({ ...x, text: e.target.value }))} disabled={beschaeftigt}
-              onKeyDown={(e) => { if (e.key === 'Enter') massnahmeAnlegen() }}
-              placeholder="Neue Maßnahme, z.B. Checkliste um O2-Druck ergänzen" style={eingabe} />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <input value={massnahme.verantwortlich} onChange={(e) => setMassnahme((x) => ({ ...x, verantwortlich: e.target.value }))}
-                placeholder="Verantwortlich" list="cirs-personen" style={{ ...eingabe, flex: '2 1 160px', width: 'auto' }} />
-              <input type="date" value={massnahme.frist} onChange={(e) => setMassnahme((x) => ({ ...x, frist: e.target.value }))}
-                aria-label="Frist der Maßnahme" style={{ ...eingabe, flex: '1 1 140px', width: 'auto' }} />
-              <button onClick={massnahmeAnlegen} disabled={!massnahme.text.trim() || beschaeftigt}
-                style={{ ...knopfVollWenn(!!massnahme.text.trim() && !beschaeftigt), flex: '1 1 110px' }}>Anlegen</button>
+        </div>
+        <div className="bv-flaeche vg-abstand">
+          <div className="ein-innen">
+            <Feld label="Neue Maßnahme" erst>
+              <input className="bv-eingabe" value={massnahme.text} onChange={(e) => setMassnahme((x) => ({ ...x, text: e.target.value }))} disabled={beschaeftigt}
+                onKeyDown={(e) => { if (e.key === 'Enter') void massnahmeAnlegen() }}
+                placeholder="z. B. Checkliste um O2-Druck ergänzen" />
+            </Feld>
+            <div className="ein-raster">
+              <Feld label="Verantwortlich" zusatz="freiwillig">
+                <input className="bv-eingabe" value={massnahme.verantwortlich} onChange={(e) => setMassnahme((x) => ({ ...x, verantwortlich: e.target.value }))} list="cirs-personen" />
+              </Feld>
+              <Feld label="Frist der Maßnahme" zusatz="freiwillig">
+                <input className="bv-eingabe" type="date" value={massnahme.frist} onChange={(e) => setMassnahme((x) => ({ ...x, frist: e.target.value }))} />
+              </Feld>
             </div>
             <datalist id="cirs-personen">{personen.map((p) => <option key={p.id} value={p.name} />)}</datalist>
+            <div className="ein-knoepfe">
+              <button type="button" className="bv-knopf voll weit" onClick={() => { void massnahmeAnlegen() }} disabled={!massnahme.text.trim() || beschaeftigt}>Maßnahme anlegen</button>
+            </div>
           </div>
-        </Abschnitt>
+        </div>
 
         {/* Verlauf */}
-        <Abschnitt titel="Verlauf">
-          <div style={{ display: 'flex', gap: 8, marginBottom: verlauf.length ? 14 : 0 }}>
-            <textarea value={notiz} onChange={(e) => setNotiz(e.target.value)} rows={2} placeholder="Notiz für den Verlauf, z.B. Rücksprache mit der Wachleitung"
-              style={{ ...eingabe, resize: 'vertical', lineHeight: 1.5, flex: 1 }} />
-            <button onClick={notizAnlegen} disabled={!notiz.trim() || beschaeftigt}
-              style={{ ...knopfVollWenn(!!notiz.trim() && !beschaeftigt), alignSelf: 'flex-end' }}>Notieren</button>
+        <Abschnitt titel="Verlauf" />
+        <div className="bv-flaeche">
+          <div className="ein-innen">
+            <Feld label="Notiz für den Verlauf" erst>
+              <textarea className="bv-eingabe" value={notiz} onChange={(e) => setNotiz(e.target.value)} rows={2} placeholder="z. B. Rücksprache mit der Wachleitung" />
+            </Feld>
+            <div className="ein-knoepfe">
+              <button type="button" className="bv-knopf voll" onClick={() => { void notizAnlegen() }} disabled={!notiz.trim() || beschaeftigt}>Notieren</button>
+            </div>
           </div>
-          {verlauf.length === 0 && <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 12 }}>Noch nichts bearbeitet.</div>}
+        </div>
+        <div className="bv-flaeche vg-abstand">
+          {verlauf.length === 0 ? <Leer>Noch nichts bearbeitet.</Leer> : null}
           {verlauf.map((e) => (
-            <div key={e.id} style={{ display: 'flex', gap: 10, padding: '8px 0', borderTop: '0.5px solid var(--lbf-border-light)' }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: e.art === 'abschluss' ? 'var(--lbf-ok-grund)' : 'rgba(var(--lbf-rot-rgb),0.07)', color: e.art === 'abschluss' ? 'var(--lbf-ok-text)' : 'var(--lbf-akzent)' }}>
-                {pik(VERLAUF_ZEICHEN[e.art] ?? VERLAUF_ZEICHEN.notiz, 13)}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, color: 'var(--lbf-text)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', fontWeight: e.art === 'notiz' ? 400 : 600 }}>{e.text}</div>
-                <div style={{ fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 1 }}>{zeitText(e.am)} · {e.von}</div>
-              </div>
+            <div key={e.id} className="bv-z">
+              <span className="bv-tx">
+                <b className={`ein-lang${e.art === 'notiz' ? ' ein-normal' : ''}`}>{e.text}</b>
+                <small>{zeitText(e.am)}{e.von ? ` · ${e.von}` : ''}</small>
+              </span>
+              {e.art === 'abschluss' ? <span className={phaseKlasse('abgeschlossen')}>Ergebnis</span> : null}
             </div>
           ))}
-        </Abschnitt>
-      </div>
+        </div>
+      </Seite>
     </div>
   )
 }

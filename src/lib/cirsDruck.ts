@@ -7,7 +7,7 @@
 
 import { escapeHtml } from './aelrdDruck'
 import {
-  fallPrioritaet, fristUeberschritten, geltendeKategorie, geltendeSchwere, haeufigkeitName, istAbgeschlossen, istUeberfaellig, kategorieName,
+  eigeneZeilen, fallPrioritaet, fristUeberschritten, geltendeKategorie, geltendeSchwere, haeufigkeitName, istAbgeschlossen, istUeberfaellig, kategorieName,
   phaseName, schwereName, tagText, zeitText,
   type Auswertung, type CirsFall,
 } from './cirs'
@@ -67,8 +67,10 @@ function absatz(name: string, wert?: string): string {
 }
 
 /** Eine Meldung mit allem, was zu ihr gehört. */
-export function cirsSeite(f: CirsFall, optionen: { mitMelder?: boolean; gedruckt: Gedruckt }): string {
+export function cirsSeite(f: CirsFall, optionen: { mitMelder?: boolean; gedruckt: Gedruckt; bezeichnung?: Record<string, string> }): string {
   const { meldung: m, bearbeitung: b } = f
+  // Eigene Felder der Organisation, wie gemeldet (Bezeichnung aus dem Schnappschuss)
+  const eigene = eigeneZeilen(f, optionen.bezeichnung)
   const heute = optionen.gedruckt.am
   const prio = fallPrioritaet(f)
   const melder = optionen.mitMelder && (m.melder_name || m.melder_kontakt)
@@ -95,8 +97,8 @@ export function cirsSeite(f: CirsFall, optionen: { mitMelder?: boolean; gedruckt
 <dl class="raster">
   ${zeile('Datum', tagText(m.datum))}
   ${zeile('Ort', m.ort)}
-  ${zeile('Kategorie (gemeldet)', kategorieName(m.kategorie))}
-  ${zeile('Schweregrad (gemeldet)', schwereName(m.schwere))}
+  ${zeile('Kategorie (gemeldet)', m.kategorie ? kategorieName(m.kategorie) : '')}
+  ${zeile('Schweregrad (gemeldet)', m.schwere ? schwereName(m.schwere) : '')}
 </dl>
 
 <h2>Beschreibung des Melders</h2>
@@ -105,6 +107,8 @@ ${absatz('Warum ist es passiert?', m.warum)}
 ${absatz('Folgen', m.folgen)}
 ${absatz('Vorschlag zur Vermeidung', m.vorschlag)}
 ${melder ? `<dl class="raster">${zeile('Melder', m.melder_name)}${zeile('Kontakt', m.melder_kontakt)}</dl>` : ''}
+${eigene.length ? `<h2>Weitere Angaben</h2>
+${eigene.map((x) => absatz(x.label, x.text)).join('')}` : ''}
 
 <h2>Bewertung und Zuständigkeit</h2>
 <dl class="raster">

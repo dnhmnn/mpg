@@ -416,6 +416,12 @@ onRecordUpdateRequest((e) => {
     for (const f of fest) {
       try { e.record.set(f, alt.getString(f)) } catch (err) { /* Feld fehlt */ }
     }
+    // Eigene Angaben (JSON, setzt nur formular.pb.js beim Absenden) bleiben, wie gemeldet
+    let mitEigenen = false
+    try { mitEigenen = !!e.record.collection().fields.getByName("eigene") } catch (err) { mitEigenen = false }
+    if (mitEigenen) {
+      try { e.record.set("eigene", alt.get("eigene")) } catch (err) { /* Feld ohne Wert */ }
+    }
   }
   e.next()
 }, "mpg_defect_reports")

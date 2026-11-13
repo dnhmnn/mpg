@@ -189,3 +189,32 @@ describe('Texte ohne Gedankenstriche', () => {
     for (const n of [0, 1, 2]) expect(besatzungFusszeile(n)).not.toMatch(GEDANKENSTRICH)
   })
 })
+
+describe('Eigene Formulare: Absender nach der Vorlage (Plan Vorgänge 5.3, F6)', () => {
+  const angemeldet = stand('frei', { id: 'u1', name: 'Anna Berg' })
+
+  it('Modus der Vorlage hat Vorrang vor dem Stand', () => {
+    expect(modusAusStand(stand('frei'), 'eigen', 'passwort')).toBe('passwort')
+    expect(modusAusStand(stand('passwort'), 'eigen', 'frei')).toBe('frei')
+    expect(modusAusStand(stand('passwort'), 'eigen')).toBe('frei')
+    expect(modusAusStand(stand('passwort'), 'eigen', 'anonym')).toBe('frei')
+  })
+
+  it('anonym: nie Token, nie Name, nie Passwort, keine Vorprüfung, Knopf ohne Namen', () => {
+    expect(absenderAngabe({ stand: angemeldet, formular: 'eigen', anderer: false, name: 'Anna Berg', passwort: 'pw', modus: 'anonym' })).toEqual({ mitAnmeldung: false, absender: null })
+    expect(sendetAngemeldet(angemeldet, false, 'anonym')).toBe(false)
+    expect(vorDemSenden({ stand: stand('passwort'), alterServer: false, formular: 'eigen', anderer: false, name: '', passwort: '', online: true, modus: 'anonym' })).toBe('')
+    expect(sendeKnopfText({ stand: angemeldet, anderer: false, modus: 'anonym' })).toBe('Absenden')
+  })
+
+  it('Passwort und frei wie bei den Standardformularen; angemeldete Mitglieder werden erkannt', () => {
+    expect(absenderAngabe({ stand: stand('frei'), formular: 'eigen', anderer: false, name: ' Ida Imker ', passwort: 'pw', modus: 'passwort' })).toEqual({ mitAnmeldung: false, absender: { name: 'Ida Imker', passwort: 'pw' } })
+    expect(absenderAngabe({ stand: stand('passwort'), formular: 'eigen', anderer: false, name: 'Ida Imker', passwort: 'pw', modus: 'frei' })).toEqual({ mitAnmeldung: false, absender: { name: 'Ida Imker' } })
+    expect(absenderAngabe({ stand: angemeldet, formular: 'eigen', anderer: false, name: '', passwort: '', modus: 'passwort' })).toEqual({ mitAnmeldung: true, absender: null })
+    expect(vorDemSenden({ stand: stand('frei'), alterServer: false, formular: 'eigen', anderer: false, name: 'Ida Imker', passwort: '', online: true, modus: 'passwort' })).toMatch(/Passwort/)
+  })
+
+  it('neue Texte ohne Gedankenstriche', () => {
+    for (const t of [ABSENDER_TEXTE.anonymHinweis, ABSENDER_TEXTE.absenderAnonym, ABSENDER_TEXTE.unverschluesselt, ABSENDER_TEXTE.unlesbar(1), ABSENDER_TEXTE.unlesbar(3)]) expect(t).not.toMatch(GEDANKENSTRICH)
+  })
+})

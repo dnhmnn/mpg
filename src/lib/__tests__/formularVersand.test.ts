@@ -586,3 +586,170 @@ describe('Masken: formularSenden und sendenOderAblegen', () => {
     for (const t of texte) expect(t).not.toMatch(/[–—]/)
   })
 })
+
+// ── Plan Vorgänge 5.3, 5.4, 5.7: eigene Formulare, ohne Namen, ohne Hintergrundversand ──
+
+describe('Eigene Formulare in der Warteschlange (5.3)', () => {
+  const V = 'vvvvvvvvvvvvvv1'
+  const eig = (x: Partial<Warteeintrag> = {}) => eintrag({ formular: 'eigen', maske: undefined, vorlage: V, modus: 'frei', titel: 'Fahrzeugcheck', daten: { version: 2, werte: { f_aaaaaaaa: 'RTW 1' } }, ...x })
+  const mitEigen = (ausstehend: boolean, modus: 'passwort' | 'frei' = 'passwort'): Stand => ({ ...stand(modus), formulare: { ...stand(modus).formulare, eigen: { modus: 'frei', an: true, oeffentlich: true, ausstehend } } })
+
+  it('Modus kommt vom Eintrag (der Vorlage), nicht vom Stand der Standardformulare', () => {
+    expect(naechsterSchritt(eig(), k({ stand: mitEigen(true, 'passwort') }))).toEqual({ art: 'senden', absender: { name: 'Anna Berg' }, mitAnmeldung: false })
+    expect(naechsterSchritt(eig({ modus: 'passwort' }), k({ stand: mitEigen(true, 'frei') }))).toEqual({ art: 'fragen' })
+    // Ohne Angabe gilt „Name frei“
+    expect(naechsterSchritt(eig({ modus: undefined }), k({ stand: mitEigen(true) })).art).toBe('senden')
+    // „ausstehend“ aus stand.formulare.eigen
+    const alt = eig({ modus: 'passwort', gefragtAb: minuten(61), nameEindeutig: true })
+    expect(naechsterSchritt(alt, k({ stand: mitEigen(true) }))).toEqual({ art: 'senden', absender: { name: 'Anna Berg', ausstehend: true }, mitAnmeldung: false })
+    expect(naechsterSchritt(alt, k({ stand: mitEigen(false) }))).toEqual({ art: 'fragen' })
+    expect(ohnePasswortMoeglich(eig({ modus: 'passwort', nameEindeutig: true }), mitEigen(true))).toBe(true)
+    expect(ohnePasswortMoeglich(eig({ modus: 'passwort', nameEindeutig: true }), mitEigen(false))).toBe(false)
+  })
+
+  it('anonym: nie ein Token, nie ein Name, auch mit passender Anmeldung und ohne Stand', () => {
+    const a = eig({ modus: 'anonym', absenderName: '', angemeldetId: 'u1' })
+    expect(naechsterSchritt(a, k({ stand: null, tokenId: 'u1' }))).toEqual({ art: 'senden', absender: null, mitAnmeldung: false })
+    expect(ohnePasswortMoeglich({ ...a, absenderName: 'Anna Berg', nameEindeutig: true }, mitEigen(true))).toBe(false)
+  })
+
+  it('Senden: vorlage im Body; anonym ohne Token und ohne Absender, auch wenn der Aufrufer etwas mitgibt', async () => {
+    anmelden('u1')
+    ablegen(ls, eig({ modus: 'anonym', absenderName: '', angemeldetId: 'u1' }), JETZT)
+    antworten.push(json(200, { ok: true, id: 'abcdefghij01234', bereits: false, absender: null, anonym: true }))
+    const e = eintraege(ls, 'wache1')[0]
+    const r = await eintragAusfuehren(ls, e, { art: 'senden', absender: { name: 'Anna Berg' }, mitAnmeldung: true }, { jetzt: JETZT })
+    expect(r.ergebnis).toBe('gesendet')
+    expect(r.meldung).toBe('Fahrzeugcheck gesendet.')
+    expect(aufrufe[0].auth).toBeUndefined()
+    expect(aufrufe[0].body).toEqual({ formular: 'eigen', id: 'abcdefghij01234', absender: null, daten: { version: 2, werte: { f_aaaaaaaa: 'RTW 1' } }, vorlage: V })
+    // Name frei: mit Namen
+    ablegen(ls, eig(), JETZT)
+    antworten.push(json(200, { ok: true, id: 'abcdefghij01234', bereits: false, absender: { id: '', name: 'Anna Berg', status: 'ohne_konto', weg: '', modus: 'frei', am: '' } }))
+    await eintragAusfuehren(ls, eintraege(ls, 'wache1')[0], naechsterSchritt(eintraege(ls, 'wache1')[0], k({ stand: mitEigen(true) })), { jetzt: JETZT })
+    expect(aufrufe[1].body).toMatchObject({ formular: 'eigen', vorlage: V, absender: { name: 'Anna Berg' } })
+  })
+
+  it('Vorlage inzwischen mit Passwort: die Karte fragt; nicht mehr anonym: Name eintragen', async () => {
+    ablegen(ls, eig(), JETZT)
+    antworten.push(json(401, { grund: 'passwort_noetig', message: 'Bitte bestätige mit deinem Passwort.' }))
+    await eintragAusfuehren(ls, eintraege(ls, 'wache1')[0], { art: 'senden', absender: { name: 'Anna Berg' }, mitAnmeldung: false }, { jetzt: JETZT })
+    const e = eintraege(ls, 'wache1')[0]
+    expect(e.modus).toBe('passwort')
+    expect(naechsterSchritt(e, k({ stand: mitEigen(true) }))).toEqual({ art: 'fragen' })
+
+    ablegen(ls, eig({ id: 'zzzzzzzzzzzzzzz', modus: 'anonym', absenderName: '' }), JETZT)
+    antworten.push(json(400, { grund: 'name', message: 'Bitte Vor- und Nachnamen vollständig eintragen.' }))
+    await eintragAusfuehren(ls, eintraege(ls, 'wache1')[1], { art: 'senden', absender: null, mitAnmeldung: false }, { jetzt: JETZT })
+    const a = eintraege(ls, 'wache1')[1]
+    expect(a.modus).toBe('frei')
+    expect(naechsterSchritt(a, k({ stand: mitEigen(true) }))).toEqual({ art: 'korrigieren' })
+  })
+
+  it('alter Weg: Einsendung wie bisher (Werte flach), nie Status, Notiz oder Absender vom Client', () => {
+    expect(altSatz(eig())).toEqual({ sammlung: 'form_submissions', satz: { template_id: V, org_code: 'wache1', payload: { f_aaaaaaaa: 'RTW 1' }, id: 'abcdefghij01234', organization_id: 'org1' } })
+    const mitAlt = altSatz(eig({ alt: { template_id: 'x', organization_id: 'fremd', org_code: 'wache1', payload: { f_aaaaaaaa: 'RTW 1' }, status: 'erledigt', notiz: 'n', absender_status: 'bestaetigt' } }))
+    expect(mitAlt.satz).toEqual({ template_id: V, organization_id: 'org1', org_code: 'wache1', payload: { f_aaaaaaaa: 'RTW 1' }, id: 'abcdefghij01234' })
+  })
+
+  it('Ablage: anonym ohne Namen und ohne Anmeldung gespeichert; Modus der Vorlage geht mit', () => {
+    anmelden('u1')
+    const r = ablegenMitMeldung({ id: 'abcdefghij01234', formular: 'eigen', vorlage: V, titel: 'Hinweisbox', orgCode: 'wache1', orgId: 'org1', absenderName: 'Anna Berg', angemeldetId: 'u1', daten: { version: 1, werte: {} } }, { modus: 'anonym', mitAnmeldung: true, s: ls })
+    expect(r).toEqual({ gespeichert: true, meldung: MELDUNGEN.ohneNetzFrei })
+    const e = eintraege(ls, 'wache1')[0]
+    expect([e.modus, e.absenderName, e.angemeldetId]).toEqual(['anonym', '', ''])
+    expect(ls.d.get('formular_warteschlange_wache1')).not.toContain('Anna')
+    // Passwort-Vorlage: Meldung nach dem Modus der Vorlage
+    expect(ablegenMitMeldung({ id: 'zzzzzzzzzzzzzzz', formular: 'eigen', vorlage: V, orgCode: 'wache1', orgId: 'org1', absenderName: 'Anna Berg', angemeldetId: '', daten: { version: 1, werte: {} } }, { modus: 'passwort', mitAnmeldung: false, s: ls }).meldung)
+      .toBe(MELDUNGEN.ohneNetzPasswort('Anna Berg'))
+  })
+
+  it('Texte der Karte: Titel der Vorlage, Rückfrage beim Verwerfen', () => {
+    const e = eig()
+    expect(eintragKopf(e)).toMatch(/^Fahrzeugcheck vom \d{2}\.\d{2}\., \d{2}:\d{2} wartet auf das Senden$/)
+    expect(eintragKopf({ ...e, titel: undefined })).toMatch(/^Formular vom /)
+    expect(gesendetText(e, 'Anna Berg')).toBe('Fahrzeugcheck gesendet. Wartet auf die Unterschrift von Anna Berg.')
+    expect(verwerfenFrageText(e)).toBe('Das Formular „Fahrzeugcheck“ wird von diesem Gerät gelöscht. Das lässt sich nicht rückgängig machen.')
+    expect(bleibendHinweis({ formular: 'eigen', letzterFehler: { grund: 'daten', text: '', am: '' } })).toBe('In dieser Karte lässt sich das nicht ändern. Bitte neu erfassen und diesen Eintrag danach verwerfen.')
+  })
+})
+
+describe('Karte ohne Patientennamen (5.4)', () => {
+  it('Protokoll: nur Einsatznummer und Zeit; andere Formulare wie bisher', () => {
+    const e = eintrag({ daten: { title: 'Patientendoku: Max Muster', payload: { name: 'Muster', vorname: 'Max', einsatz_nr: '2026-117' } } })
+    expect(eintragKopf(e)).toContain('Max Muster')
+    const ohne = eintragKopf(e, { ohneNamen: true })
+    expect(ohne).toMatch(/^Protokoll zum Einsatz 2026-117 vom \d{2}\.\d{2}\., \d{2}:\d{2} wartet auf das Senden$/)
+    expect(ohne).not.toContain('Muster')
+    expect(eintragKopf(eintrag(), { ohneNamen: true })).toMatch(/^Protokoll vom /)
+    expect(gesendetText(e, null, { ohneNamen: true })).toBe('Protokoll zum Einsatz 2026-117 gesendet.')
+    expect(gesendetText(e, 'Anna Berg', { ohneNamen: true })).toBe('Protokoll zum Einsatz 2026-117 gesendet. Wartet auf die Unterschrift von Anna Berg.')
+    expect(verwerfenFrageText(e, { ohneNamen: true })).not.toContain('Muster')
+    expect(verwerfenFrageText(e, { ohneNamen: true })).toContain('zum Einsatz 2026-117')
+    const pa = eintrag({ formular: 'produktausgabe', maske: undefined, daten: { einsatz: 'E-117', datum: '2026-11-07', positionen: [] } })
+    expect(eintragKopf(pa, { ohneNamen: true })).toBe(eintragKopf(pa))
+  })
+
+  it('auch die Meldung nach dem Senden aus der Karte nennt keinen Namen', async () => {
+    ablegen(ls, eintrag({ daten: { title: 'Patientendoku: Max Muster', payload: { name: 'Muster', einsatz_nr: '7' } } }), JETZT)
+    antworten.push(json(200, { ok: true, id: 'abcdefghij01234', bereits: false, absender: { id: 'u1', name: 'Anna Berg', status: 'ausstehend', weg: '', modus: 'passwort', am: '' } }))
+    const r = await eintragAusfuehren(ls, eintraege(ls, 'wache1')[0], { art: 'senden', absender: { name: 'Anna Berg', ausstehend: true }, mitAnmeldung: false }, { jetzt: JETZT, ohneNamen: true })
+    expect(r.meldung).toBe('Protokoll zum Einsatz 7 gesendet. Wartet auf die Unterschrift von Anna Berg.')
+  })
+})
+
+describe('Ohne Hintergrundversand: Hinweis nach dem Ablegen (5.7)', () => {
+  const ne = (x: Partial<NeuerEintrag> = {}): NeuerEintrag => ({ id: 'abcdefghij01234', formular: 'patienten', maske: 'doku', orgCode: 'wache1', orgId: 'org1', absenderName: 'Anna Berg', angemeldetId: '', daten: { title: 't', payload: {} }, ...x })
+
+  it('ohne SyncManager (iOS, Firefox) an jede Ablage-Meldung, je Formular', () => {
+    vi.stubGlobal('window', {})
+    const r = ablegenMitMeldung(ne(), { modus: 'frei', mitAnmeldung: false, s: ls })
+    expect(r.meldung).toBe(`${MELDUNGEN.ohneNetzFrei} Bitte diese Seite später mit Netz wieder öffnen, sonst kommt das Protokoll nicht an.`)
+    expect(ablegenMitMeldung(ne({ id: 'b'.repeat(15), formular: 'produktausgabe' }), { modus: 'frei', mitAnmeldung: false, s: ls }).meldung).toMatch(/sonst kommt die Produktausgabe nicht an\.$/)
+    expect(ablegenMitMeldung(ne({ id: 'c'.repeat(15), formular: 'defektmeldung' }), { modus: 'frei', mitAnmeldung: false, s: ls, anlass: 'drossel', sekunden: 60 }).meldung).toMatch(/sonst kommt die Defektmeldung nicht an\.$/)
+    expect(ablegenMitMeldung(ne({ id: 'd'.repeat(15), formular: 'eigen', vorlage: 'v'.repeat(15) }), { modus: 'frei', mitAnmeldung: false, s: ls, anlass: 'ohne_passwort' }).meldung).toMatch(/sonst kommt das Formular nicht an\.$/)
+    expect(MELDUNGEN.ohneHintergrund(['patienten', 'eigen'])).toBe('Bitte diese Seite später mit Netz wieder öffnen, sonst kommen die Einträge nicht an.')
+    // Nicht gespeichert: kein Hinweis
+    expect(ablegenMitMeldung(ne({ id: 'e'.repeat(15) }), { modus: 'frei', mitAnmeldung: false, s: null }).meldung).toBe(MELDUNGEN.ohneNetzOhneSpeicher)
+  })
+
+  it('mit Background Sync, aber der Tresor ist nicht offen (Klartext): ebenso, denn der Service Worker liest nur den Tresor', () => {
+    vi.stubGlobal('window', { SyncManager: function () {} })
+    expect(ablegenMitMeldung(ne(), { modus: 'frei', mitAnmeldung: false, s: ls }).meldung).toMatch(/sonst kommt das Protokoll nicht an\.$/)
+  })
+
+  it('außerhalb eines Browsers kein Hinweis (die übrigen Prüffälle bleiben, wie sie sind)', () => {
+    expect(ablegenMitMeldung(ne(), { modus: 'frei', mitAnmeldung: false, s: ls }).meldung).toBe(MELDUNGEN.ohneNetzFrei)
+  })
+})
+
+describe('Ablage im Tresor: erst „abgelegt“, wenn es wirklich liegt (5.5)', () => {
+  it('weder verschlüsselt noch als Klartext sicher: nicht abgelegt; sonst abgelegt', async () => {
+    const { _tresorNeu, tresorOeffnen, tresorWeiche } = await import('../tresor')
+    const daten = new Map<string, unknown>()
+    let key: CryptoKey | null = null
+    let kaputt = true
+    const ablage = {
+      async lesen() { return Object.fromEntries(daten) },
+      async schreiben(k: string, v: unknown) { if (kaputt) throw new Error('voll'); daten.set(k, v) },
+      async loeschen(k: string) { daten.delete(k) },
+      async schluessel() { return key },
+      async schluesselSetzen(c: CryptoKey) { if (!key) key = c },
+    }
+    _tresorNeu()
+    try {
+      const klar = { ...ls, setItem: () => { throw new Error('voll') }, get length() { return ls.length } }
+      vi.stubGlobal('localStorage', klar)
+      expect(await tresorOeffnen({ ablage, kanal: null, klar })).toBe('verschluesselt')
+      const ne: NeuerEintrag = { id: 'abcdefghij01234', formular: 'patienten', maske: 'doku', orgCode: 'wache1', orgId: 'org1', absenderName: 'Anna Berg', angemeldetId: '', daten: { title: 't', payload: {} } }
+      expect(await sendenOderAblegen(ne, { absender: { name: 'Anna Berg' }, mitAnmeldung: false }, { modus: 'frei', s: tresorWeiche(), online: false }))
+        .toEqual({ art: 'nicht_abgelegt', meldung: MELDUNGEN.ohneNetzOhneSpeicher })
+      kaputt = false
+      expect(await sendenOderAblegen({ ...ne, id: 'zzzzzzzzzzzzzzz' }, { absender: { name: 'Anna Berg' }, mitAnmeldung: false }, { modus: 'frei', s: tresorWeiche(), online: false }))
+        .toEqual({ art: 'abgelegt', meldung: MELDUNGEN.ohneNetzFrei })
+      expect([...daten.keys()].length).toBe(2)
+    } finally {
+      _tresorNeu()
+    }
+  })
+})

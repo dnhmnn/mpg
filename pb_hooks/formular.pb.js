@@ -12,7 +12,7 @@
 // Routen (Vertrag: docs/pocketbase-regeln.md, „Öffentliche Formulare: Absender“):
 //   GET  /api/responda/formular/{code}/stand          Einstellung, Felder, angemeldet als
 //   POST /api/responda/formular/{code}/name           Name bekannt? nur ja/nein
-//   POST /api/responda/formular/{code}/absenden       anlegen (alle drei Formulare)
+//   POST /api/responda/formular/{code}/absenden       anlegen (alle drei Formulare und eigene Formulare)
 //   GET  /api/responda/formular/unterschriften        was wartet auf meine Unterschrift
 //   POST /api/responda/formular/unterschreiben        nachträglich bestätigen
 //   POST /api/responda/formular/zurueckweisen         „Das war ich nicht“ (statt zu unterschreiben)
@@ -21,7 +21,15 @@
 //   GET  /api/responda/formular/diagnose              nur Superuser: IP, Proxy, Felder
 //
 // Dazu der Schutz direkter API-Aufrufe auf patients, product_outputs und mpg_defect_reports,
-// solange deren Create-Regeln offen sind (alte App-Stände), und der Aufräum-Lauf der Drossel.
+// solange deren Create-Regeln offen sind (alte App-Stände), das Anlegen in form_submissions
+// nur über die Route, und der Aufräum-Lauf der Drossel.
+//
+// Eigene Formulare der Organisationen (form_templates, form_submissions; Plan Vorgänge 2):
+// Formular "eigen" mit `vorlage` in /name und /absenden, Absender je Vorlage („passwort“, „frei“
+// oder „anonym“: dann gar kein Absender, auch nicht mit Token). Direktes Anlegen in
+// form_submissions sperrt diese Datei; Ändern, Löschen und die Vorlagen schützt
+// eigene-formulare.pb.js. Produktausgabe und Defektmeldung nehmen `daten.eigene` an (eigene
+// Felder der Organisation, form_config.formulare).
 //
 // Die Regeln selbst stehen in formular-regeln.js (reine Funktionen, mit Prüffällen in vitest).
 // Rücknahme: nur diese Datei entfernen und PocketBase neu starten; die App nimmt dann den
@@ -35,23 +43,36 @@
 // Merker für mpg.pb.js und formular-felder.pb.js: diese Datei ist geladen (formular-regeln.js,
 // FORMULAR_AKTIV). Beim allerersten Start außerdem die Statusfelder einmal leeren: Was dort vor
 // den Hooks stand, hat niemand geprüft (statusfelderLeeren, Merker-Datei im Datenverzeichnis).
+// Eigene Formulare haben einen eigenen Merker (START_MERKER_EIGENE): Wo das Absender-Paket schon lief,
+// leert der erste Start dieses Pakets nur form_submissions.absender_status, einmal.
 onBootstrap((e) => {
   e.next()
   e.app.store().set("responda:formular_aktiv", true)
   let R = null
   try { R = require(`${__hooks}/formular-regeln.js`) } catch (err) { return }
+  const da = (pfad) => { try { $os.stat(pfad); return true } catch (err) { return false } }
   const pfad = e.app.dataDir() + "/" + R.START_MERKER
-  let schonGestartet = false
-  try { $os.stat(pfad); schonGestartet = true } catch (err) { schonGestartet = false }
-  if (schonGestartet) return
-  try {
-    const n = R.statusfelderLeeren(e.app)
-    $os.writeFile(pfad, "Formular-Hooks zuerst gestartet am " + new Date().toISOString() + ". Statusfelder geleert: " + JSON.stringify(n) + "\n", 420)
-    const summe = Object.keys(n).reduce((s, k) => s + n[k], 0)
-    if (summe > 0) e.app.logger().warn("[formular] Erster Start: Statusfelder aus der Zeit vor den Hooks geleert", "anzahl", JSON.stringify(n))
-    else e.app.logger().info("[formular] Erster Start, keine Statusfelder zu leeren")
-  } catch (err) {
-    e.app.logger().error("[formular] Erster Start: Statusfelder nicht geleert, nächster Start versucht es erneut", "fehler", String(err).slice(0, 300))
+  if (!da(pfad)) {
+    try {
+      const n = R.statusfelderLeeren(e.app)
+      $os.writeFile(pfad, "Formular-Hooks zuerst gestartet am " + new Date().toISOString() + ". Statusfelder geleert: " + JSON.stringify(n) + "\n", 420)
+      const summe = Object.keys(n).reduce((s, k) => s + n[k], 0)
+      if (summe > 0) e.app.logger().warn("[formular] Erster Start: Statusfelder aus der Zeit vor den Hooks geleert", "anzahl", JSON.stringify(n))
+      else e.app.logger().info("[formular] Erster Start, keine Statusfelder zu leeren")
+    } catch (err) {
+      e.app.logger().error("[formular] Erster Start: Statusfelder nicht geleert, nächster Start versucht es erneut", "fehler", String(err).slice(0, 300))
+    }
+  }
+  const pfadEigene = e.app.dataDir() + "/" + R.START_MERKER_EIGENE
+  if (!da(pfadEigene)) {
+    try {
+      const n = R.eigeneStatusLeeren(e.app)
+      $os.writeFile(pfadEigene, "Eigene Formulare zuerst gestartet am " + new Date().toISOString() + ". form_submissions.absender_status geleert: " + n + "\n", 420)
+      if (n > 0) e.app.logger().warn("[formular] Erster Start eigene: absender_status aus der Zeit vor den Hooks geleert", "anzahl", n)
+      else e.app.logger().info("[formular] Erster Start eigene, nichts zu leeren")
+    } catch (err) {
+      e.app.logger().error("[formular] Erster Start eigene: nicht geleert, nächster Start versucht es erneut", "fehler", String(err).slice(0, 300))
+    }
   }
 })
 
@@ -83,9 +104,17 @@ routerAdd("GET", "/api/responda/formular/{code}/stand", (e) => {
     }
   }
   formulare.cirs = { modus: "anonym", an: R.formularAn(org, "cirs"), oeffentlich: R.formularOeffentlich(org, "cirs"), ausstehend: false }
+  // Eigene Formulare: den Absender bestimmt die Vorlage (modus hier ohne Bedeutung), an = Modul Vorgänge frei
+  const eigeneFrei = R.modulFrei(org, R.EIGEN.modul)
+  formulare.eigen = { modus: "frei", an: eigeneFrei, oeffentlich: eigeneFrei, ausstehend: R.feldDa($app, R.EIGEN.sammlung, R.EIGEN.statusfeld) }
   return e.json(200, {
-    version: 1,
+    version: 2,
     formulare: formulare,
+    faehig: {
+      eigene_felder: { produktausgabe: true, defektmeldung: R.feldDa($app, "mpg_defect_reports", "eigene"), cirs: true },
+      eigene_formulare: true,
+      eingang: ["status", "notiz", "bearbeitung"].every((f) => R.feldDa($app, R.EIGEN.sammlung, f)),
+    },
     angemeldet: mitglied ? { id: mitglied.id, name: R.kontoName(mitglied) } : null,
   })
 })
@@ -100,9 +129,18 @@ routerAdd("POST", "/api/responda/formular/{code}/name", (e) => {
   if (!body) return R.antwort(e, 400, "daten", { feld: "daten" })
   const org = R.orgPerCode($app, e.request.pathValue("code"))
   if (!org) return R.antwort(e, 404, "organisation")
-  if (R.FORMULARE.indexOf(body.formular) < 0) return R.antwort(e, 400, "daten", { feld: "formular" })
+  const eigen = body.formular === R.EIGEN.formular
+  if (!eigen && R.FORMULARE.indexOf(body.formular) < 0) return R.antwort(e, 400, "daten", { feld: "formular" })
   const mitglied = R.mitgliedAusToken(e.auth ? R.personAusRecord(e.auth) : null, org.id, jetzt)
-  if (!(mitglied ? R.formularAn(org, body.formular) : R.formularOeffentlich(org, body.formular))) return R.antwort(e, 403, "formular_aus")
+  if (eigen) {
+    // Eigenes Formular: die Vorlage muss Einsendungen annehmen; „anonym“ fragt nie nach Namen
+    if (!R.kennungGueltig(body.vorlage)) return R.antwort(e, 400, "daten", { feld: "vorlage" })
+    const vorlage = R.vorlageLaden($app, body.vorlage)
+    if (!R.vorlageAn(org, vorlage)) return R.antwort(e, 403, "formular_aus", { text: R.EIGENE_TEXTE.vorlage_aus })
+    if (R.vorlageModus(vorlage) === "anonym") return R.antwort(e, 400, "daten", { feld: "formular" })
+  } else if (!(mitglied ? R.formularAn(org, body.formular) : R.formularOeffentlich(org, body.formular))) {
+    return R.antwort(e, 403, "formular_aus")
+  }
 
   if (!mitglied && R.speicherVoll($app, G, jetzt)) return R.antwort(e, 429, "drossel", { sekunden: G.speicher_sekunden })
   const d = mitglied
@@ -123,13 +161,15 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
   const jetzt = Date.now()
   const G = R.grenzenMit({ sperreSekunden: $os.getenv("RESPONDA_FORMULAR_SPERRE_SEKUNDEN"), speicherMax: $os.getenv("RESPONDA_FORMULAR_SPEICHER_MAX") })
 
-  // 1. Body, Org, Formular, Kennung
+  // 1. Body, Org, Formular (eigen: Vorlage), Kennung
   const body = R.bodyLesen(e)
   if (!body) return R.antwort(e, 400, "daten", { feld: "daten" })
   const org = R.orgPerCode($app, e.request.pathValue("code"))
   if (!org) return R.antwort(e, 404, "organisation")
   const formular = body.formular
-  if (R.FORMULARE.indexOf(formular) < 0) return R.antwort(e, 400, "daten", { feld: "formular" })
+  const eigen = formular === R.EIGEN.formular
+  if (!eigen && R.FORMULARE.indexOf(formular) < 0) return R.antwort(e, 400, "daten", { feld: "formular" })
+  if (eigen && !R.kennungGueltig(body.vorlage)) return R.antwort(e, 400, "daten", { feld: "vorlage" })
   const maske = formular === "patienten" ? body.maske : ""
   if (formular === "patienten" && R.MASKEN.indexOf(maske) < 0) return R.antwort(e, 400, "daten", { feld: "maske" })
   const id = body.id
@@ -137,8 +177,21 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
   const daten = body.daten
   if (!daten || typeof daten !== "object" || Array.isArray(daten)) return R.antwort(e, 400, "daten", { feld: formular === "patienten" ? "payload" : "daten" })
   const person = e.auth ? R.personAusRecord(e.auth) : null
-  const mitglied = R.mitgliedAusToken(person, org.id, jetzt)
-  if (!(mitglied ? R.formularAn(org, formular) : R.formularOeffentlich(org, formular))) return R.antwort(e, 403, "formular_aus")
+  let vorlage = null
+  let modus = ""
+  let mitglied = null
+  if (eigen) {
+    // Eine Vorlage, die nichts annimmt (inaktiv, archiviert, fremd, Modul aus), gilt auch mit Token
+    vorlage = R.vorlageLaden($app, body.vorlage)
+    if (!R.vorlageAn(org, vorlage)) return R.antwort(e, 403, "formular_aus", { text: R.EIGENE_TEXTE.vorlage_aus })
+    modus = R.vorlageModus(vorlage)
+    // „anonym“: kein Absender, auch wenn ein gültiges Token kommt (Plan Vorgänge F6)
+    mitglied = modus === "anonym" ? null : R.mitgliedAusToken(person, org.id, jetzt)
+  } else {
+    mitglied = R.mitgliedAusToken(person, org.id, jetzt)
+    if (!(mitglied ? R.formularAn(org, formular) : R.formularOeffentlich(org, formular))) return R.antwort(e, 403, "formular_aus")
+    modus = R.absenderModus(org.form_config, formular)
+  }
 
   // 2. Speicher und Drossel
   const realIp = R.realIP(e)
@@ -147,8 +200,9 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
   const d = mitglied ? R.zaehlen($app, "send:u:" + mitglied.id, G.send_u, jetzt) : R.anonymZaehlen($app, "send", realIp, G, jetzt)
   if (!d.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: d.sekunden })
 
-  const sammlung = R.SAMMLUNG[formular]
-  const statusfeld = R.STATUSFELD[sammlung]
+  const sammlung = eigen ? R.EIGEN.sammlung : R.SAMMLUNG[formular]
+  const statusfeld = R.statusfeldVon(sammlung)
+  const schonOpt = eigen ? { vorlage: vorlage.id } : null
 
   // 3. Änderung aus der Warteschlange der alten Doku
   if (body.uebernommen === true && formular === "patienten") {
@@ -158,46 +212,60 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
 
   // 4./5. Prüfsumme; Kennung schon da?
   const pruefsumme = $security.sha256(R.kanonisch(daten) || "")
-  const schon = R.schonDa($app, formular, id, org.id, pruefsumme, daten)
+  const schon = R.schonDa($app, formular, id, org.id, pruefsumme, daten, schonOpt)
   if (schon) return schon.bereits ? e.json(200, schon.antwort) : R.antwort(e, 409, "kennung")
 
-  // 6. Daten
-  const pr = R.datenPruefen(formular, daten, R.bestandLaden($app, formular, daten), { orgId: org.id, maske: maske })
-  if (!pr.ok) return R.antwort(e, 400, "daten", { feld: pr.feld, text: pr.text })
+  // 6. Daten (eigen: gegen die Fassung, mit der gesendet wurde; sonst mit den eigenen Feldern der Org)
+  let pr = null
+  let fassung = null
+  if (eigen) {
+    fassung = R.fassungFuer(vorlage, daten.version)
+    const a = R.angabenBauen(fassung.felder, daten, { versionAktuell: vorlage.version, grenze: R.FELD_GRENZEN.werte_vorlage })
+    if (!a.ok) return R.antwort(e, 400, "daten", { feld: a.feld === "werte" ? "werte" : "werte." + a.feld, text: a.text })
+    pr = { ok: true, angaben: a.angaben }
+  } else {
+    // Defektmeldung ohne Feld eigene: eigene Angaben würden verworfen, also auch nicht geprüft
+    const ohneEigene = formular === "defektmeldung" && !R.feldDa($app, sammlung, "eigene")
+    const zuPruefen = ohneEigene ? Object.assign({}, daten, { eigene: undefined }) : daten
+    pr = R.datenPruefenMitEigenen(formular, zuPruefen, R.bestandLaden($app, formular, daten), { orgId: org.id, maske: maske, formConfig: org.form_config })
+    if (!pr.ok) return R.antwort(e, 400, "daten", { feld: pr.feld, text: pr.text })
+  }
 
-  // 7. Absender
-  const modus = R.absenderModus(org.form_config, formular)
+  // 7. Absender („anonym“: keiner, ein mitgeschickter Name wird verworfen)
   const feldVorhanden = R.feldDa($app, sammlung, statusfeld)
-  const angabe = body.absender && typeof body.absender === "object" && !Array.isArray(body.absender) ? body.absender : {}
-  const name = typeof angabe.name === "string" ? angabe.name.slice(0, 500) : ""
-  const passwort = typeof angabe.passwort === "string" ? angabe.passwort : ""
-  const mitglieder = R.mitgliederLaden($app, org.id)
-  const k = {
-    modus: modus, mitglied: mitglied, name: name, passwort: passwort !== "", ausstehend: angabe.ausstehend === true,
-    treffer: R.treffer(mitglieder, name, org.id, jetzt), feldVorhanden: feldVorhanden,
-  }
-  let ent = R.absenderEntscheiden(k)
+  const mitglieder = formular === "patienten" || modus !== "anonym" ? R.mitgliederLaden($app, org.id) : []
+  let absender = null
+  if (modus !== "anonym") {
+    const angabe = body.absender && typeof body.absender === "object" && !Array.isArray(body.absender) ? body.absender : {}
+    const name = typeof angabe.name === "string" ? angabe.name.slice(0, 500) : ""
+    const passwort = typeof angabe.passwort === "string" ? angabe.passwort : ""
+    const k = {
+      modus: modus, mitglied: mitglied, name: name, passwort: passwort !== "", ausstehend: angabe.ausstehend === true,
+      treffer: R.treffer(mitglieder, name, org.id, jetzt), feldVorhanden: feldVorhanden,
+    }
+    let ent = R.absenderEntscheiden(k)
 
-  if (ent.art === "passwort_pruefen") {
-    // Jede Prüfung wird vorher atomar reserviert (je IP-Topf, je Konto und Topf, je Konto)
-    const pr2 = R.passwortPruefen($app, ent.kandidaten, passwort, realIp, G, jetzt)
-    if (pr2.grund === "gesperrt") return R.antwort(e, 429, "gesperrt", { sekunden: pr2.sekunden })
-    if (pr2.grund === "passwort_falsch") return R.antwort(e, 401, "passwort_falsch", { versuche_uebrig: pr2.uebrig })
-    k.passwortTreffer = pr2.person
-    ent = R.absenderEntscheiden(k)
-  }
-  if (ent.art === "fehler") return R.antwort(e, ent.status, ent.grund, { feld: ent.feld, text: ent.text })
+    if (ent.art === "passwort_pruefen") {
+      // Jede Prüfung wird vorher atomar reserviert (je IP-Topf, je Konto und Topf, je Konto)
+      const pr2 = R.passwortPruefen($app, ent.kandidaten, passwort, realIp, G, jetzt)
+      if (pr2.grund === "gesperrt") return R.antwort(e, 429, "gesperrt", { sekunden: pr2.sekunden })
+      if (pr2.grund === "passwort_falsch") return R.antwort(e, 401, "passwort_falsch", { versuche_uebrig: pr2.uebrig })
+      k.passwortTreffer = pr2.person
+      ent = R.absenderEntscheiden(k)
+    }
+    if (ent.art === "fehler") return R.antwort(e, ent.status, ent.grund, { feld: ent.feld, text: ent.text })
 
-  if (ent.status === "ausstehend") {
-    if (R.offeneAusstehende($app, org.id, ent.person.id) >= G.aus_offen) return R.antwort(e, 429, "drossel", { sekunden: 3600 })
-    const a1 = R.zaehlen($app, "aus:ip:" + ip, G.aus_ip, jetzt)
-    if (!a1.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: a1.sekunden })
-    const a2 = R.zaehlen($app, "aus:z:" + ent.person.id, G.aus_z, jetzt)
-    if (!a2.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: a2.sekunden })
+    if (ent.status === "ausstehend") {
+      if (R.offeneAusstehende($app, org.id, ent.person.id) >= G.aus_offen) return R.antwort(e, 429, "drossel", { sekunden: 3600 })
+      const a1 = R.zaehlen($app, "aus:ip:" + ip, G.aus_ip, jetzt)
+      if (!a1.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: a1.sekunden })
+      const a2 = R.zaehlen($app, "aus:z:" + ent.person.id, G.aus_z, jetzt)
+      if (!a2.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: a2.sekunden })
+    }
+    absender = R.absenderEintrag(ent, modus, new Date(jetzt).toISOString())
   }
 
   // 8. Datensatz
-  const absender = R.absenderEintrag(ent, modus, new Date(jetzt).toISOString())
   let antwortAbsender = absender
   let frist = ""
   let rec = null
@@ -205,7 +273,7 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
     rec = new Record($app.findCollectionByNameOrId(sammlung))
     rec.set("id", id)
     rec.set("organization_id", org.id)
-    if (feldVorhanden) rec.set(statusfeld, absender.status)
+    if (feldVorhanden) rec.set(statusfeld, absender ? absender.status : "")
     if (formular === "patienten") {
       const payload = R.patientenPayload(pr.daten.payload, { maske: maske, absender: absender, eingangMs: jetzt, pruefsumme: pruefsumme, mitglieder: mitglieder, orgId: org.id, mitglied: !!mitglied, jetzt: jetzt })
       rec.set("title", pr.daten.title)
@@ -219,6 +287,15 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
       rec.set("status", "offen")
       rec.set("payload", payload)
       antwortAbsender = payload.absender
+    } else if (eigen) {
+      const payload = R.einsendungPayload({ vorlage: vorlage, fassung: fassung, angaben: pr.angaben, absender: absender, modus: modus, eingangMs: jetzt, pruefsumme: pruefsumme })
+      rec.set("template_id", vorlage.id)
+      if (R.feldDa($app, sammlung, "org_code")) rec.set("org_code", org.org_code)
+      rec.set("payload", payload)
+      if (R.feldDa($app, sammlung, "status")) rec.set("status", "neu")
+      if (R.feldDa($app, sammlung, "notiz")) rec.set("notiz", "")
+      if (R.feldDa($app, sammlung, "bearbeitung")) rec.set("bearbeitung", { verlauf: [] })
+      antwortAbsender = payload.absender || null
     } else {
       rec.set("device_id", pr.daten.device_id)
       rec.set("device_name", pr.daten.device_name)
@@ -227,18 +304,22 @@ routerAdd("POST", "/api/responda/formular/{code}/absenden", (e) => {
       rec.set("status", "pending")
       rec.set("reporter_name", absender.name)
       rec.set("reporter_user_id", R.meldungReporterId(absender, feldVorhanden))
+      // Eigene Angaben nur mit dem Feld eigene (sonst verworfen); die Prüfsumme erkennt Doppelte
+      if (pr.daten.eigene && R.feldDa($app, sammlung, "eigene")) rec.set("eigene", Object.assign({}, pr.daten.eigene, { eingang_sha256: pruefsumme }))
     }
     $app.save(rec)
   } catch (err) {
     // Zwei gleichzeitige Sendungen derselben Kennung: wie Schritt 5 antworten
-    const nochmal = R.schonDa($app, formular, id, org.id, pruefsumme, daten)
+    const nochmal = R.schonDa($app, formular, id, org.id, pruefsumme, daten, schonOpt)
     if (nochmal) return nochmal.bereits ? e.json(200, nochmal.antwort) : R.antwort(e, 409, "kennung")
     const text = String(err)
     if (/^(GoError: )?[A-Za-z0-9_.]+: /.test(text)) return R.antwort(e, 400, "daten", { feld: "speichern" })
     $app.logger().error("[formular] Absenden nicht gespeichert", "formular", formular, "id", id, "fehler", text.slice(0, 300))
     return R.antwort(e, 500, "server")
   }
-  return e.json(200, { ok: true, id: id, bereits: false, absender: antwortAbsender, frist: frist })
+  const aus = { ok: true, id: id, bereits: false, absender: antwortAbsender, frist: frist }
+  if (eigen) aus.anonym = modus === "anonym"
+  return e.json(200, aus)
 })
 
 // ── Unterschriften ──────────────────────────────────────────────────────────
@@ -255,9 +336,10 @@ routerAdd("GET", "/api/responda/formular/unterschriften", (e) => {
 
   const org = mitglied.organization_id
   const eintraege = []
-  for (const f of R.FORMULARE) {
-    const sammlung = R.SAMMLUNG[f]
-    const feld = R.STATUSFELD[sammlung]
+  // Die drei festen Formulare und die eigenen Formulare (form_submissions, EIGEN)
+  for (const f of R.FORMULARE.concat([R.EIGEN.formular])) {
+    const sammlung = R.sammlungFuer(f)
+    const feld = R.statusfeldVon(sammlung)
     if (!R.feldDa($app, sammlung, feld)) continue
     let liste = []
     try {
@@ -285,10 +367,11 @@ routerAdd("POST", "/api/responda/formular/unterschreiben", (e) => {
   if (!d.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: d.sekunden })
   const body = R.bodyLesen(e)
   if (!body) return R.antwort(e, 400, "daten", { feld: "daten" })
-  if (R.FORMULARE.indexOf(body.formular) < 0) return R.antwort(e, 400, "daten", { feld: "formular" })
+  // Patientendoku, Produktausgabe, Defektmeldung und eigene Formulare ("eigen", form_submissions)
+  const sammlung = R.sammlungFuer(body.formular)
+  if (!sammlung) return R.antwort(e, 400, "daten", { feld: "formular" })
   if (!R.kennungGueltig(body.id)) return R.antwort(e, 400, "daten", { feld: "id" })
-  const sammlung = R.SAMMLUNG[body.formular]
-  const feld = R.STATUSFELD[sammlung]
+  const feld = R.statusfeldVon(sammlung)
   if (!R.feldDa($app, sammlung, feld)) return R.antwort(e, 404, "nicht_gefunden")
 
   const org = mitglied.organization_id
@@ -316,7 +399,7 @@ routerAdd("POST", "/api/responda/formular/unterschreiben", (e) => {
           q = R.besatzungAufloesen(q, null, mitglieder, { orgId: org, mitglied: false, ausstehend: false, jetzt: jetzt })
           q.frist = new Date(jetzt + R.FRIST_MS).toISOString()
           if (neu.feld) q[neu.feld] = name
-        } else {
+        } else if (sammlung === "product_outputs") {
           q.user_id = mitglied.id
           q.user_name = name
         }
@@ -345,8 +428,9 @@ routerAdd("POST", "/api/responda/formular/unterschreiben", (e) => {
 //                     änderbar); die Leitung schließt ihn mit „Ohne Unterschrift abschließen“ ab.
 //   product_outputs:  ohne Konto unter dem eingetragenen Namen (absender_status ohne_konto).
 //   mpg_defect_reports: ebenso ohne Konto (reporter_status ohne_konto, reporter_user_id leer).
-// In payload.absender (patients, product_outputs) steht danach `zurueckgewiesen` mit Kennung,
-// Name und Zeit; payload.absender setzt nur der Server.
+//   form_submissions: wie product_outputs (absender_status ohne_konto, Kennung geleert).
+// In payload.absender (patients, product_outputs, form_submissions) steht danach
+// `zurueckgewiesen` mit Kennung, Name und Zeit; payload.absender setzt nur der Server.
 
 routerAdd("POST", "/api/responda/formular/zurueckweisen", (e) => {
   const R = require(`${__hooks}/formular-regeln.js`)
@@ -359,10 +443,10 @@ routerAdd("POST", "/api/responda/formular/zurueckweisen", (e) => {
   if (!d.erlaubt) return R.antwort(e, 429, "drossel", { sekunden: d.sekunden })
   const body = R.bodyLesen(e)
   if (!body) return R.antwort(e, 400, "daten", { feld: "daten" })
-  if (R.FORMULARE.indexOf(body.formular) < 0) return R.antwort(e, 400, "daten", { feld: "formular" })
+  const sammlung = R.sammlungFuer(body.formular)
+  if (!sammlung) return R.antwort(e, 400, "daten", { feld: "formular" })
   if (!R.kennungGueltig(body.id)) return R.antwort(e, 400, "daten", { feld: "id" })
-  const sammlung = R.SAMMLUNG[body.formular]
-  const feld = R.STATUSFELD[sammlung]
+  const feld = R.statusfeldVon(sammlung)
   if (!R.feldDa($app, sammlung, feld)) return R.antwort(e, 404, "nicht_gefunden")
 
   const org = mitglied.organization_id
@@ -484,8 +568,9 @@ routerAdd("GET", "/api/responda/formular/diagnose", (e) => {
   try { remote = String(e.remoteIP() || "") } catch (err) { remote = "" }
   const koepfe = R.proxyKoepfe($app)
   const privat = R.ipPrivat(real)
+  // Statusfelder des Absender-Pakets und die Felder der eigenen Formulare (FELDER_DIAGNOSE)
   const felder = {}
-  for (const s of ["patients", "product_outputs", "mpg_defect_reports"]) felder[s + "." + R.STATUSFELD[s]] = R.feldDa($app, s, R.STATUSFELD[s])
+  for (const x of R.FELDER_DIAGNOSE) felder[x[0] + "." + x[1]] = R.feldDa($app, x[0], x[1])
   let speicher = 0
   try { speicher = $app.store().length() } catch (err) { speicher = 0 }
   return e.json(200, {
@@ -595,9 +680,20 @@ onRecordCreateRequest((e) => {
     e.record.set("status", "pending")
     e.record.set("reporter_name", absender.name)
     e.record.set("reporter_user_id", R.meldungReporterId(absender, feldVorhanden))
+    // Eigene Angaben setzt nur die Route (geprüft gegen die Einstellung der Organisation)
+    if (R.feldDa(e.app, sammlung, "eigene")) e.record.set("eigene", null)
   }
   e.next()
 }, "patients", "product_outputs", "mpg_defect_reports")
+
+// form_submissions (eigene Formulare): nur über die Route. Alte App-Stände legten direkt an,
+// ohne jede Prüfung; sie bekommen einen Hinweis, die Seite neu zu laden. Ändern, Löschen und die
+// Vorlagen schützt eigene-formulare.pb.js (auch ohne diese Datei).
+onRecordCreateRequest((e) => {
+  if (e.hasSuperuserAuth()) return e.next()
+  const R = require(`${__hooks}/formular-regeln.js`)
+  throw new ForbiddenError(R.EIGENE_TEXTE.eigen_alt)
+}, "form_submissions")
 
 // ── Schutz direkter API-Aufrufe: Ändern ────────────────────────────────────
 
@@ -693,8 +789,8 @@ onRecordUpdateRequest((e) => {
   e.next()
 }, "patients")
 
-// product_outputs: Absender und Empfänger bleiben, wie der Server sie gesetzt hat. Ein Body
-// nur mit status (Lager „Ausbuchen“ im Batch) bleibt unberührt.
+// product_outputs: Absender, Empfänger und eigene Angaben (payload.eigene) bleiben, wie der
+// Server sie gesetzt hat. Ein Body nur mit status (Lager „Ausbuchen“ im Batch) bleibt unberührt.
 onRecordUpdateRequest((e) => {
   if (e.hasSuperuserAuth()) return e.next()
   try {
@@ -710,7 +806,7 @@ onRecordUpdateRequest((e) => {
       const O = R.payloadLesen(R.jsonWert(original, "payload"))
       if (O) {
         const N = Object.assign({}, R.payloadLesen(R.jsonWert(e.record, "payload")) || {})
-        for (const k of ["absender", "user_id", "user_name", "eingang_sha256"]) {
+        for (const k of ["absender", "user_id", "user_name", "eingang_sha256", "eigene"]) {
           if (Object.prototype.hasOwnProperty.call(O, k)) N[k] = O[k]
           else delete N[k]
         }

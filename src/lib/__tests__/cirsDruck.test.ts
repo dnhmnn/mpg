@@ -73,3 +73,17 @@ describe('CIRS zum Ausdrucken: Auswertung', () => {
     expect(auswertungSeite(auswerten([], AM), [], { zeitraum: '2025', gedruckt: { am: AM } })).toContain('Im Zeitraum ist keine Meldung eingegangen.')
   })
 })
+
+describe('CIRS zum Ausdrucken: eigene Felder', () => {
+  it('stehen unter „Weitere Angaben“, escaped; ausgeblendete Kernfelder fehlen statt Strich', () => {
+    const f = fallAus({ id: 'eigen0000000001', created: '2026-10-02 08:15:00.000Z', payload: {
+      was: 'Verwechslung', eigene: { v: 1, version: 1, felder: [{ id: 'e_fahrzeug', typ: 'text', label: 'Fahrzeug <Nr>' }], werte: { e_fahrzeug: 'RTW <1>' } },
+    } })
+    const html = cirsSeite(f, { gedruckt: { am: AM } })
+    expect(html).toContain('<h2>Weitere Angaben</h2>')
+    expect(html).toContain('Fahrzeug &lt;Nr&gt;')
+    expect(html).toContain('RTW &lt;1&gt;')
+    expect(html).not.toContain('<dt>Kategorie (gemeldet)</dt>')
+    expect(cirsSeite(fall(), { gedruckt: { am: AM } })).not.toContain('Weitere Angaben')
+  })
+})

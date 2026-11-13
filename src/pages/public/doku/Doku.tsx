@@ -24,7 +24,6 @@ import { useNavigate } from 'react-router-dom'
 import { useOrg } from '../OrgPublicLayout'
 import { pb } from '../../../lib/pocketbase'
 import { aktuelleTokenId } from '../../../lib/formular/api'
-import { useFormularStand } from '../../../lib/formular/stand'
 import { gepruefterPayload } from '../../../lib/formular/absender'
 import { ABSENDER_TEXTE } from '../absender/texte'
 import { AbmeldenNachSenden, Textknopf } from '../absender/AbsenderFeld'
@@ -34,8 +33,11 @@ import { offeneErwartung, offenePflicht, pflichtKarte, type Stand } from '../../
 import { normalbefund, uebergabeUebernehmen, uebernahmeUmfang } from '../../../katalog/uebernahme'
 import DokuFeld, { Rasterzelle, gefuellt, istRasterfeld, type Werte } from './DokuFeld'
 import {
-  entwurfLesen, entwurfSchreiben, entwurfVerwerfen, standText,
+  entwurfFinden, entwurfSchreiben, entwurfSpeicher, entwurfVerwerfen, standText, type Entwurf,
 } from './entwurf'
+import EntwurfFrage, { SpeicherLaedt } from './EntwurfFrage'
+import { mitgliedAngemeldet, useFormularStand } from '../../../lib/formular/stand'
+import { TRESOR_OFFEN_EREIGNIS, tresorBereit, tresorOeffnetNoch } from '../../../lib/tresor'
 import Reiter, { ampel, type ReiterStand } from './Reiter'
 import { zettelMitFeldern, zettelVon, type ZettelTeil } from './zettel'
 import Unterschrift from './Unterschrift'
@@ -338,21 +340,47 @@ export default function Doku({
   const [entwurfOrt] = useState(() => (imApp ? `${orgCode}_u_${aktuelleTokenId()}` : orgCode))
   /** Eine Kennung in Props oder ?id=: dann wird geändert, nicht neu abgesendet. */
   const [idVorab] = useState(() => ausProps || (new URLSearchParams(window.location.search).get('id') ?? ''))
+  /**
+   * Ohne Anmeldung eines Mitglieds dieser Organisation (öffentliche Seite, geteiltes Tablet)
+   * wird ein Entwurf nicht von selbst eingesetzt: erst eine Frage ohne Patientendaten
+   * (EntwurfFrage, Review F7). In der App liegt der Entwurf je Person, da gibt es keine Frage.
+   */
+  const [fragen] = useState(() => !imApp && !mitgliedAngemeldet(String((org as { id?: unknown })?.id ?? '')))
   /*
    * Der Entwurf aus dem Gerät wird gleich beim Aufbau gelesen, nicht in einem
    * Effekt: sonst stünde die Maske einen Augenblick leer da, und ein Tippen
-   * in dieser Lücke ginge gegen den leeren Stand.
+   * in dieser Lücke ginge gegen den leeren Stand. Öffnet der Tresor noch (nach
+   * der Zeitgrenze in main.tsx), wartet die Maske erst auf ihn (Review F6):
+   * sonst sähe sie den verschlüsselten Entwurf nicht und überschriebe ihn.
    */
-  const [werte, setWerteRoh] = useState<Werte>(
+  const [start] = useState(() => {
+    const leer: { werte: Werte; stand: string; angebot: Entwurf | null; warten: boolean } = { werte: {}, stand: '', angebot: null, warten: false }
     // Mit ?id= gilt der Entwurf des Geräts nicht (er gehört zum zuletzt Angefangenen)
-    () => (nurLesen || idVorab ? {} : entwurfLesen(window.localStorage, entwurfOrt)?.werte ?? {}),
-  )
+    if (nurLesen || idVorab) return leer
+    if (tresorOeffnetNoch()) return { ...leer, warten: true }
+    const e = entwurfFinden(entwurfSpeicher(), entwurfOrt)
+    if (!e) return leer
+    return fragen ? { ...leer, angebot: e } : { ...leer, werte: e.werte as Werte, stand: e.stand }
+  })
+  const [werte, setWerteRoh] = useState<Werte>(start.werte)
   /** Beim Ansehen schreibt niemand — der Weg dorthin ist schlicht zu. */
   const setWerte: typeof setWerteRoh = nurLesen ? () => {} : setWerteRoh
   /** Der Stand des wiederhergestellten Entwurfs — bis er weggetippt wird. */
-  const [wiederhergestellt, setWiederhergestellt] = useState(
-    () => (nurLesen || idVorab ? '' : entwurfLesen(window.localStorage, entwurfOrt)?.stand ?? ''),
-  )
+  const [wiederhergestellt, setWiederhergestellt] = useState(start.stand)
+  /** Ein Entwurf liegt auf dem Gerät, die Frage ist noch offen (ohne Anmeldung). */
+  const [angebot, setAngebot] = useState<Entwurf | null>(start.angebot)
+  // Jeder angebotene Entwurf bekommt seine eigene Frage samt „Fortsetzen“ (Nachprüfung): neuer Schlüssel je Angebot
+  const angebotZaehler = useRef(0)
+  const angebotSchluessel = useMemo(() => `angebot-${++angebotZaehler.current}`, [angebot])
+  /** Der Tresor öffnet noch: erst danach wird der Entwurf gelesen. */
+  const [speicherWartet, setSpeicherWartet] = useState(start.warten)
+  /** Einen gefundenen Entwurf einsetzen oder, ohne Anmeldung, erst anbieten. */
+  function entwurfAnnehmen(e: Entwurf | null) {
+    if (!e) return
+    if (fragen) { setAngebot(e); return }
+    setWerteRoh(e.werte as Werte)
+    setWiederhergestellt(e.stand)
+  }
   /** Wenn das Gerät nichts behalten will, muss die Maske es sagen. */
   const [sichertNicht, setSichertNicht] = useState(false)
   /** Nach dem Absenden: die Nummer, oder leer, wenn es in der Warteschlange liegt. */
@@ -397,13 +425,43 @@ export default function Doku({
     // sonst läge das abgesendete Protokoll danach als Entwurf auf dem Gerät
     // und ginge beim nächsten Absenden ein zweites Mal raus.
     // Nach dem Absenden nicht mehr: sonst läge das Gesendete wieder als Entwurf da
-    if (nurLesen || idVorab || gesendet) return
+    // Solange die Frage zum liegenden Entwurf offen ist oder der Tresor noch öffnet: nichts
+    // schreiben, sonst überschriebe die leere Maske den liegenden Entwurf
+    if (nurLesen || idVorab || gesendet || angebot || speicherWartet) return
     const uhr = setTimeout(() => {
-      const ging = entwurfSchreiben(window.localStorage, entwurfOrt, werte)
+      const ging = entwurfSchreiben(entwurfSpeicher(), entwurfOrt, werte)
       setSichertNicht(!ging)
     }, 400)
     return () => clearTimeout(uhr)
-  }, [werte, entwurfOrt, nurLesen, idVorab, gesendet])
+  }, [werte, entwurfOrt, nurLesen, idVorab, gesendet, angebot, speicherWartet])
+
+  /* Der Tresor öffnet noch: höchstens einige Sekunden warten, dann den Entwurf lesen (Review F6). */
+  useEffect(() => {
+    if (!speicherWartet) return
+    let aus = false
+    void tresorBereit().then(() => {
+      if (aus) return
+      entwurfAnnehmen(entwurfFinden(entwurfSpeicher(), entwurfOrt))
+      setSpeicherWartet(false)
+    })
+    return () => { aus = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speicherWartet])
+
+  /*
+   * Ist der Tresor erst noch später offen und wurde in der Maske noch nichts getan, den Entwurf
+   * jetzt lesen. Wurde schon getippt, bleibt der ältere Entwurf unter einem eigenen Schlüssel
+   * (tresor.ts, ENTWURF_FRUEHER) und wird angeboten, sobald dieses Protokoll fertig ist.
+   */
+  const unberuehrt = useRef(true)
+  unberuehrt.current = werte === start.werte && !angebot && !gesendet
+  useEffect(() => {
+    if (nurLesen || idVorab) return
+    const spaet = () => { if (unberuehrt.current) entwurfAnnehmen(entwurfFinden(entwurfSpeicher(), entwurfOrt)) }
+    window.addEventListener(TRESOR_OFFEN_EREIGNIS, spaet)
+    return () => window.removeEventListener(TRESOR_OFFEN_EREIGNIS, spaet)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nurLesen, idVorab, entwurfOrt])
 
   /*
    * Angemeldet erkannt und das Feld Unterschrift leer: einmal mit dem
@@ -672,6 +730,32 @@ export default function Doku({
     ).slice(0, 12)
   }, [suche])
 
+  // Erst die Frage zum liegenden Entwurf (ohne Patientendaten), oder warten, bis der Tresor offen ist
+  if (speicherWartet || angebot) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', paddingBottom: 40 }}>
+        <header style={{ background: 'var(--lbf-card)', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 14px' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: TEXT }}>Patientendokumentation</div>
+          <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU }}>{org.org_name}</div>
+        </header>
+        <div style={{ padding: '0 14px' }}>
+          {speicherWartet || !angebot ? <SpeicherLaedt /> : (
+            <EntwurfFrage
+              key={angebotSchluessel}
+              stand={angebot.stand}
+              onFortsetzen={() => { setWerteRoh(angebot.werte as Werte); setWiederhergestellt(angebot.stand); setAngebot(null) }}
+              onVerwerfen={() => {
+                entwurfVerwerfen(entwurfSpeicher(), entwurfOrt)
+                // Liegt noch ein früher aufgehobener Entwurf, kommt die Frage für ihn
+                setAngebot(entwurfFinden(entwurfSpeicher(), entwurfOrt))
+              }}
+            />
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--warm-bg)', paddingBottom: 40 }}>
       <header style={{ position: 'sticky', top: 0, zIndex: 20, background: 'var(--lbf-card)', borderBottom: `0.5px solid ${LINIE}`, padding: '9px 14px' }}>
@@ -765,7 +849,7 @@ export default function Doku({
             <button
               type="button"
               onClick={() => {
-                entwurfVerwerfen(window.localStorage, entwurfOrt)
+                entwurfVerwerfen(entwurfSpeicher(), entwurfOrt)
                 setWerte({})
                 setWiederhergestellt('')
               }}
@@ -913,7 +997,7 @@ export default function Doku({
                 onSpringen={zumBlock}
                 onGesendet={(g) => {
                   // Ein geändertes Protokoll hat keinen Entwurf auf dem Gerät
-                  if (!g.geaendert) entwurfVerwerfen(window.localStorage, entwurfOrt)
+                  if (!g.geaendert) entwurfVerwerfen(entwurfSpeicher(), entwurfOrt)
                   setWiederhergestellt('')
                   setGesendet(g)
                 }}

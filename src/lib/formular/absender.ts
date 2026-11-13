@@ -13,7 +13,15 @@ import type { User } from '../../types'
 import { modulFrei } from '../freigabe'
 
 export type FormularId = 'patienten' | 'produktausgabe' | 'defektmeldung'
+/**
+ * Was auf dem Gerät warten und über /absenden gehen kann: die drei Formulare mit
+ * Absender und eigene Formulare der Organisation (`eigen`, Vorlage in form_templates).
+ * `FormularId` bleibt, wie es ist (viele Tabellen je Formular hängen daran).
+ */
+export type FormularArt = FormularId | 'eigen'
 export type AbsenderModus = 'passwort' | 'frei'
+/** Absender eines eigenen Formulars, je Vorlage: wie die Standardformulare oder anonym (wie CIRS); Zwilling in felder.ts. */
+export type { VorlageModus } from './felder'
 export type AbsenderStatus = 'bestaetigt' | 'nicht_bestaetigt' | 'ohne_konto' | 'ausstehend' | 'ohne_unterschrift'
 export type AbsenderWeg = 'passwort' | 'anmeldung' | 'nachgereicht' | ''
 export type AbsenderAbschluss = { id: string; name: string; am: string; grund: string }
@@ -35,7 +43,7 @@ export type AbsenderEintrag = {
    */
   zurueckgewiesen?: { id: string; name: string; am: string }
 }
-export type Sammlung = 'patients' | 'product_outputs' | 'mpg_defect_reports'
+export type Sammlung = 'patients' | 'product_outputs' | 'mpg_defect_reports' | 'form_submissions'
 
 /** Die drei Formulare mit Absender (CIRS bleibt anonym). */
 export const FORMULARE: FormularId[] = ['patienten', 'produktausgabe', 'defektmeldung']
@@ -48,6 +56,11 @@ export const SAMMLUNG: Record<FormularId, Sammlung> = {
   patienten: 'patients',
   produktausgabe: 'product_outputs',
   defektmeldung: 'mpg_defect_reports',
+}
+
+/** Sammlung je Formular, auch für eigene Formulare (Einsendungen in form_submissions). */
+export function sammlungVon(f: FormularArt): Sammlung {
+  return f === 'eigen' ? 'form_submissions' : SAMMLUNG[f]
 }
 
 /** Voreinstellung je Formular (PO-Entscheidung 2): Patientendoku mit Passwort, sonst Name frei. */
@@ -121,8 +134,9 @@ export function absenderAusObjekt(roh: unknown): AbsenderEintrag | null {
 }
 
 /**
- * Den Absender eines Datensatzes lesen. `patients` und `product_outputs` führen
- * ihn in `payload.absender` (payload als Objekt, Text oder doppelt kodiert),
+ * Den Absender eines Datensatzes lesen. `patients`, `product_outputs` und
+ * `form_submissions` (eigene Formulare; anonym: keiner) führen ihn in
+ * `payload.absender` (payload als Objekt, Text oder doppelt kodiert),
  * Meldungen in `reporter_status`, `reporter_name` und `reporter_user_id`.
  * null heißt: ein alter Satz ohne Angabe; dann zeigt die App nichts Neues an.
  *

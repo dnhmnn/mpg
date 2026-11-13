@@ -6,7 +6,7 @@ import {
   ABSENDER_MODI, ABSENDER_WAHL, DIALOG_TEXTE, GRUND_MAX, GRUND_MIN, PRUEF_GRUND_TEXT, UNITAS_TEXTE, UNTERSCHREIBEN_TEXT,
   VORGAENGE_TEXTE, WARTET_HINWEIS, abschlussLesen, abschlussZeile, besatzungZeile, datumLang, datumText, gedrosselt,
   doppeltText, grundPruefen, hatAbsenderWahl, karteAusSuche, koennenNichtText, mannschaftNachtragen, mannschaftNachtragenZeigen, ohneUnterschriftErklaerung, pruefungZeigen,
-  pruefEintraege, pruefEintragText, selbstFreigabeFaellig, unterschriftenNach, unterschriftTitel, vorgaengeReiter, zeitpunkt,
+  pruefEintraege, pruefEintragText, selbstFreigabeFaellig, unterschriftenNach, unterschriftTitel, zeitpunkt,
   ZURUECKGEWIESEN_TEXT, ZURUECKWEISEN_TEXT, ausgeschaltetText, statText, zurueckgewiesenZeile,
 } from '../formular/verwaltung'
 import { GRUND_MAX as API_GRUND_MAX, GRUND_MIN as API_GRUND_MIN, type MitgliederPruefung, type Unterschrift } from '../formular/api'
@@ -149,24 +149,21 @@ describe('Karten unter Vorgänge (3.3, 3.4)', () => {
     expect(karteAusSuche('<script>')).toBe('')
   })
 
-  it('Reiter: ohne Modul Vorgänge kein CIRS, ohne Patienten kein Feld-Editor', () => {
-    expect(vorgaengeReiter({ vorgaengeFrei: true, patientenFrei: true })).toEqual(['formulare', 'editor', 'cirs'])
-    expect(vorgaengeReiter({ vorgaengeFrei: false, patientenFrei: true })).toEqual(['formulare', 'editor'])
-    expect(vorgaengeReiter({ vorgaengeFrei: true, patientenFrei: false })).toEqual(['formulare', 'cirs'])
-    expect(vorgaengeReiter({ vorgaengeFrei: false, patientenFrei: false })).toEqual(['formulare'])
-  })
 })
 
 describe('Unitas (4.9)', () => {
   const u = (formular: Unterschrift['formular'], id: string, titel = ''): Unterschrift => ({ formular, id, titel, zusammenfassung: '', angelegt: '2026-10-31 13:20:05.120Z', absender_name: 'Anna Berg' })
 
-  it('Unterschriften je Formular, Reihenfolge bleibt', () => {
-    const liste = [u('patienten', 'p2'), u('defektmeldung', 'd1'), u('patienten', 'p1'), u('produktausgabe', 'a1')]
+  it('Unterschriften je Formular, auch eigene Formulare; Reihenfolge bleibt, Unbekanntes fällt weg', () => {
+    const liste = [u('patienten', 'p2'), u('defektmeldung', 'd1'), u('eigen', 'e2'), u('patienten', 'p1'), u('produktausgabe', 'a1'), u('eigen', 'e1'),
+      u('toString' as Unterschrift['formular'], 'x1'), u('cirs' as Unterschrift['formular'], 'x2')]
     const n = unterschriftenNach(liste)
     expect(n.patienten.map((x) => x.id)).toEqual(['p2', 'p1'])
     expect(n.produktausgabe.map((x) => x.id)).toEqual(['a1'])
     expect(n.defektmeldung.map((x) => x.id)).toEqual(['d1'])
-    expect(unterschriftenNach(null)).toEqual({ patienten: [], produktausgabe: [], defektmeldung: [] })
+    expect(n.eigen.map((x) => x.id)).toEqual(['e2', 'e1'])
+    expect(Object.values(n).flat()).toHaveLength(6)
+    expect(unterschriftenNach(null)).toEqual({ patienten: [], produktausgabe: [], defektmeldung: [], eigen: [] })
   })
 
   it('Titel des Servers, sonst je Formular', () => {
@@ -174,6 +171,15 @@ describe('Unitas (4.9)', () => {
     expect(unterschriftTitel(u('patienten', 'p'))).toBe('Protokoll')
     expect(unterschriftTitel(u('produktausgabe', 'a', '  '))).toBe('Produktausgabe')
     expect(unterschriftTitel(u('defektmeldung', 'd'))).toBe('Defektmeldung')
+    expect(unterschriftTitel(u('eigen', 'e', 'Fahrzeugcheck'))).toBe('Fahrzeugcheck')
+    expect(unterschriftTitel(u('eigen', 'e'))).toBe('Formular')
+  })
+
+  it('Unterschreiben und „Das war ich nicht“ auch für eigene Formulare', () => {
+    expect(UNTERSCHREIBEN_TEXT.eigen).toBe('Du bestätigst, dass du dieses Formular abgegeben hast.')
+    expect(ZURUECKWEISEN_TEXT.eigen).toMatch(/ohne Konto unter dem eingetragenen Namen/)
+    expect(ZURUECKGEWIESEN_TEXT.eigen).toMatch(/nicht mehr mit deinem Konto verknüpft/)
+    expect(UNITAS_TEXTE.eigeneFormulare).toBe('Eigene Formulare')
   })
 
   it('Datum aus dem PocketBase-Format mit Leerzeichen', () => {

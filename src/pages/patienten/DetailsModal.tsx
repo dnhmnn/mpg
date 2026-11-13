@@ -3,6 +3,7 @@ import type { Patient, Nacherfassung } from './types'
 import { parsePayload, fmtDateTime } from './types'
 import { istDivi } from '../../lib/protokoll'
 import { escapeHtml } from '../../lib/aelrdDruck'
+import { altfelder, mitAltfeldern } from '../../lib/patientenAltfelder'
 import { PubSection } from '../public/pubStyles'
 const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
 
@@ -11,6 +12,11 @@ interface Props {
   type: 'patient' | 'nach'
   onClose: () => void
   onEdit?: () => void
+  /**
+   * form_config der Organisation: beschriftet im Ausdruck die Werte früherer
+   * eigener Felder (Bauplan Vorgänge, B1). Ohne: „Eigenes Feld“.
+   */
+  formConfig?: unknown
 }
 
 const pik = (ch: React.ReactNode, sz = 18) => (
@@ -85,13 +91,16 @@ function CatSection({ label, items }: { label: string; items: [boolean | undefin
   )
 }
 
-export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
+export default function DetailsModal({ doc, type, onClose, onEdit, formConfig }: Props) {
   async function printDoc() {
     const w = window.open('', '_blank', 'width=1000,height=750')
     if (!w) return
 
     if (type === 'patient') {
       const roh = parsePayload((doc as Patient).payload)
+      // Werte früherer eigener Felder: eine Seite hinter dem Ausdruck, aus dem
+      // unveränderten payload (altfelderHtml entschärft selbst)
+      const alte = altfelder(roh, formConfig)
 
       // Fassung 2.0 wird auf dem ÄLRD-Bogen gedruckt, und zwar ohne
       // Uebersetzung: diese Protokolle tragen bereits die Feldnamen des
@@ -103,7 +112,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       if (istDivi(roh)) {
         // Die Druckvorlagen sind gross und werden nur hier gebraucht (sie entschärfen selbst).
         const { aelrdHtml } = await import('../../lib/aelrdProtokoll')
-        w.document.write(aelrdHtml(roh as Record<string, unknown>))
+        w.document.write(mitAltfeldern(aelrdHtml(roh as Record<string, unknown>), alte))
         w.document.close()
         return
       }
@@ -365,7 +374,7 @@ export default function DetailsModal({ doc, type, onClose, onEdit }: Props) {
       <button class="pbtn" onclick="window.print()">Drucken / PDF</button>
       </body></html>`
 
-      w.document.write(html)
+      w.document.write(mitAltfeldern(html, alte, { klein: true }))
       w.document.close()
       return
     }

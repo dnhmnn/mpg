@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { angemeldeteSitzung, useOrg } from './OrgPublicLayout'
 import { pb } from '../../lib/pocketbase'
-import { formularFrei } from '../../lib/freigabe'
+import { formularFrei, modulFrei } from '../../lib/freigabe'
 import { angemeldetTrotzAusgeschaltet } from '../../lib/formular/absender'
 import { formConfigLesen } from '../../lib/formular/einstellung'
+import { schemaLesen } from '../../lib/formular/felder'
 import type { FormTemplate } from './formSchema'
 
 const STATIC_ITEMS = [
@@ -75,6 +76,10 @@ const CHEVRON = (
   </svg>
 )
 
+function felderText(n: number): string {
+  return n === 1 ? '1 Feld' : `${n} Felder`
+}
+
 export default function OrgLanding() {
   const { org, orgCode } = useOrg()
   const logoUrl = org.logo ? pb.files.getUrl(org, org.logo) : null
@@ -83,12 +88,16 @@ export default function OrgLanding() {
 
   const [customTemplates, setCustomTemplates] = useState<FormTemplate[]>([])
 
+  // Eigene Formulare nur mit freiem Modul Vorgänge; aktiv per Filter, archivierte im Client
+  // ausgefiltert (das Feld darf in PocketBase noch fehlen, Plan Vorgänge 4.3)
+  const eigeneFrei = modulFrei(org, 'dokumente')
   useEffect(() => {
+    if (!eigeneFrei) { setCustomTemplates([]); return }
     pb.collection('form_templates').getFullList<FormTemplate>({
-      filter: `organization_id = "${org.id}" && is_active = true`,
+      filter: pb.filter('organization_id = {:o} && is_active = true', { o: org.id }),
       sort: 'created',
-    }).then(setCustomTemplates).catch(() => {})
-  }, [org.id])
+    }).then((liste) => setCustomTemplates(liste.filter((t) => t.archiviert !== true))).catch(() => {})
+  }, [org.id, eigeneFrei])
 
   // Ausgeblendet (Vorgänge → Formulare) oder Modul nicht freigeschaltet (Supervisor). Ausgeblendet heißt nur
   // „öffentlicher Link aus“: angemeldete Mitglieder dieser Organisation sehen Patientendoku, Produktausgabe
@@ -155,7 +164,7 @@ export default function OrgLanding() {
                       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', lineHeight: 1.3 }}>{template.title}</div>
                       {template.description
                         ? <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{template.description}</div>
-                        : <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{template.schema.length} Felder</div>
+                        : <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{felderText(schemaLesen(template).felder.filter((f) => !f.aus).length)}</div>
                       }
                     </div>
                     {CHEVRON}

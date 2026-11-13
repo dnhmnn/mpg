@@ -103,6 +103,8 @@ export interface ExternalReport {
   severity: Severity
   status: ExternalReportStatus
   rejected_reason?: string
+  /** Eigene Felder der Organisation (Plan Vorgänge 1.3), nur vom Server gesetzt; nur anzeigen. Fehlt vor Owner-Schritt 6. */
+  eigene?: unknown
   created: string
 }
 

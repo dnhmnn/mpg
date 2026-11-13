@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { pb } from '../pocketbase'
-import { formularFrei } from '../freigabe'
+import { formularFrei, modulFrei } from '../freigabe'
 import type { User } from '../../types'
 import { absenderModus, FORMULARE, kannAngemeldetSenden, type FormularId } from './absender'
 import { alterWegErlaubt, formularStand, geraeteSpeicher, standLesen, type FormularStand, type Speicher, type Stand } from './api'
@@ -25,7 +25,7 @@ export function standMerken(orgCode: string, wert: { stand: Stand | null; alt: b
   try {
     const roh = wert.alt || !wert.stand
       ? { v: 1, am: jetzt.toISOString(), alt: wert.alt }
-      : { v: 1, am: jetzt.toISOString(), alt: false, version: wert.stand.version, formulare: wert.stand.formulare }
+      : { v: 1, am: jetzt.toISOString(), alt: false, version: wert.stand.version, formulare: wert.stand.formulare, faehig: wert.stand.faehig }
     s.setItem(STAND_PREFIX + orgCode, JSON.stringify(roh))
   } catch { /* Speicher voll oder gesperrt: nicht merken */ }
 }
@@ -38,7 +38,7 @@ export function gemerkterStand(orgCode: string, s: Speicher | null = geraeteSpei
     if (!roh || roh.v !== 1) return null
     // Nach dem Enddatum gibt es keinen alten Weg mehr, also auch kein gemerktes „alt“
     if (roh.alt === true) return alterWegErlaubt(jetzt) ? { stand: null, alt: true } : null
-    const stand = standLesen({ version: roh.version, formulare: roh.formulare, angemeldet: null })
+    const stand = standLesen({ version: roh.version, formulare: roh.formulare, faehig: roh.faehig, angemeldet: null })
     return stand ? { stand, alt: false } : null
   } catch {
     return null
@@ -66,7 +66,8 @@ function versteckt(org: Record<string, unknown> | null): string[] {
 /**
  * Stand ohne Netz und ohne Gemerktes, aus der Organisation erschlossen
  * (`version: 0`): Modus aus `form_config`, `ausstehend: true`. Ohne
- * Organisation gelten die Voreinstellungen und alles als an.
+ * Organisation gelten die Voreinstellungen und alles als an. Eigene Formulare
+ * (`eigen`): an, wenn das Modul Vorgänge frei ist; den Absender kennt die Vorlage.
  */
 export function standAusOrg(org: Record<string, unknown> | null): Stand {
   const aus = versteckt(org)
@@ -80,6 +81,8 @@ export function standAusOrg(org: Record<string, unknown> | null): Stand {
     }
   }
   const formulare = Object.fromEntries([...FORMULARE, 'cirs' as const].map((f) => [f, eins(f)])) as Stand['formulare']
+  const eigeneAn = org ? modulFrei(org, 'dokumente') : true
+  formulare.eigen = { modus: 'frei', an: eigeneAn, oeffentlich: eigeneAn, ausstehend: true }
   return { version: 0, formulare, angemeldet: null }
 }
 
@@ -92,6 +95,18 @@ export function angemeldetOhneNetz(orgId: string, konto: unknown, tokenGueltig: 
   const u = konto as User
   if (u.organization_id !== orgId || !kannAngemeldetSenden(u, jetzt) || typeof u.id !== 'string' || !u.id) return null
   return { id: u.id, name: typeof u.name === 'string' ? u.name.trim() : '' }
+}
+
+/**
+ * Ist auf diesem Gerät ein Mitglied dieser Organisation angemeldet (gültiges Token, auch ohne
+ * Netz)? Ohne das zeigen die öffentlichen Seiten keine Patientendaten von selbst: die Karte der
+ * Warteschlange nennt keinen Namen (5.4), ein Entwurf wird erst nach einer Frage eingesetzt
+ * (Review F7).
+ */
+export function mitgliedAngemeldet(orgId: string): boolean {
+  let gueltig = false, konto: unknown = null
+  try { gueltig = pb.authStore.isValid; konto = pb.authStore.record ?? pb.authStore.model } catch { /* keine Sitzung */ }
+  return !!angemeldetOhneNetz(orgId, konto, gueltig)
 }
 
 function sitzungFuer(org: Record<string, unknown> | null, jetzt: Date): Stand['angemeldet'] {

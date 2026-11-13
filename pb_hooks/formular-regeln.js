@@ -563,9 +563,12 @@ function fehler(status, grund, zusatz) {
  * passwortTreffer: undefined = noch nicht geprüft, null = keiner passt, sonst das Mitglied.
  * Ergebnis: { art: "anlegen", status, person, weg, name } | { art: "passwort_pruefen", kandidaten }
  *         | { art: "fehler", status, grund, feld?, text? }
+ * Modus „anonym“ (nur eigene Formulare): { art: "anlegen", anonym: true, status: "", person: null }.
  */
 function absenderEntscheiden(k) {
   const t = k.treffer || []
+  // 0: eigenes Formular „anonym“ (Plan Vorgänge F6): kein Absender, auch nicht mit Token
+  if (k.modus === "anonym") return { art: "anlegen", status: "", person: null, weg: "", name: "", anonym: true }
   // 1: angemeldet
   if (k.mitglied) return { art: "anlegen", status: "bestaetigt", person: k.mitglied, weg: "anmeldung", name: kontoName(k.mitglied) }
   const name = anzeigeName(k.name)
@@ -652,11 +655,11 @@ function datumDe(datum) {
   return t.length === 3 ? t[2] + "." + t[1] + "." + t[0] : String(datum || "")
 }
 
-/** payload einer Produktausgabe (1.13) aus geprüften Daten. */
+/** payload einer Produktausgabe (1.13) aus geprüften Daten; `d.eigene` (Angaben) nur von der Route. */
 function ausgabePayload(d, absender, pruefsumme) {
   const a = Object.assign({}, absender)
   delete a.feld
-  return {
+  const p = {
     einsatz: d.einsatz,
     datum: d.datum,
     lager_id: d.lager_id,
@@ -667,6 +670,8 @@ function ausgabePayload(d, absender, pruefsumme) {
     absender: a,
     eingang_sha256: pruefsumme || "",
   }
+  if (istObjekt(d.eigene)) p.eigene = d.eigene
+  return p
 }
 
 function ausgabeTitel(d) {
@@ -738,6 +743,799 @@ function datenPruefen(formular, daten, bestand, o) {
     return { ok: true, daten: { device_id: daten.device_id, device_name: String(g.name || ""), description: description, severity: severity } }
   }
   return datenFehler("formular")
+}
+
+/**
+ * datenPruefen und dazu die eigenen Felder der Organisation (Plan Vorgänge 2.4): Steht in
+ * `daten.eigene` ein Objekt `{ version, werte }`, prüft angabenBauen die Werte gegen die
+ * eigenen Felder aus form_config und legt das Ergebnis unter `daten.eigene` ab. Fehlt es, ist
+ * alles wie bei datenPruefen. o = { orgId, maske, formConfig }.
+ * Fehler der eigenen Felder: { ok: false, feld: "eigene.<Kennung>" bzw. "eigene", text }.
+ */
+function datenPruefenMitEigenen(formular, daten, bestand, o) {
+  const pr = datenPruefen(formular, daten, bestand, o)
+  if (!pr.ok || (formular !== "produktausgabe" && formular !== "defektmeldung") || !istObjekt(daten.eigene)) return pr
+  const k = standardKonfig((o || {}).formConfig, formular)
+  const a = angabenBauen(k.eigene, daten.eigene, { versionAktuell: k.version, grenze: FELD_GRENZEN.werte_standard })
+  if (!a.ok) return { ok: false, feld: a.feld === "werte" ? "eigene" : "eigene." + a.feld, text: a.text }
+  pr.daten.eigene = a.angaben
+  return pr
+}
+
+// ── Felder: anpassbare Standardformulare und eigene Formulare (Plan Vorgänge 1, 2) ──
+//
+// Zwilling für die App: src/lib/formular/felder.ts (ein Gleichlauf-Prüffall vergleicht beide).
+// Ein Feld: { id, typ, label, hilfe?, pflicht?, aus?, optionen?, einheit?, min?, max?, abschnitt? }.
+
+const FELD_TYPEN = ["text", "langtext", "zahl", "datum", "uhrzeit", "auswahl", "mehrfach", "janein"]
+
+/** Grenzen der Felder und Angaben (Plan 1.1). */
+const FELD_GRENZEN = {
+  eigene_standard: 30,
+  felder: 80,
+  abschnitte: 20,
+  label: 120,
+  hilfe: 300,
+  optionen_min: 2,
+  optionen: 30,
+  option: 80,
+  einheit: 12,
+  text: 500,
+  langtext: 4000,
+  zahl: 1e9,
+  mehrfach: 30,
+  titel: 120,
+  beschreibung: 500,
+  notiz: 4000,
+  werte_vorlage: 200000,
+  werte_standard: 60000,
+  aelter: 30,
+  aelter_text: 4000,
+  fassungen: 10,
+  verlauf: 500,
+}
+
+function kernFeld(id, label, fest, ausErlaubt, pflichtWaehlbar, pflichtVor) {
+  return { id: id, label: label, fest: fest, ausErlaubt: ausErlaubt, pflichtWaehlbar: pflichtWaehlbar, pflichtVor: pflichtVor }
+}
+
+/** Kernfelder der Standardformulare (Plan 1.2). Patientendoku hat keinen Katalog. */
+const STANDARD_FELDER = {
+  produktausgabe: [
+    kernFeld("einsatz", "Einsatznummer", true, false, false, true),
+    kernFeld("datum", "Datum", true, false, false, true),
+    kernFeld("positionen", "Positionen", true, false, false, true),
+    kernFeld("lager_id", "Verbrauchsort", true, false, false, true),
+  ],
+  defektmeldung: [
+    kernFeld("device_id", "Gerät", true, false, false, true),
+    kernFeld("description", "Beschreibung", true, false, false, true),
+    kernFeld("severity", "Schweregrad", true, false, false, true),
+  ],
+  cirs: [
+    kernFeld("datum", "Datum des Ereignisses", false, true, true, true),
+    kernFeld("ort", "Ort", false, true, true, true),
+    kernFeld("kategorie", "Kategorie", false, true, true, true),
+    kernFeld("schwere", "Schweregrad", false, true, true, true),
+    kernFeld("was", "Was ist passiert?", true, false, false, true),
+    kernFeld("warum", "Warum ist es passiert?", false, true, true, false),
+    kernFeld("folgen", "Folgen", false, true, true, false),
+    kernFeld("vorschlag", "Wie lässt es sich verhindern?", false, true, true, false),
+    kernFeld("melder_name", "Name (freiwillig)", false, true, false, false),
+    kernFeld("melder_kontakt", "Kontakt (freiwillig)", false, true, false, false),
+  ],
+}
+const STANDARD_FORMULARE = ["produktausgabe", "defektmeldung", "cirs"]
+
+/** Eigene Formulare im Vertrag der Routen (form_templates, form_submissions). */
+const EIGEN = { formular: "eigen", sammlung: "form_submissions", statusfeld: "absender_status", modul: "dokumente" }
+const VORLAGE_MODI = ["passwort", "frei", "anonym"]
+const EINSENDUNG_STATUS = ["neu", "in_bearbeitung", "erledigt"]
+
+/** Texte dieses Pakets (TEXTE, DATEN_TEXTE und HOOK_TEXTE bleiben unverändert). */
+const EIGENE_TEXTE = {
+  vorlage_aus: "Dieses Formular ist nicht aktiv.",
+  pflicht: "Bitte „{label}“ ausfüllen.",
+  wert: "Bitte „{label}“ prüfen.",
+  zu_gross: "Das sind zu viele Angaben für ein Formular. Bitte kürzen.",
+  eigen_alt: "Diese Fassung der App kann dieses Formular nicht mehr senden. Bitte die Seite neu laden.",
+  einsendung_loeschen: "Einsendungen werden nicht gelöscht. Erledigte stehen im Archiv.",
+  einsendung_recht: "Einsendungen sehen und bearbeiten nur Mitglieder mit dem Recht für Vorgänge.",
+  eingang_regel: "Der Eingang ist auf dem Server noch nicht fertig eingestellt. Bitte die Verantwortlichen informieren.",
+  vorlage_recht: "Eigene Formulare verwalten nur Mitglieder mit dem Recht für Vorgänge.",
+  vorlage_loeschen: "Dieses Formular hat Einsendungen. Bitte archivieren statt löschen.",
+  vorlage_geaendert: "Das Formular wurde inzwischen an anderer Stelle geändert. Bitte neu laden.",
+  vorlage_schema: "Die Felder des Formulars sind nicht gültig: {grund}.",
+  vorlage_titel: "Bitte einen Titel eintragen, höchstens 120 Zeichen.",
+  vorlage_beschreibung: "Die Beschreibung ist zu lang. Höchstens 500 Zeichen.",
+  status: "Diesen Status gibt es nicht.",
+  notiz: "Die Notiz ist zu lang. Höchstens 4000 Zeichen.",
+  cirs_was: "Bitte beschreiben, was passiert ist.",
+}
+
+/** Alte Feldarten der Vorlagen (fieldType) und zurück; mehrfach hat keine alte Form. */
+const ALT_TYP = { text: "text", textarea: "langtext", number: "zahl", date: "datum", time: "uhrzeit", select: "auswahl", checkbox: "janein" }
+const ALT_AUS_TYP = { text: "text", langtext: "textarea", zahl: "number", datum: "date", uhrzeit: "time", auswahl: "select", mehrfach: "text", janein: "checkbox" }
+
+function eigenes(o, k) {
+  return !!o && typeof o === "object" && Object.prototype.hasOwnProperty.call(o, k)
+}
+
+/** JSON aus Text (auch doppelt kodiert) oder schon als Wert; Unlesbares null. */
+function jsonLesen(x) {
+  let v = x
+  for (let i = 0; i < 2 && typeof v === "string"; i++) {
+    try { v = JSON.parse(v) } catch (err) { return null }
+  }
+  return v === undefined ? null : v
+}
+
+/** Kennung eines Felds oder Abschnitts: Buchstabe oder Ziffer, dann bis 39 aus [A-Za-z0-9_-]; keine Namen von Object.prototype. */
+function kennungOk(id) {
+  return typeof id === "string" && /^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$/.test(id) && !(id in Object.prototype)
+}
+
+function kuerzen(x, max) {
+  return typeof x === "string" ? x.trim().slice(0, max).trim() : ""
+}
+
+function zahlOk(n) {
+  return typeof n === "number" && Number.isFinite(n) && Math.abs(n) <= FELD_GRENZEN.zahl
+}
+
+/** Ganze Zahl ab 0 oder null. */
+function versionsZahl(x) {
+  return typeof x === "number" && Number.isInteger(x) && x >= 0 && x <= 1e9 ? x : null
+}
+
+function optionenLesen(roh) {
+  const aus = []
+  const gesehen = {}
+  for (const o of Array.isArray(roh) ? roh : []) {
+    const t = kuerzen(o, FELD_GRENZEN.option)
+    if (!t) continue
+    const k = t.toLowerCase()
+    if (eigenes(gesehen, k)) continue
+    gesehen[k] = true
+    aus.push(t)
+    if (aus.length >= FELD_GRENZEN.optionen) break
+  }
+  return aus
+}
+
+/** Feld in neuer Schreibweise, alte Schlüssel (fieldType, required, hint, options) übersetzt, nichts geprüft. */
+function feldRoh(x) {
+  if (!istObjekt(x)) return x
+  const f = Object.assign({}, x)
+  if (f.typ === undefined && typeof x.fieldType === "string") f.typ = eigenes(ALT_TYP, x.fieldType) ? ALT_TYP[x.fieldType] : x.fieldType
+  if (f.pflicht === undefined && x.required !== undefined) f.pflicht = x.required === true
+  if (f.hilfe === undefined && x.hint !== undefined) f.hilfe = x.hint
+  if (f.optionen === undefined && x.options !== undefined) f.optionen = x.options
+  delete f.fieldType
+  delete f.required
+  delete f.hint
+  delete f.options
+  return f
+}
+
+/** Ein Feld nachsichtig gelesen (Anzeige, Normalform); null, wenn Kennung oder Art nicht passen. */
+function feldLesen(x, mitAbschnitt) {
+  const f = feldRoh(x)
+  if (!istObjekt(f) || !kennungOk(f.id) || FELD_TYPEN.indexOf(f.typ) < 0) return null
+  const d = { id: f.id, typ: f.typ, label: kuerzen(f.label, FELD_GRENZEN.label) }
+  const hilfe = kuerzen(f.hilfe, FELD_GRENZEN.hilfe)
+  if (hilfe) d.hilfe = hilfe
+  if (f.pflicht === true) d.pflicht = true
+  if (f.aus === true) d.aus = true
+  if (d.typ === "auswahl" || d.typ === "mehrfach") d.optionen = optionenLesen(f.optionen)
+  if (d.typ === "zahl") {
+    const einheit = kuerzen(f.einheit, FELD_GRENZEN.einheit)
+    if (einheit) d.einheit = einheit
+    const min = zahlOk(f.min) ? f.min : null
+    const max = zahlOk(f.max) ? f.max : null
+    if (min !== null && (max === null || min <= max)) d.min = min
+    if (max !== null && (min === null || min <= max)) d.max = max
+  }
+  if (mitAbschnitt && kennungOk(f.abschnitt)) d.abschnitt = f.abschnitt
+  return d
+}
+
+/** Liste von Feldern nachsichtig: Unlesbares und doppelte Kennungen fallen weg, höchstens `max`. */
+function feldListeLesen(roh, mitAbschnitt, max) {
+  const liste = jsonLesen(roh)
+  const aus = []
+  const ids = {}
+  for (const x of Array.isArray(liste) ? liste : []) {
+    const d = feldLesen(x, mitAbschnitt)
+    if (!d || eigenes(ids, d.id)) continue
+    ids[d.id] = true
+    aus.push(d)
+    if (aus.length >= max) break
+  }
+  return aus
+}
+
+/** Abschnitte nachsichtig: { id, titel, hilfe? }, höchstens 20. */
+function abschnitteLesen(roh) {
+  const liste = jsonLesen(roh)
+  const aus = []
+  const ids = {}
+  for (const x of Array.isArray(liste) ? liste : []) {
+    if (!istObjekt(x) || !kennungOk(x.id) || eigenes(ids, x.id)) continue
+    ids[x.id] = true
+    const a = { id: x.id, titel: kuerzen(x.titel, FELD_GRENZEN.titel) }
+    const h = kuerzen(x.hilfe, FELD_GRENZEN.hilfe)
+    if (h) a.hilfe = h
+    aus.push(a)
+    if (aus.length >= FELD_GRENZEN.abschnitte) break
+  }
+  return aus
+}
+
+/** Felder nach Abschnitten ordnen (stabil); ohne Abschnitte ohne `abschnitt`, unbekannte in den ersten. */
+function inAbschnitte(felder, abschnitte) {
+  if (!abschnitte.length) {
+    return felder.map((f) => { const g = Object.assign({}, f); delete g.abschnitt; return g })
+  }
+  const pos = {}
+  abschnitte.forEach((a, i) => { pos[a.id] = i })
+  const mit = felder.map((f, i) => {
+    const g = Object.assign({}, f)
+    if (!eigenes(pos, g.abschnitt)) g.abschnitt = abschnitte[0].id
+    return { g: g, i: i }
+  })
+  mit.sort((a, b) => (pos[a.g.abschnitt] - pos[b.g.abschnitt]) || (a.i - b.i))
+  return mit.map((x) => x.g)
+}
+
+/**
+ * Schema einer Vorlage lesen (neue und alte Vorlagen): `vorlage` = { schema, abschnitte }
+ * (Liste oder JSON-Text). Ergebnis { abschnitte, felder } in Formularfolge. Ohne Abschnitte gilt
+ * ein Abschnitt ohne Titel (Felder ohne `abschnitt`).
+ */
+function schemaLesen(vorlage) {
+  const v = istObjekt(vorlage) ? vorlage : {}
+  const abschnitte = abschnitteLesen(v.abschnitte)
+  return { abschnitte: abschnitte, felder: inAbschnitte(feldListeLesen(v.schema, true, FELD_GRENZEN.felder), abschnitte) }
+}
+
+/** Ein Feld mit den Altschlüsseln für alte Seiten (fieldType, required, hint, options). */
+function altSpiegeln(f) {
+  const g = Object.assign({}, f)
+  g.fieldType = ALT_AUS_TYP[f.typ] || "text"
+  g.required = f.pflicht === true && f.aus !== true
+  if (f.hilfe) g.hint = f.hilfe
+  if (f.optionen) g.options = f.optionen.slice()
+  return g
+}
+
+/**
+ * Schema für form_templates: neue oder alte Felder → Normalform in Formularfolge, mit
+ * gespiegelten Altschlüsseln (`schema`), dazu `abschnitte` und `felder` (ohne Altschlüssel).
+ */
+function schemaNormalisieren(schema, abschnitte) {
+  const s = schemaLesen({ schema: schema, abschnitte: abschnitte })
+  return { schema: s.felder.map(altSpiegeln), abschnitte: s.abschnitte, felder: s.felder }
+}
+
+/** Schema so, wie es kam (Liste oder Text), alte Schlüssel übersetzt, für schemaFehler. */
+function schemaRoh(schema, abschnitte) {
+  const f = jsonLesen(schema)
+  return { felder: Array.isArray(f) ? f.map(feldRoh) : f, abschnitte: jsonLesen(abschnitte) }
+}
+
+function schemaFehlerText(feld, text) {
+  return { feld: feld, text: text }
+}
+
+/**
+ * Prüft ein Schema { abschnitte, felder } streng (neue Schreibweise; alte vorher über
+ * schemaRoh). null = gültig, sonst { feld, text } mit einem Grund ohne Punkt am Ende.
+ */
+function schemaFehler(s) {
+  const G = FELD_GRENZEN
+  const x = istObjekt(s) ? s : {}
+  const abschnitte = x.abschnitte === undefined || x.abschnitte === null ? [] : x.abschnitte
+  if (!Array.isArray(abschnitte)) return schemaFehlerText("abschnitte", "Die Abschnitte sind unlesbar")
+  if (abschnitte.length > G.abschnitte) return schemaFehlerText("abschnitte", "Höchstens " + G.abschnitte + " Abschnitte")
+  const aIds = {}
+  for (let i = 0; i < abschnitte.length; i++) {
+    const a = abschnitte[i]
+    const n = i + 1
+    if (!istObjekt(a)) return schemaFehlerText("abschnitte", "Abschnitt " + n + " ist unlesbar")
+    if (!kennungOk(a.id)) return schemaFehlerText("abschnitte", "Abschnitt " + n + " hat keine gültige Kennung")
+    if (eigenes(aIds, a.id)) return schemaFehlerText(a.id, "Abschnitt " + n + ": Kennung doppelt")
+    aIds[a.id] = true
+    const titel = typeof a.titel === "string" ? a.titel.trim() : ""
+    if (!titel) return schemaFehlerText(a.id, "Abschnitt " + n + " hat keinen Titel")
+    if (titel.length > G.titel) return schemaFehlerText(a.id, "Titel von Abschnitt " + n + " ist zu lang, höchstens " + G.titel + " Zeichen")
+    if (typeof a.hilfe === "string" && a.hilfe.trim().length > G.hilfe) return schemaFehlerText(a.id, "Hilfetext von Abschnitt " + n + " ist zu lang, höchstens " + G.hilfe + " Zeichen")
+  }
+  const felder = x.felder === undefined || x.felder === null ? [] : x.felder
+  if (!Array.isArray(felder)) return schemaFehlerText("schema", "Die Felder sind unlesbar")
+  if (felder.length > G.felder) return schemaFehlerText("schema", "Höchstens " + G.felder + " Felder")
+  const ids = {}
+  for (let i = 0; i < felder.length; i++) {
+    const f = feldRoh(felder[i])
+    const n = i + 1
+    if (!istObjekt(f)) return schemaFehlerText("schema", "Feld " + n + " ist unlesbar")
+    if (!kennungOk(f.id)) return schemaFehlerText("schema", "Feld " + n + " hat keine gültige Kennung")
+    if (eigenes(ids, f.id)) return schemaFehlerText(f.id, "Feld " + n + ": Kennung doppelt")
+    ids[f.id] = true
+    if (FELD_TYPEN.indexOf(f.typ) < 0) return schemaFehlerText(f.id, "Feld " + n + " hat eine unbekannte Art")
+    const label = typeof f.label === "string" ? f.label.trim() : ""
+    if (!label) return schemaFehlerText(f.id, "Feld " + n + " hat keine Bezeichnung")
+    if (label.length > G.label) return schemaFehlerText(f.id, "Bezeichnung von Feld " + n + " ist zu lang, höchstens " + G.label + " Zeichen")
+    if (typeof f.hilfe === "string" && f.hilfe.trim().length > G.hilfe) return schemaFehlerText(f.id, "Hilfetext von Feld " + n + " ist zu lang, höchstens " + G.hilfe + " Zeichen")
+    if (f.typ === "auswahl" || f.typ === "mehrfach") {
+      const opt = Array.isArray(f.optionen) ? f.optionen : []
+      if (opt.length < G.optionen_min) return schemaFehlerText(f.id, "Feld " + n + ": Auswahl ohne Optionen, mindestens zwei")
+      if (opt.length > G.optionen) return schemaFehlerText(f.id, "Feld " + n + ": höchstens " + G.optionen + " Optionen")
+      const gesehen = {}
+      for (let j = 0; j < opt.length; j++) {
+        const t = typeof opt[j] === "string" ? opt[j].trim() : ""
+        if (!t || t.length > G.option) return schemaFehlerText(f.id, "Feld " + n + ": Option " + (j + 1) + " ist leer oder länger als " + G.option + " Zeichen")
+        const k = t.toLowerCase()
+        if (eigenes(gesehen, k)) return schemaFehlerText(f.id, "Feld " + n + ": Option doppelt")
+        gesehen[k] = true
+      }
+    }
+    if (f.typ === "zahl") {
+      if (typeof f.einheit === "string" && f.einheit.trim().length > G.einheit) return schemaFehlerText(f.id, "Einheit von Feld " + n + " ist zu lang, höchstens " + G.einheit + " Zeichen")
+      const minDa = f.min !== undefined && f.min !== null
+      const maxDa = f.max !== undefined && f.max !== null
+      if ((minDa && !zahlOk(f.min)) || (maxDa && !zahlOk(f.max)) || (minDa && maxDa && f.min > f.max)) {
+        return schemaFehlerText(f.id, "Feld " + n + ": kleinster und größter Wert passen nicht")
+      }
+    }
+    const ab = f.abschnitt
+    if (abschnitte.length ? !eigenes(aIds, ab) : (ab !== undefined && ab !== null && ab !== "")) {
+      return schemaFehlerText(f.id, "Feld " + n + " gehört zu keinem Abschnitt")
+    }
+  }
+  return null
+}
+
+/** Leer: fehlt, null, Text nur aus Leerzeichen, leere Liste. Nein (false) ist nicht leer. */
+function wertLeer(w) {
+  if (w === undefined || w === null) return true
+  if (typeof w === "string") return w.trim() === ""
+  if (Array.isArray(w)) return w.length === 0
+  return false
+}
+
+const NEIN = { ok: false }
+function ja(w) {
+  return { ok: true, wert: w }
+}
+
+/** Ein (nicht leerer) Wert gegen sein Feld: { ok: true, wert } normalisiert, sonst { ok: false }. */
+function wertPruefen(def, w) {
+  const G = FELD_GRENZEN
+  if (!istObjekt(def)) return NEIN
+  const opt = Array.isArray(def.optionen) ? def.optionen : []
+  if (def.typ === "text") {
+    if (typeof w !== "string") return NEIN
+    const t = w.trim()
+    return t.length <= G.text ? ja(t) : NEIN
+  }
+  if (def.typ === "langtext") {
+    if (typeof w !== "string") return NEIN
+    const t = w.replace(/\r\n?/g, "\n").trim()
+    return t.length <= G.langtext ? ja(t) : NEIN
+  }
+  if (def.typ === "zahl") {
+    let n = w
+    if (typeof w === "string" && /^ *-?[0-9]+([.,][0-9]+)? *$/.test(w)) n = Number(w.trim().replace(",", "."))
+    if (!zahlOk(n)) return NEIN
+    if (zahlOk(def.min) && n < def.min) return NEIN
+    if (zahlOk(def.max) && n > def.max) return NEIN
+    return ja(n === 0 ? 0 : n)
+  }
+  if (def.typ === "datum") {
+    return typeof w === "string" && datumGueltig(w.trim()) ? ja(w.trim()) : NEIN
+  }
+  if (def.typ === "uhrzeit") {
+    return typeof w === "string" && /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(w.trim()) ? ja(w.trim()) : NEIN
+  }
+  if (def.typ === "auswahl") {
+    if (typeof w !== "string") return NEIN
+    const t = w.trim()
+    return opt.indexOf(t) >= 0 ? ja(t) : NEIN
+  }
+  if (def.typ === "mehrfach") {
+    if (!Array.isArray(w) || w.length > G.mehrfach) return NEIN
+    const gewaehlt = {}
+    for (const x of w) {
+      if (typeof x !== "string") return NEIN
+      const t = x.trim()
+      if (opt.indexOf(t) < 0 || eigenes(gewaehlt, t)) return NEIN
+      gewaehlt[t] = true
+    }
+    return ja(opt.filter((o) => eigenes(gewaehlt, o)))
+  }
+  if (def.typ === "janein") return typeof w === "boolean" ? ja(w) : NEIN
+  return NEIN
+}
+
+/** Nur die gültigen, nicht leeren Werte sichtbarer Felder, normalisiert (wie die App sie sendet). */
+function werteBereinigen(defs, werte) {
+  const aus = {}
+  const w = istObjekt(werte) ? werte : {}
+  for (const d of Array.isArray(defs) ? defs : []) {
+    if (!istObjekt(d) || !kennungOk(d.id) || d.aus === true || !eigenes(w, d.id) || wertLeer(w[d.id])) continue
+    const r = wertPruefen(d, w[d.id])
+    if (r.ok) aus[d.id] = r.wert
+  }
+  return aus
+}
+
+function wertAlsText(w) {
+  const t = typeof w === "string" ? w : JSON.stringify(w === undefined ? null : w)
+  return String(t).slice(0, FELD_GRENZEN.aelter_text)
+}
+
+/** Text mit {label} bzw. {grund}, ohne dass „$“ im eingesetzten Text etwas bedeutet. */
+function einsetzen(text, platz, wert) {
+  return text.replace(platz, () => String(wert))
+}
+
+/**
+ * Angaben zu eigenen Feldern bauen (Plan 2.4, Kern von F5).
+ * defs = Felder der benutzten Fassung, eingabe = { version, werte } vom Client,
+ * o = { versionAktuell, grenze }.
+ * Nachsichtig nur bei einer älteren Fassung: eingabe.version ist eine ganze Zahl mit
+ * 0 ≤ version < versionAktuell (eine Einsendung, die auf dem Gerät lag, während das Formular
+ * geändert wurde). Dann nimmt es an, was gültig ist, legt Unpassendes als Text unter `aelter` ab
+ * und hält die genannte Fassung im Satz fest. Alles andere (fehlt, Text, gleich, größer,
+ * unbekannt) prüft es streng wie die aktuelle Fassung: Pflicht und gültige Werte.
+ * Ergebnis { ok: true, angaben: { v: 1, version, felder, werte, aelter? } } | { ok: false, feld, text }.
+ */
+function angabenBauen(defs, eingabe, o) {
+  const G = FELD_GRENZEN
+  const opt = o || {}
+  const e = istObjekt(eingabe) ? eingabe : {}
+  const werte = istObjekt(e.werte) ? e.werte : {}
+  const grenze = Number(opt.grenze) > 0 ? Number(opt.grenze) : G.werte_vorlage
+  if ((kanonisch(werte) || "").length > grenze) return { ok: false, feld: "werte", text: EIGENE_TEXTE.zu_gross }
+  const genannt = versionsZahl(e.version)
+  const jetzt = versionsZahl(opt.versionAktuell) !== null ? opt.versionAktuell : 0
+  const aktuell = !(genannt !== null && genannt < jetzt)
+  const sichtbar = (Array.isArray(defs) ? defs : []).filter((d) => istObjekt(d) && kennungOk(d.id) && d.aus !== true)
+  const bekannt = {}
+  const aus = {}
+  const aelter = []
+  const alt = (id, w) => { if (aelter.length < G.aelter) aelter.push({ id: String(id).slice(0, 64), wert: wertAlsText(w) }) }
+  for (const d of sichtbar) {
+    if (eigenes(bekannt, d.id)) continue
+    bekannt[d.id] = true
+    const w = eigenes(werte, d.id) ? werte[d.id] : undefined
+    const name = d.label || d.id
+    if (wertLeer(w)) {
+      if (d.pflicht === true && aktuell) return { ok: false, feld: d.id, text: einsetzen(EIGENE_TEXTE.pflicht, "{label}", name) }
+      continue
+    }
+    const r = wertPruefen(d, w)
+    if (r.ok) aus[d.id] = r.wert
+    else if (aktuell) return { ok: false, feld: d.id, text: einsetzen(EIGENE_TEXTE.wert, "{label}", name) }
+    else alt(d.id, w)
+  }
+  if (!aktuell) {
+    // Sortiert: Den Body liefert PocketBase als Go-Map, deren Schlüsselfolge zufällig ist.
+    // So stehen unbekannte Kennungen immer in derselben Folge in `aelter` (und dieselben 30).
+    for (const id of Object.keys(werte).sort()) if (!eigenes(bekannt, id) && !wertLeer(werte[id])) alt(id, werte[id])
+  }
+  // Im Satz die Fassung, gegen die geprüft wurde: die genannte ältere, sonst die aktuelle
+  const version = aktuell ? jetzt : genannt
+  const felder = []
+  const drin = {}
+  for (const d of sichtbar) {
+    if (eigenes(drin, d.id)) continue
+    drin[d.id] = true
+    felder.push(Object.assign({}, d))
+  }
+  const angaben = { v: 1, version: version, felder: felder, werte: aus }
+  if (aelter.length) angaben.aelter = aelter
+  return { ok: true, angaben: angaben }
+}
+
+/**
+ * Einstellung eines Standardformulars aus form_config.formulare.<formular> (Plan 1.2), nachsichtig:
+ * Objekt, Text oder doppelt kodiert; Kaputtes ergibt die Vorgabe. Ergebnis
+ * { v: 1, version, felder, reihenfolge (vollständig), eigene }.
+ */
+function standardKonfig(cfg, formular) {
+  const G = FELD_GRENZEN
+  const kern = eigenes(STANDARD_FELDER, formular) ? STANDARD_FELDER[formular] : []
+  const alle = formConfigLesen(cfg).formulare
+  const roh = istObjekt(alle) && eigenes(alle, formular) && istObjekt(alle[formular]) ? alle[formular] : {}
+  const version = versionsZahl(roh.version) !== null ? roh.version : 0
+  const kernIds = {}
+  for (const k of kern) kernIds[k.id] = true
+  const fr = istObjekt(roh.felder) ? roh.felder : {}
+  const felder = {}
+  for (const k of kern) {
+    if (!eigenes(fr, k.id) || !istObjekt(fr[k.id])) continue
+    const x = fr[k.id]
+    const e = {}
+    const label = kuerzen(x.label, G.label)
+    if (label) e.label = label
+    const hilfe = kuerzen(x.hilfe, G.hilfe)
+    if (hilfe) e.hilfe = hilfe
+    if (k.ausErlaubt && typeof x.aus === "boolean") e.aus = x.aus
+    if (k.pflichtWaehlbar && typeof x.pflicht === "boolean") e.pflicht = x.pflicht
+    if (Object.keys(e).length) felder[k.id] = e
+  }
+  const eigene = []
+  const ids = {}
+  for (const x of Array.isArray(roh.eigene) ? roh.eigene : []) {
+    const d = feldLesen(x, false)
+    if (!d || eigenes(kernIds, d.id) || eigenes(ids, d.id)) continue
+    ids[d.id] = true
+    eigene.push(d)
+    if (eigene.length >= G.eigene_standard) break
+  }
+  const reihenfolge = []
+  const drin = {}
+  for (const id of Array.isArray(roh.reihenfolge) ? roh.reihenfolge : []) {
+    if (typeof id !== "string" || eigenes(drin, id) || !(eigenes(kernIds, id) || eigenes(ids, id))) continue
+    drin[id] = true
+    reihenfolge.push(id)
+  }
+  for (const k of kern) if (!eigenes(drin, k.id)) { drin[k.id] = true; reihenfolge.push(k.id) }
+  for (const d of eigene) if (!eigenes(drin, d.id)) { drin[d.id] = true; reihenfolge.push(d.id) }
+  return { v: 1, version: version, felder: felder, reihenfolge: reihenfolge, eigene: eigene }
+}
+
+/** Absender-Art einer Vorlage: passwort, frei oder anonym; fehlt oder unbekannt: frei. */
+function vorlageModus(vorlage) {
+  const a = istObjekt(vorlage) ? vorlage.absender : undefined
+  return VORLAGE_MODI.indexOf(a) >= 0 ? a : "frei"
+}
+
+/** Nimmt die Vorlage Einsendungen an? Eigene Org, aktiv, nicht archiviert, Modul Vorgänge frei. */
+function vorlageAn(org, vorlage) {
+  return !!org && istObjekt(vorlage) && vorlage.organization_id === org.id && vorlage.is_active === true &&
+    vorlage.archiviert !== true && modulFrei(org, EIGEN.modul)
+}
+
+/**
+ * Die Fassung, gegen die geprüft wird: fassungen[version] für eine ältere Fassung (ganze Zahl
+ * kleiner als die aktuelle), wenn es sie noch gibt, sonst die aktuelle. Ob streng geprüft wird,
+ * entscheidet angabenBauen an der genannten Nummer, nicht an dieser Auswahl.
+ * Ergebnis { version, abschnitte, felder, aktuell }.
+ */
+function fassungFuer(vorlage, version) {
+  const v = istObjekt(vorlage) ? vorlage : {}
+  const jetzt = versionsZahl(v.version) !== null ? v.version : 0
+  const f = jsonLesen(v.fassungen)
+  const k = versionsZahl(version) !== null ? String(version) : ""
+  if (k && version < jetzt && istObjekt(f) && eigenes(f, k) && istObjekt(f[k])) {
+    const s = schemaLesen({ schema: f[k].schema, abschnitte: f[k].abschnitte })
+    return { version: version, abschnitte: s.abschnitte, felder: s.felder, aktuell: false }
+  }
+  const s = schemaLesen(v)
+  return { version: jetzt, abschnitte: s.abschnitte, felder: s.felder, aktuell: true }
+}
+
+/**
+ * Obergrenze für form_templates.fassungen in Zeichen (kanonisch). Zehn große Fassungen könnten
+ * sonst die Größe des JSON-Felds sprengen, dann ließe sich die Vorlage nicht mehr speichern.
+ * Darüber fällt die älteste Fassung zuerst weg, die neue bleibt immer. Was mit einer
+ * weggefallenen Fassung gesendet wird, prüft der Server gegen die aktuelle (F5: angenommen,
+ * Unpassendes unter `aelter`). Feldgröße in PocketBase: docs/pocketbase-regeln.md, „Felder“.
+ */
+const FASSUNGEN_MAX_ZEICHEN = 2000000
+
+/** fassungen einer Vorlage mit der neuen Fassung, nur die letzten 10 (nach Nummer), höchstens FASSUNGEN_MAX_ZEICHEN. */
+function fassungenNeu(alt, version, felder, abschnitte, am) {
+  const a = jsonLesen(alt)
+  const alle = {}
+  if (istObjekt(a)) for (const k of Object.keys(a)) if (/^[0-9]+$/.test(k) && istObjekt(a[k])) alle[k] = a[k]
+  alle[String(version)] = { schema: felder, abschnitte: abschnitte, am: am }
+  const behalten = Object.keys(alle).sort((x, y) => Number(x) - Number(y)).slice(-FELD_GRENZEN.fassungen)
+  let groesse = 0
+  const groessen = behalten.map((k) => { const n = (kanonisch(alle[k]) || "").length + k.length + 4; groesse += n; return n })
+  while (behalten.length > 1 && groesse > FASSUNGEN_MAX_ZEICHEN && behalten[0] !== String(version)) {
+    behalten.shift()
+    groesse -= groessen.shift()
+  }
+  const aus = {}
+  for (const k of behalten) aus[k] = alle[k]
+  return aus
+}
+
+/**
+ * payload einer neuen Einsendung (Plan 1.5). o = { vorlage, fassung, angaben, absender
+ * (Eintrag oder null), modus, eingangMs, pruefsumme }. Bei „anonym“ ohne `absender`.
+ */
+function einsendungPayload(o) {
+  const p = {
+    v: 2,
+    titel: kuerzen(o.vorlage && o.vorlage.title, FELD_GRENZEN.titel) || "Formular",
+    version: o.angaben.version,
+    abschnitte: (o.fassung && o.fassung.abschnitte) || [],
+    felder: o.angaben.felder,
+    werte: o.angaben.werte,
+    aelter: o.angaben.aelter || [],
+    absender_modus: o.modus,
+    abgesendet: new Date(o.eingangMs).toISOString(),
+    eingang_sha256: o.pruefsumme || "",
+  }
+  if (o.absender && o.modus !== "anonym") {
+    const a = Object.assign({}, o.absender)
+    delete a.feld
+    p.absender = a
+  }
+  return p
+}
+
+function wertKurz(f, w) {
+  if (typeof w === "boolean") return w ? "Ja" : "Nein"
+  if (Array.isArray(w)) return w.join(", ")
+  if (typeof w === "number") return String(w).replace(".", ",") + (f && f.einheit ? " " + f.einheit : "")
+  if (f && f.typ === "datum" && typeof w === "string") return datumDe(w)
+  return String(w).replace(/[\r\n\t]+/g, " ")
+}
+
+/** „<Titel>: <erster Wert>“, höchstens 120 Zeichen (Liste „Wartet auf deine Unterschrift“). */
+function einsendungZusammenfassung(payload) {
+  const p = payloadLesen(payload) || {}
+  const titel = typeof p.titel === "string" ? p.titel : ""
+  const werte = istObjekt(p.werte) ? p.werte : {}
+  let erster = ""
+  for (const f of Array.isArray(p.felder) ? p.felder : []) {
+    if (istObjekt(f) && eigenes(werte, f.id) && !wertLeer(werte[f.id])) { erster = wertKurz(f, werte[f.id]); break }
+  }
+  return (titel + (erster ? ": " + erster : "")).slice(0, 120)
+}
+
+// ── Hooks der eigenen Formulare (reine Teile, Plan Vorgänge 2.7) ────────────
+
+/** Sammlung eines Formulars der Routen (Unterschriften): die drei festen und "eigen"; sonst "". */
+function sammlungFuer(formular) {
+  if (formular === EIGEN.formular) return EIGEN.sammlung
+  return FORMULARE.indexOf(formular) >= 0 ? SAMMLUNG[formular] : ""
+}
+
+/**
+ * Recht Vorgänge in dieser Organisation, wie die Regel VORGAENGE (docs/pocketbase-regeln.md):
+ * Konto in users, aktiv, eigene Organisation, keine Teilnehmenden; Supervisor, Leitung oder
+ * Recht `dokumente` (auch befristet, solange es läuft).
+ */
+function darfVorgaenge(u, orgId, jetzt) {
+  if (!istUsers(u) || !aktiv(u, jetzt) || u.role === "teilnehmer") return false
+  if (!orgId || u.organization_id !== orgId) return false
+  return u.supervisor === true || u.role === "admin" || rechtAktiv(u, EIGEN.modul, jetzt)
+}
+
+/**
+ * Eine Vorlage (form_templates) prüfen und in die Normalform bringen (Hook, Plan 2.7.3).
+ * v = { title, description, absender, archiviert, is_active, schema, abschnitte } so, wie der
+ * Datensatz sie nach dem Anwenden des Bodys trägt (Liste oder JSON-Text, alte oder neue Felder).
+ * alt (nur beim Ändern) = { title, description, schema, abschnitte } des gespeicherten Satzes.
+ * Ergebnis { ok: true, werte: { title, description, absender, archiviert, is_active, schema
+ * (mit Altschlüsseln), abschnitte, felder (ohne), bestand } } | { ok: false, feld, text }.
+ *
+ * Bestandsschutz: Der alte Baukasten ließ Auswahl mit weniger als zwei Optionen, doppelte Optionen
+ * und lange Texte zu. Ist ein solches gespeichertes Schema (bzw. Titel, Beschreibung) durch die
+ * Änderung inhaltlich gleich geblieben, bleibt es stehen (`bestand: true`, der Hook schreibt
+ * schema und abschnitte dann nicht), damit sich die Vorlage weiter aktivieren, deaktivieren und
+ * archivieren lässt. Jede inhaltliche Änderung wird streng geprüft.
+ */
+function vorlagePruefen(v, alt) {
+  const x = istObjekt(v) ? v : {}
+  const a = istObjekt(alt) ? alt : null
+  const titelAlt = a && typeof a.title === "string" ? a.title.trim() : null
+  const title = typeof x.title === "string" ? x.title.trim() : ""
+  if ((!title || title.length > FELD_GRENZEN.titel) && !(title && title === titelAlt)) return { ok: false, feld: "title", text: EIGENE_TEXTE.vorlage_titel }
+  const beschreibungAlt = a && typeof a.description === "string" ? a.description.trim() : null
+  const description = typeof x.description === "string" ? x.description.trim() : ""
+  if (description.length > FELD_GRENZEN.beschreibung && description !== beschreibungAlt) return { ok: false, feld: "description", text: EIGENE_TEXTE.vorlage_beschreibung }
+  const f = schemaFehler(schemaRoh(x.schema, x.abschnitte))
+  let bestand = false
+  if (f) {
+    const neu = schemaLesen({ schema: x.schema, abschnitte: x.abschnitte })
+    const vorher = a ? schemaLesen({ schema: a.schema, abschnitte: a.abschnitte }) : null
+    bestand = !!vorher && vorlageKanon(neu.felder, neu.abschnitte) === vorlageKanon(vorher.felder, vorher.abschnitte)
+    if (!bestand) return { ok: false, feld: f.feld, text: einsetzen(EIGENE_TEXTE.vorlage_schema, "{grund}", f.text) }
+  }
+  const n = schemaNormalisieren(x.schema, x.abschnitte)
+  const archiviert = x.archiviert === true
+  return {
+    ok: true,
+    werte: {
+      title: title, description: description, absender: VORLAGE_MODI.indexOf(x.absender) >= 0 ? x.absender : "frei",
+      archiviert: archiviert, is_active: archiviert ? false : x.is_active === true,
+      schema: n.schema, abschnitte: n.abschnitte, felder: n.felder, bestand: bestand,
+    },
+  }
+}
+
+/** Kanon einer Fassung (Felder ohne Altschlüssel und Abschnitte), für den Vergleich alt/neu. */
+function vorlageKanon(felder, abschnitte) {
+  return kanonisch({ schema: felder || [], abschnitte: abschnitte || [] })
+}
+
+/**
+ * Fassung nach dem Speichern einer Vorlage (Plan 1.4, F4). o = { neu: bool, altVersion,
+ * altFelder, altAbschnitte, altFassungen, felder, abschnitte, am }.
+ * Anlegen: Version 1. Ändern: +1, wenn sich Felder oder Abschnitte geändert haben, sonst wie
+ * vorher. `fassungen` bekommt die neue Fassung (und die bisherige, falls sie dort fehlte, etwa bei
+ * Vorlagen aus der Zeit vor dem Feld), höchstens die letzten 10.
+ * Ergebnis { version, fassungen, geaendert }.
+ */
+function vorlageFassung(o) {
+  const am = o.am || ""
+  if (o.neu) return { version: 1, fassungen: fassungenNeu(null, 1, o.felder, o.abschnitte, am), geaendert: true }
+  const alt = versionsZahl(o.altVersion) !== null ? o.altVersion : 0
+  if (vorlageKanon(o.felder, o.abschnitte) === vorlageKanon(o.altFelder, o.altAbschnitte)) {
+    const f = jsonLesen(o.altFassungen)
+    return { version: alt, fassungen: istObjekt(f) ? f : null, geaendert: false }
+  }
+  let vorher = jsonLesen(o.altFassungen)
+  if (!istObjekt(vorher)) vorher = {}
+  if (!eigenes(vorher, String(alt))) vorher = fassungenNeu(vorher, alt, o.altFelder || [], o.altAbschnitte || [], "")
+  return { version: alt + 1, fassungen: fassungenNeu(vorher, alt + 1, o.felder, o.abschnitte, am), geaendert: true }
+}
+
+/** Steht eine basis_version im Body, die nicht die gespeicherte ist? (409, Plan 2.7.3) */
+function basisKonflikt(basis, gespeichert) {
+  if (basis === undefined || basis === null || basis === "") return false
+  const b = typeof basis === "string" && /^[0-9]+$/.test(basis) ? Number(basis) : basis
+  const g = versionsZahl(gespeichert) !== null ? gespeichert : 0
+  return b !== g
+}
+
+/** Notiz einer Einsendung: Text, Zeilenumbrüche vereinheitlicht, außen ohne Leerraum. */
+function notizLesen(x) {
+  if (x === undefined || x === null) return ""
+  return typeof x === "string" ? x.replace(/\r\n?/g, "\n").trim() : null
+}
+
+/**
+ * Eine Einsendung bearbeiten (Hook form_submissions, Plan 2.7.2): nur `status` und `notiz` aus
+ * dem Body. o = { status, notiz, bearbeitung (des Originals), body (nur die Schlüssel des Bodys),
+ * von: { id, name }, am, id (Kennung des Verlaufseintrags), mitVerlauf }.
+ * Ergebnis { ok: true, status, notiz, bearbeitung, geaendert } | { ok: false, text }.
+ */
+function einsendungAendern(o) {
+  const body = istObjekt(o.body) ? o.body : {}
+  const statusO = typeof o.status === "string" ? o.status : ""
+  const notizO = typeof o.notiz === "string" ? o.notiz : ""
+  let status = statusO
+  if (eigenes(body, "status")) {
+    if (EINSENDUNG_STATUS.indexOf(body.status) < 0) return { ok: false, text: EIGENE_TEXTE.status }
+    status = body.status
+  }
+  let notiz = notizO
+  if (eigenes(body, "notiz")) {
+    const n = notizLesen(body.notiz)
+    if (n === null || n.length > FELD_GRENZEN.notiz) return { ok: false, text: EIGENE_TEXTE.notiz }
+    notiz = n
+  }
+  const b = jsonLesen(o.bearbeitung)
+  const verlauf = istObjekt(b) && Array.isArray(b.verlauf) ? b.verlauf.filter(istObjekt) : []
+  const geaendert = status !== statusO || notiz !== notizO
+  let bearbeitung = istObjekt(b) ? Object.assign({}, b, { verlauf: verlauf }) : { verlauf: verlauf }
+  if (geaendert && o.mitVerlauf) {
+    const von = istObjekt(o.von) ? { id: String(o.von.id || ""), name: String(o.von.name || "") } : { id: "", name: "" }
+    const eintrag = { id: String(o.id || ""), am: String(o.am || ""), von: von, status_vorher: statusO, status: status, notiz: notiz !== notizO }
+    bearbeitung = Object.assign({}, bearbeitung, { verlauf: verlauf.concat([eintrag]).slice(-FELD_GRENZEN.verlauf) })
+  }
+  return { ok: true, status: status, notiz: notiz, bearbeitung: bearbeitung, geaendert: geaendert }
+}
+
+/**
+ * Eigene Felder einer CIRS-Meldung (Hook cirs.pb.js, Plan 2.7.5): payload.eigene = { version,
+ * werte } vom Client wird gegen die Einstellung der Organisation neu gebaut.
+ * Ergebnis { ok: true, eigene } (eigene null: nichts mitgeschickt) | { ok: false, text }.
+ */
+function cirsEigene(formConfig, roh) {
+  if (!istObjekt(roh)) return { ok: true, eigene: null }
+  const k = standardKonfig(formConfig, "cirs")
+  const a = angabenBauen(k.eigene, roh, { versionAktuell: k.version, grenze: FELD_GRENZEN.werte_standard })
+  return a.ok ? { ok: true, eigene: a.angaben } : { ok: false, text: a.text }
 }
 
 // ── Drossel und Sperre (1.12) ──────────────────────────────────────────────
@@ -1337,24 +2135,33 @@ function absenderAusSatz(rec, sammlung) {
 /** Antwort für eine schon gespeicherte Sendung mit derselben Kennung (bereits: true). */
 function gespeicherteAntwort(rec, sammlung) {
   const p = sammlung === "mpg_defect_reports" ? {} : payloadLesen(jsonWert(rec, "payload")) || {}
-  return { ok: true, id: rec.id, bereits: true, absender: absenderAusSatz(rec, sammlung), frist: sammlung === "patients" ? String(p.frist || "") : "" }
+  const aus = { ok: true, id: rec.id, bereits: true, absender: absenderAusSatz(rec, sammlung), frist: sammlung === "patients" ? String(p.frist || "") : "" }
+  if (sammlung === EIGEN.sammlung) aus.anonym = p.absender_modus === "anonym"
+  return aus
 }
 
 /**
  * Kennung schon vergeben? null = frei; { bereits: true, antwort } = dieselbe Sendung noch einmal;
  * { bereits: false } = Kennung mit anderen Daten, anderer Org oder in einer anderen Sammlung (409).
+ * Eigene Formulare (formular "eigen"): o = { vorlage }, gleiche Vorlage verlangt.
  */
-function schonDa(app, formular, id, orgId, pruefsumme, daten) {
-  const sammlung = SAMMLUNG[formular]
+function schonDa(app, formular, id, orgId, pruefsumme, daten, o) {
+  const sammlung = formular === EIGEN.formular ? EIGEN.sammlung : SAMMLUNG[formular]
   let rec = null
   try { rec = app.findRecordById(sammlung, id) } catch (err) { rec = null }
   if (rec) {
     if (rec.getString("organization_id") !== orgId) return { bereits: false }
+    if (sammlung === EIGEN.sammlung && (!o || rec.getString("template_id") !== o.vorlage)) return { bereits: false }
     if (sammlung === "mpg_defect_reports") {
       const d = istObjekt(daten) ? daten : {}
-      const gleich = rec.getString("device_id") === d.device_id &&
+      let gleich = rec.getString("device_id") === d.device_id &&
         rec.getString("description") === (typeof d.description === "string" ? d.description.trim() : "") &&
         rec.getString("severity") === (SCHWERE.indexOf(d.severity) >= 0 ? d.severity : "medium")
+      // Eigene Angaben (Feld eigene): gleich heißt dieselbe Prüfsumme der Sendung; ohne Angaben auch ohne daten.eigene
+      if (gleich && feldDa(app, sammlung, "eigene")) {
+        const g = jsonWert(rec, "eigene")
+        gleich = istObjekt(g) ? g.eingang_sha256 === pruefsumme : !istObjekt(d.eigene)
+      }
       return gleich ? { bereits: true, antwort: gespeicherteAntwort(rec, sammlung) } : { bereits: false }
     }
     const p = payloadLesen(jsonWert(rec, "payload")) || {}
@@ -1396,11 +2203,16 @@ function zielAlterAenderung(app, orgId, payload) {
   return ""
 }
 
-/** Offene „ausstehend“ für dieses Ziel über alle drei Sammlungen der Org. */
+/** Statusfeld einer Sammlung mit Absender, auch form_submissions (EIGEN). */
+function statusfeldVon(sammlung) {
+  return sammlung === EIGEN.sammlung ? EIGEN.statusfeld : STATUSFELD[sammlung]
+}
+
+/** Offene „ausstehend“ für dieses Ziel über alle Sammlungen der Org (auch eigene Formulare). */
 function offeneAusstehende(app, orgId, zielId) {
   let n = 0
-  for (const sammlung of ["patients", "product_outputs", "mpg_defect_reports"]) {
-    const feld = STATUSFELD[sammlung]
+  for (const sammlung of ["patients", "product_outputs", "mpg_defect_reports", EIGEN.sammlung]) {
+    const feld = statusfeldVon(sammlung)
     if (!feldDa(app, sammlung, feld)) continue
     try {
       if (sammlung === "mpg_defect_reports") {
@@ -1418,6 +2230,124 @@ function offeneAusstehende(app, orgId, zielId) {
 
 /** Datei im Datenverzeichnis: Die Formular-Hooks sind schon einmal gestartet (statusfelderLeeren lief). */
 const START_MERKER = "responda_formular_start.txt"
+/** Ebenso für die eigenen Formulare (eigeneStatusLeeren lief), unabhängig vom ersten Merker. */
+const START_MERKER_EIGENE = "responda_eigene_start.txt"
+
+/**
+ * Felder, die GET /diagnose meldet: die Statusfelder des Absender-Pakets und die Felder der
+ * eigenen Formulare (Plan Vorgänge 1.6). [Sammlung, Feld].
+ */
+const FELDER_DIAGNOSE = [
+  ["patients", "absender_status"], ["product_outputs", "absender_status"], ["mpg_defect_reports", "reporter_status"],
+  ["form_templates", "absender"], ["form_templates", "archiviert"], ["form_templates", "abschnitte"],
+  ["form_templates", "version"], ["form_templates", "fassungen"],
+  ["form_submissions", "status"], ["form_submissions", "notiz"], ["form_submissions", "bearbeitung"], ["form_submissions", "absender_status"],
+  ["mpg_defect_reports", "eigene"],
+]
+
+/**
+ * form_submissions.absender_status einmal leeren (erster Start dieses Pakets, Plan Vorgänge
+ * 2.7.7): Was dort vor den Hooks stand, setzte kein Hook. Gibt die Zahl der geleerten Sätze.
+ */
+function eigeneStatusLeeren(app) {
+  if (!feldDa(app, EIGEN.sammlung, EIGEN.statusfeld)) return 0
+  let n = 0
+  try { n = app.findRecordsByFilter(EIGEN.sammlung, EIGEN.statusfeld + " != ''", "", 0, 0).length } catch (err) { n = 0 }
+  if (n > 0) app.db().newQuery("UPDATE `" + EIGEN.sammlung + "` SET `" + EIGEN.statusfeld + "` = '' WHERE `" + EIGEN.statusfeld + "` != ''").execute()
+  return n
+}
+
+/** Eine Vorlage als einfaches Objekt (fehlende Felder leer), für fassungFuer, vorlageAn, vorlageModus. */
+function vorlageAusRecord(rec) {
+  return {
+    id: rec.id,
+    organization_id: rec.getString("organization_id"),
+    title: rec.getString("title"),
+    description: rec.getString("description"),
+    is_active: rec.getBool("is_active"),
+    archiviert: rec.getBool("archiviert"),
+    absender: rec.getString("absender"),
+    schema: jsonWert(rec, "schema"),
+    abschnitte: jsonWert(rec, "abschnitte"),
+    version: rec.getInt("version"),
+    fassungen: jsonWert(rec, "fassungen"),
+  }
+}
+
+/** Vorlage per Kennung oder null. */
+function vorlageLaden(app, id) {
+  if (!kennungGueltig(id)) return null
+  try { return vorlageAusRecord(app.findRecordById("form_templates", id)) } catch (err) { return null }
+}
+
+/**
+ * Eine Vorlage im Hook prüfen und in Normalform setzen (form_templates, Anlegen und Ändern,
+ * Plan 2.7.3). `rec` trägt den Stand nach dem Body, `original` ist beim Anlegen null, `basis` die
+ * basis_version aus dem Body. Fehlt das Feld abschnitte, gelten Felder ohne Abschnitt (die App
+ * meldet das fehlende Feld). version und fassungen setzt nur dieser Hook, wenn es die Felder gibt.
+ * Ergebnis { ok: true } | { ok: false, status, text }; wirft nicht.
+ */
+function vorlageImHook(app, rec, original, basis, jetztIso) {
+  const da = (f) => feldDa(app, "form_templates", f)
+  const mitAbschnitten = da("abschnitte")
+  const mitVersion = da("version")
+  if (original && mitVersion && basisKonflikt(basis, original.getInt("version"))) {
+    return { ok: false, status: 409, text: EIGENE_TEXTE.vorlage_geaendert }
+  }
+  let schema = jsonWert(rec, "schema")
+  if (!mitAbschnitten && Array.isArray(schema)) {
+    schema = schema.map((f) => { if (!istObjekt(f)) return f; const g = Object.assign({}, f); delete g.abschnitt; return g })
+  }
+  const altWerte = original ? {
+    title: original.getString("title"),
+    description: original.getString("description"),
+    schema: jsonWert(original, "schema"),
+    abschnitte: mitAbschnitten ? jsonWert(original, "abschnitte") : [],
+  } : null
+  const p = vorlagePruefen({
+    title: rec.getString("title"),
+    description: rec.getString("description"),
+    absender: da("absender") ? rec.getString("absender") : "frei",
+    archiviert: da("archiviert") ? rec.getBool("archiviert") : false,
+    is_active: rec.getBool("is_active"),
+    schema: schema,
+    abschnitte: mitAbschnitten ? jsonWert(rec, "abschnitte") : [],
+  }, altWerte)
+  if (!p.ok) return { ok: false, status: 400, text: p.text }
+  const w = p.werte
+  if (original) rec.set("organization_id", original.getString("organization_id"))
+  rec.set("title", w.title)
+  rec.set("description", w.description)
+  rec.set("is_active", w.is_active)
+  // Bestandsschutz: ein gespeichertes, inhaltlich unverändertes altes Schema bleibt, wie es war
+  if (w.bestand) rec.set("schema", original.get("schema"))
+  else rec.set("schema", w.schema)
+  if (da("absender")) rec.set("absender", w.absender)
+  if (da("archiviert")) rec.set("archiviert", w.archiviert)
+  if (mitAbschnitten) rec.set("abschnitte", w.bestand ? original.get("abschnitte") : w.abschnitte)
+  if (mitVersion) {
+    let alt = { felder: [], abschnitte: [] }
+    if (original) alt = schemaLesen({ schema: jsonWert(original, "schema"), abschnitte: mitAbschnitten ? jsonWert(original, "abschnitte") : [] })
+    const f = vorlageFassung({
+      neu: !original,
+      altVersion: original ? original.getInt("version") : 0,
+      altFelder: alt.felder, altAbschnitte: alt.abschnitte,
+      altFassungen: original && da("fassungen") ? jsonWert(original, "fassungen") : null,
+      felder: w.felder, abschnitte: w.abschnitte, am: jetztIso,
+    })
+    rec.set("version", f.version)
+    if (da("fassungen")) rec.set("fassungen", f.fassungen)
+  } else if (da("fassungen")) {
+    // Ohne Feld version zählt keine Fassung; was dort steht, bleibt (beim Anlegen leer)
+    rec.set("fassungen", original ? original.get("fassungen") : null)
+  }
+  return { ok: true }
+}
+
+/** Gibt es eine Einsendung zu dieser Vorlage? (Löschen einer Vorlage, Plan 2.7.3, F9) */
+function vorlageHatEinsendungen(app, vorlageId) {
+  try { app.findFirstRecordByFilter(EIGEN.sammlung, "template_id = {:t}", { t: vorlageId }); return true } catch (err) { return false }
+}
 
 /**
  * Statusfelder leeren, beim allerersten Start von formular.pb.js (Merker START_MERKER). Werte,
@@ -1440,9 +2370,17 @@ function statusfelderLeeren(app) {
   return aus
 }
 
-/** Ein Eintrag der Liste „Wartet auf deine Unterschrift“ (1.6). */
+/** Ein Eintrag der Liste „Wartet auf deine Unterschrift“ (1.6); eigene Formulare mit `vorlage`. */
 function unterschriftEintrag(rec, formular, absender) {
   const kurz = (s) => String(s || "").slice(0, 120)
+  if (formular === EIGEN.formular) {
+    const p = payloadLesen(jsonWert(rec, "payload")) || {}
+    return {
+      formular: formular, vorlage: rec.getString("template_id"), id: rec.id,
+      titel: (typeof p.titel === "string" && p.titel) || "Formular", zusammenfassung: kurz(einsendungZusammenfassung(p)),
+      angelegt: rec.getString("created"), absender_name: String((absender && absender.name) || ""),
+    }
+  }
   let titel = rec.getString("title")
   let zus = titel
   if (formular === "produktausgabe") {
@@ -1476,4 +2414,12 @@ module.exports = {
   bodyLesen, bodySchluessel, realIP, proxyKoepfe, einmalJe, aufraeumen, speicherVoll, bestandLaden, absenderAusSatz, gespeicherteAntwort,
   schonDa, pbZeit, zielAlterAenderung, offeneAusstehende, unterschriftEintrag,
   START_MERKER, statusfelderLeeren,
+  // Vorgänge: Felder, eigene Formulare
+  FELD_TYPEN, FELD_GRENZEN, STANDARD_FELDER, STANDARD_FORMULARE, EIGEN, VORLAGE_MODI, EINSENDUNG_STATUS, EIGENE_TEXTE, ALT_TYP, ALT_AUS_TYP,
+  kennungOk, jsonLesen, feldLesen, feldRoh, standardKonfig, schemaLesen, schemaNormalisieren, schemaRoh, schemaFehler, abschnitteLesen,
+  wertLeer, wertPruefen, werteBereinigen, angabenBauen, datenPruefenMitEigenen, einsetzen,
+  vorlageModus, vorlageAn, fassungFuer, fassungenNeu, FASSUNGEN_MAX_ZEICHEN, einsendungPayload, einsendungZusammenfassung,
+  statusfeldVon, START_MERKER_EIGENE, eigeneStatusLeeren, vorlageAusRecord, vorlageLaden,
+  sammlungFuer, darfVorgaenge, vorlagePruefen, vorlageKanon, vorlageFassung, basisKonflikt, notizLesen, einsendungAendern, cirsEigene,
+  FELDER_DIAGNOSE, vorlageImHook, vorlageHatEinsendungen,
 }

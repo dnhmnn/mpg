@@ -2,6 +2,9 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import { einmalNeuLaden, istLadefehler, neueFassungAbfangen, wirdNeuGeladen } from './lib/neueFassung'
+import { pb } from './lib/pocketbase'
+import { entwuerfeAufraeumen, fensterEinrichten, tresorBereit, tresorOeffnen } from './lib/tresor'
+import { ohneAnmeldungLeeren, veralteteLoeschen, wechselBeobachten } from './lib/zwischenspeicher'
 
 // Nach einer Veröffentlichung fehlen der alten Fassung im Gerät Teile — dann einmal neu laden
 neueFassungAbfangen()
@@ -111,11 +114,30 @@ if (!root) {
     </div>
   `
 } else {
-  ReactDOM.createRoot(root).render(
-    <React.StrictMode>
-      <ErrorBoundary>
-        <App />
-      </ErrorBoundary>
-    </React.StrictMode>,
-  )
+  // Erst den Tresor öffnen (Warteschlange und Entwürfe verschlüsselt auf dem Gerät, höchstens
+  // 1,5 Sekunden), dann rendern: die Masken lesen ihren Entwurf schon beim Aufbau. Scheitert es,
+  // arbeitet die App wie bisher mit localStorage weiter; nichts geht verloren.
+  const zeigen = () => {
+    try { fensterEinrichten() } catch { /* ohne Warnung und Hintergrundversand */ }
+    ReactDOM.createRoot(root).render(
+      <React.StrictMode>
+        <ErrorBoundary>
+          <App />
+        </ErrorBoundary>
+      </React.StrictMode>,
+    )
+  }
+  tresorOeffnen({ api: String(pb.baseURL || '') }).then(zeigen, zeigen)
+  // Verfallene Entwürfe (älter als ein Tag) vom Gerät nehmen, sobald der Tresor offen ist (Review F5)
+  void tresorBereit(30_000).then(() => { try { entwuerfeAufraeumen() } catch { /* beim nächsten Start */ } })
+  // Wechselt die angemeldete Person (Abmelden, andere Person, Anmeldung abgelaufen): Antworten im
+  // Zwischenspeicher des Service Workers löschen, damit die Nächste am Gerät nichts davon findet
+  try {
+    const kennung = () => { try { return String((pb.authStore.model as { id?: unknown } | null)?.id ?? '') } catch { return '' } }
+    wechselBeobachten(kennung(), (f) => pb.authStore.onChange(() => f(kennung())))
+    // Ohne gültige Anmeldung (abgemeldet, auf /login umgeleitet): leeren, kurz darauf noch einmal
+    ohneAnmeldungLeeren(() => { try { return !!kennung() && pb.authStore.isValid } catch { return false } })
+    // Antworten älter als 24 Stunden bei jedem Start löschen (Workbox täte es erst bei der nächsten Anfrage)
+    void veralteteLoeschen()
+  } catch { /* ohne */ }
 }

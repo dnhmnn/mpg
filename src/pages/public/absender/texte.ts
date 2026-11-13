@@ -6,7 +6,7 @@
 // Stelle steht, was der Mensch liest, und ein Prüffall sicherstellt, dass kein
 // neuer Text einen Gedankenstrich trägt.
 
-import { ABSENDER_VOREINSTELLUNG, nameVergleichsform, type AbsenderModus, type FormularId } from '../../../lib/formular/absender'
+import { ABSENDER_VOREINSTELLUNG, nameVergleichsform, type AbsenderModus, type FormularArt, type VorlageModus } from '../../../lib/formular/absender'
 
 export { nameVergleichsform } from '../../../lib/formular/absender'
 import type { AbsenderAngabe, Grund, NamensErgebnis, Stand } from '../../../lib/formular/api'
@@ -99,14 +99,28 @@ export function besatzungFusszeile(erkannt: number): string {
   return `${erkannt} Besatzungsmitglieder sind erkannt und finden das Protokoll in Unitas.`
 }
 
-/** Modus des Formulars aus dem Stand; ohne Stand die Voreinstellung. */
-export function modusAusStand(stand: Stand | null, formular: FormularId): AbsenderModus {
+/**
+ * Modus des Formulars aus dem Stand; ohne Stand die Voreinstellung. Eigene Formulare
+ * (`eigen`): der Modus der Vorlage (`vorlageModus`, Vorrang vor dem Stand); „anonym“
+ * prüfen die Aufrufer vorher selbst (`istAnonymModus`), hier zählt es wie „frei“.
+ */
+export function modusAusStand(stand: Stand | null, formular: FormularArt, vorlageModus?: VorlageModus): AbsenderModus {
+  if (formular === 'eigen') return vorlageModus === 'passwort' ? 'passwort' : 'frei'
   const m = stand?.formulare?.[formular]?.modus
   return m === 'passwort' || m === 'frei' ? m : ABSENDER_VOREINSTELLUNG[formular]
 }
 
-/** Ist eine Person angemeldet erkannt, und sendet sie selbst (nicht „Anderer Absender“)? */
-export function sendetAngemeldet(stand: Stand | null, anderer: boolean): boolean {
+/** Ein eigenes Formular ohne Absender (Vorlage „anonym“)? */
+export function istAnonymModus(formular: FormularArt, vorlageModus?: VorlageModus): boolean {
+  return formular === 'eigen' && vorlageModus === 'anonym'
+}
+
+/**
+ * Ist eine Person angemeldet erkannt, und sendet sie selbst (nicht „Anderer Absender“)?
+ * Bei einem anonymen eigenen Formular nie (dann sendet niemand mit Namen, Plan Vorgänge F6).
+ */
+export function sendetAngemeldet(stand: Stand | null, anderer: boolean, vorlageModus?: VorlageModus): boolean {
+  if (vorlageModus === 'anonym') return false
   return !!stand?.angemeldet && !anderer
 }
 
@@ -116,16 +130,18 @@ export function sendetAngemeldet(stand: Stand | null, anderer: boolean): boolean
  * dem Passwort (ein leeres fällt weg; dann antwortet der Server `passwort_noetig`,
  * ohne Netz fragt die Warteschlange später).
  */
-export function absenderAngabe(p: { stand: Stand | null; formular: FormularId; anderer: boolean; name: string; passwort: string }): { mitAnmeldung: boolean; absender: AbsenderAngabe } {
+export function absenderAngabe(p: { stand: Stand | null; formular: FormularArt; anderer: boolean; name: string; passwort: string; modus?: VorlageModus }): { mitAnmeldung: boolean; absender: AbsenderAngabe } {
+  // Anonym: kein Token, kein Name, kein Passwort
+  if (istAnonymModus(p.formular, p.modus)) return { mitAnmeldung: false, absender: null }
   if (sendetAngemeldet(p.stand, p.anderer)) return { mitAnmeldung: true, absender: null }
   const name = String(p.name ?? '').trim()
-  if (modusAusStand(p.stand, p.formular) === 'passwort' && p.passwort) return { mitAnmeldung: false, absender: { name, passwort: p.passwort } }
+  if (modusAusStand(p.stand, p.formular, p.modus) === 'passwort' && p.passwort) return { mitAnmeldung: false, absender: { name, passwort: p.passwort } }
   return { mitAnmeldung: false, absender: { name } }
 }
 
 /** „Als Anna Berg senden“, wenn angemeldet erkannt; sonst `sonst` (Vorgabe „Absenden“). */
-export function sendeKnopfText(p: { stand: Stand | null; anderer: boolean }, sonst = 'Absenden'): string {
-  if (!sendetAngemeldet(p.stand, p.anderer)) return sonst
+export function sendeKnopfText(p: { stand: Stand | null; anderer: boolean; modus?: VorlageModus }, sonst = 'Absenden'): string {
+  if (!sendetAngemeldet(p.stand, p.anderer, p.modus)) return sonst
   const name = p.stand!.angemeldet!.name.trim()
   return name ? `Als ${name} senden` : 'Angemeldet senden'
 }
@@ -138,11 +154,12 @@ export const PASSWORT_FEHLT = 'Bitte bestätige mit deinem Passwort. Ist keins z
  * Leer heißt: senden. Ohne Netz oder bei altem Server prüft niemand das
  * Passwort, dann zählt nur der Name.
  */
-export function vorDemSenden(p: { stand: Stand | null; alterServer: boolean; formular: FormularId; anderer: boolean; name: string; passwort: string; online: boolean }): string {
+export function vorDemSenden(p: { stand: Stand | null; alterServer: boolean; formular: FormularArt; anderer: boolean; name: string; passwort: string; online: boolean; modus?: VorlageModus }): string {
+  if (istAnonymModus(p.formular, p.modus)) return ''
   if (sendetAngemeldet(p.stand, p.anderer)) return ''
   if (!String(p.name ?? '').trim()) return 'Bitte einen Namen eintragen.'
   if (!p.online || p.alterServer) return ''
-  if (modusAusStand(p.stand, p.formular) === 'passwort' && !p.passwort) return PASSWORT_FEHLT
+  if (modusAusStand(p.stand, p.formular, p.modus) === 'passwort' && !p.passwort) return PASSWORT_FEHLT
   return ''
 }
 
@@ -196,7 +213,10 @@ export const ABSENDER_TEXTE = {
   absenderZeile: (name: string) => name ? `Absender: ${name}` : 'Absender: ohne Namen',
   ohnePasswortSenden: 'Ohne Passwort senden',
   ohnePasswortErklaerung: (name: string) => `Geht ohne Bestätigung raus und wartet auf die Unterschrift von ${name || 'dem Absender'} in Unitas.`,
-  ohnePasswortVonSelbst: 'Nach einer Stunde geht es von selbst so raus.',
+  /** `hintergrund`: das Gerät sendet nach dem Schließen der Seite selbst (Background Sync, F12). */
+  ohnePasswortVonSelbst: (hintergrund: boolean) => hintergrund
+    ? 'Nach einer Stunde geht es von selbst so raus. Wird diese Seite vorher geschlossen, geht es meist schon dann so raus, sobald Netz da ist; sonst beim nächsten Öffnen.'
+    : 'Nach einer Stunde geht es von selbst so raus.',
   ohnePasswortNurEindeutig: 'Ohne Passwort geht das nur, wenn der Name genau zu einem Mitglied passt.',
   gehtRaus: 'Geht gleich raus.',
   sendet: 'Wird gesendet …',
@@ -207,4 +227,10 @@ export const ABSENDER_TEXTE = {
   erneutSenden: 'Erneut senden',
   nameKorrigieren: 'Mit diesem Namen senden',
   ohneServer: 'Wartet auf die Verbindung zum Server.',
+  // Eigene Formulare ohne Absender (Vorlage „anonym“)
+  anonymHinweis: 'Dieses Formular wird ohne Namen gesendet.',
+  absenderAnonym: 'Absender: anonym',
+  // Tresor (Plan Vorgänge 5.1)
+  unverschluesselt: 'Auf diesem Gerät wird unverschlüsselt gespeichert, weil der Browser es nicht anders zulässt.',
+  unlesbar: (n: number) => n === 1 ? 'Ein Eintrag auf diesem Gerät ist unlesbar.' : `${n} Einträge auf diesem Gerät sind unlesbar.`,
 } as const

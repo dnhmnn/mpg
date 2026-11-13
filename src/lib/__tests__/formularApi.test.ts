@@ -383,3 +383,67 @@ describe('Stand ohne Netz (stand.ts)', () => {
     expect(angemeldetOhneNetz('', u, true)).toBeNull()
   })
 })
+
+// ── Plan Vorgänge 5.3: eigene Formulare, Stand-Version 2 ──
+
+describe('Eigene Formulare über die Routen (5.3)', () => {
+  const V = 'vvvvvvvvvvvvvv1'
+  const STAND2 = {
+    ...STAND,
+    version: 2,
+    formulare: { ...STAND.formulare, eigen: { modus: 'frei', an: true, oeffentlich: true, ausstehend: true } },
+    faehig: { eigene_felder: { produktausgabe: true, defektmeldung: false, cirs: true }, eigene_formulare: true, eingang: true },
+  }
+
+  it('Stand: eigen und faehig gelesen; ein älterer Server hat keins von beiden', () => {
+    const s = standLesen(STAND2)!
+    expect(s.formulare.eigen).toEqual({ modus: 'frei', an: true, oeffentlich: true, ausstehend: true })
+    expect(s.faehig).toEqual(STAND2.faehig)
+    const alt = standLesen(STAND)!
+    expect('eigen' in alt.formulare).toBe(false)
+    expect(alt.faehig).toBeUndefined()
+    expect(standLesen({ ...STAND2, faehig: { eigene_felder: 'kaputt', eingang: 'ja' } })!.faehig).toEqual({ eigene_felder: { produktausgabe: false, defektmeldung: false, cirs: false }, eigene_formulare: false, eingang: false })
+  })
+
+  it('gemerkt mit eigen und faehig (ohne angemeldet); ohne Netz aus der Organisation: eigen nach Modul Vorgänge', () => {
+    const s = speicher()
+    standMerken('wache1', { stand: standLesen(STAND2)!, alt: false }, s)
+    const g = gemerkterStand('wache1', s)!.stand!
+    expect(g.formulare.eigen?.ausstehend).toBe(true)
+    expect(g.faehig?.eingang).toBe(true)
+    expect(g.angemeldet).toBeNull()
+    expect(standAusOrg({ id: 'o', freigeschaltet: ['patienten'] }).formulare.eigen).toEqual({ modus: 'frei', an: false, oeffentlich: false, ausstehend: true })
+    expect(standAusOrg({ id: 'o', freigeschaltet: ['dokumente'] }).formulare.eigen?.an).toBe(true)
+    expect(standAusOrg(null).formulare.eigen?.an).toBe(true)
+  })
+
+  it('Name: mit Vorlage; Absenden: mit Vorlage, anonym ohne Absender', async () => {
+    antworten.push(json(200, { vollstaendig: true, gefunden: true, eindeutig: true }))
+    await nameGefunden('wache1', 'eigen', 'Ida Imker', { vorlage: V })
+    expect(JSON.parse(String(aufrufe[0].init.body))).toEqual({ formular: 'eigen', name: 'Ida Imker', vorlage: V })
+    expect(absendeBody({ formular: 'eigen', id: 'abcdefghij01234', absender: null, daten: { version: 1, werte: {} }, vorlage: V, maske: 'doku' }))
+      .toEqual({ formular: 'eigen', id: 'abcdefghij01234', absender: null, daten: { version: 1, werte: {} }, vorlage: V })
+    antworten.push(json(200, { ok: true, id: 'abcdefghij01234', bereits: false, absender: null, frist: '', anonym: true }))
+    const r = await absenden('wache1', { formular: 'eigen', id: 'abcdefghij01234', absender: null, daten: {}, vorlage: V }, { mitAnmeldung: false })
+    expect(r).toEqual({ ok: true, wert: { id: 'abcdefghij01234', bereits: false, absender: null, frist: '', anonym: true } })
+    antworten.push(json(200, { ok: true, id: 'abcdefghij01234', bereits: false, absender: { id: '', name: 'Ida Imker', status: 'ohne_konto', weg: '', modus: 'frei', am: '' }, frist: '', anonym: false }))
+    const f = await absenden('wache1', { formular: 'eigen', id: 'abcdefghij01234', absender: { name: 'Ida Imker' }, daten: {}, vorlage: V }, { mitAnmeldung: false })
+    expect(f.wert?.anonym).toBe(false)
+    expect(f.wert?.absender?.name).toBe('Ida Imker')
+    // Standardformulare wie bisher, ohne anonym
+    antworten.push(json(200, { ok: true, id: 'abcdefghij01234', bereits: false, absender: { id: '', name: 'Ida', status: 'ohne_konto', weg: '', modus: 'frei', am: '' }, frist: '' }))
+    expect((await absenden('wache1', { formular: 'produktausgabe', id: 'abcdefghij01234', absender: { name: 'Ida' }, daten: {} }, { mitAnmeldung: false })).wert).not.toHaveProperty('anonym')
+  })
+
+  it('Unterschriften: eigene Formulare mit Vorlage; unterschreiben und zurückweisen nehmen eigen an', async () => {
+    anmelden()
+    antworten.push(json(200, { eintraege: [{ formular: 'eigen', vorlage: V, id: 'e1', titel: 'Fahrzeugcheck', zusammenfassung: 'Fahrzeugcheck: RTW 1', angelegt: 'A', absender_name: 'Anna Berg' }] }))
+    expect(await offeneUnterschriften()).toEqual({ ok: true, wert: [{ formular: 'eigen', vorlage: V, id: 'e1', titel: 'Fahrzeugcheck', zusammenfassung: 'Fahrzeugcheck: RTW 1', angelegt: 'A', absender_name: 'Anna Berg' }] })
+    antworten.push(json(200, { ok: true, absender: { id: 'u1', name: 'Anna Berg', status: 'bestaetigt', weg: 'nachgereicht', modus: 'passwort', am: '' }, frist: '' }))
+    await unterschreiben('eigen', 'e1')
+    expect(JSON.parse(String(aufrufe[1].init.body))).toEqual({ formular: 'eigen', id: 'e1' })
+    antworten.push(json(200, { ok: true, absender: null }))
+    await zurueckweisen('eigen', 'e1')
+    expect(JSON.parse(String(aufrufe[2].init.body))).toEqual({ formular: 'eigen', id: 'e1' })
+  })
+})

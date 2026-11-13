@@ -16,6 +16,18 @@ import { pbFehlerText } from '../../lib/pbFehler'
 import { altenVersuchSenden, ohne, useMpg, type BlattVersuch, type DefektFormular } from './MpgDaten'
 import { Blatt, Feld, Haken, Hinweis, eingabe, knopfRand, knopfVollWenn, kursivGrau } from './teile'
 import { SCHWERE_NAME, abzeichenStil, melder, type Defect, type Device, type ExternalReport, type Severity } from './typen'
+import { angabenLesen } from '../../lib/formular/felder'
+import AngabenAnsicht from '../../components/AngabenAnsicht'
+
+/** Eigene Felder der Organisation an einer Meldung von außen, wie gesendet (nur ausgefüllte). */
+function MeldungAngaben({ meldung }: { meldung: ExternalReport }) {
+  return (
+    <AngabenAnsicht
+      angaben={angabenLesen(meldung.eigene)} art="liste" nurAusgefuellt titel="Weitere Angaben"
+      rahmen={{ borderTop: '0.5px solid var(--lbf-border-light)', paddingTop: 10 }}
+    />
+  )
+}
 
 export function Blaetter() {
   const { blatt } = useMpg()
@@ -346,6 +358,7 @@ function MeldungBestaetigenFormular({ meldung }: { meldung: ExternalReport }) {
             {mz.abzeichen && <span style={abzeichenStil(mz.abzeichen.farbe)}>{mz.abzeichen.text}</span>}
           </div>
         </div>
+        <MeldungAngaben meldung={meldung} />
         <Feld label="Anmerkung (optional)">
           <textarea value={anmerkung} readOnly={fest} onChange={e => setAnmerkung(e.target.value)} rows={3}
             placeholder="z. B. Gerät gesichtet, Ersatz auf RTW 2 gelegt …" style={{ ...eingabe, resize: 'vertical' }} />
@@ -394,6 +407,7 @@ function MeldungAblehnen({ meldung }: { meldung: ExternalReport }) {
     <Blatt ueber="Meldung ablehnen" titel={m.geraeteName(meldung.device_id, meldung.device_name)} onClose={() => m.setBlatt(null)} gesperrt={m.busy}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ ...kursivGrau, fontSize: 13 }}>{meldung.description}</div>
+        <MeldungAngaben meldung={meldung} />
         <Feld label="Grund (optional)">
           <textarea value={grund} onChange={e => setGrund(e.target.value)} rows={3} readOnly={m.busy}
             placeholder="z. B. falsches Gerät angegeben, kein Defekt …" style={{ ...eingabe, resize: 'vertical' }} />

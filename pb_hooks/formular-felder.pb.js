@@ -15,6 +15,8 @@
 //     abgeschlossene Sätze ändert ohne Anmeldung niemand, ausstehende gar niemand (wie mit
 //     formular.pb.js).
 //   - mpg_defect_reports ändert mpg.pb.js (reporter_status gehört zu den festen Feldern).
+//   - form_submissions (eigene Formulare): Anlegen geht wieder direkt (alter Weg), status „neu“,
+//     absender_status und notiz leer, bearbeitung leer. Ändern schützt eigene-formulare.pb.js.
 //
 // Kommt ohne formular-regeln.js aus und bleibt bei einer Rücknahme liegen
 // (docs/formulare-absender-einfuehrung.md, „Rücknahme“).
@@ -30,6 +32,20 @@ onRecordCreateRequest((e) => {
   if (da) e.record.set(feld, "")
   e.next()
 }, "patients", "product_outputs", "mpg_defect_reports")
+
+// form_submissions (eigene Formulare): ohne formular.pb.js geht der alte Weg wieder (direkt
+// anlegen). Die Felder, die sonst nur der Server setzt, bleiben leer bzw. „neu“ (Plan Vorgänge
+// 2.7.6); geprüft wird die Einsendung dann nicht (wie vor diesem Paket).
+onRecordCreateRequest((e) => {
+  if (e.hasSuperuserAuth() || e.app.store().get("responda:formular_aktiv") === true) return e.next()
+  const felder = e.record.collection().fields
+  const da = (f) => { try { return !!felder.getByName(f) } catch (err) { return false } }
+  if (da("status")) e.record.set("status", "neu")
+  if (da("absender_status")) e.record.set("absender_status", "")
+  if (da("notiz")) e.record.set("notiz", "")
+  if (da("bearbeitung")) e.record.set("bearbeitung", null)
+  e.next()
+}, "form_submissions")
 
 onRecordUpdateRequest((e) => {
   if (e.hasSuperuserAuth() || e.app.store().get("responda:formular_aktiv") === true) return e.next()

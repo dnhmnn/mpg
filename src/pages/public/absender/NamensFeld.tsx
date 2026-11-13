@@ -11,7 +11,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { nameGefunden, type NamensErgebnis } from '../../../lib/formular/api'
-import type { AbsenderModus, FormularId } from '../../../lib/formular/absender'
+import type { AbsenderModus, FormularArt } from '../../../lib/formular/absender'
 import { lageAusErgebnis, lageAusFehler, namePruefbar, pruefzeile, PRUEF_PAUSE_MS, type NamensLage, type NamensZweck } from './texte'
 
 const ROT = 'var(--lbf-akzent)'
@@ -19,15 +19,17 @@ const TEXT = 'var(--lbf-text)'
 const GRAU = 'var(--warm-gray)'
 const LINIE = 'rgba(var(--lbf-rot-rgb),0.14)'
 
-/** Ergebnisse je Organisation, Formular und Text, solange die Seite offen ist. */
+/** Ergebnisse je Organisation, Formular (eigene: je Vorlage) und Text, solange die Seite offen ist. */
 const gemerkt = new Map<string, NamensErgebnis>()
-const merkSchluessel = (orgCode: string, formular: FormularId, text: string) => `${orgCode}\u0000${formular}\u0000${text}`
+const merkSchluessel = (orgCode: string, formular: FormularArt, vorlage: string, text: string) => `${orgCode}\u0000${formular}\u0000${vorlage}\u0000${text}`
 
 const UNVOLLSTAENDIG: NamensErgebnis = { vollstaendig: false, gefunden: false, eindeutig: false }
 
 export default function NamensFeld(p: {
   orgCode: string
-  formular: FormularId
+  formular: FormularArt
+  /** Nur eigene Formulare (`formular="eigen"`): Kennung der Vorlage, die der Server prüft. */
+  vorlage?: string
   wert: string
   onWert: (n: string) => void
   zweck: NamensZweck
@@ -50,6 +52,7 @@ export default function NamensFeld(p: {
   nurZeile?: boolean
 }) {
   const { orgCode, formular, wert, mitAnmeldung, verknuepft, nurLesen } = p
+  const vorlage = p.vorlage ?? ''
   const [lage, setLage] = useState<NamensLage>('leer')
   const nr = useRef(0)
   const onErgebnis = useRef(p.onErgebnis)
@@ -64,23 +67,23 @@ export default function NamensFeld(p: {
     // Ein geladener, verknüpfter Posten wird nicht neu geprüft: der Server
     // behält die Verknüpfung, solange der Name gleich bleibt.
     if (verknuepft) { setLage('stumm'); return }
-    const schon = gemerkt.get(merkSchluessel(orgCode, formular, text))
+    const schon = gemerkt.get(merkSchluessel(orgCode, formular, vorlage, text))
     if (schon) { setLage(lageAusErgebnis(schon)); melden(schon); return }
     setLage('pruefe')
     const uhr = setTimeout(() => {
       if (meine !== nr.current) return
       if (!namePruefbar(text)) { setLage('unvollstaendig'); melden(UNVOLLSTAENDIG); return }
       if (typeof navigator !== 'undefined' && navigator.onLine === false) { setLage('ohne_netz'); melden(null); return }
-      void nameGefunden(orgCode, formular, text, { mitAnmeldung }).then((r) => {
+      void nameGefunden(orgCode, formular, text, { mitAnmeldung, vorlage }).then((r) => {
         if (meine !== nr.current) return
         if (r.ok === false) { setLage(lageAusFehler(r.grund)); melden(null); return }
-        gemerkt.set(merkSchluessel(orgCode, formular, text), r.wert)
+        gemerkt.set(merkSchluessel(orgCode, formular, vorlage, text), r.wert)
         setLage(lageAusErgebnis(r.wert))
         melden(r.wert)
       })
     }, PRUEF_PAUSE_MS)
     return () => clearTimeout(uhr)
-  }, [wert, orgCode, formular, mitAnmeldung, verknuepft])
+  }, [wert, orgCode, formular, vorlage, mitAnmeldung, verknuepft])
 
   useEffect(() => () => { nr.current++ }, [])
 

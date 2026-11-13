@@ -3,7 +3,7 @@ import {
   auswerten, bearbeitungLesen, bewertungSetzen, csv, CirsFehler, fallAus, filtern, fristSetzen, fristUeberschritten,
   imZeitraum, inTagen, istUeberfaellig, massnahmeAbhaken, massnahmeHinzufuegen, massnahmeStreichen, meldungsNummer,
   notizHinzufuegen, payloadLesen, phaseSetzen, prioritaet, sortieren, speicherDaten, statusFuer, tageBisFrist,
-  zaehlen, zustaendigSetzen,
+  zaehlen, zustaendigSetzen, eigeneSpalten, eigeneZeilen, kategorieText, schwereText,
   type Bearbeitung, type CirsDatensatz, type CirsFall, type Schritt,
 } from '../cirs'
 
@@ -355,5 +355,68 @@ describe('CIRS: CSV', () => {
   it('enthält weder Name noch Kontakt des Melders', () => {
     expect(text).not.toContain('Erika Muster')
     expect(text).not.toContain('0170 123456')
+  })
+})
+
+// Eigene Felder der Organisation (Plan Vorgänge 1.3, 3.9): payload.eigene mit Schnappschuss
+describe('CIRS: eigene Felder', () => {
+  const EIGENE = {
+    v: 1, version: 2,
+    felder: [
+      { id: 'e_fahrzeug', typ: 'text', label: 'Fahrzeug' },
+      { id: 'e_schicht', typ: 'auswahl', label: 'Schicht', optionen: ['Tag', 'Nacht'] },
+      { id: 'e_leer0001', typ: 'text', label: 'Leer gelassen' },
+    ],
+    werte: { e_fahrzeug: 'RTW 1', e_schicht: 'Nacht' },
+  }
+  // Datum, Kategorie und Schweregrad ausgeblendet: nur „Was ist passiert?“
+  const OHNE = { was: 'Medikament verwechselt', eigene: EIGENE }
+
+  it('fallAus liest payload.eigene; ohne eigene null', () => {
+    const f = fallAus(datensatz({}, OHNE))
+    expect(f.eigene?.werte).toEqual({ e_fahrzeug: 'RTW 1', e_schicht: 'Nacht' })
+    expect(fallAus(datensatz()).eigene).toBeNull()
+    expect(fallAus(datensatz({}, { ...MELDUNG, eigene: JSON.stringify(EIGENE) })).eigene?.version).toBe(2)
+  })
+
+  it('Zeilen nur mit Ausgefülltem; ohne Schnappschuss Bezeichnung aus der Einstellung, sonst Kennung', () => {
+    expect(eigeneZeilen(fallAus(datensatz({}, OHNE)))).toEqual([
+      { id: 'e_fahrzeug', label: 'Fahrzeug', text: 'RTW 1' },
+      { id: 'e_schicht', label: 'Schicht', text: 'Nacht' },
+    ])
+    const rueckfall = fallAus(datensatz({}, { was: 'x', eigene: { version: 1, werte: { e_fahrzeug: 'NEF', e_anders01: true } } }))
+    expect(eigeneZeilen(rueckfall, { e_fahrzeug: 'Fahrzeug' })).toEqual([
+      { id: 'e_fahrzeug', label: 'Fahrzeug', text: 'NEF' },
+      { id: 'e_anders01', label: 'e_anders01', text: 'Ja' },
+    ])
+  })
+
+  it('Suche findet eigene Werte', () => {
+    const f = fallAus(datensatz({}, OHNE))
+    expect(filtern([f], { ansicht: 'alle', suche: 'rtw' }, undefined, HEUTE)).toHaveLength(1)
+    expect(filtern([f], { ansicht: 'alle', suche: 'nef' }, undefined, HEUTE)).toHaveLength(0)
+  })
+
+  it('CSV: je eigenem Feld eine Spalte am Ende, Bezeichnung der neuesten Meldung', () => {
+    const alt = fallAus(datensatz({ id: 'alt00000000000x', created: '2026-09-01 08:00:00.000Z' }, { was: 'a', eigene: { ...EIGENE, felder: [{ id: 'e_fahrzeug', typ: 'text', label: 'Kfz' }], werte: { e_fahrzeug: '=1+1' } } }))
+    const neu = fallAus(datensatz({ id: 'neu00000000000x', created: '2026-10-02 08:00:00.000Z' }, OHNE))
+    expect(eigeneSpalten([alt, neu]).map((x) => x.label)).toEqual(['Fahrzeug', 'Schicht', 'Leer gelassen'])
+    const text = csv([alt, neu], HEUTE)
+    const [kopf, z1, z2] = text.slice(1).split('\r\n')
+    expect(kopf.endsWith(';Was ist passiert;Fahrzeug;Schicht;Leer gelassen')).toBe(true)
+    expect(z1.endsWith(";'=1+1;;")).toBe(true)
+    expect(z2.endsWith(';RTW 1;Nacht;')).toBe(true)
+    expect(csv([fallAus(datensatz())], HEUTE).split('\r\n')[0].endsWith(';Was ist passiert')).toBe(true)
+  })
+
+  it('ausgeblendete Kernfelder: „Ohne Angabe“, Auswertung zählt sie dort, Zeitraum nach Eingang', () => {
+    const f = fallAus(datensatz({}, OHNE))
+    expect(kategorieText(f.meldung.kategorie)).toBe('Ohne Angabe')
+    expect(schwereText(f.meldung.schwere)).toBe('Ohne Angabe')
+    expect(kategorieText('fahrzeug')).toBe('Fahrzeug')
+    const a = auswerten([f], HEUTE)
+    expect(a.nachKategorie.find((k) => k.wert === 'ohne')).toEqual({ wert: 'ohne', name: 'Ohne Angabe', anzahl: 1 })
+    expect(a.nachSchwere.find((k) => k.wert === 'ohne')?.anzahl).toBe(1)
+    expect(imZeitraum([f], new Date('2026-10-01T00:00:00Z'), new Date('2026-10-03T00:00:00Z'))).toHaveLength(1)
   })
 })

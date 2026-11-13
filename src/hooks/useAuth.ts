@@ -3,7 +3,8 @@ import { pb } from '../lib/pocketbase'
 import { ROLES, getRoleTemplate } from '../lib/apps'
 import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { istEigeneRolleId, vorlageBereinigen } from '../lib/rollen'
-import { anzahlAlle } from '../lib/formular/warteschlange'
+import { leerenOhneWarteschlange, tresorEntwuerfe, tresorEntwuerfeLoeschen, tresorWartend, tresorZustand, verlassenErlauben } from '../lib/tresor'
+import { apiZwischenspeicherLeeren } from '../lib/zwischenspeicher'
 import type { User } from '../types'
 
 /**
@@ -139,10 +140,12 @@ export function useAuth() {
   async function logout() {
     // EKS hält Einsatzdaten lokal. localStorage.clear() darf sie nicht stillschweigend vernichten.
     const pending = Number(localStorage.getItem('eks_pending_count') || '0')
-    // Ohne Netz abgeschickte Formulare warten im lokalen Speicher (formular_warteschlange_<org>,
-    // aus älteren Fassungen offline_queue_<org>) und gingen mit localStorage.clear() verloren
-    let formulare = 0
-    try { formulare = anzahlAlle(localStorage) } catch { /* unlesbar: nicht zählen */ }
+    // Ohne Netz abgeschickte Formulare warten verschlüsselt im Tresor (IndexedDB, src/lib/tresor.ts)
+    // oder, wo der Browser das nicht zulässt, in localStorage. Sie bleiben beim Abmelden (F13);
+    // begonnene Protokolle (Entwürfe) werden gelöscht, damit sie nicht für den Nächsten liegen bleiben.
+    let formulare = 0, entwuerfe = 0
+    try { formulare = tresorWartend() } catch { /* unlesbar: nicht zählen */ }
+    try { entwuerfe = tresorEntwuerfe() } catch { /* nicht zählen */ }
     // Offline vorgemerkte Lager-Buchungen (IndexedDB) bleiben auf dem Gerät und hängen an der
     // Person, die sie erfasst hat. Gezählt wird nur, was die Abmeldende betrifft.
     let lagerEigene = 0, lagerProbleme = 0, lagerKollegen = 0
@@ -168,23 +171,35 @@ export function useAuth() {
     if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
     if (mpg.unklar > 0) warnungen.push(`Im MPG ${mpg.unklar === 1 ? 'ist eine Speicherung' : `sind ${mpg.unklar} Speicherungen`} (Prüfung, Defektmeldung, Sperre, Freigabe oder Ähnliches) nicht sicher angekommen — bitte vorher im MPG erneut senden.`)
     if (mpg.entwurf) warnungen.push('Eine begonnene MPG-Prüfung ist noch nicht gespeichert.')
-    if (formulare > 0) warnungen.push(formulare === 1 ? 'Ein ausgefülltes Formular wartet noch auf diesem Gerät auf das Senden.' : `${formulare} ausgefüllte Formulare warten noch auf diesem Gerät auf das Senden.`)
+    const formularTeile: string[] = []
+    const wie = tresorZustand() === 'verschluesselt' ? 'verschlüsselt hier' : 'hier'
+    if (formulare > 0) formularTeile.push(formulare === 1
+      ? `Ein ausgefülltes Formular wartet noch auf diesem Gerät. Es bleibt ${wie} und geht raus, sobald Netz da ist.`
+      : `${formulare} ausgefüllte Formulare warten noch auf diesem Gerät. Sie bleiben ${wie} und gehen raus, sobald Netz da ist.`)
+    if (entwuerfe > 0) warnungen.push(entwuerfe === 1 ? 'Ein begonnenes Protokoll auf diesem Gerät wird beim Abmelden gelöscht.' : `${entwuerfe} begonnene Protokolle auf diesem Gerät werden beim Abmelden gelöscht.`)
     const lagerTeile: string[] = []
     if (lagerEigene > 0) lagerTeile.push(`${lagerEigene} deiner Lager-Buchungen ${lagerEigene === 1 ? 'ist' : 'sind'} noch nicht übertragen. Sie bleiben auf diesem Gerät und gehen raus, sobald du dich hier wieder anmeldest — oder jemand aus deiner Organisation sie unter deinem Namen überträgt. Besser vorher mit Netz übertragen (Lager → Abzeichen).`)
     if (lagerProbleme > 0) lagerTeile.push(`${lagerProbleme} deiner Lager-Buchungen ${lagerProbleme === 1 ? 'braucht' : 'brauchen'} eine Entscheidung (teilweise übertragen oder abgelehnt) — siehe Lager → Abzeichen.`)
     if (lagerKollegen > 0) lagerTeile.push(`Außerdem warten ${lagerKollegen} Lager-Buchung${lagerKollegen === 1 ? '' : 'en'} von Kolleginnen und Kollegen auf diesem Gerät.`)
-    const lagerHinweis = lagerTeile.length ? `\n\n${lagerTeile.join('\n')}` : ''
+    const lagerHinweis = [...formularTeile, ...lagerTeile].length ? `\n\n${[...formularTeile, ...lagerTeile].join('\n')}` : ''
     const frage = warnungen.length
       ? `Achtung: ${warnungen.join(' ')}\n\nBeim Abmelden gehen lokale Daten verloren.${lagerHinweis}\n\nWirklich abmelden?`
       : lagerHinweis ? `${lagerHinweis.trim()}\n\nWirklich abmelden?` : 'Wirklich abmelden?'
     if (confirm(frage)) {
       const lager = localStorage.getItem('lager_pending_count')
       pb.authStore.clear()
-      localStorage.clear()
+      // Entwürfe weg (auch im Tresor), Warteschlange bleibt; localStorage wie bisher leeren
+      try { await tresorEntwuerfeLoeschen() } catch { /* was nicht gelöscht werden kann, war nicht gespeichert */ }
+      leerenOhneWarteschlange(() => localStorage.clear())
       // Der Zähler gehört zur Warteschlange, nicht zur Anmeldung — wieder hinschreiben
       if (lager && lager !== '0') { try { localStorage.setItem('lager_pending_count', lager) } catch { /* egal */ } }
       // Zwischengespeicherten Lagerbestand löschen (die Warteschlange selbst bleibt)
       try { await lagerModul?.snapshotLeeren() } catch { /* egal */ }
+      // Antworten der API im Zwischenspeicher des Service Workers (vor dem Seitenwechsel abwarten;
+      // main.tsx leert bei jedem Wechsel der Person ebenfalls, das hier ist der sichere Weg)
+      try { await apiZwischenspeicherLeeren() } catch { /* egal */ }
+      // Die Warteschlange bleibt; die Rückfrage beim Verlassen ist hier schon beantwortet
+      verlassenErlauben()
       window.location.href = '/login'
     }
   }

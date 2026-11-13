@@ -12,7 +12,11 @@
 //   1. /api/health liefert 200 (sonst: Log ausgeben, Ende mit 1),
 //   2. GET /api/responda/formular/rauchprobe/stand liefert 404 MIT grund "organisation"
 //      (Route aus formular.pb.js geladen; die Sammlung fehlt im leeren Verzeichnis),
-//   3. POST /api/crons/doku_frist als Superuser liefert 204.
+//   3. POST /api/crons/doku_frist als Superuser liefert 204,
+//   4. GET /api/responda/formular/diagnose als Superuser nennt die Felder der eigenen Formulare
+//      (form_templates.version, form_submissions.status): formular.pb.js ist der Stand mit den
+//      eigenen Formularen. eigene-formulare.pb.js und cirs.pb.js startet PocketBase mit allen
+//      anderen *.pb.js; ein Syntaxfehler darin fiele schon bei 1. auf.
 // Nie gegen den echten Server: das Verzeichnis ist neu und wird danach gelöscht.
 
 import { spawn, execFileSync } from 'node:child_process'
@@ -84,6 +88,13 @@ else {
     const token = (await auth.json().catch(() => ({}))).token
     const cron = await fetch(`${B}/api/crons/doku_frist`, { method: 'POST', headers: { Authorization: token || '' } })
     if (cron.status !== 204) ende(1, `POST /api/crons/doku_frist: ${cron.status} ${await cron.text()}`)
-    else ende(0, `Rauchprobe bestanden: ${bin} startet mit ${hooks}, Formular-Routen und Frist-Lauf sind geladen.`)
+    else {
+      const diag = await fetch(`${B}/api/responda/formular/diagnose`, { headers: { Authorization: token || '' } })
+      const d = await diag.json().catch(() => ({}))
+      const felder = d && d.felder ? Object.keys(d.felder) : []
+      if (diag.status !== 200 || !felder.includes('form_templates.version') || !felder.includes('form_submissions.status')) {
+        ende(1, `GET /api/responda/formular/diagnose: ${diag.status} ${JSON.stringify(d).slice(0, 300)} (formular.pb.js ohne die eigenen Formulare?)`)
+      } else ende(0, `Rauchprobe bestanden: ${bin} startet mit ${hooks}, Formular-Routen (mit eigenen Formularen) und Frist-Lauf sind geladen.`)
+    }
   }
 }

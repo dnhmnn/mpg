@@ -5,6 +5,10 @@
 // Name frei, je nach Einstellung der Organisation. Gesendet wird nur über
 // src/lib/formular/versand.ts (Route /absenden, ohne Netz in die
 // Warteschlange, bei altem Server der alte Weg); die Maske legt nie selbst an.
+//
+// Felder nach der Einstellung der Organisation (Plan Vorgänge 4.2): Bezeichnung und
+// Hilfetext der Kernfelder, Reihenfolge und eigene Felder aus form_config.formulare.
+// Die Kernblöcke (Positionen, Verbrauchsort) behalten ihre Bedienung.
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -19,7 +23,10 @@ import { ablegenMitMeldung, sendenOderAblegen } from '../../lib/formular/versand
 import type { NeuerEintrag } from '../../lib/formular/warteschlange'
 import { absenderZeile, type AbsenderEintrag, type AbsenderModus } from '../../lib/formular/absender'
 import { ABSENDER_TEXTE, modusAusStand } from './absender/texte'
-import { EINSATZ_MAX, absenderPruefen, ausgabeAlt, ausgabeDaten, ausgabePruefen } from './formularDaten'
+import { EINSATZ_MAX, absenderPruefen, ausgabeAlt, ausgabeDaten, ausgabePruefen, eigeneAngaben, type EigeneEingabe } from './formularDaten'
+import { bausteine, standardKonfig, werteBereinigen, type Baustein } from '../../lib/formular/felder'
+import FeldEingabe from './felder/FeldEingabe'
+import { eigeneAngeboten, eigeneFelder, feldElementId, felderPruefen, fokusAuf, gruppieren, serverFeld } from './felder/pruefen'
 
 /** Heutiges Datum in Ortszeit (nicht UTC: kurz nach Mitternacht stünde sonst der Vortag da). */
 const today = () => {
@@ -33,15 +40,36 @@ type Pos = { qty: number; name: string; item_id: string; unit: string }
 /** Was nach dem Senden gezeigt wird: angekommen oder auf dem Gerät abgelegt. */
 type Fertig = { art: 'gesendet'; absender: string } | { art: 'abgelegt'; meldung: string }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Card({ title, hilfe, children }: { title: string; hilfe?: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)' }}>
       <div style={{ padding: '.85rem 1rem', fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', borderBottom: '0.5px solid var(--lbf-border-light)' }}>
         {title}
       </div>
-      <div style={{ padding: '1rem' }}>{children}</div>
+      <div style={{ padding: '1rem' }}>
+        {hilfe ? <div style={hilfeStil}>{hilfe}</div> : null}
+        {children}
+      </div>
     </div>
   )
+}
+
+/** Hilfetext aus der Einstellung: klein in Zweitfarbe unter der Bezeichnung (nicht kursiv). */
+const hilfeStil: React.CSSProperties = { fontSize: 12, color: 'var(--warm-gray)', lineHeight: 1.45, margin: '0 0 10px', textTransform: 'none', letterSpacing: 'normal', fontWeight: 400 }
+
+/** Die festen Texte der Vorprüfung mit der Bezeichnung der Organisation, wenn sie umbenannt hat. */
+function kernFehler(text: string, bs: Baustein[]): string {
+  const label = (id: string) => {
+    const b = bs.find((x) => x.art === 'kern' && x.id === id)
+    return b && b.art === 'kern' && b.label !== b.kern.label ? b.label : ''
+  }
+  const umbenannt: [string, string, (l: string) => string][] = [
+    ['einsatz', 'Bitte den Einsatz angeben.', (l) => `Bitte „${l}“ angeben.`],
+    ['datum', 'Bitte ein gültiges Datum angeben.', (l) => `Bitte „${l}“ prüfen.`],
+    ['lager_id', 'Bitte einen Verbrauchsort auswählen.', (l) => `Bitte „${l}“ auswählen.`],
+  ]
+  for (const [id, t, neu] of umbenannt) if (text === t && label(id)) return neu(label(id))
+  return text
 }
 
 function ArticleSearch({ inventoryItems, onSelect }: {
@@ -134,6 +162,30 @@ export default function OrgProduktausgabe() {
   // Derselbe Modus, nach dem AbsenderFeld das Passwortfeld zeigt; beim alten Server gibt es keins
   const modus: AbsenderModus = alterServer ? 'frei' : modusAusStand(stand, 'produktausgabe')
 
+  // Felder nach der Einstellung; eigene nur, wenn der Server sie nimmt (sonst gingen sie verloren)
+  const konfig = standardKonfig(org.form_config, 'produktausgabe')
+  const mitEigenen = eigeneAngeboten('produktausgabe', { stand, alterServer })
+  const alleBausteine = bausteine(konfig, 'produktausgabe')
+  const bs = mitEigenen ? alleBausteine : alleBausteine.filter((b) => b.art === 'kern')
+  const eigene = eigeneFelder(bs)
+  const [werte, setWerte] = useState<Record<string, unknown>>({})
+  const [feldFehler, setFeldFehler] = useState<Record<string, string>>({})
+  function wertSetzen(id: string, w: unknown) {
+    setWerte((p) => ({ ...p, [id]: w }))
+    if (feldFehler[id]) setFeldFehler((p) => { const n = { ...p }; delete n[id]; return n })
+  }
+  /** `daten.eigene` nur, wenn es eigene Felder gibt. */
+  function eigeneEingabe(): EigeneEingabe | undefined {
+    return eigene.length ? { version: konfig.version, werte: werteBereinigen(eigene, werte) } : undefined
+  }
+  /** Eigene Felder prüfen; der erste Fehler bekommt den Fokus. */
+  function eigenePruefen(): boolean {
+    const p = felderPruefen(eigene, werte)
+    setFeldFehler(p.fehler)
+    if (p.erster) fokusAuf(p.erster)
+    return !p.erster
+  }
+
   useEffect(() => {
     pb.collection('inventory_items').getFullList<InventoryItem>({
       filter: `organization_id = "${org.id}"`,
@@ -174,6 +226,7 @@ export default function OrgProduktausgabe() {
     const angemeldetId = angabe.mitAnmeldung ? stand?.angemeldet?.id ?? '' : ''
     const absenderName = (angabe.absender?.name ?? '').trim() || (angabe.mitAnmeldung ? stand?.angemeldet?.name ?? '' : name.trim())
     const lagerName = locations.find(l => l.id === selectedLagerId)?.name ?? ''
+    const e = eigeneEingabe()
     return {
       id: kennung.current,
       formular: 'produktausgabe',
@@ -181,8 +234,8 @@ export default function OrgProduktausgabe() {
       orgId: org.id,
       absenderName,
       angemeldetId,
-      daten: ausgabeDaten(einsatz, datum, selectedLagerId, positions),
-      alt: ausgabeAlt(einsatz, datum, selectedLagerId, positions, { lagerName, absender: { id: angemeldetId, name: absenderName }, orgId: org.id }),
+      daten: ausgabeDaten(einsatz, datum, selectedLagerId, positions, e),
+      alt: ausgabeAlt(einsatz, datum, selectedLagerId, positions, { lagerName, absender: { id: angemeldetId, name: absenderName }, orgId: org.id, eigene: e ? eigeneAngaben(eigene, e) : undefined }),
     }
   }
 
@@ -198,9 +251,12 @@ export default function OrgProduktausgabe() {
     if (sending) return
     setFehler('')
     setAblegenAnbieten(false)
-    const pruef = ausgabePruefen(ausgabeDaten(einsatz, datum, selectedLagerId, positions))
+    const kern = ausgabePruefen(ausgabeDaten(einsatz, datum, selectedLagerId, positions))
+    const eigeneOk = eigenePruefen()
+    const pruef = (kern ? kernFehler(kern, bs) : '')
       || absenderPruefen({ angemeldet, name, modus, passwort, online: navigator.onLine !== false, alterServer })
     if (pruef) { setFehler(pruef); return }
+    if (!eigeneOk) return
     const angabe = absenderAngabe({ stand, formular: 'produktausgabe', anderer, name, passwort })
     const e = eintrag(angabe)
     setSending(true)
@@ -214,7 +270,10 @@ export default function OrgProduktausgabe() {
       } else if (r.art === 'nicht_abgelegt') {
         setFehler(r.meldung)
       } else {
-        setFehler(r.meldung)
+        // Ein eigenes Feld, das der Server ablehnt: der Text am Feld
+        const f = serverFeld(r.feld, 'eigene')
+        if (r.grund === 'daten' && f && eigene.some((d) => d.id === f)) { setFeldFehler((p) => ({ ...p, [f]: r.meldung })); fokusAuf(f) }
+        else setFehler(r.meldung)
         setAblegenAnbieten(r.ablegenAnbieten)
         sperre.current = r.ablegenAnbieten ? { sekunden: r.sekunden, text: r.meldung } : null
       }
@@ -238,9 +297,12 @@ export default function OrgProduktausgabe() {
     if (sending) return
     setFehler('')
     setAblegenAnbieten(false)
-    const pruef = ausgabePruefen(ausgabeDaten(einsatz, datum, selectedLagerId, positions))
+    const kern = ausgabePruefen(ausgabeDaten(einsatz, datum, selectedLagerId, positions))
+    const eigeneOk = eigenePruefen()
+    const pruef = (kern ? kernFehler(kern, bs) : '')
       || absenderPruefen({ angemeldet: false, name, modus: 'frei', passwort: '', online: true, alterServer })
     if (pruef) { setFehler(pruef); return }
+    if (!eigeneOk) return
     setPasswort('')
     const angabe = absenderAngabe({ stand, formular: 'produktausgabe', anderer: true, name, passwort: '' })
     const r = ablegenMitMeldung(eintrag(angabe), { modus, mitAnmeldung: false, anlass: 'ohne_passwort' })
@@ -252,6 +314,7 @@ export default function OrgProduktausgabe() {
     setEinsatz(''); setDatum(today())
     setPositions([{ qty: 1 }]); setFertig(null); setSelectedLagerId(locations.length === 1 ? locations[0].id : '')
     setPasswort(''); setFehler(''); setAblegenAnbieten(false)
+    setWerte({}); setFeldFehler({})
     // Neue Ausgabe, neue Kennung (4.2); der Name bleibt für die nächste Ausgabe stehen
     kennung.current = ''
   }
@@ -304,79 +367,109 @@ export default function OrgProduktausgabe() {
       </header>
       <PubWrap>
 
-        <PubSection title="Kopfdaten" open>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }}>
-            <div style={field}>
-              <label style={lbl}>Einsatznummer *
-                <input style={inp} type="text" placeholder="z.B. 2025-001" maxLength={EINSATZ_MAX} value={einsatz} onChange={e => setEinsatz(e.target.value)} />
-              </label>
-            </div>
-            <div style={field}>
-              <label style={lbl}>Datum *
-                <input style={inp} type="date" value={datum} onChange={e => setDatum(e.target.value)} />
-              </label>
-            </div>
-          </div>
-        </PubSection>
-
-        <Card title="Positionen">
-          {positions.map((pos, i) => (
-            <div key={i} style={{ padding: '.75rem', background: pos.item_id ? 'rgba(var(--lbf-rot-rgb),0.03)' : 'var(--warm-bg)', border: `1.5px solid ${pos.item_id ? 'rgba(var(--lbf-rot-rgb),0.2)' : 'rgba(var(--lbf-rot-rgb),0.1)'}`, borderRadius: 10, marginBottom: '.6rem' }}>
-              <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start' }}>
-                <div style={{ flexShrink: 0, width: 72 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Anz.</div>
-                  <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
-                    type="number" min={1} value={pos.qty ?? 1}
-                    onChange={e => updQty(i, Number(e.target.value))} />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: pos.item_id ? '#16a34a' : 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
-                    {pos.item_id ? 'Artikel ausgewählt' : 'Artikel auswählen *'}
-                  </div>
-                  {pos.item_id ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--lbf-card)', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '10px 12px' }}>
-                      <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', wordBreak: 'break-word' }}>{pos.name}</span>
-                      <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', flexShrink: 0 }}>{pos.unit}</span>
-                      <button type="button" onClick={() => clearPos(i)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+        {gruppieren(bs, 'produktausgabe').map((g, gi) => {
+          if (g.block === 'positionen') {
+            const b = g.teile[0] as Extract<Baustein, { art: 'kern' }>
+            return (
+              <Card key={`b-${gi}`} title={b.label} hilfe={b.hilfe}>
+                {positions.map((pos, i) => (
+                  <div key={i} style={{ padding: '.75rem', background: pos.item_id ? 'rgba(var(--lbf-rot-rgb),0.03)' : 'var(--warm-bg)', border: `1.5px solid ${pos.item_id ? 'rgba(var(--lbf-rot-rgb),0.2)' : 'rgba(var(--lbf-rot-rgb),0.1)'}`, borderRadius: 10, marginBottom: '.6rem' }}>
+                    <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-start' }}>
+                      <div style={{ flexShrink: 0, width: 72 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>Anz.</div>
+                        <input style={{ ...inp, marginTop: 0, textAlign: 'center', padding: '10px 4px' }}
+                          type="number" min={1} value={pos.qty ?? 1}
+                          onChange={e => updQty(i, Number(e.target.value))} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: pos.item_id ? '#16a34a' : 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+                          {pos.item_id ? 'Artikel ausgewählt' : 'Artikel auswählen *'}
+                        </div>
+                        {pos.item_id ? (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--lbf-card)', border: '1.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 10, padding: '10px 12px' }}>
+                            <span style={{ flex: 1, fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', wordBreak: 'break-word' }}>{pos.name}</span>
+                            <span style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', flexShrink: 0 }}>{pos.unit}</span>
+                            <button type="button" onClick={() => clearPos(i)}
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--warm-gray)', fontSize: 20, lineHeight: 1, padding: '0 2px', flexShrink: 0 }}>×</button>
+                          </div>
+                        ) : null}
+                      </div>
+                      <button type="button" onClick={() => delPos(i)}
+                        style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-akzent-weich)', color: 'var(--lbf-akzent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        ×
+                      </button>
                     </div>
-                  ) : null}
-                </div>
-                <button type="button" onClick={() => delPos(i)}
-                  style={{ width: 34, height: 34, borderRadius: 8, border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-akzent-weich)', color: 'var(--lbf-akzent)', fontWeight: 700, cursor: 'pointer', fontSize: '1.1rem', flexShrink: 0, alignSelf: 'flex-end', marginBottom: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  ×
-                </button>
-              </div>
-              {!pos.item_id && (
-                <div style={{ marginTop: '.5rem' }}>
-                  <ArticleSearch inventoryItems={inventoryItems} onSelect={item => selectItem(i, item)} />
-                </div>
-              )}
-            </div>
-          ))}
-          <button type="button" onClick={addPos}
-            style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-akzent-weich)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, color: 'var(--lbf-akzent)', fontSize: 13, fontFamily: 'inherit', letterSpacing: '0.02em' }}>
-            + Position hinzufügen
-          </button>
-        </Card>
-
-        <Card title="Verbrauchsort *">
-          {locations.length === 0 ? (
-            <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Keine Verbrauchsorte gefunden</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {locations.map(loc => (
-                <button key={loc.id} type="button" onClick={() => setSelectedLagerId(loc.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: selectedLagerId === loc.id ? '1.5px solid var(--lbf-akzent)' : '1.5px solid var(--lbf-border)', background: selectedLagerId === loc.id ? 'var(--lbf-akzent-weich)' : 'var(--lbf-card)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: selectedLagerId === loc.id ? '2px solid var(--lbf-akzent)' : '2px solid rgba(var(--lbf-rot-rgb),0.2)', background: selectedLagerId === loc.id ? 'var(--lbf-akzent-grund)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {selectedLagerId === loc.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                    {!pos.item_id && (
+                      <div style={{ marginTop: '.5rem' }}>
+                        <ArticleSearch inventoryItems={inventoryItems} onSelect={item => selectItem(i, item)} />
+                      </div>
+                    )}
                   </div>
-                  <span style={{ fontWeight: selectedLagerId === loc.id ? 700 : 400, fontStyle: selectedLagerId === loc.id ? 'italic' : 'normal', fontSize: 15, color: 'var(--lbf-text)' }}>{loc.name}</span>
+                ))}
+                <button type="button" onClick={addPos}
+                  style={{ border: '1px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-akzent-weich)', padding: '8px 14px', borderRadius: 8, cursor: 'pointer', fontWeight: 700, color: 'var(--lbf-akzent)', fontSize: 13, fontFamily: 'inherit', letterSpacing: '0.02em' }}>
+                  + Position hinzufügen
                 </button>
-              ))}
-            </div>
-          )}
-        </Card>
+              </Card>
+            )
+          }
+          if (g.block === 'lager_id') {
+            const b = g.teile[0] as Extract<Baustein, { art: 'kern' }>
+            return (
+              <Card key={`b-${gi}`} title={`${b.label} *`} hilfe={b.hilfe}>
+                {locations.length === 0 ? (
+                  <div style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)' }}>Keine Verbrauchsorte gefunden</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {locations.map(loc => (
+                      <button key={loc.id} type="button" onClick={() => setSelectedLagerId(loc.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 10, border: selectedLagerId === loc.id ? '1.5px solid var(--lbf-akzent)' : '1.5px solid var(--lbf-border)', background: selectedLagerId === loc.id ? 'var(--lbf-akzent-weich)' : 'var(--lbf-card)', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+                        <div style={{ width: 18, height: 18, borderRadius: '50%', flexShrink: 0, border: selectedLagerId === loc.id ? '2px solid var(--lbf-akzent)' : '2px solid rgba(var(--lbf-rot-rgb),0.2)', background: selectedLagerId === loc.id ? 'var(--lbf-akzent-grund)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {selectedLagerId === loc.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                        </div>
+                        <span style={{ fontWeight: selectedLagerId === loc.id ? 700 : 400, fontStyle: selectedLagerId === loc.id ? 'italic' : 'normal', fontSize: 15, color: 'var(--lbf-text)' }}>{loc.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )
+          }
+          return (
+            <PubSection key={`g-${gi}`} title={g.titel} open>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', columnGap: '.75rem' }}>
+                {g.teile.map((b) => {
+                  if (b.art === 'eigen') {
+                    return (
+                      <div key={b.feld.id} style={{ gridColumn: '1 / -1' }}>
+                        <FeldEingabe feld={b.feld} wert={werte[b.feld.id]} onWert={(w) => wertSetzen(b.feld.id, w)} fehler={feldFehler[b.feld.id]} />
+                      </div>
+                    )
+                  }
+                  if (b.id === 'einsatz') {
+                    return (
+                      <div key="einsatz" style={field}>
+                        <label style={lbl} htmlFor={feldElementId('einsatz')}>{b.label} *</label>
+                        {b.hilfe ? <div style={{ ...hilfeStil, margin: '4px 0 0' }}>{b.hilfe}</div> : null}
+                        <input id={feldElementId('einsatz')} style={inp} type="text" placeholder="z.B. 2025-001" maxLength={EINSATZ_MAX} value={einsatz} onChange={e => setEinsatz(e.target.value)} />
+                      </div>
+                    )
+                  }
+                  if (b.id === 'datum') {
+                    return (
+                      <div key="datum" style={field}>
+                        <label style={lbl} htmlFor={feldElementId('datum')}>{b.label} *</label>
+                        {b.hilfe ? <div style={{ ...hilfeStil, margin: '4px 0 0' }}>{b.hilfe}</div> : null}
+                        <input id={feldElementId('datum')} style={inp} type="date" value={datum} onChange={e => setDatum(e.target.value)} />
+                      </div>
+                    )
+                  }
+                  return null
+                })}
+              </div>
+            </PubSection>
+          )
+        })}
 
         <div style={{ background: 'var(--lbf-card)', borderLeft: '3px solid var(--lbf-akzent)', borderRadius: 12, marginBottom: '.75rem', boxShadow: '0 1px 4px rgba(0,0,0,0.07)', padding: '1rem' }}>
           <AbsenderFeld

@@ -167,7 +167,7 @@ export default function PatientView() {
       </header>
 
       <PubWrap>
-        <ProtokollView payload={p} changedFields={changedFields} tfChangedFields={tfChangedFields} />
+        <ProtokollView payload={p} changedFields={changedFields} tfChangedFields={tfChangedFields} formConfig={org?.form_config} />
 
         <div style={{ background: 'var(--lbf-warn-grund-2)', border: '1px solid #fbbf24', borderRadius: 12, padding: 16, margin: '1.5rem 0', textAlign: 'center' }}>
           <div style={{ fontWeight: 700, color: 'var(--lbf-warn-text)', marginBottom: 4 }}>Zugang endet {expiry?.toLocaleString('de-DE')}</div>

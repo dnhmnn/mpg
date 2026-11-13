@@ -8,6 +8,8 @@
 //   Anlegen  : offen (die Meldeseite der Organisation). Eine mitgeschickte
 //              "bearbeitung" wird entfernt, der Status ist immer "offen" —
 //              eine Bearbeitung entsteht nur durch ein späteres Update.
+//              Organisation aktiv und CIRS an, Ereignis beschrieben, eigene
+//              Felder gegen die Einstellung geprüft (unten, mit Rückfall).
 //   Lesen    : nur mit Recht "dokumente" (oder Supervisor, oder befristetem
 //              Recht, das noch läuft) und nur in der eigenen Organisation.
 //   Ändern   : ebenso. Die Angaben des Melders (Ereignis, Beschreibung,
@@ -36,6 +38,13 @@
 //   Delete      : gesperrt (Schloss in der Admin-Oberfläche, also null — nicht
 //                 als leerer Text, das hieße "öffentlich")
 
+// Anlegen (Plan Vorgänge 2.7.5, Superuser ausgenommen): Organisation aktiv und CIRS für sie an
+// und öffentlich, sonst 403; „Was ist passiert?“ nicht leer, sonst 400. Eigene Felder der
+// Organisation (form_config.formulare.cirs) kommen als payload.eigene = { version, werte } und
+// werden hier gegen die Einstellung neu gebaut (Bezeichnungen vom Server, Schnappschuss der
+// Felder); ungültig: 400. Fehlt formular-regeln.js (Rückfall): Organisation, Modul und Inhalt
+// prüft niemand (wie früher), von payload.eigene bleiben nur version und werte (bis 60000
+// Zeichen, sonst fällt eigene weg und es steht im Log).
 onRecordCreateRequest((e) => {
   let payload = null
   try {
@@ -45,10 +54,42 @@ onRecordCreateRequest((e) => {
   } catch (err) {
     payload = null
   }
-  if (payload && typeof payload === "object" && !Array.isArray(payload) && payload.bearbeitung !== undefined) {
+  const istPayload = payload && typeof payload === "object" && !Array.isArray(payload)
+  let geaendert = false
+  if (istPayload && payload.bearbeitung !== undefined) {
     delete payload.bearbeitung
-    e.record.set("payload", payload)
+    geaendert = true
   }
+  if (!e.hasSuperuserAuth()) {
+    let R = null
+    try { R = require(`${__hooks}/formular-regeln.js`) } catch (err) { R = null }
+    if (R) {
+      const org = R.orgPerId(e.app, e.record.getString("organization_id"))
+      if (!org || !org.is_active || !R.formularOeffentlich(org, "cirs")) throw new ForbiddenError(R.TEXTE.formular_aus)
+      const was = istPayload && typeof payload.was === "string" ? payload.was.trim() : ""
+      if (!was) throw new BadRequestError(R.EIGENE_TEXTE.cirs_was)
+      if (istPayload && payload.eigene !== undefined) {
+        const r = R.cirsEigene(org.form_config, payload.eigene)
+        if (!r.ok) throw new BadRequestError(r.text)
+        if (r.eigene) payload.eigene = r.eigene
+        else delete payload.eigene
+        geaendert = true
+      }
+    } else if (istPayload && payload.eigene !== undefined) {
+      const roh = payload.eigene
+      const werte = roh && typeof roh === "object" && !Array.isArray(roh) && roh.werte && typeof roh.werte === "object" && !Array.isArray(roh.werte) ? roh.werte : null
+      let text = ""
+      try { text = werte ? JSON.stringify(werte) : "" } catch (err) { text = "" }
+      if (werte && text.length < 60000) {
+        payload.eigene = { version: typeof roh.version === "number" ? roh.version : 0, werte: werte }
+      } else {
+        delete payload.eigene
+        e.app.logger().warn("[cirs] formular-regeln.js fehlt, eigene Angaben verworfen (unlesbar oder zu groß)")
+      }
+      geaendert = true
+    }
+  }
+  if (geaendert) e.record.set("payload", payload)
   e.record.set("status", "offen")
   e.next()
 }, "cirs_reports")
@@ -109,7 +150,8 @@ onRecordUpdateRequest((e) => {
   const vorher = lesen(original.getString("payload"))
   const nachher = lesen(e.record.getString("payload"))
   // Die Angaben des Melders bleiben, wie gemeldet — nur Bearbeitung und Status ändern sich
-  const MELDER = ["datum", "ort", "kategorie", "schwere", "was", "warum", "folgen", "vorschlag", "melder_name", "melder_kontakt"]
+  // (eigene: Angaben zu eigenen Feldern der Organisation, Plan Vorgänge 2.7.5)
+  const MELDER = ["datum", "ort", "kategorie", "schwere", "was", "warum", "folgen", "vorschlag", "melder_name", "melder_kontakt", "eigene"]
   if (vorher) {
     const zusammen = nachher || {}
     for (const k of MELDER) {

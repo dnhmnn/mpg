@@ -16,14 +16,21 @@
 // Fehler, der sich ohne Zutun nicht gibt (Formular aus, Angaben abgewiesen).
 // Die Stunde bis „ohne Passwort“ zählt nur, solange die Karte ausgeklappt ist
 // („Später“ klappt sie ein; dann gilt die Frage als nicht gesehen).
+//
+// Datenschutz (Plan Vorgänge 5.4): Ohne Anmeldung eines Mitglieds dieser Organisation
+// nennt die Karte keinen Patientennamen, nur Zeit, Formular und Einsatznummer. Der
+// Inhalt liegt verschlüsselt auf dem Gerät (src/lib/tresor.ts); geht das im Browser
+// nicht, sagt die Karte es. Ohne Hintergrundversand (iOS, Firefox) steht dauerhaft da,
+// dass die Seite später mit Netz wieder geöffnet werden muss.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { aktuelleTokenId, geraeteSpeicher, nameGefunden, type NamensErgebnis, type Speicher } from '../../../lib/formular/api'
-import { useFormularStand } from '../../../lib/formular/stand'
+import { mitgliedAngemeldet, useFormularStand } from '../../../lib/formular/stand'
 import {
-  abarbeiten, absenderNameSetzen, aenderungAbgewiesen, bleibenderFehler, bleibendHinweis, eintragAusfuehren, eintragKopf, MELDUNGEN, naechsterSchritt,
+  abarbeiten, absenderNameSetzen, aenderungAbgewiesen, bleibenderFehler, bleibendHinweis, eintragAusfuehren, eintragKopf, formularStandVon, istAnonym, MELDUNGEN, naechsterSchritt,
   ohnePasswortMoeglich, schrittOhnePasswort, verwerfen, verwerfenFrageText, type Ausfuehrung, type Schritt,
 } from '../../../lib/formular/versand'
+import { hintergrundMoeglich, karteAn, SENDEN_EREIGNIS, TRESOR_EREIGNIS, tresorKlartextGrund, tresorProbleme } from '../../../lib/tresor'
 import { aktualisieren, ALTER_PREFIX, eintrag, eintraege, schluessel, type Warteeintrag } from '../../../lib/formular/warteschlange'
 import NamensFeld from './NamensFeld'
 import { PasswortFeld, Textknopf } from './AbsenderFeld'
@@ -76,6 +83,19 @@ function rohStand(s: Speicher | null, orgCode: string): string {
 
 type Meldung = { text: string; art: 'info' | 'fehler' }
 
+/**
+ * Ohne Patientennamen zeigen? Ja, solange auf diesem Gerät kein Mitglied dieser Organisation
+ * angemeldet ist (öffentliche Seite, geteiltes Tablet). Mit Anmeldung bleibt alles wie bisher.
+ */
+function ohneNamenFuer(orgId: string): boolean {
+  return !mitgliedAngemeldet(orgId)
+}
+
+function orgIdVon(org: unknown, liste: Warteeintrag[]): string {
+  const id = org && typeof org === 'object' ? (org as { id?: unknown }).id : undefined
+  return typeof id === 'string' && id ? id : (liste[0]?.orgId ?? '')
+}
+
 export default function Warteschlange({ orgCode, org, eingebettet = false }: {
   orgCode: string
   /** Die Organisation, falls schon geladen (für den Stand ohne Netz). */
@@ -105,6 +125,8 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
   const manuell = useRef(false)
   const lage = useRef({ stand, alterServer, laedt, spaeter })
   lage.current = { stand, alterServer, laedt, spaeter }
+  const orgRef = useRef(org)
+  orgRef.current = org
 
   const neuLesen = useCallback(() => {
     if (!s || !orgCode) return [] as Warteeintrag[]
@@ -144,14 +166,15 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
       if (jetztOnline && st && !alt) {
         for (const e of eintraege(s, orgCode)) {
           if (e.nameEindeutig !== undefined || e.ziel || e.angemeldetId) continue
-          if (st.formulare[e.formular]?.modus !== 'passwort' || !namePruefbar(e.absenderName)) continue
-          const r = await nameGefunden(orgCode, e.formular, e.absenderName.trim())
+          if (formularStandVon(e, st)?.modus !== 'passwort' || !namePruefbar(e.absenderName)) continue
+          const r = await nameGefunden(orgCode, e.formular, e.absenderName.trim(), { vorlage: e.vorlage })
           if (r.ok === false) break
           absenderNameSetzen(s, orgCode, e.id, e.absenderName, r.wert)
         }
       }
+      const ohneNamen = ohneNamenFuer(orgIdVon(orgRef.current, eintraege(s, orgCode)))
       // Eingeklappt sieht niemand die Passwortfrage: dann zählt sie nicht als gestellt (gefragtAb)
-      const ergebnis = await abarbeiten(s, orgCode, { online: jetztOnline, stand: st, serverAlt: alt, frageSichtbar: !eingeklappt })
+      const ergebnis = await abarbeiten(s, orgCode, { online: jetztOnline, stand: st, serverAlt: alt, frageSichtbar: !eingeklappt, ohneNamen })
       for (const [id, r] of Object.entries(ergebnis)) {
         // Warten und Korrigieren sagt die Zeile des Eintrags selbst; keine zweite Meldung darunter
         if (r.schritt === 'warten' || r.schritt === 'korrigieren') { setMeldungen((m) => { if (!m[id]) return m; const n = { ...m }; delete n[id]; return n }); continue }
@@ -190,19 +213,28 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
       if (neu) { setSpaeter(false); spaeterSchreiben(orgCode, false); lage.current.spaeter = false; void durchlauf() }
     }
     const netz = () => setOnline(onlineJetzt())
+    // Der Service Worker bittet, jetzt zu senden (Background Sync, während dieses Fenster offen ist)
+    const senden = () => { void durchlauf() }
     const uhr = setInterval(pruefen, BLICK_MS)
     window.addEventListener(WARTESCHLANGE_EREIGNIS, pruefen)
+    window.addEventListener(TRESOR_EREIGNIS, pruefen)
+    window.addEventListener(SENDEN_EREIGNIS, senden)
     window.addEventListener('storage', pruefen)
     window.addEventListener('online', netz)
     window.addEventListener('offline', netz)
     return () => {
       clearInterval(uhr)
       window.removeEventListener(WARTESCHLANGE_EREIGNIS, pruefen)
+      window.removeEventListener(TRESOR_EREIGNIS, pruefen)
+      window.removeEventListener(SENDEN_EREIGNIS, senden)
       window.removeEventListener('storage', pruefen)
       window.removeEventListener('online', netz)
       window.removeEventListener('offline', netz)
     }
   }, [s, orgCode, neuLesen, durchlauf])
+
+  // Diese Karte arbeitet die Schlange der Organisation ab (Auskunft an den Service Worker)
+  useEffect(() => (orgCode ? karteAn(orgCode) : undefined), [orgCode])
 
   useEffect(() => { setSpaeter(spaeterLesen(orgCode)) }, [orgCode])
 
@@ -229,7 +261,7 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
         e = eintrag(s, orgCode, id)
       }
       if (!e) return
-      const r = await eintragAusfuehren(s, e, schritt(e), { passwort: o.passwort })
+      const r = await eintragAusfuehren(s, e, schritt(e), { passwort: o.passwort, ohneNamen: ohneNamenFuer(e.orgId) })
       ergebnisMerken(id, r)
     } finally {
       manuell.current = false
@@ -281,6 +313,11 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
 
   const jetzt = new Date()
   const tokenId = aktuelleTokenId()
+  const ohneNamen = ohneNamenFuer(orgIdVon(org, liste))
+  const grund = tresorKlartextGrund()
+  const unverschluesselt = grund === 'nicht_moeglich' || grund === 'fehler'
+  const unlesbar = tresorProbleme()
+  const ohneHintergrund = liste.length > 0 && !hintergrundMoeglich()
 
   return (
     <div style={eingebettet
@@ -295,6 +332,15 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
             <div style={{ fontSize: 10, fontWeight: 700, color: ROT, textTransform: 'uppercase', letterSpacing: '0.14em' }}>{T.schlangeTitel}</div>
             {liste.length > 0 ? (
               <div style={{ fontSize: 12, fontStyle: 'italic', color: GRAU, marginTop: 2 }}>{T.warten(liste.length)}</div>
+            ) : null}
+            {ohneHintergrund ? (
+              <div style={{ fontSize: 12, color: TEXT, marginTop: 4, lineHeight: 1.45 }}>{MELDUNGEN.ohneHintergrund(liste.map((x) => x.formular))}</div>
+            ) : null}
+            {liste.length > 0 && unverschluesselt ? (
+              <div style={{ fontSize: 11, color: GRAU, marginTop: 4, lineHeight: 1.4 }}>{T.unverschluesselt}</div>
+            ) : null}
+            {liste.length > 0 && unlesbar > 0 ? (
+              <div style={{ fontSize: 11, color: GRAU, marginTop: 4, lineHeight: 1.4 }}>{T.unlesbar(unlesbar)}</div>
             ) : null}
           </div>
           {liste.length > 0 ? (
@@ -317,11 +363,11 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
           const meldung = meldungen[e.id]
           const name = namen[e.id] ?? e.absenderName
           const laeuft = beschaeftigt === e.id
-          const fStand = stand?.formulare[e.formular]
+          const fStand = formularStandVon(e, stand)
           return (
             <div key={e.id} style={{ padding: '10px 12px 12px', borderTop: i > 0 ? `0.5px solid ${LINIE}` : 'none' }}>
-              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>{eintragKopf(e)}</div>
-              <div style={{ fontSize: 12, fontStyle: 'italic', color: GRAU, marginTop: 2 }}>{T.absenderZeile(e.absenderName.trim())}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TEXT, lineHeight: 1.35 }}>{eintragKopf(e, { ohneNamen })}</div>
+              <div style={{ fontSize: 12, fontStyle: 'italic', color: GRAU, marginTop: 2 }}>{istAnonym(e) ? T.absenderAnonym : T.absenderZeile(e.absenderName.trim())}</div>
 
               {e.ziel ? (
                 aenderungAbgewiesen(e) ? (
@@ -348,7 +394,7 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
                   <Zeile>{bleibendHinweis(e)}</Zeile>
                   {verwerfenFrage === e.id ? (
                     <div style={{ marginTop: 8 }}>
-                      <div style={{ fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.45 }}>{verwerfenFrageText(e)}</div>
+                      <div style={{ fontSize: 12, fontStyle: 'italic', color: TEXT, lineHeight: 1.45 }}>{verwerfenFrageText(e, { ohneNamen })}</div>
                       <div style={{ display: 'flex', gap: 16, marginTop: 6 }}>
                         <Textknopf onClick={() => verwerfenJetzt(e)}>{T.endgueltigVerwerfen}</Textknopf>
                         <Textknopf farbe={GRAU} onClick={() => setVerwerfenFrage('')}>{T.behalten}</Textknopf>
@@ -365,7 +411,7 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
                 <div style={{ marginTop: 8 }}>
                   {e.letzterFehler ? <Hinweis art="fehler">{e.letzterFehler.text}</Hinweis> : null}
                   <NamensFeld
-                    orgCode={orgCode} formular={e.formular} wert={name}
+                    orgCode={orgCode} formular={e.formular} vorlage={e.vorlage} wert={name}
                     onWert={(n) => nameGeaendert(e.id, n)}
                     onErgebnis={(r, text) => namePruefung(e, r, text)}
                     zweck="absender" modus="frei" mitAnmeldung={false}
@@ -383,7 +429,7 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
                 <div style={{ marginTop: 8 }}>
                   {e.letzterFehler && e.letzterFehler.grund !== 'gesperrt' ? <Hinweis art="fehler">{e.letzterFehler.text}</Hinweis> : null}
                   <NamensFeld
-                    orgCode={orgCode} formular={e.formular} wert={name}
+                    orgCode={orgCode} formular={e.formular} vorlage={e.vorlage} wert={name}
                     onWert={(n) => nameGeaendert(e.id, n)}
                     onErgebnis={(r, text) => namePruefung(e, r, text)}
                     zweck="ausstehend" modus="passwort" mitAnmeldung={false}
@@ -410,7 +456,7 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
                       {ohnePasswortMoeglich({ ...e, absenderName: name }, stand) && name === e.absenderName ? (
                         <>
                           <div style={{ fontSize: 12, color: TEXT, marginTop: 4, lineHeight: 1.45 }}>{T.ohnePasswortErklaerung(name.trim())}</div>
-                          <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 2 }}>{T.ohnePasswortVonSelbst}</div>
+                          <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 2 }}>{T.ohnePasswortVonSelbst(hintergrundMoeglich())}</div>
                         </>
                       ) : (
                         <div style={{ fontSize: 11, fontStyle: 'italic', color: GRAU, marginTop: 4, lineHeight: 1.4 }}>{T.ohnePasswortNurEindeutig}</div>

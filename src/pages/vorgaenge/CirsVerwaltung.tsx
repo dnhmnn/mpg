@@ -1,5 +1,6 @@
 // CIRS unter Vorgänge: die Meldungen der Organisation, ihre Bearbeitung und
-// die Auswertung.
+// die Auswertung, im Stil der Benutzerverwaltung (Bauplan Vorgänge, 3.9):
+// Flächen mit ruhigen Zeilen, Status als Wort, Abschnitte ohne Versalien.
 //
 // Gespeichert wird immer auf dem frisch gelesenen Datensatz: erst holen, dann
 // den Bearbeitungsschritt darauf anwenden, dann schreiben. So überschreibt
@@ -7,22 +8,24 @@
 // Melders bleiben unberührt (siehe speicherDaten in lib/cirs).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type React from 'react'
 import { pb } from '../../lib/pocketbase'
 import type { User } from '../../types'
 import { hatRecht } from '../../lib/apps'
 import {
   ANSICHTEN, KATEGORIEN, SCHWEREGRADE,
-  auswerten, bearbeitungAus, CirsFehler, csv, fallAus, fallPrioritaet, filtern, geltendeKategorie, geltendeSchwere,
-  imZeitraum, istAbgeschlossen, istUeberfaellig, kalendertag, kategorieName, offeneMassnahmen, schwereName, sortieren,
+  auswerten, bearbeitungAus, CirsFehler, csv, fallAus, fallPrioritaet, filtern, geltendeKategorie,
+  imZeitraum, istAbgeschlossen, istUeberfaellig, kalendertag, kategorieText, offeneMassnahmen, sortieren,
   speicherDaten, tagText, zaehlen,
   type Ansicht, type Bearbeitung, type CirsDatensatz, type CirsFall, type Person, type Schritt,
 } from '../../lib/cirs'
 import { auswertungSeite, cirsSeite, druckFensterOeffnen } from '../../lib/cirsDruck'
+import { herunterladen } from '../../lib/csv'
 import CirsDetail from './CirsDetail'
+import { Abschnitt, Auswahl, Feld, Hinweis, Leer, Notiz, VgIcon, Zeile } from './bausteine'
 import {
-  PhaseMarke, PrioMarke, abschnittKopf, eingabe, karte, knopfLeise, knopfRand, pik, randFarbe, wieLange,
+  CIRS_TEXTE as T, PhaseWort, cirsAnzeige, exportiertText, meldungenText, prioText, ueberfaelligText, useCirsKonfig, wieLange,
 } from './cirsTeile'
+import { EIN_CSS } from './eingang/stil'
 
 interface Props {
   user: User | null
@@ -30,8 +33,13 @@ interface Props {
   orgName?: string
   /** Eine Meldung, die gleich offen sein soll (Verweis aus dem Hub). */
   startMeldung?: string | null
-  /** Meldet die Zahlen nach oben — für das Abzeichen am Reiter. */
+  /** Meldet die Zahlen nach oben, für die Zahl am Reiter. */
   onZahlen?: (z: { neu: number; ueberfaellig: number }) => void
+  /**
+   * form_config der Organisation (Bezeichnungen der Felder, eigene Felder ohne Schnappschuss).
+   * Fehlt sie, liest die Verwaltung sie einmal selbst.
+   */
+  formConfig?: unknown
 }
 
 type Bereich = 'liste' | 'auswertung'
@@ -47,18 +55,7 @@ function zeitraumGrenzen(z: Zeitraum, heute: Date): { von: Date | null; bis: Dat
   }
 }
 
-function herunterladen(name: string, inhalt: string, typ: string) {
-  const url = URL.createObjectURL(new Blob([inhalt], { type: typ }))
-  const a = document.createElement('a')
-  a.href = url
-  a.download = name
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZahlen }: Props) {
+export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZahlen, formConfig }: Props) {
   const [datensaetze, setDatensaetze] = useState<CirsDatensatz[]>([])
   const [laedt, setLaedt] = useState(true)
   const [ladefehler, setLadefehler] = useState('')
@@ -73,7 +70,7 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
 
   const [offenId, setOffenId] = useState<string | null>(startMeldung ?? null)
   const [beschaeftigt, setBeschaeftigt] = useState(false)
-  // Ein Fehler gehört zu der Meldung, bei der er entstand — schließt man sie vorher, zeigt ihn die Liste
+  // Ein Fehler gehört zu der Meldung, bei der er entstand; schließt man sie vorher, zeigt ihn die Liste
   const [fehler, setFehlerRoh] = useState<{ id: string; text: string } | null>(null)
   const [hinweis, setHinweis] = useState<{ text: string; fehler?: boolean } | null>(null)
   const hinweisZeigen = useCallback((text: string, istFehler = false) => {
@@ -81,7 +78,11 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
     if (!istFehler) setTimeout(() => setHinweis((h) => (h?.text === text ? null : h)), 3500)
   }, [])
 
-  // Der heutige Tag — bleibt die Seite über Mitternacht offen, zählt er weiter,
+  // Bezeichnungen der Felder nach der Einstellung der Organisation
+  const konfig = useCirsKonfig(orgId, formConfig)
+  const anzeige = useMemo(() => cirsAnzeige(konfig), [konfig])
+
+  // Der heutige Tag: bleibt die Seite über Mitternacht offen, zählt er weiter,
   // sonst stünde eine Frist von gestern noch als "heute fällig" da
   const [heute, setHeute] = useState(() => new Date())
   useEffect(() => {
@@ -108,7 +109,7 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
       })
       setDatensaetze(liste)
     } catch (e: any) {
-      setLadefehler(e?.status === 0 ? 'Keine Verbindung — die Meldungen konnten nicht geladen werden.' : 'Die Meldungen konnten nicht geladen werden.')
+      setLadefehler(e?.status === 0 ? T.keinNetzLaden : T.ladefehler)
     } finally {
       setLaedt(false)
     }
@@ -140,7 +141,7 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
     if (!laedt && !ladefehler && offenId && !faelle.some((f) => f.id === offenId)) setOffenId(null)
   }, [laedt, ladefehler, offenId, faelle])
 
-  // Der Stand, den die Ansicht zeigt — auch zwischen zwei Darstellungen aktuell,
+  // Der Stand, den die Ansicht zeigt, auch zwischen zwei Darstellungen aktuell,
   // damit ein zweiter Schritt in der Warteschlange den ersten schon sieht
   const angezeigt = useRef<CirsDatensatz[]>([])
   angezeigt.current = datensaetze
@@ -160,7 +161,7 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
       const vorhin = angezeigt.current.find((d) => d.id === id)
       if (vorhin?.updated && frisch.updated && vorhin.updated !== frisch.updated) {
         uebernehmen(frisch)
-        setFehler('Die Meldung wurde inzwischen von jemand anderem geändert. Hier steht jetzt der neue Stand — bitte prüfen und den Schritt bei Bedarf wiederholen.')
+        setFehler(T.fremdGeaendert)
         return false
       }
       const vorher = bearbeitungAus(frisch)
@@ -171,9 +172,9 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
       return true
     } catch (e: any) {
       setFehler(e instanceof CirsFehler ? e.message
-        : e?.status === 0 ? 'Keine Verbindung — nichts gespeichert. Bitte erneut versuchen.'
-          : e?.status === 403 || e?.status === 404 ? 'Keine Berechtigung, diese Meldung zu bearbeiten.'
-            : 'Speichern fehlgeschlagen. Bitte erneut versuchen.')
+        : e?.status === 0 ? T.keinNetzSpeichern
+          : e?.status === 403 || e?.status === 404 ? T.keinRecht
+            : T.nichtGespeichert)
       return false
     }
   }, [ich?.id, ich?.name, uebernehmen]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -193,7 +194,7 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
     return lauf
   }, [ausfuehren])
 
-  // Solange eine Meldung offen ist, ist die Liste dahinter nicht erreichbar —
+  // Solange eine Meldung offen ist, ist die Liste dahinter nicht erreichbar,
   // weder für die Tastatur noch für den Screenreader (React 18 kennt inert nicht als Prop)
   const liste = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -211,7 +212,7 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
     if (zurueck) setTimeout(() => zurueck.focus(), 0)
   }
 
-  /** Eine Meldung öffnen — und dabei frisch holen, damit niemand auf altem Stand arbeitet. */
+  /** Eine Meldung öffnen und dabei frisch holen, damit niemand auf altem Stand arbeitet. */
   function oeffnen(id: string) {
     zuletztFokus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
     setFehlerRoh((f) => (f?.id === id ? f : null))
@@ -222,8 +223,8 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
   }
 
   function meldungDrucken(f: CirsFall, mitMelder: boolean) {
-    if (!druckFensterOeffnen(cirsSeite(f, { mitMelder, gedruckt: { von: ich?.name, am: new Date() } }))) {
-      setFehlerRoh({ id: f.id, text: 'Das Druckfenster wurde blockiert. Bitte Pop-ups für Responda erlauben.' })
+    if (!druckFensterOeffnen(cirsSeite(f, { mitMelder, gedruckt: { von: ich?.name, am: new Date() }, bezeichnung: anzeige.eigene }))) {
+      setFehlerRoh({ id: f.id, text: T.druckBlockiert })
     }
   }
 
@@ -233,140 +234,119 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
 
   function csvLaden() {
     const tag = tagText(new Date().toISOString().slice(0, 10)).replace(/\./g, '-')
-    herunterladen(`CIRS-${tag}.csv`, csv(sichtbar, heute), 'text/csv;charset=utf-8')
-    hinweisZeigen(`${sichtbar.length} Meldung${sichtbar.length === 1 ? '' : 'en'} exportiert — ohne Melderangaben`)
+    herunterladen(`CIRS-${tag}.csv`, csv(sichtbar, heute, { bezeichnung: anzeige.eigene }), 'text/csv;charset=utf-8')
+    hinweisZeigen(exportiertText(sichtbar.length))
   }
 
   function auswertungDrucken() {
     const html = auswertungSeite(auswertung, sortieren(imBereich, heute), { zeitraum: grenzen.name, organisation: orgName, gedruckt: { von: ich?.name, am: new Date() } })
-    if (!druckFensterOeffnen(html)) hinweisZeigen('Das Druckfenster wurde blockiert. Bitte Pop-ups für Responda erlauben.', true)
+    if (!druckFensterOeffnen(html)) hinweisZeigen(T.druckBlockiert, true)
   }
 
   // ── Darstellung ───────────────────────────────────────────────────────────
 
-  const reiter = (
-    <div style={{ display: 'flex', gap: 22, marginBottom: 16, borderBottom: '0.5px solid var(--lbf-border-light)' }}>
-      {([['liste', 'Meldungen'], ['auswertung', 'Auswertung']] as [Bereich, string][]).map(([b, name]) => (
-        <button key={b} onClick={() => setBereich(b)} aria-pressed={bereich === b}
-          style={{
-            padding: '4px 0 9px', marginBottom: -0.5, fontSize: 15, fontWeight: 700, fontStyle: 'italic', fontFamily: 'inherit', cursor: 'pointer',
-            border: 'none', borderBottom: bereich === b ? '2px solid var(--lbf-akzent)' : '2px solid transparent', background: 'none',
-            color: bereich === b ? 'var(--lbf-text)' : 'var(--warm-gray)',
-          }}>{name}</button>
-      ))}
-    </div>
-  )
+  if (user && !darf) return <Notiz>{T.vertraulich}</Notiz>
+  if (!orgId) return <Notiz>{user ? T.orgFehlt : T.laedt}</Notiz>
 
-  if (user && !darf) {
-    return <div style={{ padding: '24px 16px', background: 'var(--lbf-card)', borderRadius: 12, textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
-      CIRS-Meldungen sind vertraulich. Sie sind nur mit dem Recht für Vorgänge zu sehen.
-    </div>
-  }
-  if (!orgId) {
-    return <div style={{ padding: '24px 16px', background: 'var(--lbf-card)', borderRadius: 12, textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
-      {user ? 'Die Organisation konnte nicht geladen werden. Bitte die Verbindung prüfen.' : 'Laden…'}
-    </div>
-  }
+  const gefiltert = !!(suche || kategorie || schwere)
+  const leerText = faelle.length === 0 ? T.keineMeldungen
+    : gefiltert ? T.keinTreffer
+      : ansicht === 'ueberfaellig' ? T.nichtsUeberfaellig
+        : ansicht === 'neu' ? T.keineNeuen
+          : ansicht === 'meine' ? T.keineMeinen
+            : T.keineInAnsicht
 
   return (
     <div>
+      <style>{EIN_CSS}</style>
       <div ref={liste}>
-      {reiter}
-
-      {ladefehler && (
-        <div role="alert" style={{ background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text)', borderRadius: 10, padding: '10px 14px', fontSize: 13, fontWeight: 600, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flex: 1 }}>{ladefehler}</span>
-          <button onClick={laden} style={{ ...knopfLeise, background: 'none', color: 'var(--lbf-fehler-text)' }}>Erneut laden</button>
+        <div className="bv-segmente" role="group" aria-label={T.bereiche}>
+          {([['liste', T.meldungen], ['auswertung', T.auswertung]] as [Bereich, string][]).map(([b, name]) => (
+            <button key={b} type="button" className="bv-seg" aria-pressed={bereich === b} onClick={() => setBereich(b)}>{name}</button>
+          ))}
         </div>
-      )}
-      {hinweis && (
-        <div role={hinweis.fehler ? 'alert' : 'status'} style={{ background: hinweis.fehler ? 'var(--lbf-fehler-grund)' : 'var(--lbf-ok-grund)', color: hinweis.fehler ? 'var(--lbf-fehler-text)' : 'var(--lbf-ok-text)', borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 600, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flex: 1 }}>{hinweis.text}</span>
-          {hinweis.fehler && <button onClick={() => setHinweis(null)} style={{ ...knopfLeise, background: 'none', color: 'var(--lbf-fehler-text)' }}>Schließen</button>}
-        </div>
-      )}
-      {fehler && fehler.id !== offenId && (
-        <div role="alert" style={{ background: 'var(--lbf-fehler-grund)', color: 'var(--lbf-fehler-text)', borderRadius: 10, padding: '9px 14px', fontSize: 13, fontWeight: 600, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ flex: 1 }}>{faelle.find((f) => f.id === fehler.id)?.nummer ?? 'Meldung'}: {fehler.text}</span>
-          <button onClick={() => oeffnen(fehler.id)} style={{ ...knopfLeise, background: 'none', color: 'var(--lbf-fehler-text)' }}>Öffnen</button>
-          <button onClick={() => setFehlerRoh(null)} style={{ ...knopfLeise, background: 'none', color: 'var(--lbf-fehler-text)' }}>Schließen</button>
-        </div>
-      )}
 
-      {bereich === 'liste' && (
-        <>
-          {/* Ansichten */}
-          <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 4, marginBottom: 12, WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
-            {ANSICHTEN.map((a) => {
-              const aktiv = a.wert === ansicht
-              const n = zahlen[a.wert]
-              const warn = a.wert === 'ueberfaellig' && n > 0
-              return (
-                <button key={a.wert} onClick={() => setAnsicht(a.wert)} aria-pressed={aktiv}
-                  style={{
-                    flexShrink: 0, padding: '7px 12px', borderRadius: 99, fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
-                    border: aktiv ? '1px solid var(--lbf-akzent)' : '1px solid var(--lbf-border)', background: aktiv ? 'rgba(var(--lbf-rot-rgb),0.08)' : 'var(--lbf-card)',
-                    color: aktiv ? 'var(--lbf-akzent)' : 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 6,
-                  }}>
-                  {a.name}
-                  <span style={{ fontSize: 11, fontWeight: 800, minWidth: 18, padding: '0 5px', borderRadius: 99, textAlign: 'center',
-                    background: warn ? 'var(--lbf-fehler-grund)' : 'rgba(var(--lbf-rot-rgb),0.07)', color: warn ? 'var(--lbf-fehler-text)' : 'var(--lbf-text)' }}>{n}</span>
-                </button>
-              )
-            })}
-          </div>
-
-          {/* Suche und Filter */}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-            <input value={suche} onChange={(e) => setSuche(e.target.value)} placeholder="Suchen: Ort, Text, Nummer, Maßnahme …"
-              aria-label="Meldungen durchsuchen" style={{ ...eingabe, flex: '3 1 220px', width: 'auto' }} />
-            <select value={kategorie} onChange={(e) => setKategorie(e.target.value)} aria-label="Kategorie" style={{ ...eingabe, flex: '1 1 140px', width: 'auto' }}>
-              <option value="">Alle Kategorien</option>
-              {KATEGORIEN.map((k) => <option key={k.wert} value={k.wert}>{k.name}</option>)}
-            </select>
-            <select value={schwere} onChange={(e) => setSchwere(e.target.value)} aria-label="Schweregrad" style={{ ...eingabe, flex: '1 1 120px', width: 'auto' }}>
-              <option value="">Alle Schweregrade</option>
-              {SCHWEREGRADE.map((s) => <option key={s.wert} value={s.wert}>{s.name}</option>)}
-            </select>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '4px 0 12px', gap: 10 }}>
-            <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
-              {laedt ? 'Laden…' : `${sichtbar.length} Meldung${sichtbar.length === 1 ? '' : 'en'}`}
-              {(suche || kategorie || schwere) && !laedt && (
-                <button onClick={() => { setSuche(''); setKategorie(''); setSchwere('') }} style={{ ...knopfLeise, marginLeft: 8, background: 'none', padding: '2px 4px' }}>Filter zurücksetzen</button>
-              )}
+        <div style={{ marginTop: 14 }}>
+          {ladefehler ? (
+            <div role="alert" className="ein-meldung fehler">
+              <span>{ladefehler}</span>
+              <button type="button" onClick={laden}>{T.erneutLaden}</button>
             </div>
-            <button onClick={csvLaden} disabled={!sichtbar.length} style={{ ...knopfRand, padding: '6px 12px', fontSize: 12, display: 'flex', alignItems: 'center', gap: 6, opacity: sichtbar.length ? 1 : 0.45 }}>
-              {pik(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>, 14)}
-              CSV
-            </button>
-          </div>
+          ) : null}
+          {hinweis ? (
+            <div role={hinweis.fehler ? 'alert' : 'status'} className={`ein-meldung ${hinweis.fehler ? 'fehler' : 'ok'}`}>
+              <span>{hinweis.text}</span>
+              {hinweis.fehler ? <button type="button" onClick={() => setHinweis(null)}>{T.schliessen}</button> : null}
+            </div>
+          ) : null}
+          {fehler && fehler.id !== offenId ? (
+            <div role="alert" className="ein-meldung fehler">
+              <span>{faelle.find((f) => f.id === fehler.id)?.nummer ?? 'Meldung'}: {fehler.text}</span>
+              <button type="button" onClick={() => oeffnen(fehler.id)}>{T.oeffnen}</button>
+              <button type="button" onClick={() => setFehlerRoh(null)}>{T.schliessen}</button>
+            </div>
+          ) : null}
+        </div>
 
-          {/* Liste */}
-          {!laedt && sichtbar.length === 0 && (
-            <div style={{ padding: '24px 16px', background: 'var(--lbf-card)', borderRadius: 12, border: '0.5px dashed rgba(var(--lbf-rot-rgb),0.2)', textAlign: 'center' }}>
-              <div style={{ fontSize: 14, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                {faelle.length === 0 ? 'Noch keine CIRS-Meldungen eingegangen.'
-                  : suche || kategorie || schwere ? 'Keine Meldung passt zu Suche und Filter.'
-                    : ansicht === 'ueberfaellig' ? 'Nichts überfällig.'
-                      : ansicht === 'neu' ? 'Keine neuen Meldungen.'
-                        : ansicht === 'meine' ? 'Dir ist keine offene Meldung zugewiesen.'
-                          : 'Keine Meldungen in dieser Ansicht.'}
+        {bereich === 'liste' && (
+          <>
+            <Feld label={T.ansicht} erst>
+              <Auswahl value={ansicht} onChange={(v) => setAnsicht(v as Ansicht)}>
+                {ANSICHTEN.map((a) => <option key={a.wert} value={a.wert}>{`${a.name} (${zahlen[a.wert]})`}</option>)}
+              </Auswahl>
+            </Feld>
+            {zahlen.ueberfaellig > 0 && ansicht !== 'ueberfaellig' ? (
+              <div className="bv-flaeche vg-abstand">
+                <Zeile titel={ueberfaelligText(zahlen.ueberfaellig)} unter="Frist der Meldung oder einer Maßnahme verstrichen" art="akzent" pfeil onClick={() => setAnsicht('ueberfaellig')} />
               </div>
+            ) : null}
+
+            <div className="bv-suche" style={{ marginTop: 14 }}>
+              <VgIcon n="suche" className="bv-klein" />
+              <input
+                type="text" enterKeyHint="search" value={suche} onChange={(e) => setSuche(e.target.value)}
+                placeholder={T.suchePlatzhalter} aria-label={T.sucheAria} autoComplete="off"
+              />
+              {suche ? <button type="button" aria-label={T.sucheLeeren} onClick={() => setSuche('')}><VgIcon n="kreuz" className="bv-klein" /></button> : null}
             </div>
-          )}
+            <div className="ein-raster">
+              <Feld label={anzeige.kern.kategorie?.label ?? T.kategorie}>
+                <Auswahl value={kategorie} onChange={setKategorie}>
+                  <option value="">{T.alleKategorien}</option>
+                  {KATEGORIEN.map((k) => <option key={k.wert} value={k.wert}>{k.name}</option>)}
+                </Auswahl>
+              </Feld>
+              <Feld label={anzeige.kern.schwere?.label ?? T.schweregrad}>
+                <Auswahl value={schwere} onChange={setSchwere}>
+                  <option value="">{T.alleSchweregrade}</option>
+                  {SCHWEREGRADE.map((s) => <option key={s.wert} value={s.wert}>{s.name}</option>)}
+                </Auswahl>
+              </Feld>
+            </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {sichtbar.map((f) => <Zeile key={f.id} fall={f} heute={heute} onOeffnen={() => oeffnen(f.id)} />)}
-          </div>
-        </>
-      )}
+            <Abschnitt
+              titel={laedt ? T.laedt : meldungenText(sichtbar.length)}
+              rechts={(
+                <>
+                  {gefiltert && !laedt ? (
+                    <button type="button" className="vg-textknopf" onClick={() => { setSuche(''); setKategorie(''); setSchwere('') }}>{T.filterZurueck}</button>
+                  ) : null}
+                  <button type="button" className="vg-textknopf" onClick={csvLaden} disabled={!sichtbar.length}>{T.csv}</button>
+                </>
+              )}
+            />
+            <div className="bv-flaeche">
+              {!laedt && sichtbar.length === 0 ? <Leer>{leerText}</Leer> : null}
+              {sichtbar.map((f) => <MeldungZeile key={f.id} fall={f} heute={heute} onOeffnen={() => oeffnen(f.id)} />)}
+            </div>
+          </>
+        )}
 
-      {bereich === 'auswertung' && (
-        <AuswertungAnsicht a={auswertung} zeitraum={zeitraum} setZeitraum={setZeitraum} name={grenzen.name} onDrucken={auswertungDrucken} laedt={laedt} />
-      )}
-
+        {bereich === 'auswertung' && (
+          <AuswertungAnsicht a={auswertung} zeitraum={zeitraum} setZeitraum={setZeitraum} name={grenzen.name} onDrucken={auswertungDrucken} laedt={laedt} />
+        )}
       </div>
+
       {offen && (
         <CirsDetail
           fall={offen}
@@ -378,83 +358,66 @@ export default function CirsVerwaltung({ user, orgId, orgName, startMeldung, onZ
           fehler={fehler?.id === offen.id ? fehler.text : ''}
           onSchliessen={schliessen}
           onDrucken={(mitMelder) => meldungDrucken(offen, mitMelder)}
+          anzeige={anzeige}
         />
       )}
     </div>
   )
 }
 
-function Zeile({ fall: f, heute, onOeffnen }: { fall: CirsFall; heute: Date; onOeffnen: () => void }) {
+function MeldungZeile({ fall: f, heute, onOeffnen }: { fall: CirsFall; heute: Date; onOeffnen: () => void }) {
   const b = f.bearbeitung
   const ueber = istUeberfaellig(f, heute)
   const zu = istAbgeschlossen(b.phase)
   const offene = offeneMassnahmen(b).length
-  const ort = f.meldung.ort
   const datum = tagText(f.meldung.datum)
+  const prio = zu ? '' : prioText(fallPrioritaet(f))
+  const zeile1 = [datum && `Ereignis ${datum}`, f.meldung.ort, `eingegangen ${wieLange(f.eingang, heute)}`].filter(Boolean).join(' · ')
+  const zeile3 = [
+    f.nummer,
+    b.zustaendig ? b.zustaendig.name : zu ? '' : T.niemandZustaendig,
+    b.frist && !zu ? `Frist ${tagText(b.frist)}` : '',
+    b.massnahmen.length ? `Maßnahmen ${b.massnahmen.length - offene} von ${b.massnahmen.length}` : '',
+    prio,
+  ].filter(Boolean).join(' · ')
   return (
-    <button onClick={onOeffnen} style={{
-      ...karte, borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `3px solid ${randFarbe(b.phase, ueber)}`,
-      padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', width: '100%', overflow: 'hidden', display: 'block', color: 'inherit',
-    }}>
-      <div style={{ padding: '12px 14px 10px' }}>
-        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 17, color: zu ? 'var(--warm-gray)' : 'var(--lbf-text)', lineHeight: 1.25 }}>
-              {kategorieName(geltendeKategorie(f))}
-            </div>
-            <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>
-              {[datum && `Ereignis ${datum}`, ort, `eingegangen ${wieLange(f.eingang, heute)}`].filter(Boolean).join(' · ')}
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-            <PhaseMarke phase={b.phase} />
-            {!zu && <PrioMarke prio={fallPrioritaet(f)} />}
-          </div>
-        </div>
-        {f.meldung.was && (
-          <div style={{ fontSize: 13, color: 'var(--lbf-text)', marginTop: 8, lineHeight: 1.45, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' } as React.CSSProperties}>
-            {f.meldung.was}
-          </div>
-        )}
-      </div>
-      <div style={{ borderTop: '0.5px solid var(--lbf-border-light)', background: 'var(--lbf-fuss)', padding: '7px 14px', display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 11, color: 'var(--warm-gray)' }}>
-        <span style={{ fontWeight: 700, letterSpacing: '0.02em' }}>{f.nummer}</span>
-        <span>{b.zustaendig ? b.zustaendig.name : zu ? '' : 'niemand zuständig'}</span>
-        {b.frist && !zu && <span style={{ color: ueber ? 'var(--lbf-fehler-text-2)' : 'inherit', fontWeight: ueber ? 700 : 400 }}>Frist {tagText(b.frist)}</span>}
-        {b.massnahmen.length > 0 && <span>Maßnahmen {b.massnahmen.length - offene}/{b.massnahmen.length}</span>}
-        {schwereName(geltendeSchwere(f)) !== '—' && <span>{schwereName(geltendeSchwere(f))}</span>}
-      </div>
-    </button>
+    <Zeile
+      titel={kategorieText(geltendeKategorie(f))} onClick={onOeffnen} pfeil
+      label={`${f.nummer}, ${kategorieText(geltendeKategorie(f))}`}
+      unter={(
+        <>
+          <span className="ein-block">{zeile1}</span>
+          {f.meldung.was ? <span className="ein-block ein-zwei">{f.meldung.was}</span> : null}
+          <span className="ein-block" style={{ marginTop: 3 }}>{zeile3}</span>
+        </>
+      )}
+      rechts={<PhaseWort phase={b.phase} ueberfaellig={ueber} />}
+    />
   )
 }
 
-function Kachel({ name, wert, text }: { name: string; wert: string | number; text: string }) {
-  return (
-    <div style={{ ...karte, padding: '14px 16px' }}>
-      <div style={abschnittKopf}>{name}</div>
-      <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>{wert}</div>
-      <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6 }}>{text}</div>
-    </div>
-  )
+function ZahlZeile({ titel, unter, wert }: { titel: string; unter: string; wert: string | number }) {
+  return <Zeile titel={titel} unter={unter} rechts={wert === '' ? undefined : <span className="ein-zahl">{wert}</span>} />
 }
 
-/** Waagerechte Balken, Wert am Balkenende — eine Reihe, eine Farbe. */
+/** Waagerechte Balken, Wert am Balkenende: eine Reihe, eine Farbe. */
 function Balken({ titel, reihe }: { titel: string; reihe: { name: string; anzahl: number }[] }) {
   const max = Math.max(1, ...reihe.map((r) => r.anzahl))
   return (
-    <section style={{ marginBottom: 18 }}>
-      <div style={abschnittKopf}>{titel}</div>
-      <div style={{ ...karte, padding: '12px 16px' }} role="table" aria-label={titel}>
-        {reihe.map((r) => (
-          <div key={r.name} role="row" title={`${r.name}: ${r.anzahl}`}
-            style={{ display: 'grid', gridTemplateColumns: 'minmax(110px, 42%) 1fr', alignItems: 'center', gap: 10, padding: '5px 0' }}>
-            <div role="rowheader" style={{ fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.25, overflowWrap: 'anywhere' }}>{r.name}</div>
-            <div role="cell" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ height: 10, width: `${(r.anzahl / max) * 85}%`, minWidth: r.anzahl ? 3 : 0, background: 'var(--lbf-akzent)', borderRadius: '0 4px 4px 0' }} />
-              <span style={{ fontSize: 12, fontWeight: 700, color: r.anzahl ? 'var(--lbf-text)' : 'var(--warm-gray)' }}>{r.anzahl}</span>
+    <section>
+      <h3 className="bv-gruppe">{titel}</h3>
+      <div className="bv-flaeche">
+        <div className="ein-balken" role="table" aria-label={titel}>
+          {reihe.map((r) => (
+            <div key={r.name} role="row" style={{ display: 'contents' }}>
+              <span role="rowheader">{r.name}</span>
+              <div role="cell">
+                <i style={{ width: `${(r.anzahl / max) * 85}%`, minWidth: r.anzahl ? 3 : 0 }} />
+                <b className={r.anzahl ? undefined : 'null'}>{r.anzahl}</b>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   )
@@ -464,40 +427,37 @@ function AuswertungAnsicht({ a, zeitraum, setZeitraum, name, onDrucken, laedt }:
   a: ReturnType<typeof auswerten>; zeitraum: Zeitraum; setZeitraum: (z: Zeitraum) => void; name: string; onDrucken: () => void; laedt: boolean
 }) {
   return (
-    <div>
-      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
-        <select value={zeitraum} onChange={(e) => setZeitraum(e.target.value as Zeitraum)} aria-label="Zeitraum" style={{ ...eingabe, width: 'auto', flex: '1 1 180px' }}>
-          <option value="12m">Letzte 12 Monate</option>
-          <option value="jahr">Dieses Jahr</option>
-          <option value="vorjahr">Vorjahr</option>
-          <option value="alle">Gesamter Zeitraum</option>
-        </select>
-        <button onClick={onDrucken} disabled={laedt} style={{ ...knopfRand, display: 'flex', alignItems: 'center', gap: 6 }}>
-          {pik(<><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></>, 15)}
-          Bericht drucken
-        </button>
+    <>
+      <div className="ein-raster">
+        <Feld label={T.zeitraum} erst>
+          <Auswahl value={zeitraum} onChange={(v) => setZeitraum(v as Zeitraum)}>
+            <option value="12m">Letzte 12 Monate</option>
+            <option value="jahr">Dieses Jahr</option>
+            <option value="vorjahr">Vorjahr</option>
+            <option value="alle">Gesamter Zeitraum</option>
+          </Auswahl>
+        </Feld>
       </div>
-      <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: 12 }}>{name} · nach Eingang der Meldung</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
-        <Kachel name="Meldungen" wert={a.gesamt} text="im Zeitraum eingegangen" />
-        <Kachel name="In Bearbeitung" wert={a.offen} text={a.ueberfaellig ? `davon ${a.ueberfaellig} überfällig` : 'nichts überfällig'} />
-        <Kachel name="Abgeschlossen" wert={a.abgeschlossen + a.keinHandlungsbedarf} text={a.keinHandlungsbedarf ? `davon ${a.keinHandlungsbedarf} ohne Handlungsbedarf` : 'Bearbeitung beendet'} />
-        <Kachel name="Dauer" wert={a.mittlereDauerTage ?? '—'} text="Tage bis zum Abschluss im Mittel" />
+      <Hinweis>{name} · {T.nachEingang}</Hinweis>
+
+      <Abschnitt titel="Zahlen" rechts={<button type="button" className="vg-textknopf" onClick={onDrucken} disabled={laedt}>{T.berichtDrucken}</button>} />
+      <div className="bv-flaeche">
+        <ZahlZeile titel="Meldungen" unter="im Zeitraum eingegangen" wert={a.gesamt} />
+        <ZahlZeile titel="In Bearbeitung" unter={a.ueberfaellig ? `davon ${a.ueberfaellig} überfällig` : 'nichts überfällig'} wert={a.offen} />
+        <ZahlZeile titel="Abgeschlossen" unter={a.keinHandlungsbedarf ? `davon ${a.keinHandlungsbedarf} ohne Handlungsbedarf` : 'Bearbeitung beendet'} wert={a.abgeschlossen + a.keinHandlungsbedarf} />
+        <ZahlZeile titel="Dauer" unter={a.mittlereDauerTage === null ? 'noch nichts abgeschlossen' : 'Tage bis zum Abschluss im Mittel'} wert={a.mittlereDauerTage === null ? '' : String(a.mittlereDauerTage).replace('.', ',')} />
+        <ZahlZeile titel="Maßnahmen" unter={`${a.massnahmen.erledigt} von ${a.massnahmen.gesamt} erledigt`} wert={a.massnahmen.erledigt} />
       </div>
-      <div style={{ fontSize: 13, color: 'var(--warm-gray)', marginBottom: 18 }}>
-        Maßnahmen: <strong style={{ color: 'var(--lbf-text)' }}>{a.massnahmen.erledigt}</strong> von <strong style={{ color: 'var(--lbf-text)' }}>{a.massnahmen.gesamt}</strong> erledigt
-      </div>
+
       {a.gesamt === 0 ? (
-        <div style={{ padding: '24px 16px', background: 'var(--lbf-card)', borderRadius: 12, border: '0.5px dashed rgba(var(--lbf-rot-rgb),0.2)', textAlign: 'center', fontSize: 14, fontStyle: 'italic', color: 'var(--warm-gray)' }}>
-          Im Zeitraum ist keine Meldung eingegangen.
-        </div>
+        <div className="bv-flaeche vg-abstand"><Leer>{T.imZeitraumNichts}</Leer></div>
       ) : (
         <>
           <Balken titel="Nach Kategorie" reihe={a.nachKategorie} />
           <Balken titel="Nach Schweregrad" reihe={a.nachSchwere} />
-          {a.nachMonat.length > 1 && <Balken titel="Eingang nach Monat" reihe={a.nachMonat} />}
+          {a.nachMonat.length > 1 ? <Balken titel="Eingang nach Monat" reihe={a.nachMonat} /> : null}
         </>
       )}
-    </div>
+    </>
   )
 }

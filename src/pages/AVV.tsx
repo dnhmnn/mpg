@@ -63,7 +63,7 @@ const SECTIONS = [
       { label: 'Zutrittskontrolle', text: 'Der Server befindet sich in Nürnberg, Deutschland und steht im ausschließlichen Eigentum des Auftragnehmers; Zugang ausschließlich für den Auftragnehmer persönlich.' },
       { label: 'Zugangskontrolle', text: 'Starke Passwörter und SSH-Key-Authentifizierung; keine unsicheren Remote-Zugangsprotokolle.' },
       { label: 'Zugriffskontrolle', text: 'Rollenbasiertes Zugriffskonzept (Benutzer, Supervisor, Admin); Mandantentrennung per organization_id.' },
-      { label: 'Weitergabekontrolle', text: 'Alle Verbindungen verschlüsselt via TLS 1.2/1.3 (HTTPS); keine Weitergabe an Dritte ohne Weisung.' },
+      { label: 'Weitergabekontrolle', text: 'Alle Verbindungen verschlüsselt via TLS 1.2/1.3 (HTTPS); keine Weitergabe an Dritte ohne Weisung. Was ohne Netz auf einem Gerät abgelegt wird (Formulare, begonnene Protokolle), liegt dort verschlüsselt im Browser (AES-GCM), bis es gesendet oder verworfen ist; lässt ein Browser die Verschlüsselung nicht zu, liegt es unverschlüsselt im Browser, und die App zeigt das an. Der Schlüssel liegt im selben Browserprofil; gegen das Auslesen der Gerätedateien schützen Gerätesperre und Geräteverschlüsselung, für die der Auftraggeber auf seinen Geräten sorgt. Patientendaten (Protokolle, Nacherfassungen, Zugriffs- und Änderungsprotokolle), Einsätze, Benutzerkonten, Chat und Notizen legt die App nicht im Zwischenspeicher des Browsers ab. Der übrige Zwischenspeicher kann Namen von Mitgliedern enthalten; die App verwendet ihn höchstens 24 Stunden und löscht ihn beim Abmelden, beim Wechsel der angemeldeten Person und beim Start ohne Anmeldung.' },
       { label: 'Eingabekontrolle', text: 'Protokollierung relevanter Zugriffe und Änderungen im System.' },
       { label: 'Verfügbarkeitskontrolle', text: 'Regelmäßige Datensicherungen; Wiederherstellungskonzept vorhanden.' },
       { label: 'Trennungskontrolle', text: 'Daten verschiedener Auftraggeber werden strikt getrennt verarbeitet und gespeichert.' },
@@ -73,7 +73,8 @@ const SECTIONS = [
     num: '§ 6',
     title: 'Unterauftragsverarbeiter',
     paragraphs: [
-      'Der Auftragnehmer setzt zum Zeitpunkt des Vertragsschlusses keine Unterauftragsverarbeiter ein. Alle Daten werden auf dem eigenen Server des Auftragnehmers in Deutschland verarbeitet.',
+      'Der Auftragnehmer setzt zum Zeitpunkt des Vertragsschlusses für die Inhalte, die in Responda eingegeben werden, keine Unterauftragsverarbeiter ein. Diese Daten werden ausschließlich auf dem eigenen Server des Auftragnehmers in Deutschland verarbeitet.',
+      'Die Dateien der App (Programmcode, Bilder, Schriften) liefert Netlify, Inc. (San Francisco, USA) aus. Dabei verarbeitet Netlify nur die technisch nötigen Verbindungsdaten der aufrufenden Geräte (IP-Adresse, Zeitpunkt, aufgerufene Datei, Browser), keine Inhalte. Eine Übermittlung dieser Verbindungsdaten in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.',
       'Beabsichtigt der Auftragnehmer künftig Unterauftragsverarbeiter einzusetzen, informiert er den Auftraggeber rechtzeitig (mindestens 4 Wochen vorher). Der Auftraggeber kann schriftlich Einspruch erheben.',
       'Werden Unterauftragsverarbeiter eingesetzt, stellt der Auftragnehmer sicher, dass diesen dieselben Datenschutzpflichten auferlegt werden.',
     ],

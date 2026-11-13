@@ -10,7 +10,7 @@ import { offeneRueckfragen } from './public/doku/rueckfrage'
 import { formularFrei } from '../lib/freigabe'
 import {
   ABSENDER_ABZEICHEN, ABSENDER_ZUSATZ, absenderLesen, absenderZeile, darfBearbeiten, gepruefterPayload, istMeinProtokoll, jsonLesen,
-  kannAngemeldetSenden, type FormularId,
+  kannAngemeldetSenden, type FormularArt,
 } from '../lib/formular/absender'
 import { istFehler, offeneUnterschriften, type Unterschrift } from '../lib/formular/api'
 import { UNITAS_TEXTE, besatzungZeile, datumLang, gedrosselt, statText, unterschriftenNach, unterschriftTitel } from '../lib/formular/verwaltung'
@@ -108,6 +108,8 @@ export default function Unitas() {
   const [myPatients, setMyPatients] = useState<PatientRecord[]>([])
   const [myFreigegebenPatients, setMyFreigegebenPatients] = useState<PatientRecord[]>([])
   const [myArchivedPatients, setMyArchivedPatients] = useState<PatientRecord[]>([])
+  /** Protokolle ohne Netz nicht geladen (sie liegen nie im Zwischenspeicher, vite.config.ts). */
+  const [protokolleOhneNetz, setProtokolleOhneNetz] = useState(false)
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const location = useLocation()
@@ -152,7 +154,7 @@ export default function Unitas() {
    * alle drei Formulare. Nur für Konten, deren Token als Mitglied zählt.
    */
   const [unterschriften, setUnterschriften] = useState<Unterschrift[]>([])
-  const [unterschreibenFuer, setUnterschreibenFuer] = useState<{ formular: FormularId; id: string; titel: string } | null>(null)
+  const [unterschreibenFuer, setUnterschreibenFuer] = useState<{ formular: FormularArt; id: string; titel: string } | null>(null)
   /** Aufgeklappte Zusammenfassung einer wartenden Produktausgabe oder Meldung. */
   const [aufgeklappt, setAufgeklappt] = useState('')
   const kannSenden = kannAngemeldetSenden(user ?? null)
@@ -197,8 +199,20 @@ export default function Unitas() {
       setMyPatients((open as any[]).map(lesbar).filter(isMine))
       setMyFreigegebenPatients((freed as any[]).map(lesbar).filter(isMine))
       setMyArchivedPatients((archived as any[]).map(lesbar).filter(isMine))
-    } catch { /* ignore */ }
+      setProtokolleOhneNetz(false)
+    } catch (e: any) {
+      // Ohne Netz (status 0, nicht abgebrochen) sagen, warum die Liste leer ist; sonst wie bisher still
+      if (e?.status === 0 && !e?.isAbort) setProtokolleOhneNetz(true)
+    }
   }, [user])
+
+  // Kommt das Netz zurück, die Protokolle gleich neu laden
+  useEffect(() => {
+    if (!protokolleOhneNetz) return
+    const wieder = () => { void loadPatients() }
+    window.addEventListener('online', wieder)
+    return () => window.removeEventListener('online', wieder)
+  }, [protokolleOhneNetz, loadPatients])
 
   useEffect(() => {
     if (user) {
@@ -356,7 +370,7 @@ export default function Unitas() {
   const pendingReportsCount = myReports.filter(r => r.status === 'pending').length
   const lernbarBadge = upcomingTermine.length + (progress.length - doneMods)
   const protokolleBadge = myPatients.length + myArchivedPatients.length + offen.patienten.length
-  const vorgaengeWarten = offen.produktausgabe.length + offen.defektmeldung.length
+  const vorgaengeWarten = offen.produktausgabe.length + offen.defektmeldung.length + offen.eigen.length
 
   const firstName = user?.name?.split(' ')[0] || ''
 
@@ -534,7 +548,11 @@ export default function Unitas() {
               </button>
             )}
 
-            {myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && offen.patienten.length === 0 && (
+            {protokolleOhneNetz && (
+              <div role="status" data-probe="protokolle-ohne-netz" style={{ color: 'var(--warm-gray)', fontSize: 14, lineHeight: 1.5, padding: '4px 2px 12px' }}>{UNITAS_TEXTE.ohneNetz}</div>
+            )}
+
+            {!protokolleOhneNetz && myPatients.length === 0 && myFreigegebenPatients.length === 0 && myArchivedPatients.length === 0 && offen.patienten.length === 0 && (
               <div style={{ textAlign: 'center', color: 'var(--warm-gray)', padding: '60px 0', fontSize: 15, fontStyle: 'italic' }}>Keine Protokolle vorhanden</div>
             )}
 
@@ -885,6 +903,32 @@ export default function Unitas() {
                 })}
               </div>
             )}
+
+            {/* Eigene Formulare der Organisation, die auf die Unterschrift dieser Person warten */}
+            {offen.eigen.length > 0 && (
+              <>
+                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', paddingLeft: 2, marginTop: 28, marginBottom: 16 }}>{UNITAS_TEXTE.eigeneFormulare}</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {offen.eigen.map(u => {
+                    const auf = aufgeklappt === u.id
+                    return (
+                      <div key={u.id} style={{ background: 'var(--lbf-card)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)', borderLeft: '3px solid var(--lbf-warn-text-2)' }}>
+                        <div style={{ padding: '14px 16px' }}>
+                          <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: ABSENDER_ABZEICHEN.ausstehend!.farbe, marginBottom: 4 }}>{ABSENDER_ABZEICHEN.ausstehend!.text}</div>
+                          <div style={{ fontWeight: 700, fontSize: 15, fontStyle: 'italic', color: 'var(--text)', overflowWrap: 'anywhere' }}>{unterschriftTitel(u)}</div>
+                          <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{datumLang(u.angelegt)}</div>
+                          {auf && u.zusammenfassung && <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, marginTop: 8, overflowWrap: 'anywhere' }}>{u.zusammenfassung}</div>}
+                        </div>
+                        <div style={{ padding: '9px 12px', display: 'flex', gap: 7, background: 'var(--lbf-fuss)', borderTop: '0.5px solid var(--lbf-border-light)' }}>
+                          <button onClick={() => setAufgeklappt(auf ? '' : u.id)} style={{ background: 'transparent', color: 'var(--lbf-akzent)', border: '1px solid rgba(var(--lbf-rot-rgb),0.3)', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{auf ? UNITAS_TEXTE.zuklappen : UNITAS_TEXTE.ansehen}</button>
+                          <button onClick={() => setUnterschreibenFuer({ formular: 'eigen', id: u.id, titel: unterschriftTitel(u) })} style={{ background: 'var(--lbf-akzent-grund)', color: '#fff', border: 'none', borderRadius: 7, padding: '6px 13px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'inherit' }}>{UNITAS_TEXTE.unterschreiben}</button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1090,7 +1134,7 @@ export default function Unitas() {
           onFertig={() => {
             unterschriftenDrossel.current?.sofort()
             if (unterschreibenFuer.formular === 'patienten') loadPatients()
-            else void loadVorgaenge()
+            else if (unterschreibenFuer.formular !== 'eigen') void loadVorgaenge()
           }}
           onVeraltet={() => unterschriftenDrossel.current?.sofort()}
         />

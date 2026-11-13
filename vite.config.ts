@@ -2,6 +2,12 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+// Sammlungen, deren Antworten nie in den Zwischenspeicher dürfen (Patienten- und
+// Gesundheitsdaten, Konten, Einsätze, Chat, Notizen). Dieselbe Liste steht in
+// src/lib/zwischenspeicherRegel.ts; ein Prüffall hält beide gleich.
+const OHNE_ZWISCHENSPEICHER_SAMMLUNGEN = ['patients', 'patient_docs_nacherfassung', 'access_logs', 'audit_logs', 'users', 'einsaetze', 'einsatz_personen', 'chat_messages', 'chat_channel_keys', 'user_keys', 'notizen']
+const OHNE_ZWISCHENSPEICHER = new RegExp(`^https://api\\.responda\\.systems/api/collections/(${OHNE_ZWISCHENSPEICHER_SAMMLUNGEN.join('|')})/`, 'i')
+
 // Eine sichtbare Kennung der Fassung. Ohne sie laesst sich nicht
 // unterscheiden, ob eine Meldung aus einer alten, im Service Worker
 // festgehaltenen Fassung kommt oder aus der neuen.
@@ -17,6 +23,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Hintergrundversand der Formulare (Background Sync, public/sw-formulare.js):
+        // hängt nur einen sync-Handler an, die Regeln unten bleiben, wie sie sind.
+        importScripts: ['sw-formulare.js'],
         runtimeCaching: [
           // Reihenfolge zählt: Workbox nimmt die erste passende Regel.
           // Realtime ist ein endloser SSE-Stream — der darf NIE in einen Cache-Handler.
@@ -58,6 +67,25 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/api\/collections\/cirs_/i,
             handler: 'NetworkOnly',
           },
+          // Einsendungen eigener Formulare (Eingang unter Vorgänge) enthalten
+          // personenbezogene Angaben. Sie sollen nicht unverschlüsselt im
+          // Zwischenspeicher des Service Workers liegen, und Status und Notiz
+          // werden vor dem Schreiben frisch gelesen.
+          {
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/collections\/form_submissions\//i,
+            handler: 'NetworkOnly',
+          },
+          // Patienten- und Gesundheitsdaten, Konten, Einsätze, Chat und Notizen
+          // sollen nie unverschlüsselt im Zwischenspeicher liegen. Die Liste steht
+          // in src/lib/zwischenspeicherRegel.ts. Ohne Netz zeigt die App sie
+          // deshalb nicht aus einem alten Stand. Andere Antworten können Namen
+          // von Mitgliedern enthalten (etwa wer eine Meldung erfasst hat); den
+          // Rest von api-cache leert src/lib/zwischenspeicher.ts beim Wechsel
+          // der Person und beim Start ohne Anmeldung.
+          {
+            urlPattern: OHNE_ZWISCHENSPEICHER,
+            handler: 'NetworkOnly',
+          },
           // Die Texterkennung der Gesundheitskarte wird beim ersten Mal aus
           // dem Netz geholt. Danach liegt sie im Zwischenspeicher, damit sie
           // im Funkloch nicht fehlt. Sie ist unveraenderlich versioniert,
@@ -90,6 +118,7 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/.*/i,
             handler: 'NetworkFirst',
             options: {
+              // Name auch in src/lib/zwischenspeicher.ts (API_CACHE)
               cacheName: 'api-cache',
               networkTimeoutSeconds: 5,
               expiration: { maxEntries: 300, maxAgeSeconds: 24 * 60 * 60 },

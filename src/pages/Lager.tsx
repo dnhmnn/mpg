@@ -14,6 +14,8 @@ import { ergebnisAusJournal, type LogZeile } from '../lib/lagerLogbuch'
 import StatusBar from '../components/StatusBar'
 import FormularEinstellungLink from '../components/FormularEinstellungLink'
 import { ABSENDER_ABZEICHEN, absenderLesen, absenderZeile, einstellungsLinkZeigen } from '../lib/formular/absender'
+import { angabenLesen } from '../lib/formular/felder'
+import AngabenAnsicht from '../components/AngabenAnsicht'
 
 // Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
 const LagerStats = lazy(() => import('../components/LagerStats'))
@@ -194,6 +196,8 @@ interface ProductOutput {
     lager_id?: string
     lager_name?: string
     positionen: Array<{ qty: number; name: string; item_id?: string; unit?: string }>
+    /** Eigene Felder der Organisation (Plan Vorgänge 1.3), nur vom Server gesetzt; nur anzeigen. */
+    eigene?: unknown
   }
 }
 
@@ -5170,6 +5174,12 @@ export default function Lager() {
                         {/* Abzeichen bleibt fest: Schriftfarbe #854d0e hat kein Thema-Gegenstueck, Grund und Schrift nur gemeinsam tauschbar */}
                         <span style={{ fontSize: 10, fontWeight: 700, background: 'var(--lbf-warn-grund-4)', color: 'var(--lbf-warn-text-4)', borderRadius: 6, padding: '3px 8px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Offen</span>
                       </div>
+
+                      {/* Eigene Felder der Organisation, wie gesendet (Bezeichnungen aus dem Schnappschuss) */}
+                      <AngabenAnsicht
+                        angaben={angabenLesen(p.eigene)} art="liste" nurAusgefuellt titel="Weitere Angaben"
+                        rahmen={{ marginBottom: 12, background: 'var(--lbf-card)', borderRadius: 10, padding: '8px 12px 10px', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)' }}
+                      />
 
                       <div style={{ marginBottom: 12 }}>
                         <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 6 }}>Lager</div>

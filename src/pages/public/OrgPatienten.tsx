@@ -7,11 +7,13 @@
 // angemeldet oder Name frei) und die Besatzung verknüpft. Ohne Netz liegt das
 // Protokoll in der Warteschlange des Geräts, ohne Passwort.
 
-import { useRef, useState, useEffect, useMemo } from 'react'
+import { useMemo, useRef, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useOrg } from './OrgPublicLayout'
-import { useFormularStand } from '../../lib/formular/stand'
-import { neueKennung } from '../../lib/formular/api'
+import { mitgliedAngemeldet, useFormularStand } from '../../lib/formular/stand'
+import { ENTWURF_FRIST_MS, entwurfNachruecken, tresorBereit, tresorOeffnetNoch } from '../../lib/tresor'
+import EntwurfFrage, { SpeicherLaedt } from './doku/EntwurfFrage'
+import { geraeteSpeicher, neueKennung } from '../../lib/formular/api'
 import { ablegenMitMeldung, sendenOderAblegen } from '../../lib/formular/versand'
 import type { NeuerEintrag } from '../../lib/formular/warteschlange'
 import AbsenderFeld, { AbmeldenNachSenden, Textknopf, absenderAngabe, sendeKnopfText, vorDemSenden } from './absender/AbsenderFeld'
@@ -25,8 +27,7 @@ import { AELRD_ERGAENZUNG } from './aelrdErgaenzung'
 import { mehrfachZusammenfassen } from '../../lib/aelrdFormular'
 import { payloadZusammenfuehren } from '../../lib/payloadZusammenfuehren'
 import { NEUE_FASSUNG, mitFassung } from '../../lib/protokoll'
-import { DEFAULT_FORM_CONFIG, SECTION_STEP_MAP, type FormConfig, type CustomFieldDef } from './formSchema'
-import { formConfigLesen } from '../../lib/formular/einstellung'
+import { SECTION_STEP_MAP } from './formSchema'
 import OrgPatientenMannschaft from './OrgPatientenMannschaft'
 import EinsatzTimeline from './EinsatzTimeline'
 import AnamneseAssistent from './AnamneseAssistent'
@@ -83,26 +84,70 @@ const STEPS = [
   'Zugang / Infusion / Medikamente','Reanimation','Übergabe / Besonderheiten','Unterschrift',
 ]
 
+/*
+ * Die Patientendokumentation ist fest (Bauplan Vorgänge, PO 2): alle Abschnitte
+ * und Felder wie im Bogen, Pflicht nur, was die Maske selbst verlangt. Was eine
+ * Organisation früher in form_config ausgeblendet, verlangt oder ergänzt hatte,
+ * gilt hier nicht mehr. Werte früherer eigener Felder (`custom_<Zeit>`) aus einem
+ * wiederhergestellten Entwurf gehen trotzdem mit (collectData baut auf dem
+ * Entwurf auf); gezeigt werden sie in Ansicht und Druck (lib/patientenAltfelder.ts).
+ */
+const hide = (_id: string): boolean => false
+const req = (_id: string): boolean => false
+const visibleSectionIds = Object.entries(SECTION_STEP_MAP)
+  .sort((a, b) => a[1] - b[1])
+  .map(([id]) => id)
+
+/*
+ * Der Entwurf liegt nur im Gerät, unter `patientendoku_<org>`. Immer über
+ * geraeteSpeicher(): mit dem Tresor (Teil O) verschlüsselt, sonst localStorage.
+ * Gespeichert als `{ entwurf: 1, stand, werte }`: nach einem Tag wird er nicht mehr
+ * angeboten und beim nächsten Start entfernt (Review F5). Ältere Entwürfe ohne Hülle
+ * liest die Maske weiter; der Start versieht sie mit einem Zeitpunkt (entwuerfeAufraeumen).
+ */
+const altEntwurfSchluessel = (orgCode: string) => 'patientendoku_' + orgCode
+type AltEntwurf = { text: string; stand: string }
+function altEntwurfHolen(orgCode: string, jetzt = Date.now()): AltEntwurf | null {
+  let roh: string | null = null
+  try { roh = geraeteSpeicher()?.getItem(altEntwurfSchluessel(orgCode)) ?? null } catch { return null }
+  if (!roh) return null
+  try {
+    const o = JSON.parse(roh) as Record<string, unknown> | null
+    if (!o || typeof o !== 'object' || Array.isArray(o)) return null
+    if (o.entwurf === 1 && typeof o.stand === 'string' && o.werte && typeof o.werte === 'object') {
+      const alter = jetzt - Date.parse(o.stand)
+      if (!Number.isFinite(alter) || Math.abs(alter) > ENTWURF_FRIST_MS) { altEntwurfWeg(orgCode); return null }
+      return { text: JSON.stringify(o.werte), stand: o.stand }
+    }
+    // Ohne Hülle (vor dieser Fassung gespeichert): wie bisher, Alter unbekannt
+    return { text: roh, stand: '' }
+  } catch {
+    return null
+  }
+}
+/** true = gespeichert. */
+function altEntwurfAblegen(orgCode: string, daten: unknown): boolean {
+  try {
+    const s = geraeteSpeicher()
+    if (!s) return false
+    s.setItem(altEntwurfSchluessel(orgCode), JSON.stringify({ entwurf: 1, stand: new Date().toISOString(), werte: daten }))
+    return true
+  } catch {
+    return false
+  }
+}
+/** Den Entwurf suchen; liegt keiner, rückt ein beim Öffnen des Tresors aufgehobener nach (Review F6). */
+function altEntwurfFinden(orgCode: string): AltEntwurf | null {
+  try { entwurfNachruecken(altEntwurfSchluessel(orgCode)) } catch { /* ohne */ }
+  return altEntwurfHolen(orgCode)
+}
+function altEntwurfWeg(orgCode: string): void {
+  try { geraeteSpeicher()?.removeItem(altEntwurfSchluessel(orgCode)) } catch { /* nichts gespeichert */ }
+}
+
 export default function OrgPatienten() {
   const { org, orgCode } = useOrg()
   const navigate = useNavigate()
-
-  const cfg: FormConfig = useMemo(
-    () => ({ ...DEFAULT_FORM_CONFIG, ...formConfigLesen((org as { form_config?: unknown }).form_config) }),
-    [org],
-  )
-
-  // Helper to hide fields/sections
-  const hide = (id: string) => cfg.hidden_fields.includes(id)
-  const req  = (id: string) => cfg.required_fields.includes(id)
-
-  // Compute visible sections based on form config
-  const visibleSectionIds = useMemo(() =>
-    Object.entries(SECTION_STEP_MAP)
-      .sort((a, b) => a[1] - b[1])
-      .filter(([id]) => !cfg.hidden_sections.includes(id))
-      .map(([id]) => id)
-  , [cfg])
   const formRef = useRef<HTMLFormElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [meds, setMeds] = useState<Med[]>([])
@@ -139,6 +184,43 @@ export default function OrgPatienten() {
   const autoSaveTimer = useRef<ReturnType<typeof setTimeout>>()
   /** Solange ein Entwurf wiederhergestellt wird, nicht zurückschreiben. */
   const stelltHer = useRef(false)
+  /**
+   * Ein Entwurf auf dem Gerät: ohne Anmeldung eines Mitglieds erst eine Frage ohne
+   * Patientendaten (Review F7); öffnet der Tresor noch, erst warten (Review F6).
+   */
+  const [fragen] = useState(() => !mitgliedAngemeldet(String((org as { id?: unknown })?.id ?? '')))
+  const [altStart] = useState(() => {
+    if (tresorOeffnetNoch()) return { warten: true, angebot: null as AltEntwurf | null, text: null as string | null }
+    const e = altEntwurfFinden(orgCode)
+    if (!e) return { warten: false, angebot: null, text: null }
+    return fragen ? { warten: false, angebot: e, text: null } : { warten: false, angebot: null, text: e.text }
+  })
+  const [speicherWartet, setSpeicherWartet] = useState(altStart.warten)
+  const [altAngebot, setAltAngebot] = useState<AltEntwurf | null>(altStart.angebot)
+  // Jeder angebotene Entwurf bekommt seine eigene Frage samt „Fortsetzen“ (Nachprüfung)
+  const altAngebotZaehler = useRef(0)
+  const altAngebotSchluessel = useMemo(() => `angebot-${++altAngebotZaehler.current}`, [altAngebot])
+  /** Der Entwurf, der in die Maske kommt (einmal, nach dem Aufbau des Formulars). */
+  const [wiederText, setWiederText] = useState<string | null>(altStart.text)
+  /** Erst nach der Entscheidung über einen liegenden Entwurf wird gespeichert (sonst überschriebe die leere Maske ihn). */
+  const entschieden = useRef(!altStart.warten && !altStart.angebot)
+  function altEntwurfNehmen(e: AltEntwurf | null) {
+    if (e && fragen) { setAltAngebot(e); return }
+    entschieden.current = true
+    setAltAngebot(null)
+    if (e) setWiederText(e.text)
+  }
+  useEffect(() => {
+    if (!speicherWartet) return
+    let aus = false
+    void tresorBereit().then(() => {
+      if (aus) return
+      altEntwurfNehmen(altEntwurfFinden(orgCode))
+      setSpeicherWartet(false)
+    })
+    return () => { aus = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [speicherWartet])
   /** Ab der ersten Änderung nach dem Öffnen wird im Gerät gespeichert. */
   const ersteRunde = useRef(true)
   const refS3   = useRef<HTMLInputElement>(null)
@@ -187,10 +269,9 @@ export default function OrgPatienten() {
   // Was ohne Netz liegen geblieben ist, schickt die Warteschlange über der
   // Seite (OrgPublicLayout), auch das aus `offline_queue_<org>` älterer Stände.
 
-  // Restore draft from localStorage on mount
+  // Den Entwurf aus dem Gerät wiederherstellen (nach der Frage bzw. sofort mit Anmeldung)
   useEffect(() => {
-    let raw: string | null = null
-    try { raw = localStorage.getItem('patientendoku_' + orgCode) } catch { /* ohne Speicher */ }
+    const raw = wiederText
     if (!raw) return
     try {
       const d = JSON.parse(raw)
@@ -246,7 +327,7 @@ export default function OrgPatienten() {
         stelltHer.current = false
       })
     } catch { stelltHer.current = false }
-  }, [orgCode])
+  }, [wiederText])
 
   useEffect(() => {
     const r = verlauf[0]
@@ -268,10 +349,11 @@ export default function OrgPatienten() {
    */
   const sammeln = useRef<() => Record<string, unknown>>(() => ({}))
   function scheduleAutoSave() {
-    if (stelltHer.current) return
+    if (stelltHer.current || !entschieden.current) return
     clearTimeout(autoSaveTimer.current)
     autoSaveTimer.current = setTimeout(() => {
-      try { localStorage.setItem('patientendoku_' + orgCode, JSON.stringify(sammeln.current())) } catch { /* Speicher voll: Knopf „Speichern“ sagt es */ }
+      // Speicher voll oder gesperrt: der Knopf „Speichern“ sagt es
+      altEntwurfAblegen(orgCode, sammeln.current())
     }, 1500)
   }
   useEffect(() => () => clearTimeout(autoSaveTimer.current), [])
@@ -322,18 +404,14 @@ export default function OrgPatienten() {
   sammeln.current = collectData
 
   function saveLocal() {
-    try {
-      localStorage.setItem('patientendoku_' + orgCode, JSON.stringify(collectData()))
-      alert('Entwurf auf diesem Gerät gespeichert.')
-    } catch {
-      alert('Dieses Gerät hat den Entwurf nicht gespeichert (Speicher voll oder gesperrt).')
-    }
+    if (altEntwurfAblegen(orgCode, collectData())) alert('Entwurf auf diesem Gerät gespeichert.')
+    else alert('Dieses Gerät hat den Entwurf nicht gespeichert (Speicher voll oder gesperrt).')
   }
 
   /** Alles zurück auf leer, mit neuer Kennung (nach dem Absenden oder „Formular zurücksetzen“). */
   function leeren() {
     clearTimeout(autoSaveTimer.current)
-    try { localStorage.removeItem('patientendoku_' + orgCode) } catch { /* nichts gespeichert */ }
+    altEntwurfWeg(orgCode)
     kennungRef.current = ''
     setEntwurf(null)
     setMeds([]); setDauerMeds([]); setVerlauf([emptyV()]); setPhotos([]); setGcs({ e: 0, v: 0, m: 0 })
@@ -359,7 +437,7 @@ export default function OrgPatienten() {
   /** Nach dem Ablegen auf dem Gerät: Entwurf weg, Karte der Warteschlange sofort zeigen. */
   function nachAblage(meldung: string) {
     clearTimeout(autoSaveTimer.current)
-    try { localStorage.removeItem('patientendoku_' + orgCode) } catch { /* egal */ }
+    altEntwurfWeg(orgCode)
     warteschlangeMelden()
     setAblageMeldung(meldung)
     setSuccess('OFFLINE')
@@ -404,7 +482,7 @@ export default function OrgPatienten() {
       if (r.art === 'gesendet') {
         // Ein noch laufender Zeitgeber schriebe das Gesendete sonst als Entwurf zurück
         clearTimeout(autoSaveTimer.current)
-        try { localStorage.removeItem('patientendoku_' + orgCode) } catch { /* egal */ }
+        altEntwurfWeg(orgCode)
         setSuccess(protokollnummer(r.id))
       } else if (r.art === 'abgelegt') {
         nachAblage(r.meldung)
@@ -435,45 +513,30 @@ export default function OrgPatienten() {
     setAbsenderName((a) => a.trim() ? a : n)
   }, [stand, anderer])
 
+  // Die ergänzten Felder des Bogens je Abschnitt (fest, keine eigenen Felder der Organisation)
   function renderCustomFields(sectionId: string) {
     return (
-      <>
-        <AelrdFelder
-          key={entwurf ? 'entwurf' : 'leer'}
-          ids={AELRD_ERGAENZUNG[sectionId] ?? []}
-          hide={hide}
-          werte={entwurf ?? undefined}
-        />
-        {renderEigeneFelder(sectionId)}
-      </>
+      <AelrdFelder
+        key={entwurf ? 'entwurf' : 'leer'}
+        ids={AELRD_ERGAENZUNG[sectionId] ?? []}
+        werte={entwurf ?? undefined}
+      />
     )
   }
 
-  function renderEigeneFelder(sectionId: string) {
-    return cfg.custom_fields
-      .filter((f: CustomFieldDef) => f.sectionId === sectionId)
-      .map((f: CustomFieldDef) => {
-        if (f.fieldType === 'checkbox') return (
-          <label key={f.id} style={pill}><input type="checkbox" name={f.id} />{f.required ? ' * ' : ' '}{f.label}</label>
-        )
-        if (f.fieldType === 'textarea') return (
-          <div key={f.id} style={field}><label style={lbl}>{f.label}{f.required ? ' *' : ''}<textarea style={ta} name={f.id} required={f.required} /></label></div>
-        )
-        if (f.fieldType === 'select') return (
-          <label key={f.id} style={lbl}>{f.label}{f.required ? ' *' : ''}
-            <select style={sel} name={f.id} required={f.required}>
-              <option value="">—</option>
-              {f.options?.map((o: string) => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </label>
-        )
-        return (
-          <label key={f.id} style={lbl}>{f.label}{f.required ? ' *' : ''}
-            <input style={inp} type={f.fieldType} name={f.id} required={f.required} />
-          </label>
-        )
-      })
-  }
+  // Erst die Frage zum liegenden Entwurf (ohne Patientendaten), oder warten, bis der Tresor offen ist
+  if (speicherWartet || altAngebot) return (
+    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', padding: '4px 16px 40px', boxSizing: 'border-box' }}>
+      {speicherWartet || !altAngebot ? <SpeicherLaedt /> : (
+        <EntwurfFrage
+          key={altAngebotSchluessel}
+          stand={altAngebot.stand}
+          onFortsetzen={() => { entschieden.current = true; setWiederText(altAngebot.text); setAltAngebot(null) }}
+          onVerwerfen={() => { altEntwurfWeg(orgCode); altEntwurfNehmen(altEntwurfFinden(orgCode)) }}
+        />
+      )}
+    </div>
+  )
 
   // Oben im Fluss, nicht auf 100dvh zentriert: steht darüber die Karte der Warteschlange, bleibt die Bestätigung sichtbar
   if (success) return (

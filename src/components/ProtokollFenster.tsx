@@ -12,7 +12,8 @@ import { lazy, Suspense } from 'react'
 import { useOrganisation } from '../hooks/useOrganisation'
 import { OrgKontext, type Organization } from '../pages/public/OrgPublicLayout'
 import { istDivi } from '../lib/protokoll'
-import ProtokollView from './ProtokollView'
+import { altfelder } from '../lib/patientenAltfelder'
+import ProtokollView, { AltfelderAbschnitt } from './ProtokollView'
 
 const Doku = lazy(() => import('../pages/public/doku/Doku'))
 
@@ -55,11 +56,30 @@ type Ansicht = {
   hinweis?: string
 }
 
-/** Die alte Fassung in ihrer eigenen Ansicht — sie braucht keine Organisation. */
-function alteFassung(payload: unknown) {
+/**
+ * Die alte Fassung in ihrer eigenen Ansicht — sie braucht keine Organisation.
+ * Ist sie geladen, beschriftet ihr form_config die Werte früherer eigener Felder.
+ */
+function alteFassung(payload: unknown, formConfig?: unknown) {
   return (
     <div style={{ background: 'var(--warm-bg)', paddingBottom: 24 }}>
-      <ProtokollView payload={payload as never} />
+      <ProtokollView payload={payload as never} formConfig={formConfig} />
+    </div>
+  )
+}
+
+/**
+ * Werte früherer eigener Felder der Organisation unter der Maske (Bauplan
+ * Vorgänge, B1, 4.5). Die Patientendoku ist fest und ihre Maske kennt diese
+ * Felder nicht mehr; was damit ausgefüllt wurde, bleibt sichtbar. Ohne Werte nichts.
+ */
+function AltfelderUnterDerMaske({ payload, formConfig }: { payload: unknown; formConfig?: unknown }) {
+  if (payload === undefined || altfelder(payload, formConfig).length === 0) return null
+  return (
+    <div style={{ background: 'var(--warm-bg)' }}>
+      <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 16px 24px' }}>
+        <AltfelderAbschnitt payload={payload} formConfig={formConfig} />
+      </div>
     </div>
   )
 }
@@ -72,7 +92,7 @@ function alteFassung(payload: unknown) {
  * Benutzer — er schickte den Patienten zur Anmeldung.
  */
 export function ProtokollInhaltFuerOrg({ org, patientId, payload, pdfZuerst, hinweis, markieren, markiert, onMarkieren, hervorgehoben }: Ansicht & { org: Organization }) {
-  if (payload !== undefined && !istDivi(payload)) return alteFassung(payload)
+  if (payload !== undefined && !istDivi(payload)) return alteFassung(payload, org.form_config)
   return (
     <OrgKontext org={org} orgCode={org.org_code}>
       <Suspense fallback={null}>
@@ -82,6 +102,7 @@ export function ProtokollInhaltFuerOrg({ org, patientId, payload, pdfZuerst, hin
           hervorgehoben={hervorgehoben}
         />
       </Suspense>
+      <AltfelderUnterDerMaske payload={payload} formConfig={org.form_config} />
     </OrgKontext>
   )
 }
@@ -89,7 +110,7 @@ export function ProtokollInhaltFuerOrg({ org, patientId, payload, pdfZuerst, hin
 export function ProtokollInhalt(eigenschaften: Ansicht) {
   const { org, fehler } = useOrganisation()
   if (eigenschaften.payload !== undefined && !istDivi(eigenschaften.payload)) {
-    return alteFassung(eigenschaften.payload)
+    return alteFassung(eigenschaften.payload, org?.form_config)
   }
   if (fehler) return <p style={{ padding: 24, color: GRAU, fontStyle: 'italic' }}>{fehler}</p>
   if (!org) return <p style={{ padding: 24, color: GRAU, fontStyle: 'italic' }}>Lade …</p>

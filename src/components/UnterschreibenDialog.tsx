@@ -9,15 +9,16 @@
 //
 // „Das war ich nicht“: wer den Eintrag nicht abgegeben hat, unterschreibt
 // nicht, sondern weist ihn zurück (Route /zurueckweisen). Die Patientendoku
-// geht dann an die Leitung („Ohne Unterschrift abschließen“), Produktausgabe
-// und Defektmeldung stehen danach ohne Konto unter dem eingetragenen Namen.
+// geht dann an die Leitung („Ohne Unterschrift abschließen“), Produktausgabe,
+// Defektmeldung und eigene Formulare stehen danach ohne Konto unter dem
+// eingetragenen Namen.
 //
 // Der Rahmen (`DialogRahmen`) dient auch dem Dialog „Ohne Unterschrift
 // abschließen“ (OhneUnterschriftDialog.tsx).
 
 import { useEffect, useId, useRef, useState } from 'react'
 import { istFehler, TEXTE, unterschreiben, zurueckweisen } from '../lib/formular/api'
-import type { FormularId } from '../lib/formular/absender'
+import type { FormularArt } from '../lib/formular/absender'
 import { DIALOG_TEXTE as T, UNTERSCHREIBEN_TEXT, ZURUECKGEWIESEN_TEXT, ZURUECKWEISEN_TEXT } from '../lib/formular/verwaltung'
 
 const ROT = 'var(--lbf-akzent)'
@@ -117,7 +118,8 @@ export function DialogKnoepfe({ haupt, onHaupt, hauptAus, neben, onNeben }: {
 }
 
 export default function UnterschreibenDialog(p: {
-  formular: FormularId
+  /** Auch eigene Formulare (`eigen`, Einsendungen in form_submissions). */
+  formular: FormularArt
   id: string
   offen: boolean
   onZu: () => void

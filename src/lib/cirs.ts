@@ -15,6 +15,13 @@
 // Bearbeitung, wie sie gerade in der Datenbank steht, und gibt die neue zurück.
 // Gespeichert wird woanders — immer auf dem frisch gelesenen Stand, damit zwei
 // Bearbeiter sich nicht gegenseitig überschreiben.
+//
+// Eigene Felder der Organisation (Plan Vorgänge 1.3, 3.9) stehen in
+// payload.eigene, gebaut vom Hook pb_hooks/cirs.pb.js mit einem Schnappschuss der
+// Felder. Sie erscheinen in Ansicht, Druck und CSV; die Bearbeitung fasst sie nie an.
+
+import { csvFeld } from './csv'
+import { angabenLesen, wertLeer, wertText, type Angaben, type FeldDef } from './formular/felder'
 
 // ── Kataloge ────────────────────────────────────────────────────────────────
 
@@ -153,6 +160,8 @@ export interface CirsFall {
   meldung: CirsMeldung
   bearbeitung: Bearbeitung
   status: string
+  /** Eigene Felder der Organisation (payload.eigene), wie gemeldet; null ohne. */
+  eigene?: Angaben | null
 }
 
 /** Wer etwas tut und wann — jeder Bearbeitungsschritt trägt beides. */
@@ -320,7 +329,39 @@ export function fallAus(rec: CirsDatensatz): CirsFall {
     meldung: meldungLesen(payload),
     bearbeitung: bearbeitungAus(rec),
     status: rec.status || 'offen',
+    eigene: angabenLesen(payload.eigene),
   }
+}
+
+/**
+ * Kategorie oder Schweregrad zum Anzeigen: der Name, ohne Angabe (Feld ausgeblendet oder leer
+ * gelassen) „Ohne Angabe“. Für neue Ansichten; kategorieName und schwereName bleiben, wie sie sind.
+ */
+export function kategorieText(wert?: string): string {
+  return wert ? kategorieName(wert) : 'Ohne Angabe'
+}
+export function schwereText(wert?: string): string {
+  return wert ? schwereName(wert) : 'Ohne Angabe'
+}
+
+/** Die eigenen Angaben einer Meldung als Zeilen „Bezeichnung: Wert“, nur Ausgefülltes. */
+export function eigeneZeilen(f: Pick<CirsFall, 'eigene'>, bezeichnung: Record<string, string> = {}): { id: string; label: string; text: string }[] {
+  const a = f.eigene
+  if (!a) return []
+  const aus: { id: string; label: string; text: string }[] = []
+  const gesehen: Record<string, true> = {}
+  const name = (id: string, label?: string) => (label && label.trim()) || bezeichnung[id] || id
+  for (const d of a.felder) {
+    gesehen[d.id] = true
+    const w = a.werte[d.id]
+    if (!wertLeer(w)) aus.push({ id: d.id, label: name(d.id, d.label), text: wertText(d, w) })
+  }
+  for (const id of Object.keys(a.werte)) {
+    if (gesehen[id] || wertLeer(a.werte[id])) continue
+    aus.push({ id, label: name(id), text: wertText(undefined, a.werte[id]) })
+  }
+  for (const x of a.aelter ?? []) if (x.wert.trim()) aus.push({ id: x.id, label: name(x.id), text: x.wert })
+  return aus
 }
 
 // ── Ableitungen ─────────────────────────────────────────────────────────────
@@ -598,6 +639,7 @@ function passtZurSuche(f: CirsFall, suche: string): boolean {
     f.nummer, m.ort, m.was, m.warum, m.folgen, m.vorschlag,
     kategorieName(geltendeKategorie(f)), f.bearbeitung.zustaendig?.name,
     ...f.bearbeitung.massnahmen.map((x) => x.text),
+    ...eigeneZeilen(f).map((x) => x.text),
   ].filter(Boolean).join(' '))
   return woerter.every((w) => heu.includes(w))
 }
@@ -756,30 +798,52 @@ export function zeitText(wert?: string | null): string {
   return d ? d.toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''
 }
 
-function csvFeld(wert: unknown): string {
-  const s = String(wert ?? '').replace(/\r\n?/g, '\n')
-  // Formeln nicht ausführen lassen: Excel liest "=…", "+…", "-…", "@…" sonst als Rechnung
-  const sicher = /^[=+\-@\t]/.test(s) ? `'${s}` : s
-  return /[;"\n]/.test(sicher) ? `"${sicher.replace(/"/g, '""')}"` : sicher
+/**
+ * Die Spalten der eigenen Felder: alle Felder, die in den Meldungen vorkommen, in der Folge
+ * ihres ersten Auftretens; Bezeichnung aus dem Schnappschuss der neuesten Meldung, die das Feld
+ * trägt, sonst aus `bezeichnung` (aktuelle Einstellung), sonst die Kennung.
+ */
+export function eigeneSpalten(faelle: CirsFall[], bezeichnung: Record<string, string> = {}): { id: string; label: string; def?: FeldDef }[] {
+  const aus: { id: string; label: string; def?: FeldDef }[] = []
+  const pos: Record<string, number> = {}
+  const neueste = faelle.slice().sort((a, b) => (zeitpunkt(b.eingang)?.getTime() ?? 0) - (zeitpunkt(a.eingang)?.getTime() ?? 0))
+  for (const f of neueste) {
+    const a = f.eigene
+    if (!a) continue
+    for (const d of a.felder) {
+      if (pos[d.id] === undefined) { pos[d.id] = aus.length; aus.push({ id: d.id, label: d.label || bezeichnung[d.id] || d.id, def: d }) }
+    }
+    for (const id of Object.keys(a.werte)) {
+      if (pos[id] === undefined) { pos[id] = aus.length; aus.push({ id, label: bezeichnung[id] || id }) }
+    }
+  }
+  return aus
 }
 
 /**
- * Die Liste als CSV für Excel (Semikolon, mit BOM für die Umlaute).
+ * Die Liste als CSV für Excel (Semikolon, mit BOM für die Umlaute), je eigenem
+ * Feld der Organisation eine Spalte am Ende.
  *
  * Name und Kontakt des Melders stehen nicht darin: die Datei wandert weiter,
  * als die Meldung es sollte.
  */
-export function csv(faelle: CirsFall[], heute: Date): string {
+export function csv(faelle: CirsFall[], heute: Date, o: { bezeichnung?: Record<string, string> } = {}): string {
+  const eigene = eigeneSpalten(faelle, o.bezeichnung)
   const kopf = ['Nummer', 'Eingang', 'Ereignis am', 'Ort', 'Kategorie', 'Schweregrad', 'Häufigkeit', 'Priorität', 'Phase',
-    'Zuständig', 'Frist', 'Überfällig', 'Maßnahmen offen', 'Maßnahmen gesamt', 'Abgeschlossen am', 'Ergebnis', 'Was ist passiert']
+    'Zuständig', 'Frist', 'Überfällig', 'Maßnahmen offen', 'Maßnahmen gesamt', 'Abgeschlossen am', 'Ergebnis', 'Was ist passiert',
+    ...eigene.map((s) => s.label)]
   const zeilen = faelle.map((f) => {
     const b = f.bearbeitung
+    const defs: Record<string, FeldDef> = {}
+    for (const d of f.eigene?.felder ?? []) defs[d.id] = d
+    const werte = f.eigene?.werte ?? {}
     return [
       f.nummer, zeitText(f.eingang), tagText(f.meldung.datum), f.meldung.ort ?? '',
       kategorieName(geltendeKategorie(f)), schwereName(geltendeSchwere(f)), b.bewertung.haeufigkeit ? haeufigkeitName(b.bewertung.haeufigkeit) : '',
       fallPrioritaet(f) ?? '', phaseName(b.phase), b.zustaendig?.name ?? '', tagText(b.frist), istUeberfaellig(f, heute) ? 'ja' : 'nein',
       offeneMassnahmen(b).length, b.massnahmen.length,
       istAbgeschlossen(b.phase) && b.abschluss ? zeitText(b.abschluss.am) : '', istAbgeschlossen(b.phase) ? b.abschluss?.text ?? '' : '', f.meldung.was ?? '',
+      ...eigene.map((s) => (wertLeer(werte[s.id]) ? '' : wertText(defs[s.id] ?? s.def, werte[s.id]))),
     ]
   })
   return '﻿' + [kopf, ...zeilen].map((z) => z.map(csvFeld).join(';')).join('\r\n')

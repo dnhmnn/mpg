@@ -1,18 +1,15 @@
+// Einstellung der Formulare (`organizations.form_config`) und Vorlagen eigener Formulare.
+//
+// Patientendoku: fest (Plan Vorgänge, PO 2). `hidden_sections`, `hidden_fields`,
+// `required_fields` und `custom_fields` bleiben im Datensatz stehen, niemand schreibt sie
+// mehr; `custom_fields` beschriftet nur noch Werte alter Protokolle
+// (src/lib/patientenAltfelder.ts). Produktausgabe, Defektmeldung und CIRS lassen sich je
+// Organisation anpassen: `formulare.<formular>` (Plan 1.2), gelesen immer über
+// standardKonfig (src/lib/formular/felder.ts), geschrieben über standardSetzen
+// (src/lib/formular/einstellung.ts).
+
 import type { AbsenderModus, FormularId } from '../../lib/formular/absender'
-
-export interface FieldDef {
-  id: string
-  label: string
-  canHide: boolean
-  canRequire: boolean
-}
-
-export interface SectionDef {
-  id: string
-  title: string
-  canHide: boolean
-  fields: FieldDef[]
-}
+import type { Abschnitt, FeldDef, FeldTyp, StandardFormular, StandardKonfig, VorlageModus } from '../../lib/formular/felder'
 
 export interface CustomFieldDef {
   id: string
@@ -31,6 +28,8 @@ export interface FormConfig {
   hidden_forms: string[]
   /** Absender je Formular (Bauplan v2, 3.1); fehlt er, gilt ABSENDER_VOREINSTELLUNG (src/lib/formular/absender.ts). */
   absender?: Partial<Record<FormularId, AbsenderModus>>
+  /** Anpassungen der Standardformulare (Plan Vorgänge 1.2); lesen nur über standardKonfig. */
+  formulare?: Partial<Record<StandardFormular, StandardKonfig>>
 }
 
 export const DEFAULT_FORM_CONFIG: FormConfig = {
@@ -41,24 +40,44 @@ export const DEFAULT_FORM_CONFIG: FormConfig = {
   hidden_forms: [],
 }
 
-export interface TemplateFieldDef {
+/**
+ * Ein Feld im `schema` einer Vorlage (form_templates). Neue Form: FeldDef (Plan 1.1);
+ * dazu spiegeln Hook und App die alten Schlüssel (`fieldType`, `required`, `hint`,
+ * `options`), damit alte Seiten weiter rendern. Alte Vorlagen haben nur die alten
+ * Schlüssel. Lesen immer über schemaLesen (felder.ts).
+ */
+export type TemplateFieldDef = Partial<FeldDef> & {
   id: string
-  label: string
-  fieldType: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox'
+  label?: string
+  fieldType?: 'text' | 'number' | 'date' | 'time' | 'textarea' | 'select' | 'checkbox'
   options?: string[]
-  required: boolean
+  required?: boolean
   hint?: string
 }
 
+/** Eine Vorlage (form_templates). Felder nach `is_active` dürfen in PocketBase fehlen (Einführung, Plan 1.6). */
 export interface FormTemplate {
   id: string
   organization_id: string
   title: string
   description: string
-  schema: TemplateFieldDef[]
+  /** Liste der Felder; als JSON auch Text oder doppelt kodiert möglich. */
+  schema: TemplateFieldDef[] | string | null
   is_active: boolean
+  /** passwort, frei oder anonym; fehlt oder unbekannt: frei. */
+  absender?: VorlageModus | string
+  archiviert?: boolean
+  abschnitte?: Abschnitt[] | string | null
+  /** Nur der Hook setzt sie. */
+  version?: number
+  fassungen?: unknown
   created: string
   updated: string
+}
+
+/** Feldarten der alten Vorlagen, wie die alten Seiten sie lesen (Spiegel der neuen). */
+export const ALT_FELDART: Record<FeldTyp, NonNullable<TemplateFieldDef['fieldType']>> = {
+  text: 'text', langtext: 'textarea', zahl: 'number', datum: 'date', uhrzeit: 'time', auswahl: 'select', mehrfach: 'text', janein: 'checkbox',
 }
 
 // Maps sectionId → original step number (1-based)
@@ -69,131 +88,3 @@ export const SECTION_STEP_MAP: Record<string, number> = {
   verletzungen: 14, atemwege: 15, beatmung: 16, zugang: 17,
   reanimation: 18, uebergabe: 19, unterschrift: 20,
 }
-
-export const ORGPATIENTEN_SCHEMA: SectionDef[] = [
-  { id: 'mannschaft', title: 'Mannschaft', canHide: false, fields: [] },
-  {
-    id: 'einsatzdaten', title: 'Einsatzdaten', canHide: true,
-    fields: [
-      { id: 'einsatz_nr',    label: 'Einsatz-Nr.',          canHide: false, canRequire: true  },
-      { id: 'auftrags_nr',   label: 'Auftrags-Nr. (ILS)',   canHide: true,  canRequire: false },
-      { id: 'rufname',       label: 'Rufname',               canHide: true,  canRequire: false },
-      { id: 'fahrzeug',      label: 'Fahrzeug / Einheit',    canHide: true,  canRequire: false },
-      { id: 'einsatz_art',   label: 'Einsatzart / Stichwort',canHide: true,  canRequire: true  },
-      { id: 'einsatz_adresse',label: 'Einsatzort / Adresse', canHide: true,  canRequire: true  },
-      { id: 'transport_ziel',label: 'Transportziel',         canHide: true,  canRequire: false },
-    ],
-  },
-  { id: 'zeitstrahl', title: 'Einsatz-Zeitstrahl', canHide: true, fields: [] },
-  {
-    id: 'stammdaten', title: 'Pat-Stammdaten', canHide: false,
-    fields: [
-      { id: 'name',         label: 'Name',         canHide: false, canRequire: false },
-      { id: 'vorname',      label: 'Vorname',       canHide: false, canRequire: false },
-      { id: 'gebdatum',     label: 'Geb.-Datum',    canHide: false, canRequire: false },
-      { id: 'alter',        label: 'Alter',          canHide: true,  canRequire: false },
-      { id: 'telefon',      label: 'Telefon',        canHide: true,  canRequire: false },
-      { id: 'mobil',        label: 'Mobil',          canHide: true,  canRequire: false },
-      { id: 'strasse',      label: 'Straße',         canHide: true,  canRequire: false },
-      { id: 'plz_ort',      label: 'PLZ, Ort',       canHide: true,  canRequire: false },
-      { id: 'kasse',        label: 'Kasse',          canHide: true,  canRequire: false },
-      { id: 'versnr',       label: 'Vers.-Nr.',      canHide: true,  canRequire: false },
-      { id: 'hausarzt',     label: 'Hausarzt',       canHide: true,  canRequire: false },
-      { id: 'angehoeriger', label: 'Angehöriger',    canHide: true,  canRequire: false },
-    ],
-  },
-  {
-    id: 'anamnese', title: 'Notfallgeschehen / Anamnese', canHide: false,
-    fields: [
-      { id: 'notfallgeschehen',      label: 'Notfallgeschehen',              canHide: false, canRequire: false },
-      { id: 'verlaufsbeschreibung',  label: 'Verlaufsbeschreibung',          canHide: true,  canRequire: false },
-      { id: 'vorerkrankungen',       label: 'Vorerkrankungen',               canHide: true,  canRequire: false },
-      { id: 'vormedikation_patient', label: 'Dauermedikation (Freitext)',    canHide: true,  canRequire: false },
-      { id: 'allergien',             label: 'Allergien / Unverträglichkeiten',canHide: true, canRequire: false },
-    ],
-  },
-  {
-    id: 'naca', title: 'NACA / Bewusstsein / Verdachtsdiagnose', canHide: true,
-    fields: [
-      { id: 'naca',              label: 'NACA-Score',                   canHide: true, canRequire: false },
-      { id: 'bewusstsein',       label: 'Bewusstsein',                  canHide: true, canRequire: false },
-      { id: 'erstdiagnose_text', label: 'Verdachtsdiagnose / Erstdiagnose', canHide: true, canRequire: false },
-    ],
-  },
-  { id: 'gcs',         title: 'Glasgow Coma Scale',                    canHide: true, fields: [] },
-  {
-    id: 'messwerte', title: 'Messwerte / Atmung', canHide: true,
-    fields: [
-      { id: 'rr_sys',  label: 'RR syst. (mmHg)',   canHide: true, canRequire: false },
-      { id: 'rr_dia',  label: 'RR diast. (mmHg)',  canHide: true, canRequire: false },
-      { id: 'hf',      label: 'HF (/min)',           canHide: true, canRequire: false },
-      { id: 'af',      label: 'AF (/min)',            canHide: true, canRequire: false },
-      { id: 'spo2',    label: 'SpO₂ (%)',             canHide: true, canRequire: false },
-      { id: 'etco2',   label: 'etCO₂ (mmHg)',         canHide: true, canRequire: false },
-      { id: 'temp',    label: 'Temperatur (°C)',       canHide: true, canRequire: false },
-      { id: 'bz_mg',   label: 'BZ (mg/dl)',            canHide: true, canRequire: false },
-      { id: 'schmerz', label: 'Schmerz (0–10)',        canHide: true, canRequire: false },
-      { id: 'o2_flow', label: 'O₂ Flow (l/min)',       canHide: true, canRequire: false },
-    ],
-  },
-  {
-    id: 'neurologie', title: 'Neurologie', canHide: true,
-    fields: [
-      { id: 'neu_sonstige', label: 'Sonstige Neurologie',    canHide: true, canRequire: false },
-      { id: 'neu_zeit',     label: 'Zeitpunkt Symptombeginn',canHide: true, canRequire: false },
-    ],
-  },
-  {
-    id: 'ekg', title: 'Rhythmus / EKG', canHide: true,
-    fields: [
-      { id: 'ekg_standort', label: 'EKG Standort', canHide: true, canRequire: false },
-      { id: 'ekg_persnr',   label: 'EKG Pers-Nr.', canHide: true, canRequire: false },
-    ],
-  },
-  { id: 'haut_psyche',  title: 'Haut / Psyche',                        canHide: true, fields: [] },
-  { id: 'erstdiagnose', title: 'Erstdiagnose / Diagnose-Kategorien',    canHide: true, fields: [] },
-  { id: 'verlauf',      title: 'Verlauf',                               canHide: true, fields: [] },
-  {
-    id: 'verletzungen', title: 'Verletzungen / Trauma', canHide: true,
-    fields: [
-      { id: 'v_verbrennung_grad', label: 'Verbrennung Grad',    canHide: true, canRequire: false },
-      { id: 'v_verbrennung_pct',  label: 'Verbrennung %',       canHide: true, canRequire: false },
-      { id: 'v_sonstige',         label: 'Sonstige Verletzungen',canHide: true, canRequire: false },
-      { id: 'verletz_text',       label: 'Freitext Verletzungen',canHide: true, canRequire: false },
-    ],
-  },
-  { id: 'atemwege',  title: 'Atemwege / Lagerung / Immobilisation', canHide: true, fields: [] },
-  { id: 'beatmung',  title: 'Beatmung / Defibrillation',             canHide: true, fields: [] },
-  {
-    id: 'zugang', title: 'Zugang / Infusion / Medikamente', canHide: true,
-    fields: [
-      { id: 'zugang_art',    label: 'Zugang Art',       canHide: true, canRequire: false },
-      { id: 'zugang_region', label: 'Zugang Region',    canHide: true, canRequire: false },
-      { id: 'zugang_gauge',  label: 'Gauge',             canHide: true, canRequire: false },
-      { id: 'inf_art',       label: 'Infusion Art',      canHide: true, canRequire: false },
-      { id: 'inf_menge',     label: 'Infusion Menge (ml)',canHide: true, canRequire: false },
-    ],
-  },
-  {
-    id: 'reanimation', title: 'Reanimation', canHide: true,
-    fields: [
-      { id: 'rean_beginn', label: 'Beginn Reanimation', canHide: true, canRequire: false },
-      { id: 'rean_ende',   label: 'Ende Reanimation',   canHide: true, canRequire: false },
-      { id: 'rean_defib',  label: 'Defibrillationen',   canHide: true, canRequire: false },
-    ],
-  },
-  {
-    id: 'uebergabe', title: 'Übergabe / Besonderheiten', canHide: true,
-    fields: [
-      { id: 'uebergabe_ziel',  label: 'Übergabe Ziel',       canHide: true, canRequire: false },
-      { id: 'uebergabe_name',  label: 'Übergabe an (Name)',   canHide: true, canRequire: false },
-      { id: 'bemerkungen',     label: 'Bemerkungen',          canHide: true, canRequire: false },
-    ],
-  },
-  {
-    id: 'unterschrift', title: 'Unterschrift', canHide: false,
-    fields: [
-      { id: 'ausfueller_name', label: 'Name Ausfüller', canHide: true, canRequire: false },
-    ],
-  },
-]

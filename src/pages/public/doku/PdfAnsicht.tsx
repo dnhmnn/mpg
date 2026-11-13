@@ -11,6 +11,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ABSENDER_ABZEICHEN, absenderAusObjekt } from '../../../lib/formular/absender'
+import { altfelder, mitAltfeldern } from '../../../lib/patientenAltfelder'
+import { useOrg } from '../OrgPublicLayout'
 
 const ROT = 'var(--lbf-akzent)'
 /** Der Akzent als gefüllte Fläche mit heller Schrift darauf. */
@@ -29,10 +31,16 @@ type Vorlage = {
   aelrdDrucken: (p: Record<string, unknown>, kopf: Record<string, string>) => boolean
 }
 
-export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormular = false, hinweis = '' }: {
+export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormular = false, hinweis = '', formConfig }: {
   werte: Record<string, unknown>
   organisation: string
   onSchliessen: () => void
+  /**
+   * form_config der Organisation: beschriftet Werte früherer eigener Felder
+   * (Bauplan Vorgänge, B1). Fehlt es, gilt das der Organisation, in der die
+   * Maske steht (PdfAnsicht öffnet nur aus Doku, also im OrgKontext).
+   */
+  formConfig?: unknown
   /**
    * Diese Ansicht ist der Einstieg, nicht ein Fenster darüber.
    *
@@ -79,10 +87,31 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
     () => ({ organisation, protokollNr: '', erstellt: '' }),
     [organisation],
   )
-  const html = useMemo(
-    () => (vorlage ? vorlage.aelrdHtml(werte, kopf) : ''),
-    [vorlage, werte, kopf],
+  /*
+   * Werte früherer eigener Felder der Organisation (die Patientendoku ist fest,
+   * PO 2): auf einer eigenen Seite hinter dem Bogen, in Ansicht und Ausdruck.
+   * Der Bogen selbst bleibt, wie er ist.
+   */
+  const { org } = useOrg()
+  const alte = useMemo(
+    () => altfelder(werte, formConfig ?? org?.form_config),
+    [werte, formConfig, org],
   )
+  const html = useMemo(
+    () => (vorlage ? mitAltfeldern(vorlage.aelrdHtml(werte, kopf), alte) : ''),
+    [vorlage, werte, kopf, alte],
+  )
+
+  /** PDF: der Bogen im eigenen Fenster; mit früheren eigenen Feldern dasselbe Blatt wie in der Ansicht. */
+  function drucken(): boolean {
+    if (!vorlage) return true
+    if (alte.length === 0) return vorlage.aelrdDrucken(werte, kopf)
+    const fenster = window.open('', '_blank', 'width=1000,height=750')
+    if (!fenster) return false
+    fenster.document.write(html)
+    fenster.document.close()
+    return true
+  }
 
   const faktor = eingepasst && breite > 0 ? Math.min(1, breite / BOGEN_BREITE) : 1
 
@@ -123,7 +152,7 @@ export default function PdfAnsicht({ werte, organisation, onSchliessen, zumFormu
 
         <button
           type="button"
-          onClick={() => { if (vorlage) setBlockiert(!vorlage.aelrdDrucken(werte, kopf)) }}
+          onClick={() => { if (vorlage) setBlockiert(!drucken()) }}
           disabled={!vorlage}
           style={{ padding: '7px 13px', background: vorlage ? ROT_GRUND : 'rgba(var(--lbf-rot-rgb),0.25)', border: 'none', borderRadius: 8, color: '#fff', fontFamily: 'inherit', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', cursor: vorlage ? 'pointer' : 'default', whiteSpace: 'nowrap' }}
         >

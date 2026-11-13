@@ -9,16 +9,21 @@
 //   auf einem geteilten Tablet soll der Browser es weder anbieten zu speichern
 //   noch später für den Nächsten einsetzen.
 // - Modus frei: nur der Name.
+// - Eigenes Formular mit Vorlage „anonym“: kein Name, kein Passwort, keine Anmeldung;
+//   nur der Satz, dass ohne Namen gesendet wird (Plan Vorgänge F6).
+//
+// Eigene Formulare (`formular="eigen"`) geben `vorlage` und `modus` der Vorlage mit;
+// der Modus hat Vorrang vor dem Stand.
 //
 // Das Passwort lebt nur im Zustand der Maske und im Body des einen Aufrufs.
 
 import { useMemo, useState } from 'react'
 import { pb } from '../../../lib/pocketbase'
 import { aktuelleTokenId } from '../../../lib/formular/api'
-import type { FormularId } from '../../../lib/formular/absender'
+import type { FormularArt, VorlageModus } from '../../../lib/formular/absender'
 import type { NamensErgebnis, Stand } from '../../../lib/formular/api'
 import NamensFeld from './NamensFeld'
-import { ABSENDER_TEXTE as T, andererNameHinweis, modusAusStand, nameVergleichsform, sendetAngemeldet } from './texte'
+import { ABSENDER_TEXTE as T, andererNameHinweis, istAnonymModus, modusAusStand, nameVergleichsform, sendetAngemeldet } from './texte'
 
 export { absenderAngabe, sendeKnopfText, vorDemSenden } from './texte'
 
@@ -108,7 +113,11 @@ function kontoNameImFeld(name: string): string {
 
 export default function AbsenderFeld(p: {
   orgCode: string
-  formular: FormularId
+  formular: FormularArt
+  /** Nur eigene Formulare: Kennung der Vorlage (für die Namensprüfung am Server). */
+  vorlage?: string
+  /** Nur eigene Formulare: Absender der Vorlage; Vorrang vor dem Stand. */
+  modus?: VorlageModus
   stand: Stand | null
   alterServer: boolean
   name: string
@@ -136,8 +145,9 @@ export default function AbsenderFeld(p: {
   onZumNamen?: () => void
 }) {
   const { stand, anderer } = p
-  const angemeldet = sendetAngemeldet(stand, anderer)
-  const modus = modusAusStand(stand, p.formular)
+  const anonym = istAnonymModus(p.formular, p.modus)
+  const angemeldet = sendetAngemeldet(stand, anderer, p.modus)
+  const modus = modusAusStand(stand, p.formular, p.modus)
   const zeigePasswort = !angemeldet && !p.alterServer && modus === 'passwort'
   // „Doch angemeldet senden“ nur, wenn dieses Gerät eine gültige Sitzung hat
   const hatSitzung = anderer && aktuelleTokenId() !== ''
@@ -147,6 +157,17 @@ export default function AbsenderFeld(p: {
   const andererName = !p.onName ? andererNameHinweis({ stand, anderer, name: p.name, herkunft: p.nameHerkunft ?? 'Unterschrift' }) : ''
   // „Anderer Absender“ in der Doku, aber im Feld steht noch der Name der angemeldeten Person
   const nochKontoName = !p.onName && anderer ? kontoNameImFeld(p.name) : ''
+
+  if (anonym) {
+    return (
+      <div style={{ marginTop: 4, marginBottom: 10 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, color: ROT, textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 8 }}>
+          {T.abschnitt}
+        </div>
+        <div style={{ fontSize: 13, color: GRAU, lineHeight: 1.45 }}>{T.anonymHinweis}</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ marginTop: 4, marginBottom: 10 }}>
@@ -173,7 +194,7 @@ export default function AbsenderFeld(p: {
         <>
           {p.onName ? (
             <NamensFeld
-              orgCode={p.orgCode} formular={p.formular} wert={p.name} onWert={p.onName}
+              orgCode={p.orgCode} formular={p.formular} vorlage={p.vorlage} wert={p.name} onWert={p.onName}
               zweck="absender" modus={modus} mitAnmeldung={false}
               label={p.nameLabel ?? 'Dein Name'} platzhalter="Vor- und Nachname, wie in Responda"
               onErgebnis={(r) => p.onNamensErgebnis?.(r)} dicht
@@ -198,7 +219,7 @@ export default function AbsenderFeld(p: {
               ) : null}
               {p.name.trim() ? (
                 <NamensFeld
-                  orgCode={p.orgCode} formular={p.formular} wert={p.name} onWert={() => {}}
+                  orgCode={p.orgCode} formular={p.formular} vorlage={p.vorlage} wert={p.name} onWert={() => {}}
                   zweck="absender" modus={modus} mitAnmeldung={false} label="" nurLesen nurZeile dicht
                   onErgebnis={(r) => p.onNamensErgebnis?.(r)}
                 />

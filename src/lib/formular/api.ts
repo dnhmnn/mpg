@@ -9,7 +9,8 @@
 
 import { pb } from '../pocketbase'
 import { newId } from '../eks/ids'
-import { ABSENDER_VOREINSTELLUNG, absenderAusObjekt, minutenText, type AbsenderEintrag, type AbsenderModus, type FormularId, type Sammlung } from './absender'
+import { tresorWeiche } from '../tresor'
+import { ABSENDER_VOREINSTELLUNG, absenderAusObjekt, minutenText, type AbsenderEintrag, type AbsenderModus, type FormularArt, type FormularId, type Sammlung } from './absender'
 
 /** Warum etwas nicht ging; `netz` und `alter_server` setzt die App, alle anderen der Server (1.2). */
 export type Grund =
@@ -32,15 +33,26 @@ export function istFehler(r: { ok: boolean }): r is Fehler {
   return r.ok === false
 }
 export type FormularStand = { modus: AbsenderModus | 'anonym'; an: boolean; oeffentlich: boolean; ausstehend: boolean }
+/**
+ * Je Formular der Stand; `eigen` (Server ab Stand-Version 2) gilt für alle eigenen Formulare
+ * der Organisation: `an`/`oeffentlich` heißt Modul Vorgänge frei, `ausstehend` heißt der Server
+ * kennt „Unterschrift ausstehend“ für Einsendungen. Den Absender bestimmt dort die Vorlage.
+ */
+export type StandFormulare = Record<FormularId | 'cirs', FormularStand> & { eigen?: FormularStand }
+/** Was der Server schon kann (Stand-Version 2); fehlt bei älteren Servern. */
+export type StandFaehig = { eigene_felder: { produktausgabe: boolean; defektmeldung: boolean; cirs: boolean }; eigene_formulare: boolean; eingang: boolean }
 /** Stand des Servers. `version: 0` heißt: nur auf dem Gerät erschlossen (ohne Netz), nicht vom Server. */
-export type Stand = { version: number; formulare: Record<FormularId | 'cirs', FormularStand>; angemeldet: { id: string; name: string } | null }
+export type Stand = { version: number; formulare: StandFormulare; faehig?: StandFaehig; angemeldet: { id: string; name: string } | null }
 export type AbsenderAngabe = { name: string; passwort?: string; ausstehend?: boolean } | null
 export type Maske = 'doku' | 'alt' | 'schnell'
-/** Body von /absenden (1.5); `daten` je Formular, Passwort nur in `absender`. */
-export type Absendung = { formular: FormularId; maske?: Maske; id: string; absender: AbsenderAngabe; daten: Record<string, unknown>; uebernommen?: boolean }
-/** Antwort von /absenden nach Erfolg; `id` ist die endgültige Kennung. */
-export type Gesendet = { id: string; bereits: boolean; absender: AbsenderEintrag; frist: string }
-export type Unterschrift = { formular: FormularId; id: string; titel: string; zusammenfassung: string; angelegt: string; absender_name: string }
+/** Body von /absenden (1.5); `daten` je Formular, Passwort nur in `absender`; `vorlage` nur bei `eigen`. */
+export type Absendung = { formular: FormularArt; maske?: Maske; id: string; absender: AbsenderAngabe; daten: Record<string, unknown>; uebernommen?: boolean; vorlage?: string }
+/**
+ * Antwort von /absenden nach Erfolg; `id` ist die endgültige Kennung. `anonym`: ein eigenes
+ * Formular ohne Absender (dann ist `absender` null).
+ */
+export type Gesendet = { id: string; bereits: boolean; absender: AbsenderEintrag | null; frist: string; anonym?: boolean }
+export type Unterschrift = { formular: FormularArt; id: string; titel: string; zusammenfassung: string; angelegt: string; absender_name: string; vorlage?: string }
 export type PruefGrund = 'name_unvollstaendig' | 'name_doppelt' | 'ohne_email'
 /**
  * Ergebnis der Mitglieder-Prüfung. `koennen_nicht`: Name unvollständig oder ohne E-Mail, kann
@@ -136,16 +148,14 @@ export function drosselText(sekunden: number): string {
 
 export type Speicher = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 
-/** localStorage, wenn das Gerät ihn hergibt (privates Fenster, gesperrt: null). */
+/**
+ * Der Speicher des Geräts für die Formulare. Warteschlange und Entwürfe gehen in den
+ * Tresor (verschlüsselt in IndexedDB, src/lib/tresor.ts), alles andere wie bisher in
+ * localStorage. Ist der Tresor nicht geöffnet (Prüffälle, Browser ohne WebCrypto), ist
+ * es localStorage, wenn das Gerät ihn hergibt (privates Fenster, gesperrt: null).
+ */
 export function geraeteSpeicher(): Speicher | null {
-  try {
-    const s = (globalThis as { localStorage?: Storage }).localStorage
-    if (!s) return null
-    s.getItem('formular_probe')
-    return s
-  } catch {
-    return null
-  }
+  return tresorWeiche()
 }
 
 /** Neue Kennung eines Satzes: 15 × [a-z0-9], vom Client vergeben (wie in EKS). */
@@ -330,9 +340,9 @@ function ohneToken(): Fehler {
 
 // ── Lesen der Antworten ──────────────────────────────────────────────────────
 
-function standFormular(roh: unknown, f: FormularId | 'cirs'): FormularStand {
+function standFormular(roh: unknown, f: FormularId | 'cirs' | 'eigen'): FormularStand {
   const o = roh && typeof roh === 'object' ? roh as Record<string, unknown> : {}
-  const vor: AbsenderModus | 'anonym' = f === 'cirs' ? 'anonym' : ABSENDER_VOREINSTELLUNG[f]
+  const vor: AbsenderModus | 'anonym' = f === 'cirs' ? 'anonym' : f === 'eigen' ? 'frei' : ABSENDER_VOREINSTELLUNG[f]
   const modus = o.modus === 'passwort' || o.modus === 'frei' || o.modus === 'anonym' ? o.modus : vor
   return { modus, an: o.an === true, oeffentlich: o.oeffentlich === true, ausstehend: o.ausstehend === true }
 }
@@ -344,15 +354,33 @@ export function standLesen(b: unknown): Stand | null {
   const f = o.formulare && typeof o.formulare === 'object' ? o.formulare as Record<string, unknown> : null
   if (!f) return null
   const a = o.angemeldet && typeof o.angemeldet === 'object' ? o.angemeldet as Record<string, unknown> : null
-  return {
+  const formulare: StandFormulare = {
+    patienten: standFormular(f.patienten, 'patienten'),
+    produktausgabe: standFormular(f.produktausgabe, 'produktausgabe'),
+    defektmeldung: standFormular(f.defektmeldung, 'defektmeldung'),
+    cirs: standFormular(f.cirs, 'cirs'),
+  }
+  // Eigene Formulare kennt erst der Server mit Stand-Version 2; ohne Eintrag kein Schlüssel
+  if (f.eigen && typeof f.eigen === 'object') formulare.eigen = standFormular(f.eigen, 'eigen')
+  const stand: Stand = {
     version: zahl(o.version) ?? 1,
-    formulare: {
-      patienten: standFormular(f.patienten, 'patienten'),
-      produktausgabe: standFormular(f.produktausgabe, 'produktausgabe'),
-      defektmeldung: standFormular(f.defektmeldung, 'defektmeldung'),
-      cirs: standFormular(f.cirs, 'cirs'),
-    },
+    formulare,
     angemeldet: a && typeof a.id === 'string' && a.id ? { id: a.id, name: typeof a.name === 'string' ? a.name : '' } : null,
+  }
+  const faehig = faehigLesen(o.faehig)
+  if (faehig) stand.faehig = faehig
+  return stand
+}
+
+/** `faehig` aus /stand (Version 2); fehlt oder unlesbar: undefined (dann bietet die App das Neue nicht an). */
+function faehigLesen(roh: unknown): StandFaehig | undefined {
+  if (!roh || typeof roh !== 'object' || Array.isArray(roh)) return undefined
+  const o = roh as Record<string, unknown>
+  const e = o.eigene_felder && typeof o.eigene_felder === 'object' ? o.eigene_felder as Record<string, unknown> : {}
+  return {
+    eigene_felder: { produktausgabe: e.produktausgabe === true, defektmeldung: e.defektmeldung === true, cirs: e.cirs === true },
+    eigene_formulare: o.eigene_formulare === true,
+    eingang: o.eingang === true,
   }
 }
 
@@ -360,8 +388,8 @@ function absenderOderLeer(roh: unknown): AbsenderEintrag {
   return absenderAusObjekt(roh) ?? { id: '', name: '', status: 'ohne_konto', weg: '', modus: 'frei', am: '' }
 }
 
-function istFormular(x: unknown): x is FormularId {
-  return x === 'patienten' || x === 'produktausgabe' || x === 'defektmeldung'
+function istFormular(x: unknown): x is FormularArt {
+  return x === 'patienten' || x === 'produktausgabe' || x === 'defektmeldung' || x === 'eigen'
 }
 
 // ── Routen (1.3 bis 1.9) ─────────────────────────────────────────────────────
@@ -377,11 +405,16 @@ export function formularStand(orgCode: string, o: { mitAnmeldung?: boolean } = {
   return route({ methode: 'GET', pfad: `${code(orgCode)}/stand`, token: !!o.mitAnmeldung, orgCode, zeitMs: 10000 }, standLesen)
 }
 
-/** POST /{code}/name: passt der Name auf ein aktives Mitglied? Nur ja/nein, nie eine Liste. */
-export function nameGefunden(orgCode: string, formular: FormularId, name: string, o: { mitAnmeldung?: boolean } = {}): Promise<Antwort<NamensErgebnis>> {
+/**
+ * POST /{code}/name: passt der Name auf ein aktives Mitglied? Nur ja/nein, nie eine Liste.
+ * Eigene Formulare (`eigen`) nennen ihre Vorlage (`o.vorlage`).
+ */
+export function nameGefunden(orgCode: string, formular: FormularArt, name: string, o: { mitAnmeldung?: boolean; vorlage?: string } = {}): Promise<Antwort<NamensErgebnis>> {
   if (!orgCode) return ohneCode()
+  const body: Record<string, unknown> = { formular, name }
+  if (formular === 'eigen') body.vorlage = o.vorlage ?? ''
   return route(
-    { methode: 'POST', pfad: `${code(orgCode)}/name`, body: { formular, name }, token: !!o.mitAnmeldung, orgCode, zeitMs: 10000 },
+    { methode: 'POST', pfad: `${code(orgCode)}/name`, body, token: !!o.mitAnmeldung, orgCode, zeitMs: 10000 },
     (b) => ({ vollstaendig: b.vollstaendig === true, gefunden: b.gefunden === true, eindeutig: b.eindeutig === true }),
   )
 }
@@ -396,6 +429,7 @@ export function absendeBody(a: Absendung): Record<string, unknown> {
   }
   const body: Record<string, unknown> = { formular: a.formular, id: a.id, absender, daten: a.daten }
   if (a.formular === 'patienten' && a.maske) body.maske = a.maske
+  if (a.formular === 'eigen') body.vorlage = a.vorlage ?? ''
   if (a.uebernommen === true) body.uebernommen = true
   return body
 }
@@ -409,12 +443,17 @@ export function absenden(orgCode: string, a: Absendung, o: { mitAnmeldung: boole
   if (!orgCode) return ohneCode()
   return route(
     { methode: 'POST', pfad: `${code(orgCode)}/absenden`, body: absendeBody(a), token: o.mitAnmeldung, orgCode, zeitMs: 30000 },
-    (b) => ({
-      id: typeof b.id === 'string' && b.id ? b.id : a.id,
-      bereits: b.bereits === true,
-      absender: absenderOderLeer(b.absender),
-      frist: typeof b.frist === 'string' ? b.frist : '',
-    }),
+    (b) => {
+      const g: Gesendet = {
+        id: typeof b.id === 'string' && b.id ? b.id : a.id,
+        bereits: b.bereits === true,
+        // Anonym gesendet (eigenes Formular): kein Absender, auch kein leerer
+        absender: b.anonym === true ? null : absenderOderLeer(b.absender),
+        frist: typeof b.frist === 'string' ? b.frist : '',
+      }
+      if (a.formular === 'eigen') g.anonym = b.anonym === true
+      return g
+    },
   )
 }
 
@@ -427,13 +466,15 @@ export async function offeneUnterschriften(): Promise<Antwort<Unterschrift[]>> {
       const e = x && typeof x === 'object' ? x as Record<string, unknown> : null
       if (!e || !istFormular(e.formular) || typeof e.id !== 'string') return []
       const s = (k: string) => typeof e[k] === 'string' ? e[k] as string : ''
-      return [{ formular: e.formular, id: e.id, titel: s('titel'), zusammenfassung: s('zusammenfassung'), angelegt: s('angelegt'), absender_name: s('absender_name') }]
+      const u: Unterschrift = { formular: e.formular, id: e.id, titel: s('titel'), zusammenfassung: s('zusammenfassung'), angelegt: s('angelegt'), absender_name: s('absender_name') }
+      if (e.formular === 'eigen') u.vorlage = s('vorlage')
+      return [u]
     })
   })
 }
 
-/** POST /unterschreiben: einen ausstehenden Eintrag als die angemeldete Person bestätigen. */
-export async function unterschreiben(formular: FormularId, id: string): Promise<Antwort<{ absender: AbsenderEintrag; frist: string }>> {
+/** POST /unterschreiben: einen ausstehenden Eintrag als die angemeldete Person bestätigen (auch eigene Formulare). */
+export async function unterschreiben(formular: FormularArt, id: string): Promise<Antwort<{ absender: AbsenderEintrag; frist: string }>> {
   if (!pb.authStore.isValid) return ohneToken()
   return route(
     { methode: 'POST', pfad: `${PFAD}/unterschreiben`, body: { formular, id }, token: true },
@@ -447,7 +488,7 @@ export async function unterschreiben(formular: FormularId, id: string): Promise<
  * sie; die Leitung schließt ihn ohne Unterschrift ab. Produktausgabe und Defektmeldung: danach
  * ohne Konto unter dem eingetragenen Namen.
  */
-export async function zurueckweisen(formular: FormularId, id: string): Promise<Antwort<{ absender: AbsenderEintrag | null }>> {
+export async function zurueckweisen(formular: FormularArt, id: string): Promise<Antwort<{ absender: AbsenderEintrag | null }>> {
   if (!pb.authStore.isValid) return ohneToken()
   return route(
     { methode: 'POST', pfad: `${PFAD}/zurueckweisen`, body: { formular, id }, token: true },

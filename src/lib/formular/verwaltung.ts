@@ -11,7 +11,7 @@
 
 import {
   absenderAusObjekt, absenderLesen, fristEndeVon, jsonLesen, wartetAufUnterschrift,
-  type AbsenderAbschluss, type AbsenderModus, type FormularId,
+  type AbsenderAbschluss, type AbsenderModus, type FormularArt, type FormularId,
 } from './absender'
 import type { MitgliederPruefung, PruefGrund, Unterschrift } from './api'
 import { besatzungLesen, besatzungSetzen, POSTEN, type Posten } from '../../pages/public/doku/besatzung'
@@ -143,15 +143,12 @@ export function karteAusSuche(wert: string | null): string {
   return ['patienten', 'produktausgabe', 'defektmeldung', 'cirs'].includes(w) ? w : ''
 }
 
-/** Reiter unter Vorgänge: CIRS nur mit Modul Vorgänge, der Feld-Editor nur mit Patienten (3.4). */
-export function vorgaengeReiter(o: { vorgaengeFrei: boolean; patientenFrei: boolean }): ('formulare' | 'editor' | 'cirs')[] {
-  return ['formulare', ...(o.patientenFrei ? ['editor' as const] : []), ...(o.vorgaengeFrei ? ['cirs' as const] : [])]
-}
-
 // ── Unitas (4.9) ─────────────────────────────────────────────────────────────
 
 export const UNITAS_TEXTE = {
   neuesProtokoll: 'Neues Protokoll',
+  /** Abschnitt im Reiter Vorgänge: eigene Formulare, die auf die Unterschrift warten. */
+  eigeneFormulare: 'Eigene Formulare',
   wartetTitel: 'Wartet auf deine Unterschrift',
   statLabel: 'Unterschriften',
   /** Plural; für die Zahl selbst `statText(n)`. */
@@ -161,6 +158,11 @@ export const UNITAS_TEXTE = {
   unterschreiben: 'Unterschreiben',
   unterschrieben: 'Unterschrieben',
   keinProtokoll: 'Mit diesem Konto lässt sich kein Protokoll absenden.',
+  /**
+   * Protokolle liegen nie im Zwischenspeicher des Browsers (vite.config.ts, NetworkOnly für
+   * `patients`). Ohne Netz bleibt die Liste deshalb leer; das soll nicht wie „keine Protokolle“ wirken.
+   */
+  ohneNetz: 'Ohne Netz lassen sich deine Protokolle gerade nicht laden. Sie erscheinen wieder, sobald Netz da ist.',
 } as const
 
 /** Satz unter der Zahl der Stat-Karte „Unterschriften“: „wartet auf dich“ bei einer, sonst „warten auf dich“. */
@@ -168,10 +170,10 @@ export function statText(n: number): string {
   return n === 1 ? 'wartet auf dich' : 'warten auf dich'
 }
 
-/** Die offenen Unterschriften je Formular, Reihenfolge des Servers (neueste zuerst). */
-export function unterschriftenNach(liste: Unterschrift[] | null | undefined): Record<FormularId, Unterschrift[]> {
-  const aus: Record<FormularId, Unterschrift[]> = { patienten: [], produktausgabe: [], defektmeldung: [] }
-  for (const u of liste ?? []) if (aus[u.formular]) aus[u.formular].push(u)
+/** Die offenen Unterschriften je Formular, auch eigene Formulare (`eigen`), Reihenfolge des Servers (neueste zuerst). */
+export function unterschriftenNach(liste: Unterschrift[] | null | undefined): Record<FormularArt, Unterschrift[]> {
+  const aus: Record<FormularArt, Unterschrift[]> = { patienten: [], produktausgabe: [], defektmeldung: [], eigen: [] }
+  for (const u of liste ?? []) if (Object.prototype.hasOwnProperty.call(aus, u.formular)) aus[u.formular].push(u)
   return aus
 }
 
@@ -179,7 +181,8 @@ export function unterschriftenNach(liste: Unterschrift[] | null | undefined): Re
 export function unterschriftTitel(u: Unterschrift): string {
   const t = String(u.titel ?? '').trim()
   if (t) return t
-  return u.formular === 'patienten' ? 'Protokoll' : u.formular === 'produktausgabe' ? 'Produktausgabe' : 'Defektmeldung'
+  return u.formular === 'patienten' ? 'Protokoll' : u.formular === 'produktausgabe' ? 'Produktausgabe'
+    : u.formular === 'eigen' ? 'Formular' : 'Defektmeldung'
 }
 
 /**
@@ -220,25 +223,28 @@ export function gedrosselt(
 
 // ── Dialoge (4.9, 4.10) ──────────────────────────────────────────────────────
 
-/** Was die Person mit „Unterschreiben“ bestätigt, je Formular. */
-export const UNTERSCHREIBEN_TEXT: Record<FormularId, string> = {
+/** Was die Person mit „Unterschreiben“ bestätigt, je Formular (auch eigene Formulare). */
+export const UNTERSCHREIBEN_TEXT: Record<FormularArt, string> = {
   patienten: 'Du bestätigst, dass du dieses Protokoll abgegeben hast. Danach hast du einen Tag Zeit für Änderungen.',
   produktausgabe: 'Du bestätigst, dass du diese Produktausgabe abgegeben hast.',
   defektmeldung: 'Du bestätigst, dass du diese Meldung abgegeben hast.',
+  eigen: 'Du bestätigst, dass du dieses Formular abgegeben hast.',
 }
 
 /** „Das war ich nicht“: was danach mit dem Eintrag geschieht, je Formular (Rückfrage im Dialog). */
-export const ZURUECKWEISEN_TEXT: Record<FormularId, string> = {
+export const ZURUECKWEISEN_TEXT: Record<FormularArt, string> = {
   patienten: 'Du gibst an, dieses Protokoll nicht abgegeben zu haben. Es verschwindet aus deiner Liste. Die Leitung schließt es ohne deine Unterschrift ab.',
   produktausgabe: 'Du gibst an, diese Produktausgabe nicht abgegeben zu haben. Sie verschwindet aus deiner Liste und steht danach ohne Konto unter dem eingetragenen Namen.',
   defektmeldung: 'Du gibst an, diese Meldung nicht abgegeben zu haben. Sie verschwindet aus deiner Liste und steht danach ohne Konto unter dem eingetragenen Namen. Der Defekt selbst bleibt gemeldet.',
+  eigen: 'Du gibst an, dieses Formular nicht abgegeben zu haben. Es verschwindet aus deiner Liste und steht danach ohne Konto unter dem eingetragenen Namen.',
 }
 
 /** Nach „Das war ich nicht“: was jetzt geschieht. */
-export const ZURUECKGEWIESEN_TEXT: Record<FormularId, string> = {
+export const ZURUECKGEWIESEN_TEXT: Record<FormularArt, string> = {
   patienten: 'Erledigt. Die Leitung ist informiert und schließt das Protokoll ohne deine Unterschrift ab.',
   produktausgabe: 'Erledigt. Die Produktausgabe ist nicht mehr mit deinem Konto verknüpft.',
   defektmeldung: 'Erledigt. Die Meldung ist nicht mehr mit deinem Konto verknüpft.',
+  eigen: 'Erledigt. Das Formular ist nicht mehr mit deinem Konto verknüpft.',
 }
 
 /** Zeile in der Patientenverwaltung und über der Maske: die genannte Person hat zurückgewiesen. */

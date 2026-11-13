@@ -1072,7 +1072,7 @@ und kein Supervisor.
 
 ### Felder
 
-Anlegen (*Plain text*, nicht Pflicht), **erst wenn die Hooks laufen** (Einführung Schritt 5). Ohne
+Anlegen (*Plain text*, nicht Pflicht), **erst wenn die Hooks laufen** (Einführung Schritt 6). Ohne
 sie gibt es kein „Unterschrift ausstehend“, alles andere geht:
 
 | Sammlung | Feld | Werte |
@@ -1221,7 +1221,7 @@ Wiedereinführung legt er sie wieder erst nach den Hooks an.
 
 ### users: List und View schließen
 
-Owner-Schritt 7 der Einführung, frühestens 7 Tage nach dem Kopieren der Hooks. Vorher den
+Owner-Schritt 8 der Einführung, frühestens 7 Tage nach dem Kopieren der Hooks. Vorher den
 bisherigen Wert von List und View notieren (für die Rücknahme). Voraussetzung: Kein öffentliches
 Formular liest `users` mehr (mit diesem Paket erfüllt). Die Routen lesen über den Server und
 hängen nicht an dieser Regel.
@@ -1265,15 +1265,196 @@ Datenverzeichnis (Felder vor den Hooks gefälscht, erster Start leert, Rücknahm
 Wiedereinführung leert nicht noch einmal). **781 Prüfungen je Version, alle bestanden.**
 Gegenprobe ohne `formular.pb.js`: 315 von 692 schlagen an.
 
+## Eigene Formulare und anpassbare Standardformulare
+
+Organisationen bauen eigene Formulare (`form_templates`, verwaltet unter Vorgänge), Einsendungen
+landen in `form_submissions` (Eingang unter Vorgänge). Produktausgabe, Defektmeldung und CIRS
+lassen sich je Organisation anpassen (Bezeichnung, Hilfetext, optionale Felder ausblenden,
+Pflicht, Reihenfolge, eigene Felder); die Einstellung steht in
+`organizations.form_config.formulare.<formular>` und wird geschrieben wie bisher (Update-Regel von
+`organizations`). Patientendoku ist fest und hat keine Einstellung. Vertrag:
+`pb_hooks/formular-regeln.js` (Abschnitt „Felder“, Zwilling `src/lib/formular/felder.ts`,
+Prüffälle `formularFelder.test.ts` und `formularFelderGleichlauf.test.ts`).
+
+### Eigene Formulare: API-Regeln
+
+Recht Vorgänge (`dokumente`, auch befristet nach „Befristete Rechte in Regeln“), Leitung oder
+Supervisor, aktives Konto, keine Teilnehmenden; dieselbe Rechnung wie `darfVorgaenge` im Hook. In
+den Regeln unten steht dieser Teil jeweils ausgeschrieben (zum Kopieren):
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && (@request.auth.supervisor = true || @request.auth.role = "admin" || @request.auth.permissions.dokumente = true || (@request.auth.temp_permissions.dokumente.until ~ " " && @request.auth.temp_permissions.dokumente.until > @now))
+```
+
+`form_templates` (Vorlagen). List und View bleiben **öffentlich** (leerer Text): Die öffentlichen
+Seiten lesen die Vorlage ohne Anmeldung.
+
+**Vorlagen Create**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && (@request.auth.supervisor = true || @request.auth.role = "admin" || @request.auth.permissions.dokumente = true || (@request.auth.temp_permissions.dokumente.until ~ " " && @request.auth.temp_permissions.dokumente.until > @now)) && @request.body.organization_id = @request.auth.organization_id
+```
+
+**Vorlagen Update**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && (@request.auth.supervisor = true || @request.auth.role = "admin" || @request.auth.permissions.dokumente = true || (@request.auth.temp_permissions.dokumente.until ~ " " && @request.auth.temp_permissions.dokumente.until > @now)) && organization_id = @request.auth.organization_id && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)
+```
+
+**Vorlagen Delete**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && (@request.auth.supervisor = true || @request.auth.role = "admin" || @request.auth.permissions.dokumente = true || (@request.auth.temp_permissions.dokumente.until ~ " " && @request.auth.temp_permissions.dokumente.until > @now)) && organization_id = @request.auth.organization_id
+```
+
+`form_submissions` (Einsendungen). Lesen und ändern nur Berechtigte derselben Organisation;
+Echtzeit-Abos folgen dieser Regel (geprüft: ohne Recht und aus fremder Organisation kommt nichts
+an). **Delete**: gesperrt (Schloss, null), gelöscht wird nur in der Admin-Oberfläche. **Create**
+bleibt vorerst, wie es ist (offen): Alte App-Stände legen direkt an, der Hook in `formular.pb.js`
+weist sie ab („später schließen“ unten).
+
+**Einsendungen List, View und Update**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && (@request.auth.supervisor = true || @request.auth.role = "admin" || @request.auth.permissions.dokumente = true || (@request.auth.temp_permissions.dokumente.until ~ " " && @request.auth.temp_permissions.dokumente.until > @now)) && organization_id = @request.auth.organization_id
+```
+
+War List oder View von `form_submissions` vorher offen (leerer Text), konnte jeder ohne Anmeldung
+alle Einsendungen aller Organisationen lesen; ab Schritt 2 der Einführung ist das zu. Die
+Vorprüfung zeigt, wie die Regel heute steht. Steht sie noch offen, antwortet die Liste mit 403
+statt Einsendungen anderer Organisationen zu zeigen (Hook, Eintrag im Log); Echtzeit hält nur die
+Regel dicht.
+
+`cirs_reports`: Regeln unverändert (oben, „cirs_reports“). Neu prüft der Hook beim Anlegen
+Organisation, Modul, Inhalt und eigene Felder.
+
+### Felder
+
+| Sammlung | Feld | Typ | wann | schreibt |
+|---|---|---|---|---|
+| `form_templates` | `absender` | Plain text | **vor der App** | App: `passwort`, `frei`, `anonym`; fehlt oder unbekannt heißt `frei` |
+| `form_templates` | `archiviert` | Bool | **vor der App** | App; archiviert heißt immer inaktiv |
+| `form_templates` | `abschnitte` | JSON | **vor der App** | App: `[{ id, titel, hilfe? }]` |
+| `form_templates` | `version` | Number | nach den Hooks | nur Hook |
+| `form_templates` | `fassungen` | JSON | nach den Hooks | nur Hook: die letzten 10 Fassungen `{ "<version>": { schema, abschnitte, am } }` |
+| `form_submissions` | `status` | Plain text | nach den Hooks | Server beim Anlegen `neu`, danach Berechtigte: `neu`, `in_bearbeitung`, `erledigt` |
+| `form_submissions` | `notiz` | Plain text | nach den Hooks | Berechtigte, bis 4000 Zeichen |
+| `form_submissions` | `absender_status` | Plain text | nach den Hooks | nur Server (wie `product_outputs`) |
+| `form_submissions` | `bearbeitung` | JSON | nach den Hooks | nur Hook: `{ verlauf: [{ id, am, von: { id, name }, status_vorher, status, notiz }] }`, höchstens 500 |
+| `mpg_defect_reports` | `eigene` | JSON | nach den Hooks | nur Server (Route) |
+
+**Größe der JSON-Felder** (in der Admin-Oberfläche „Max size“, 0 heißt 1 MB): `form_templates.schema`
+**2000000**, `form_templates.fassungen` **8000000**, `form_submissions.payload` **2000000**. Die
+übrigen (`abschnitte`, `bearbeitung`, `mpg_defect_reports.eigene`) reichen mit der Vorgabe. Zu klein
+heißt: Eine große Vorlage oder Einsendung lässt sich nicht speichern („Failed to create record“).
+`fassungen` hält der Hook selbst unter 2 000 000 Zeichen (die älteste Fassung fällt zuerst weg, die
+aktuelle bleibt immer); die Vorprüfung zeigt, wie groß die Felder heute sein dürfen.
+
+Felder, die die App schreibt, kommen **vor** die App, sonst verwirft PocketBase den Wert still
+(die App sagt es, wenn eines fehlt). Felder, die nur der Server setzt, kommen **nach** den Hooks:
+vorher könnte sie jeder ohne Anmeldung füllen. `form_submissions.absender_status` leert der erste
+Start dieses Pakets einmal (`[formular] Erster Start eigene` im Log, Merker
+`responda_eigene_start.txt` im Datenverzeichnis), unabhängig vom Merker des Absender-Pakets.
+`template_id` darf Text oder Relation sein.
+
+`form_templates.schema` bleibt eine Liste. Der Hook speichert jedes Feld in der neuen Form
+(`{ id, typ, label, hilfe?, pflicht?, aus?, optionen?, einheit?, min?, max?, abschnitt? }`) und
+spiegelt dazu die alten Schlüssel (`fieldType`, `required`, `hint`, `options`), damit alte
+App-Stände die Vorlage weiter anzeigen. Alte Vorlagen liest der Server und die App wie neue.
+Feldtypen: Text, Langtext, Zahl, Datum, Uhrzeit, Auswahl, Mehrfachauswahl, Ja/Nein.
+
+Eigene Angaben eines Standardformulars stehen als `{ v: 1, version, felder, werte, aelter? }` in
+`product_outputs.payload.eigene`, `mpg_defect_reports.eigene` und `cirs_reports.payload.eigene`;
+`felder` ist ein Schnappschuss der Felder dieser Fassung, Bezeichnungen kommen vom Server, nie vom
+Client. Eine Einsendung trägt im payload `{ v: 2, titel, version, abschnitte, felder, werte,
+aelter, absender?, absender_modus, abgesendet, eingang_sha256 }`; bei „anonym“ fehlt `absender`.
+Alte Einsendungen (flacher payload) bleiben lesbar.
+
+### Hook-Dateien
+
+| Datei | Zweck |
+|---|---|
+| `formular-regeln.js` | dazu: Felder, Einstellung lesen (`standardKonfig`), Schema prüfen und normalisieren, Werte prüfen (`angabenBauen`), Fassungen, Rechte `darfVorgaenge` |
+| `formular.pb.js` | Routen für eigene Formulare (`formular: "eigen"`), eigene Felder in Produktausgabe und Defektmeldung, `form_submissions` direkt anlegen gesperrt, `payload.eigene` beim Ändern fest |
+| `eigene-formulare.pb.js` (neu) | Vorlagen prüfen (Schema, Titel, Absender, Fassungen, Konflikt 409, Löschen nur ohne Einsendungen), Einsendungen nur Status und Notiz ändern (mit Verlauf), nie löschen, Liste und Ansicht nur mit Recht; bleibt bei einer Rücknahme liegen und kommt ohne `formular-regeln.js` aus (dann nur Regeln, Einsendungen trotzdem nur Status und Notiz) |
+| `cirs.pb.js` | beim Anlegen: Organisation aktiv, CIRS an und öffentlich, „Was ist passiert?“ nicht leer, eigene Felder geprüft; `eigene` bleibt beim Ändern; Rückfall ohne `formular-regeln.js` |
+| `formular-felder.pb.js` | ohne `formular.pb.js`: Einsendungen gehen wieder direkt (alter Weg), `status` `neu`, Server-Felder leer |
+| `mpg.pb.js` | `mpg_defect_reports.eigene` bleibt beim Ändern, wie gemeldet |
+
+### Routen (zusätzlich)
+
+| Route | Neu |
+|---|---|
+| `GET /{code}/stand` | `version: 2`; `formulare.eigen` (`an` = Modul Vorgänge frei, `ausstehend` = Feld `form_submissions.absender_status` da); `faehig.eigene_felder` (Defektmeldung nur mit Feld `mpg_defect_reports.eigene`), `faehig.eigene_formulare`, `faehig.eingang` (Felder `status`, `notiz`, `bearbeitung` da) |
+| `POST /{code}/name` | `{ formular: "eigen", vorlage, name }`; Vorlage fehlt 400 (`feld: vorlage`), nimmt nichts an 403 `formular_aus` („Dieses Formular ist nicht aktiv.“), anonym 400 (`feld: formular`) |
+| `POST /{code}/absenden` | `{ formular: "eigen", vorlage, id, absender, daten: { version, werte } }`. Die Vorlage muss zur Organisation gehören, aktiv und nicht archiviert sein, Modul Vorgänge frei, auch mit Mitglieds-Token. Absender nach der Vorlage: `passwort` und `frei` wie bei der Produktausgabe (auch „ausstehend“), `anonym` ohne Absender, auch mit Token, ein mitgeschickter Name wird verworfen. Pflicht und Werte prüft der Server gegen die Fassung `daten.version`. Als älter gilt nur eine ganze Zahl kleiner als die aktuelle Fassung: daraus nimmt er an, was gültig ist, legt Unpassendes als Text unter `aelter` ab und hält die genannte Fassung im Satz fest (nichts bleibt in einer Warteschlange hängen). Alles andere (fehlt, Text, gleich, größer) prüft er streng wie die aktuelle Fassung, Pflicht eingeschlossen; so lässt sich die Prüfung nicht mit einer falschen Nummer umgehen. Dasselbe gilt für `eigene` der Standardformulare und `payload.eigene` bei CIRS. Fehler 400 `daten` mit `feld: "werte.<Kennung>"` und Text („Bitte „…“ ausfüllen.“, „Bitte „…“ prüfen.“), zu groß (200 000 Zeichen) `feld: "werte"`. Antwort dazu `anonym: true/false`. Produktausgabe und Defektmeldung nehmen `daten.eigene = { version, werte }` (Fehler `feld: "eigene.<Kennung>"`, zu groß ab 60 000 `feld: "eigene"`); Defektmeldung nur mit Feld `eigene`, sonst verworfen |
+| `GET /unterschriften`, `POST /unterschreiben`, `POST /zurueckweisen` | auch `formular: "eigen"` (Eintrag mit `vorlage`, `titel`, Zusammenfassung „Titel: erster Wert“); die Obergrenze offener „ausstehend“ zählt Einsendungen mit |
+| `GET /diagnose` | `felder` nennt auch die Felder oben |
+
+### Schutz direkter API-Aufrufe (zusätzlich)
+
+- **`form_submissions` anlegen:** nur über die Route; direkt ohne Superuser **403** „Diese Fassung
+  der App kann dieses Formular nicht mehr senden. Bitte die Seite neu laden.“
+- **`form_submissions` ändern:** nur `status` (`neu`, `in_bearbeitung`, `erledigt`, sonst 400) und
+  `notiz` (bis 4000, sonst 400); alles andere (payload, Absender, Vorlage, Organisation) bleibt.
+  Jede Änderung von Status oder Notiz steht mit Person und Zeit in `bearbeitung.verlauf` (ohne den
+  Text der Notiz). Auch ausstehende Einsendungen lassen sich so bearbeiten.
+- **`form_submissions` löschen:** nur Superuser.
+- **`form_templates` anlegen und ändern:** Schema geprüft (Kennungen, Arten, Bezeichnung bis 120,
+  Hilfetext bis 300, Auswahl 2 bis 30 Optionen ohne Doppelte, Zahlgrenzen, Abschnitte bis 20,
+  Felder bis 80), Titel 1 bis 120, Beschreibung bis 500, sonst 400 mit Grund („Die Felder des
+  Formulars sind nicht gültig: Feld 3 hat keine Bezeichnung.“). `version` und `fassungen` setzt
+  nur der Hook (+1, wenn sich Felder oder Abschnitte ändern; die letzten 10 Fassungen, höchstens
+  2 000 000 Zeichen). Ein Body mit `basis_version`, die nicht mehr stimmt: **409** „Das Formular
+  wurde inzwischen an anderer Stelle geändert. Bitte neu laden.“ Die Organisation bleibt beim
+  Ändern. **Bestandsschutz:** Der alte Baukasten ließ Auswahlfelder mit weniger als zwei Optionen,
+  doppelte Optionen und lange Texte zu. Bleibt ein solches gespeichertes Schema (oder ein zu langer
+  Titel, eine zu lange Beschreibung) bei einer Änderung inhaltlich gleich, lässt der Hook es stehen;
+  so lässt sich eine alte Vorlage weiter aktivieren, deaktivieren und archivieren. Wer Felder
+  ändert, muss sie gültig machen.
+- **Regeln noch offen:** Stehen Create, Update oder Delete von `form_templates` offen, prüft der
+  Hook das Recht selbst (403 „Eigene Formulare verwalten nur Mitglieder mit dem Recht für
+  Vorgänge.“). Steht List oder View von `form_submissions` offen, antwortet die Liste ohne Recht
+  oder mit Einsendungen anderer Organisationen mit 403 und die Ansicht ohne Recht mit 403 (Eintrag
+  im Log). Echtzeit-Abos hält nur die Regel dicht.
+- **`form_templates` löschen:** mit Einsendungen **400** „Dieses Formular hat Einsendungen. Bitte
+  archivieren statt löschen.“
+- **`product_outputs`, `mpg_defect_reports`:** direkt angelegt ohne `payload.eigene` bzw. mit
+  leerem `eigene`; beim Ändern bleiben die eigenen Angaben (auch Lager „Ausbuchen“ im Batch).
+- **`cirs_reports` anlegen:** Organisation aktiv und CIRS an und öffentlich, sonst 403; „Was ist
+  passiert?“ leer: 400; eigene Felder ungültig: 400 mit Text. Ohne `formular-regeln.js` prüft der
+  Hook wie früher nur den Status und behält von `payload.eigene` nur `version` und `werte` (bis
+  60 000 Zeichen).
+
+### Rücknahme
+
+Nur `formular.pb.js` entfernen: Eigene Formulare senden dann auf dem alten Weg direkt (ohne
+Prüfung, `status` `neu`, Server-Felder leer), Vorlagen und Eingang bleiben durch
+`eigene-formulare.pb.js` geschützt, CIRS durch `cirs.pb.js`. Die Felder bleiben.
+
+### Geprüft
+
+Gegen **PocketBase 0.28.4 und 0.40.5** mit den Regeln dieses Abschnitts (Hook-Prüfung
+`scratchpad/pb/formular-test/pruefen.mjs`, zusätzlich zu den Fällen des Absender-Pakets): **1235
+Prüfungen je Version, alle bestanden**, davon 454 für dieses Paket. Geprüft: Vorlagen anlegen und
+ändern mit und ohne Recht (befristet gültig und abgelaufen, fremde Organisation, anonym, auch bei
+offenen Regeln), jede Regel von `schemaFehler`, Altschlüssel, Fassungen (12 Änderungen, genau 10),
+`basis_version` 409, Archivieren, Bestandsschutz, Löschen mit und ohne Einsendungen; Absenden in
+allen drei Absender-Arten (anonym auch mit Mitglieds-Token ohne Namen), jeder Feldtyp gültig und
+ungültig, Pflicht nur bei der aktuellen Fassung, ältere Fassung mit `aelter`, falsche Fassungsnummer streng, zu groß, doppelt;
+Einsendungen nur Status und Notiz mit Verlauf, nie löschen, Liste, Ansicht und Echtzeit nur für
+Berechtigte derselben Organisation; Unterschreiben, Zurückweisen und Obergrenze mit eigenen
+Formularen; eigene Felder in Produktausgabe (auch Lager „Ausbuchen“ im Batch), Defektmeldung und
+CIRS; Gleichlauf goja = Node; Rücknahme, ohne `formular-regeln.js`, ohne die Felder nach den Hooks,
+erster Start eigene (auch wenn das Absender-Paket schon lief). Gegenproben auf 0.40.5: ohne
+`eigene-formulare.pb.js` schlagen 147 Fälle an, ohne `cirs.pb.js` 15, ohne `formular.pb.js` 495
+von 1084. Dazu `scripts/formular-vorpruefung.mjs` (30 Prüfungen je Version) und
+`scripts/hooks-rauchprobe.mjs` auf beiden Versionen.
+
 ## Öffentliche Formulare: später schließen
 
 Noch **nicht** ausführen. Erst, wenn keine alten App-Stände mehr direkt anlegen (frühestens nach
 dem 31.01.2027, dem Enddatum des alten Wegs in der App, `ALTER_SERVER_BIS`) und im Log keine
 direkten Anlagen mehr auftauchen:
 
-1. Create-Regel von `patients`, `product_outputs` und `mpg_defect_reports` auf **gesperrt**
-   (Schloss, null). Dann legt nur noch der Server über die Routen an. Vorher die bisherigen
-   Werte notieren.
+1. Create-Regel von `patients`, `product_outputs`, `mpg_defect_reports` und `form_submissions`
+   auf **gesperrt** (Schloss, null). Dann legt nur noch der Server über die Routen an. Vorher die
+   bisherigen Werte notieren.
 2. Danach erst, mit eigenen Routen: anonymes Update, View und List von `patients` (Bearbeiten mit
    `?id=`, Patientenzugang `/p/:code`), List/View von `inventory_items` und
    `inventory_locations` (Artikelliste der Produktausgabe), List/View von `mpg_devices`

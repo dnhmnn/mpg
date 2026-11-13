@@ -7,6 +7,8 @@ import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
 import { Aktionen, Karte, Leer, Reiter, SCHWERE_RAND, SchwereMarke, fmtDate, knopfLeise, kursivGrau, relativeDate, useBreit } from './teile'
 import { abzeichenStil, melder, type Defect, type ExternalReport } from './typen'
+import { angabenLesen } from '../../lib/formular/felder'
+import AngabenAnsicht from '../../components/AngabenAnsicht'
 
 type Teil = 'eingang' | 'offen' | 'behoben'
 
@@ -74,6 +76,8 @@ export default function Meldungen() {
                 <SchwereMarke severity={r.severity} />
               </div>
               <div style={{ fontSize: 14, marginTop: 4, lineHeight: 1.45 }}>{r.description}</div>
+              {/* Eigene Felder der Organisation, wie gesendet (nur ausgefüllte) */}
+              <AngabenAnsicht angaben={angabenLesen(r.eigene)} art="liste" nurAusgefuellt titel="Weitere Angaben" rahmen={{ marginTop: 8 }} />
               <MelderZeile r={r} style={{ marginTop: 6 }} />
               {m.unklareBestaetigung(r.id) && <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--lbf-fehler-text)', marginTop: 4 }}>Bestätigung nicht sicher gespeichert — bitte erneut senden</div>}
             </div>

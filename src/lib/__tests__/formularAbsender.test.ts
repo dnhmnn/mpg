@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ABSENDER_ABZEICHEN, ABSENDER_VOREINSTELLUNG, angemeldetTrotzAusgeschaltet, ABSENDER_ZUSATZ, FRIST_MS, absenderLesen, absenderModus, absenderZeile,
   darfBearbeiten, darfFormulareEinstellen, darfOhneUnterschrift, einstellungsLinkZeigen, fristEndeVon, istMeinProtokoll,
-  gepruefterPayload, kannAngemeldetSenden, minutenText, rechtAktiv, wartetAufUnterschrift, type AbsenderEintrag,
+  gepruefterPayload, kannAngemeldetSenden, minutenText, rechtAktiv, sammlungVon, wartetAufUnterschrift, type AbsenderEintrag,
 } from '../formular/absender'
 import { FRIST_MS as DOKU_FRIST_MS } from '../../pages/public/doku/absenden'
 import type { User } from '../../types'
@@ -246,5 +246,27 @@ describe('Rechte (Spiegel der Regeln)', () => {
     // CIRS ist anonym, ein unbekanntes Formular ebenso nie
     expect(angemeldetTrotzAusgeschaltet(u({}), 'o1', 'cirs', JETZT)).toBe(false)
     expect(angemeldetTrotzAusgeschaltet(u({}), 'o1', 'unbekannt', JETZT)).toBe(false)
+  })
+})
+
+describe('Eigene Formulare: Einsendungen in form_submissions (Plan Vorgänge 5.3)', () => {
+  it('Sammlung je Formular', () => {
+    expect(sammlungVon('eigen')).toBe('form_submissions')
+    expect(sammlungVon('patienten')).toBe('patients')
+    expect(sammlungVon('defektmeldung')).toBe('mpg_defect_reports')
+  })
+
+  it('Absender wie bei der Produktausgabe: nur mit passendem Statusfeld; anonym und alte Einsendungen ohne', () => {
+    const a = absender({ status: 'nicht_bestaetigt', modus: 'frei', weg: '' })
+    expect(absenderLesen({ payload: { v: 2, absender: a }, absender_status: 'nicht_bestaetigt' }, 'form_submissions')).toEqual(a)
+    expect(absenderLesen({ payload: JSON.stringify({ v: 2, absender: a }), absender_status: 'nicht_bestaetigt' }, 'form_submissions')).toEqual(a)
+    // Vor den Hooks oder nach einer Rücknahme: ohne Statusfeld nicht geglaubt
+    expect(absenderLesen({ payload: { v: 2, absender: a } }, 'form_submissions')).toBeNull()
+    expect(absenderLesen({ payload: { v: 2, absender: a }, absender_status: 'bestaetigt' }, 'form_submissions')).toBeNull()
+    // Anonym und alte, flache Einsendung
+    expect(absenderLesen({ payload: { v: 2, absender_modus: 'anonym' }, absender_status: '' }, 'form_submissions')).toBeNull()
+    expect(absenderLesen({ payload: { f_aaaaaaaa: 'x' } }, 'form_submissions')).toBeNull()
+    expect(absenderZeile(absenderLesen({ payload: { v: 2, absender: absender({ status: 'ausstehend' }) }, absender_status: 'ausstehend' }, 'form_submissions'), 'Anonym'))
+      .toBe('Anna Berg · Unterschrift ausstehend')
   })
 })

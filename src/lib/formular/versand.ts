@@ -10,12 +10,20 @@
 // - Ändern eines schon abgesendeten Protokolls (übernommene Änderung nach
 //   409 `aenderung_alt`).
 // Neues und Altes laufen über dieselbe Kennung, deshalb entsteht kein Doppel.
+//
+// Eigene Formulare (`formular: 'eigen'`, Plan Vorgänge 5.3) laufen genauso; ihren
+// Absender bestimmt die Vorlage (`modus` am Eintrag). „Anonym“ schickt nie ein Token
+// und nie einen Namen (F6).
+//
+// Was der Service Worker im Hintergrund sendet (public/sw-formulare.js), folgt
+// denselben Regeln; hintergrund.test.ts vergleicht beide.
 
-import { FRIST_MS, SAMMLUNG, minutenText, nameVergleichsform, type AbsenderEintrag, type AbsenderModus, type Sammlung } from './absender'
+import { FRIST_MS, minutenText, nameVergleichsform, sammlungVon, type AbsenderEintrag, type AbsenderModus, type FormularArt, type Sammlung, type VorlageModus } from './absender'
 import {
   absenden, aktuelleTokenId, direktAendern, direktAnlegen, geraeteSpeicher, istFehler, neueKennung, SERVER_NIMMT_NICHTS_AN,
-  type AbsenderAngabe, type Antwort, type Erfolg, type Fehler, type Gesendet, type Grund, type NamensErgebnis, type Speicher, type Stand,
+  type AbsenderAngabe, type Antwort, type Erfolg, type Fehler, type FormularStand, type Gesendet, type Grund, type NamensErgebnis, type Speicher, type Stand,
 } from './api'
+import { hintergrundMoeglich, nachAblage, tresorGeschrieben } from '../tresor'
 import { ablegen, aktualisieren, eintrag, eintraege, entfernen, ohnePasswort, OHNE_PASSWORT_NACH_MS, type NeuerEintrag, type Warteeintrag } from './warteschlange'
 
 /** Was die Warteschlange mit einem Eintrag tut (1.18). */
@@ -54,10 +62,27 @@ function zeitpunkt(iso: string | undefined): number {
   return Number.isFinite(t) ? t : NaN
 }
 
+/** Ein eigenes Formular, das ohne Absender geht (Vorlage „anonym“)? */
+export function istAnonym(e: Pick<Warteeintrag, 'formular' | 'modus'>): boolean {
+  return e.formular === 'eigen' && e.modus === 'anonym'
+}
+
+/**
+ * Modus und „ausstehend“ für einen Eintrag: bei den Standardformularen aus dem Stand,
+ * bei eigenen Formularen der Modus der Vorlage am Eintrag und „ausstehend“ aus
+ * `stand.formulare.eigen`. Ohne Stand null.
+ */
+export function formularStandVon(e: Pick<Warteeintrag, 'formular' | 'modus'>, stand: Stand | null): Pick<FormularStand, 'modus' | 'ausstehend'> | null {
+  if (!stand) return null
+  if (e.formular === 'eigen') return { modus: e.modus ?? 'frei', ausstehend: stand.formulare.eigen?.ausstehend === true }
+  return stand.formulare[e.formular] ?? null
+}
+
 /**
  * Was mit einem Eintrag als Nächstes geschieht (1.18, Tabelle „Versandregeln“).
  * Reine Funktion. Ein fremdes Token zählt nie: angemeldet gesendet wird nur,
- * wenn das gültige Token derselben Person gehört, die abgelegt hat.
+ * wenn das gültige Token derselben Person gehört, die abgelegt hat. Ein anonymes
+ * eigenes Formular geht immer ohne Token und ohne Namen.
  */
 export function naechsterSchritt(e: Warteeintrag, k: Kontext): Schritt {
   if (!k.online) return { art: 'warten' }
@@ -65,8 +90,9 @@ export function naechsterSchritt(e: Warteeintrag, k: Kontext): Schritt {
   if (Number.isFinite(spaeter) && spaeter > k.jetzt.getTime()) return { art: 'warten', bis: e.naechsterVersuchAb }
   if (e.ziel) return { art: 'aendern', ziel: e.ziel }
   if (k.serverAlt) return { art: 'alt' }
+  if (istAnonym(e)) return { art: 'senden', absender: null, mitAnmeldung: false }
   if (e.angemeldetId && e.angemeldetId === k.tokenId) return { art: 'senden', absender: null, mitAnmeldung: true }
-  const f = k.stand?.formulare[e.formular]
+  const f = formularStandVon(e, k.stand)
   // Ohne Stand ist der Modus unbekannt: warten, bis er da ist (nie raten)
   if (!f) return { art: 'warten' }
   if (f.modus === 'frei') return nameFalsch(e) ? { art: 'korrigieren' } : { art: 'senden', absender: { name: e.absenderName }, mitAnmeldung: false }
@@ -79,7 +105,7 @@ export function naechsterSchritt(e: Warteeintrag, k: Kontext): Schritt {
 
 /** Geht dieser Eintrag ohne Passwort raus („Ohne Passwort senden“)? Nur bei eindeutigem Namen und wenn der Server „ausstehend“ kennt. */
 export function ohnePasswortMoeglich(e: Warteeintrag, stand: Stand | null): boolean {
-  return e.nameEindeutig === true && !!stand?.formulare[e.formular]?.ausstehend && !!e.absenderName.trim()
+  return !istAnonym(e) && e.nameEindeutig === true && !!formularStandVon(e, stand)?.ausstehend && !!e.absenderName.trim()
 }
 
 /** Schritt für „Ohne Passwort senden“: geht als „Unterschrift ausstehend“ raus. */
@@ -140,9 +166,17 @@ function selbstVerknuepfen(payload: Record<string, unknown>, selbst: { id: strin
  * selbst (Besatzung, `user_id`, `reporter_user_id`); ohne `selbst` trägt er nie eine Kennung.
  */
 export function altSatz(e: Warteeintrag, selbst: { id: string; name: string } | null = null): { sammlung: Sammlung; satz: Record<string, unknown> & { id: string } } {
-  const sammlung = SAMMLUNG[e.formular]
+  const sammlung = sammlungVon(e.formular)
   const name = e.absenderName.trim()
   const d = e.daten
+  if (e.formular === 'eigen') {
+    // Einsendung wie bisher: die Werte flach im payload; Status, Notiz und Absender setzt nur der Server
+    const basis: Record<string, unknown> = istObjekt(e.alt) ? kopie(e.alt) : {
+      template_id: e.vorlage ?? '', org_code: e.orgCode, payload: istObjekt(d.werte) ? kopie(d.werte) : {},
+    }
+    for (const k of ['status', 'notiz', 'bearbeitung', 'absender_status']) delete basis[k]
+    return { sammlung, satz: ohnePasswort({ ...basis, template_id: e.vorlage || basis.template_id, id: e.id, organization_id: e.orgId }) }
+  }
   if (e.formular === 'patienten') {
     const payload: Record<string, unknown> = istObjekt(d.payload) ? kopie(d.payload) : {}
     for (const k of SERVER_SCHLUESSEL) delete payload[k]
@@ -206,7 +240,13 @@ async function altSenden(e: Warteeintrag, mitAnmeldung: boolean): Promise<SendeA
 async function sendenIntern(e: Warteeintrag, angabe: SendeAngabe): Promise<{ antwort: SendeAntwort; id: string }> {
   let id = e.id
   for (let versuch = 0; ; versuch++) {
-    const r = await absenden(e.orgCode, { formular: e.formular, maske: e.maske, id, absender: angabe.absender, daten: e.daten, uebernommen: e.uebernommen }, { mitAnmeldung: angabe.mitAnmeldung })
+    // Anonym: nie ein Token, nie ein Name, auch wenn ein Aufrufer etwas anderes übergibt
+    const anonym = istAnonym(e)
+    const r = await absenden(
+      e.orgCode,
+      { formular: e.formular, maske: e.maske, id, absender: anonym ? null : angabe.absender, daten: e.daten, uebernommen: e.uebernommen, vorlage: e.vorlage },
+      { mitAnmeldung: anonym ? false : angabe.mitAnmeldung },
+    )
     if (!istFehler(r)) return { antwort: r, id: r.wert.id }
     if (r.grund === 'alter_server') return { antwort: await altSenden({ ...e, id }, angabe.mitAnmeldung), id }
     // Kennung schon mit anderem Inhalt vergeben: neue Kennung, sofort ein zweiter Versuch
@@ -264,7 +304,17 @@ export const MELDUNGEN = {
   drosselAbgelegt: (sekunden: number) => `Gerade kommen sehr viele Anfragen. Es ist auf dem Gerät gespeichert und geht in ${minutenText(sekunden)} raus.`,
   serverAbgelegt: 'Der Server hat es gerade nicht angenommen. Es ist auf dem Gerät gespeichert und geht später raus.',
   nichtAbgelegt: (text: string) => `${text} Auf dem Gerät ließ es sich nicht speichern.`,
+  /** Ohne Hintergrundversand (iOS, Firefox, Klartext): an jede Ablage-Meldung und in die Karte (5.7). */
+  ohneHintergrund: (f: FormularArt | FormularArt[]) => `Bitte diese Seite später mit Netz wieder öffnen, sonst ${wasKommt(f)} nicht an.`,
 } as const
+
+/** „kommt das Protokoll“, „kommt die Produktausgabe“ …; mehrere verschiedene: „kommen die Einträge“. */
+function wasKommt(f: FormularArt | FormularArt[]): string {
+  const arten = [...new Set(Array.isArray(f) ? f : [f])]
+  if (arten.length !== 1) return 'kommen die Einträge'
+  const a = arten[0]
+  return a === 'patienten' ? 'kommt das Protokoll' : a === 'produktausgabe' ? 'kommt die Produktausgabe' : a === 'defektmeldung' ? 'kommt die Defektmeldung' : 'kommt das Formular'
+}
 
 /** Was die Karte zu einem bleibenden Fehler als nächsten Schritt sagt. */
 export function bleibendHinweis(e: Pick<Warteeintrag, 'formular' | 'letzterFehler'>): string {
@@ -278,25 +328,41 @@ export function bleibendHinweis(e: Pick<Warteeintrag, 'formular' | 'letzterFehle
   return 'In dieser Karte lässt sich das nicht ändern. Bitte neu erfassen und diesen Eintrag danach verwerfen.'
 }
 
+/**
+ * Ohne Patientennamen (5.4): auf einer öffentlichen Seite ohne Anmeldung eines Mitglieds
+ * dieser Organisation nennt die Karte beim Protokoll nur Einsatznummer und Zeit.
+ */
+export type NamenOption = { ohneNamen?: boolean }
+
 /** Rückfrage vor dem Verwerfen eines Eintrags mit bleibendem Fehler, je Formular. */
-export function verwerfenFrageText(e: Pick<Warteeintrag, 'formular' | 'daten'>): string {
+export function verwerfenFrageText(e: Pick<Warteeintrag, 'formular' | 'daten'> & { titel?: string }, o: NamenOption = {}): string {
   if (e.formular === 'patienten') {
-    const b = eintragBezug(e)
+    const b = eintragBezug(e, o)
     return `Das Protokoll${b ? ` ${b}` : ''} wird von diesem Gerät gelöscht. Es ist danach nirgends mehr gespeichert, das lässt sich nicht rückgängig machen.`
   }
   if (e.formular === 'produktausgabe') return 'Die Produktausgabe wird von diesem Gerät gelöscht. Das lässt sich nicht rückgängig machen.'
+  if (e.formular === 'eigen') {
+    const t = str(e.titel).trim()
+    return `Das Formular${t ? ` „${t}“` : ''} wird von diesem Gerät gelöscht. Das lässt sich nicht rückgängig machen.`
+  }
   return 'Die Defektmeldung wird von diesem Gerät gelöscht. Das lässt sich nicht rückgängig machen. Besteht der Defekt noch, bitte neu melden.'
 }
 
 /**
  * Woran der Mensch einen Eintrag erkennt: Patientendoku der Patient aus dem Titel
- * („Patientendoku: Max Muster“ → „Max Muster“), Produktausgabe der Einsatz,
- * Defektmeldung das Gerät. Leer, wenn nichts Brauchbares da ist.
+ * („Patientendoku: Max Muster“ → „Max Muster“), mit `ohneNamen` nur die Einsatznummer
+ * („zum Einsatz 2026-117“), Produktausgabe der Einsatz, Defektmeldung das Gerät, eigene
+ * Formulare nichts (der Titel der Vorlage steht schon vorn). Leer, wenn nichts Brauchbares da ist.
  */
-export function eintragBezug(e: Pick<Warteeintrag, 'formular' | 'daten'> & { alt?: Record<string, unknown> }): string {
+export function eintragBezug(e: Pick<Warteeintrag, 'formular' | 'daten'> & { alt?: Record<string, unknown> }, o: NamenOption = {}): string {
   const d = e.daten ?? {}
   const kurz = (t: string) => (t.length > 60 ? `${t.slice(0, 59)}…` : t)
   if (e.formular === 'patienten') {
+    if (o.ohneNamen) {
+      const p = istObjekt(d.payload) ? d.payload : {}
+      const nr = str(p.einsatz_nr).trim()
+      return nr ? kurz(`zum Einsatz ${nr}`) : ''
+    }
     const t = str(d.title).trim().replace(/^(Patientendoku|Schnelldoku)\s*:\s*/i, '').trim()
     return /^(Patientendoku|Schnelldoku)$/i.test(t) ? '' : kurz(t)
   }
@@ -304,25 +370,34 @@ export function eintragBezug(e: Pick<Warteeintrag, 'formular' | 'daten'> & { alt
     const einsatz = str(d.einsatz).trim()
     return einsatz ? kurz(`Einsatz ${einsatz}`) : ''
   }
+  if (e.formular === 'eigen') return ''
   const geraet = istObjekt(e.alt) ? str(e.alt.device_name).trim() : ''
   return kurz(geraet)
 }
 
-function artVon(e: Pick<Warteeintrag, 'formular'>): string {
+function artVon(e: Pick<Warteeintrag, 'formular'> & { titel?: string }): string {
+  if (e.formular === 'eigen') {
+    const t = str(e.titel).trim()
+    return t ? (t.length > 60 ? `${t.slice(0, 59)}…` : t) : 'Formular'
+  }
   return e.formular === 'produktausgabe' ? 'Produktausgabe' : e.formular === 'defektmeldung' ? 'Defektmeldung' : 'Protokoll'
 }
 
-/** Kopf der Karte: „Protokoll Max Muster vom 31.10., 14:20 wartet auf das Senden“ (Produktausgabe, Defektmeldung entsprechend). */
-export function eintragKopf(e: Warteeintrag): string {
-  const b = eintragBezug(e)
+/**
+ * Kopf der Karte: „Protokoll Max Muster vom 31.10., 14:20 wartet auf das Senden“ (Produktausgabe,
+ * Defektmeldung entsprechend, eigene Formulare mit ihrem Titel); mit `ohneNamen`
+ * „Protokoll zum Einsatz 2026-117 vom 07.11., 10:20 wartet auf das Senden“.
+ */
+export function eintragKopf(e: Warteeintrag, o: NamenOption = {}): string {
+  const b = eintragBezug(e, o)
   const wer = b ? `${artVon(e)} ${b}` : artVon(e)
   const wann = tagUndZeit(e.angelegt)
   return wann ? `${wer} vom ${wann} wartet auf das Senden` : `${wer} wartet auf das Senden`
 }
 
 /** Meldung nach dem Senden mit Bezug: „Protokoll Max Muster gesendet.“ und ggf. die Unterschrift. */
-export function gesendetText(e: Warteeintrag, ausstehendName: string | null): string {
-  const b = eintragBezug(e)
+export function gesendetText(e: Warteeintrag, ausstehendName: string | null, o: NamenOption = {}): string {
+  const b = eintragBezug(e, o)
   const wer = b ? `${artVon(e)} ${b}` : artVon(e)
   if (ausstehendName === null) return `${wer} gesendet.`
   return ausstehendName ? `${wer} gesendet. Wartet auf die Unterschrift von ${ausstehendName}.` : `${wer} gesendet. Wartet auf die Unterschrift des Absenders.`
@@ -371,7 +446,38 @@ export type Ausfuehrung = {
 }
 
 function mitAnmeldungFuer(e: Warteeintrag): boolean {
-  return !!e.angemeldetId && e.angemeldetId === aktuelleTokenId()
+  return !istAnonym(e) && !!e.angemeldetId && e.angemeldetId === aktuelleTokenId()
+}
+
+/** Was eine Sendung als Fehler zurückgab, so weit es den Eintrag ändert. */
+export type FehlerKurz = Pick<Fehler, 'grund' | 'text'> & { feld?: string; sekunden?: number }
+
+/**
+ * Einen fehlgeschlagenen Versuch am Eintrag festhalten (1.18, „Ergebnisse“). Reine Funktion,
+ * auch für den Hintergrundversand (public/sw-formulare.js rechnet dasselbe, Prüffall in
+ * hintergrund.test.ts). `aendern`: es war eine übernommene Änderung (`ziel`). `id`: die
+ * zuletzt benutzte Kennung (nach einem zweiten Versuch mit neuer Kennung).
+ */
+export function fehlerAnwenden(x: Warteeintrag, f: FehlerKurz, o: { jetzt: Date; aendern?: boolean; id?: string; neueId?: () => string }): Warteeintrag {
+  const jetzt = o.jetzt
+  const n: Warteeintrag = { ...x, versuche: x.versuche + 1 }
+  if (o.id && o.id !== x.id) n.id = o.id
+  if (f.grund === 'netz') return n
+  if (f.grund === 'drossel') {
+    n.naechsterVersuchAb = new Date(jetzt.getTime() + Math.max(1, f.sekunden ?? 60) * 1000).toISOString()
+    return n
+  }
+  if (f.grund === 'kennung') n.id = (o.neueId ?? neueKennung)()
+  if (f.grund === 'name' || f.grund === 'name_unbekannt') n.nameEindeutig = false
+  // Eigenes Formular: die Vorlage verlangt inzwischen ein Passwort, oder sie ist nicht mehr anonym
+  if (n.formular === 'eigen' && f.grund === 'passwort_noetig') n.modus = 'passwort'
+  if (istAnonym(n) && (f.grund === 'name' || f.grund === 'name_unbekannt' || (f.grund === 'daten' && f.feld === 'absender'))) n.modus = 'frei'
+  n.letzterFehler = { grund: f.grund, text: f.text, am: jetzt.toISOString() }
+  if (f.feld) n.letzterFehler.feld = f.feld
+  if (o.aendern || PAUSE_GRUENDE.includes(f.grund)) n.naechsterVersuchAb = new Date(jetzt.getTime() + FEHLER_PAUSE_MS).toISOString()
+  // Zu viele falsche Passwörter: bis zum Ende der Sperre nicht erneut fragen
+  if (f.grund === 'gesperrt') n.naechsterVersuchAb = sperreEnde(jetzt, f.sekunden)
+  return n
 }
 
 /**
@@ -388,7 +494,7 @@ function mitAnmeldungFuer(e: Warteeintrag): boolean {
  *   429 `gesperrt` wartet bis zum Ende der Sperre (`naechsterVersuchAb`).
  * Das Passwort wird nie gespeichert.
  */
-export async function eintragAusfuehren(s: Speicher, e: Warteeintrag, schritt: Schritt, o: { passwort?: string; jetzt?: Date; frageSichtbar?: boolean } = {}): Promise<Ausfuehrung> {
+export async function eintragAusfuehren(s: Speicher, e: Warteeintrag, schritt: Schritt, o: { passwort?: string; jetzt?: Date; frageSichtbar?: boolean; ohneNamen?: boolean } = {}): Promise<Ausfuehrung> {
   const jetzt = o.jetzt ?? new Date()
   if (schritt.art === 'warten') {
     return { ergebnis: 'liegt', meldung: schritt.bis ? MELDUNGEN.wartetBis(schritt.bis) : '' }
@@ -399,7 +505,7 @@ export async function eintragAusfuehren(s: Speicher, e: Warteeintrag, schritt: S
       if (!e.gefragtAb && o.frageSichtbar !== false) aktualisieren(s, e.orgCode, e.id, (x) => ({ ...x, gefragtAb: x.gefragtAb || jetzt.toISOString() }))
       return { ergebnis: 'fragen', meldung: '' }
     }
-    return eintragAusfuehren(s, e, { art: 'senden', absender: { name: e.absenderName, passwort: o.passwort }, mitAnmeldung: false }, { jetzt })
+    return eintragAusfuehren(s, e, { art: 'senden', absender: { name: e.absenderName, passwort: o.passwort }, mitAnmeldung: false }, { jetzt, ohneNamen: o.ohneNamen })
   }
 
   let antwort: SendeAntwort | Antwort<{ id: string }>
@@ -409,7 +515,7 @@ export async function eintragAusfuehren(s: Speicher, e: Warteeintrag, schritt: S
     const aenderung: Record<string, unknown> = {}
     if (typeof d.title === 'string') aenderung.title = d.title
     if (istObjekt(d.payload)) aenderung.payload = d.payload
-    antwort = await direktAendern(SAMMLUNG[e.formular], schritt.ziel, ohnePasswort(aenderung), { mitAnmeldung: mitAnmeldungFuer(e) })
+    antwort = await direktAendern(sammlungVon(e.formular), schritt.ziel, ohnePasswort(aenderung), { mitAnmeldung: mitAnmeldungFuer(e) })
   } else if (schritt.art === 'alt') {
     antwort = await altSenden(e, mitAnmeldungFuer(e))
   } else {
@@ -422,39 +528,21 @@ export async function eintragAusfuehren(s: Speicher, e: Warteeintrag, schritt: S
     entfernen(s, e.orgCode, e.id)
     const w = antwort.wert as Partial<Gesendet>
     const absender = w.absender && typeof w.absender === 'object' ? w.absender : undefined
-    const meldung = gesendetText(e, absender?.status === 'ausstehend' ? (absender.name || e.absenderName.trim()) : null)
+    const meldung = gesendetText(e, absender?.status === 'ausstehend' ? (absender.name || e.absenderName.trim()) : null, { ohneNamen: o.ohneNamen })
     return { ergebnis: 'gesendet', meldung, absender, id: typeof w.id === 'string' ? w.id : id }
   }
 
   const f = antwort as Fehler
-  const am = jetzt.toISOString()
-  const pause = new Date(jetzt.getTime() + FEHLER_PAUSE_MS).toISOString()
 
   // 409 aenderung_alt: die Angaben gehören zu einem abgesendeten Protokoll; dort eintragen
   if (f.grund === 'aenderung_alt' && f.ziel && schritt.art !== 'aendern') {
     const ziel = f.ziel
     aktualisieren(s, e.orgCode, e.id, (x) => { const n = { ...x, ziel, versuche: x.versuche + 1 }; delete n.letzterFehler; return n })
-    return eintragAusfuehren(s, { ...e, ziel }, { art: 'aendern', ziel }, { jetzt })
+    return eintragAusfuehren(s, { ...e, ziel }, { art: 'aendern', ziel }, { jetzt, ohneNamen: o.ohneNamen })
   }
 
   let meldung = schritt.art === 'aendern' ? MELDUNGEN.aenderungAbgewiesen(f.text) : MELDUNGEN.nichtGesendet(f.text)
-  aktualisieren(s, e.orgCode, e.id, (x) => {
-    const n: Warteeintrag = { ...x, versuche: x.versuche + 1 }
-    if (id !== e.id) n.id = id
-    if (f.grund === 'netz') return n
-    if (f.grund === 'drossel') {
-      n.naechsterVersuchAb = new Date(jetzt.getTime() + Math.max(1, f.sekunden ?? 60) * 1000).toISOString()
-      return n
-    }
-    if (f.grund === 'kennung') n.id = neueKennung()
-    if (f.grund === 'name' || f.grund === 'name_unbekannt') n.nameEindeutig = false
-    n.letzterFehler = { grund: f.grund, text: f.text, am }
-    if (f.feld) n.letzterFehler.feld = f.feld
-    if (schritt.art === 'aendern' || PAUSE_GRUENDE.includes(f.grund)) n.naechsterVersuchAb = pause
-    // Zu viele falsche Passwörter: bis zum Ende der Sperre nicht erneut fragen
-    if (f.grund === 'gesperrt') n.naechsterVersuchAb = sperreEnde(jetzt, f.sekunden)
-    return n
-  })
+  aktualisieren(s, e.orgCode, e.id, (x) => fehlerAnwenden(x, f, { jetzt, aendern: schritt.art === 'aendern', id }))
   if (f.grund === 'netz') meldung = MELDUNGEN.ohneNetzWartet
   if (f.grund === 'drossel') meldung = MELDUNGEN.wartetBis(new Date(jetzt.getTime() + Math.max(1, f.sekunden ?? 60) * 1000).toISOString())
   return { ergebnis: 'liegt', meldung, grund: f.grund }
@@ -473,7 +561,7 @@ const laufend = new Map<string, Promise<Lauf>>()
  * Kennung, wie sie vor dem Durchgang war. `frageSichtbar: false` (Karte
  * eingeklappt): die Passwortfrage zählt nicht als gesehen (`gefragtAb` bleibt leer).
  */
-export function abarbeiten(s: Speicher, orgCode: string, k: { online: boolean; stand: Stand | null; serverAlt: boolean; tokenId?: string; frageSichtbar?: boolean }): Promise<Lauf> {
+export function abarbeiten(s: Speicher, orgCode: string, k: { online: boolean; stand: Stand | null; serverAlt: boolean; tokenId?: string; frageSichtbar?: boolean; ohneNamen?: boolean }): Promise<Lauf> {
   const schon = laufend.get(orgCode)
   if (schon) return schon
   const lauf = (async () => {
@@ -483,7 +571,7 @@ export function abarbeiten(s: Speicher, orgCode: string, k: { online: boolean; s
       if (!e) continue
       const jetzt = new Date()
       const schritt = naechsterSchritt(e, { online: k.online, stand: k.stand, serverAlt: k.serverAlt, tokenId: k.tokenId ?? aktuelleTokenId(), jetzt })
-      const r = await eintragAusfuehren(s, e, schritt, { jetzt, frageSichtbar: k.frageSichtbar })
+      const r = await eintragAusfuehren(s, e, schritt, { jetzt, frageSichtbar: k.frageSichtbar, ohneNamen: k.ohneNamen })
       aus[id] = { ...r, schritt: schritt.art }
       if (r.grund === 'netz' || r.grund === 'drossel') break
     }
@@ -508,7 +596,8 @@ export type MaskenErgebnis =
  * auch ohne Passwort, PO-Entscheidung 1).
  */
 export type AblageAnlass = 'netz' | 'gesperrt' | 'drossel' | 'server' | 'ohne_passwort'
-type Ablage = { modus: AbsenderModus; mitAnmeldung: boolean; s?: Speicher | null; anlass?: AblageAnlass; sekunden?: number; text?: string }
+/** `modus`: aus dem Stand, bei eigenen Formularen der Vorlage (auch `anonym`). */
+type Ablage = { modus: AbsenderModus | VorlageModus; mitAnmeldung: boolean; s?: Speicher | null; anlass?: AblageAnlass; sekunden?: number; text?: string }
 
 /** Ende einer Passwortsperre: jetzt + `sekunden` vom Server, ohne Angabe SPERRE_MS. */
 function sperreEnde(jetzt: Date, sekunden?: number): string {
@@ -523,9 +612,20 @@ function sperreEnde(jetzt: Date, sekunden?: number): string {
  * Karte wieder, und ab dieser sichtbaren Frage zählt die Stunde bis „ohne Passwort“.
  */
 export function ablegenMitMeldung(e: NeuerEintrag, o: Ablage): { gespeichert: boolean; meldung: string } {
+  const r = ablegenIntern(e, o)
+  if (!r.gespeichert) return r
+  // Dauerhaften Speicher erbitten, Hintergrundversand anmelden; ohne ihn ein klarer Hinweis (5.5 bis 5.7)
+  nachAblage()
+  return hintergrundMoeglich() ? r : { ...r, meldung: `${r.meldung} ${MELDUNGEN.ohneHintergrund(e.formular)}` }
+}
+
+function ablegenIntern(e: NeuerEintrag, o: Ablage): { gespeichert: boolean; meldung: string } {
   const s = o.s === undefined ? geraeteSpeicher() : o.s
   const jetzt = new Date()
   const neu: NeuerEintrag = { ...e, angemeldetId: o.mitAnmeldung ? (e.angemeldetId || aktuelleTokenId()) : '' }
+  // Eigenes Formular: der Modus der Vorlage geht mit; anonym nie ein Name, nie eine Anmeldung (F6)
+  if (neu.formular === 'eigen' && !neu.modus) neu.modus = o.modus
+  if (istAnonym(neu)) { neu.absenderName = ''; neu.angemeldetId = '' }
   if (o.anlass === 'drossel') neu.naechsterVersuchAb = new Date(jetzt.getTime() + Math.max(1, o.sekunden ?? 60) * 1000).toISOString()
   let sperreBis = ''
   if (o.anlass === 'gesperrt') {
@@ -538,8 +638,8 @@ export function ablegenMitMeldung(e: NeuerEintrag, o: Ablage): { gespeichert: bo
   if (!gespeichert) {
     return { gespeichert, meldung: anlass === 'netz' ? MELDUNGEN.ohneNetzOhneSpeicher : MELDUNGEN.nichtAbgelegt(o.text || 'Das hat gerade nicht geklappt.') }
   }
-  const name = e.absenderName.trim()
-  const passwortWeg = o.modus === 'passwort' && !neu.angemeldetId
+  const name = neu.absenderName.trim()
+  const passwortWeg = (neu.formular === 'eigen' ? neu.modus : o.modus) === 'passwort' && !neu.angemeldetId
   if (anlass === 'drossel') return { gespeichert, meldung: MELDUNGEN.drosselAbgelegt(o.sekunden ?? 60) }
   if (anlass === 'server') return { gespeichert, meldung: o.text === SERVER_NIMMT_NICHTS_AN ? SERVER_NIMMT_NICHTS_AN : MELDUNGEN.serverAbgelegt }
   if (anlass === 'gesperrt') return { gespeichert, meldung: MELDUNGEN.gesperrtAbgelegt(name, sperreBis) }
@@ -554,12 +654,18 @@ export function ablegenMitMeldung(e: NeuerEintrag, o: Ablage): { gespeichert: bo
  * `anlass: 'gesperrt'`); alle anderen als Fehler für die Warnfläche.
  * `o.modus` ist der Modus aus dem Stand (für die Meldung ohne Netz).
  */
-export async function sendenOderAblegen(e: NeuerEintrag, angabe: SendeAngabe, o: { modus: AbsenderModus; s?: Speicher | null; online?: boolean }): Promise<MaskenErgebnis> {
+export async function sendenOderAblegen(e: NeuerEintrag, angabe: SendeAngabe, o: { modus: AbsenderModus | VorlageModus; s?: Speicher | null; online?: boolean }): Promise<MaskenErgebnis> {
   const online = o.online ?? (typeof navigator === 'undefined' ? true : navigator.onLine !== false)
   const basis: NeuerEintrag = { ...e, absenderName: e.absenderName || angabe.absender?.name || '' }
-  const ablage = (anlass: Ablage['anlass'], id: string, f?: Fehler): MaskenErgebnis => {
+  if (basis.formular === 'eigen' && !basis.modus) basis.modus = o.modus
+  const ablage = async (anlass: Ablage['anlass'], id: string, f?: Fehler): Promise<MaskenErgebnis> => {
     const r = ablegenMitMeldung({ ...basis, id }, { modus: o.modus, mitAnmeldung: angabe.mitAnmeldung, s: o.s, anlass, sekunden: f?.sekunden, text: f?.text })
-    return r.gespeichert ? { art: 'abgelegt', meldung: r.meldung } : { art: 'nicht_abgelegt', meldung: r.meldung }
+    if (!r.gespeichert) return { art: 'nicht_abgelegt', meldung: r.meldung }
+    // Liegt es wirklich (verschlüsselt oder als Klartext)? Sonst wie „ohne Speicher“ (5.5)
+    if (!(await tresorGeschrieben())) {
+      return { art: 'nicht_abgelegt', meldung: anlass === 'netz' ? MELDUNGEN.ohneNetzOhneSpeicher : MELDUNGEN.nichtAbgelegt(f?.text || 'Das hat gerade nicht geklappt.') }
+    }
+    return { art: 'abgelegt', meldung: r.meldung }
   }
   if (!online) return ablage('netz', basis.id)
   const { antwort, id } = await sendenIntern(alsEintrag(basis, new Date()), angabe)

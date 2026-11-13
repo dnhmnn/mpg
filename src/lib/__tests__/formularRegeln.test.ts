@@ -358,6 +358,16 @@ describe('Absender entscheiden (1.5, alle 12 Fälle)', () => {
     expect(R.verknuepft({ id: 'a', status: 'ohne_unterschrift' })).toBe(false)
     expect(R.verknuepft({ id: '', status: 'bestaetigt' })).toBe(false)
   })
+  it('0: Modus „anonym“ (eigene Formulare, Plan Vorgänge F6) vor allen anderen: kein Absender, auch mit Token, Name, Passwort', () => {
+    for (const x of [{}, { mitglied: anna }, { passwort: true, passwortTreffer: anna }, { ausstehend: true }, { name: '', treffer: [] }, { feldVorhanden: false }]) {
+      const e = R.absenderEntscheiden(k({ modus: 'anonym', ...x }))
+      expect([e.art, e.anonym, e.status, e.person, e.name]).toEqual(['anlegen', true, '', null, ''])
+    }
+    // Die bisherigen Modi bleiben unverändert (anonym nur, wenn ausdrücklich)
+    expect(R.absenderEntscheiden(k({ modus: 'frei' })).anonym).toBeUndefined()
+    expect(R.absenderEntscheiden(k({ modus: 'Anonym', ausstehend: true })).status).toBe('ausstehend')
+    expect(R.absenderModus({ absender: { patienten: 'anonym' } }, 'patienten')).toBe('passwort')
+  })
 })
 
 describe('Besatzung auflösen (2.5)', () => {

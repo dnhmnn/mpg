@@ -1,9 +1,13 @@
 // Warteschlange der Formulare auf dem Gerät (Bauplan v2, 1.18).
 //
 // Was ohne Netz, bei zu vielen Anfragen oder ohne Passwort nicht rausgeht,
-// liegt unter `formular_warteschlange_<orgCode>` in localStorage, als Liste von
+// liegt unter `formular_warteschlange_<orgCode>` im Speicher des Geräts, als Liste von
 // `Warteeintrag`. NIE ein Passwort, nie ein Token: `ablegen` und `aktualisieren`
 // entfernen jeden Schlüssel `passwort`/`password` in jeder Tiefe.
+//
+// Der Speicher kommt von außen (`geraeteSpeicher()` in api.ts): in der App der Tresor
+// (verschlüsselt in IndexedDB, je Eintrag ein Datensatz, src/lib/tresor.ts), in den
+// Prüffällen ein Speicher wie localStorage. Diese Datei sieht davon nichts.
 //
 // Die alte Warteschlange `offline_queue_<orgCode>` (ältere App-Stände) wird bei
 // jedem Lesen übernommen: erst neu schreiben, dann den alten Schlüssel löschen.
@@ -14,7 +18,7 @@
 //
 // Keine Imports aus React oder PocketBase (nur Typen).
 
-import type { FormularId } from './absender'
+import type { FormularArt, FormularId, VorlageModus } from './absender'
 import type { Grund, Maske, Speicher } from './api'
 
 export type { Speicher } from './api'
@@ -24,8 +28,15 @@ export type Warteeintrag = {
   v: 2
   /** Kennung des neuen Satzes, 15 × [a-z0-9]; bleibt über alle Versuche, neu nur nach 409 `kennung`. */
   id: string
-  formular: FormularId
+  /** Eines der drei Formulare mit Absender oder ein eigenes Formular (`eigen`, mit `vorlage`). */
+  formular: FormularArt
   maske?: Maske
+  /** Nur `eigen`: Kennung der Vorlage (form_templates.id). */
+  vorlage?: string
+  /** Nur `eigen`: Absender der Vorlage bei der Ablage (passwort, frei, anonym). Anonym: nie ein Name. */
+  modus?: VorlageModus
+  /** Nur `eigen`: Titel der Vorlage für die Karte (keine Patientendaten). */
+  titel?: string
   orgCode: string
   /** organizations.id, für den alten Weg. */
   orgId: string
@@ -37,7 +48,7 @@ export type Warteeintrag = {
   angemeldetId: string
   /** Genau der Teil `daten` der Route (1.5). */
   daten: Record<string, unknown>
-  /** Nur produktausgabe und defektmeldung: der Satz für den alten Weg ohne id. */
+  /** Produktausgabe, Defektmeldung und eigene Formulare: der Satz für den alten Weg ohne id. */
   alt?: Record<string, unknown>
   /** Aus offline_queue_<org> übernommen. */
   uebernommen?: boolean
@@ -65,6 +76,7 @@ export const OHNE_PASSWORT_NACH_MS = 60 * 60 * 1000
 
 const FORMULARE: FormularId[] = ['patienten', 'produktausgabe', 'defektmeldung']
 const MASKEN: Maske[] = ['doku', 'alt', 'schnell']
+const MODI: VorlageModus[] = ['passwort', 'frei', 'anonym']
 
 /** Schlüssel der Warteschlange einer Organisation in localStorage. */
 export function schluessel(orgCode: string): string {
@@ -97,9 +109,13 @@ function istObjekt(x: unknown): x is Record<string, unknown> {
 export function eintragGueltig(x: unknown): x is Warteeintrag {
   if (!istObjekt(x)) return false
   const e = x as Partial<Warteeintrag>
+  const eigen = e.formular === 'eigen'
   return e.v === 2
     && typeof e.id === 'string' && /^[a-z0-9]{15}$/.test(e.id)
-    && FORMULARE.includes(e.formular as FormularId)
+    && (eigen || FORMULARE.includes(e.formular as FormularId))
+    && (!eigen || (typeof e.vorlage === 'string' && /^[a-z0-9]{15}$/.test(e.vorlage)))
+    && (e.modus === undefined || MODI.includes(e.modus))
+    && (e.titel === undefined || typeof e.titel === 'string')
     && (e.maske === undefined || MASKEN.includes(e.maske))
     && typeof e.orgCode === 'string'
     && typeof e.orgId === 'string'

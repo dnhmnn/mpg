@@ -255,3 +255,27 @@ describe('Warteschlange: anzahlAlle', () => {
     expect(anzahlAlle({ get length(): number { throw new Error('x') }, key: () => null, getItem: () => null })).toBe(0)
   })
 })
+
+describe('Warteschlange: eigene Formulare (Plan Vorgänge 5.3)', () => {
+  const V = 'vvvvvvvvvvvvvv1'
+  const eig = (x: Partial<NeuerEintrag> = {}): NeuerEintrag => neu({ formular: 'eigen', maske: undefined, vorlage: V, modus: 'frei', titel: 'Fahrzeugcheck', daten: { version: 1, werte: { f_aaaaaaaa: 'RTW 1' } }, ...x })
+
+  it('mit gültiger Vorlage abgelegt und gelesen', () => {
+    const s = speicher()
+    expect(ablegen(s, eig(), JETZT)).toBe(true)
+    expect(ablegen(s, eig({ id: 'zzzzzzzzzzzzzzz', modus: 'anonym', absenderName: '' }), JETZT)).toBe(true)
+    const l = eintraege(s, 'wache1')
+    expect(l.map((e) => [e.formular, e.vorlage, e.modus, e.titel])).toEqual([['eigen', V, 'frei', 'Fahrzeugcheck'], ['eigen', V, 'anonym', 'Fahrzeugcheck']])
+    expect(anzahlAlle(s)).toBe(2)
+  })
+
+  it('ohne oder mit falscher Vorlage, unbekanntem Modus: nicht abgelegt', () => {
+    const s = speicher()
+    expect(ablegen(s, eig({ vorlage: undefined }), JETZT)).toBe(false)
+    expect(ablegen(s, eig({ vorlage: 'kurz' }), JETZT)).toBe(false)
+    expect(ablegen(s, eig({ modus: 'offen' as never }), JETZT)).toBe(false)
+    expect(ablegen(s, eig({ titel: 7 as never }), JETZT)).toBe(false)
+    expect(ablegen(s, neu({ formular: 'cirs' as never }), JETZT)).toBe(false)
+    expect(s.d.size).toBe(0)
+  })
+})

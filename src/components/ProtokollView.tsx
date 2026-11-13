@@ -2,6 +2,7 @@ import type { PatientPayload } from '../pages/patienten/types'
 import { PubSection, PubWrap, lbl, inp } from '../pages/public/pubStyles'
 import AelrdProtokollView from './AelrdProtokollView'
 import { istDivi } from '../lib/protokoll'
+import { ALTFELDER_TITEL, altfelder } from '../lib/patientenAltfelder'
 
 const grid: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: '.75rem' }
 const activePill: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', border: '0.5px solid transparent', borderRadius: 999, padding: '.2rem .6rem', background: 'var(--accent)', fontSize: '.9rem', margin: '2px', color: '#fff', fontWeight: 700 }
@@ -63,13 +64,54 @@ interface Props {
   payload: PatientPayload
   changedFields?: Set<string>
   tfChangedFields?: Set<string>
+  /**
+   * `form_config` der Organisation (Objekt oder Text): beschriftet die Werte
+   * früherer eigener Felder (`custom_<Zeit>`, Bauplan Vorgänge B1). Ohne sie
+   * stehen die Werte unter „Eigenes Feld“.
+   */
+  formConfig?: unknown
 }
 
-export default function ProtokollView({ payload, changedFields: cf, tfChangedFields: tf }: Props) {
+/** Unterer Innenabstand von PubWrap (Platz für eine Leiste unten). */
+const PUBWRAP_UNTEN = 120
+
+/**
+ * Werte früherer eigener Felder der Organisation. Die Patientendoku ist fest
+ * (PO 2), was so ausgefüllt wurde, bleibt aber sichtbar. Nur, wenn etwas da ist.
+ */
+export function AltfelderAbschnitt({ payload, formConfig }: { payload: unknown; formConfig?: unknown }) {
+  const liste = altfelder(payload, formConfig)
+  if (!liste.length) return null
+  return (
+    <PubSection title={ALTFELDER_TITEL} open icon={pik(<><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="7" y1="9" x2="17" y2="9" /><line x1="7" y1="13" x2="17" y2="13" /><line x1="7" y1="17" x2="13" y2="17" /></>)}>
+      <div style={grid}>
+        {liste.map((f) => (
+          <div key={f.id}>
+            <div style={lbl}>{f.label}</div>
+            <div style={{ ...inp, color: 'var(--text)', marginTop: 6, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{f.wert}</div>
+          </div>
+        ))}
+      </div>
+    </PubSection>
+  )
+}
+
+export default function ProtokollView({ payload, changedFields: cf, tfChangedFields: tf, formConfig }: Props) {
   // Fassung 2.0 wird aus dem Feldkatalog angezeigt — vollstaendig und ohne
   // von Hand gepflegte Liste. Fassung 1.0 behaelt ihre gewachsene Ansicht.
   if (istDivi(payload)) {
-    return <AelrdProtokollView payload={payload as Record<string, unknown>} changedFields={cf} tfChangedFields={tf} />
+    const mitAlten = altfelder(payload, formConfig).length > 0
+    return (
+      <>
+        <AelrdProtokollView payload={payload as Record<string, unknown>} changedFields={cf} tfChangedFields={tf} />
+        {/* Direkt unter dem letzten Abschnitt, als stünde es in derselben Hülle */}
+        {mitAlten ? (
+          <div style={{ maxWidth: 800, margin: `-${PUBWRAP_UNTEN}px auto 0`, padding: `0 1rem ${PUBWRAP_UNTEN}px` }}>
+            <AltfelderAbschnitt payload={payload} formConfig={formConfig} />
+          </div>
+        ) : null}
+      </>
+    )
   }
 
   const p = payload as any
@@ -469,6 +511,8 @@ export default function ProtokollView({ payload, changedFields: cf, tfChangedFie
           <img src={p.signature} alt="Unterschrift" style={{ maxWidth: 300, marginTop: '.75rem', border: '0.5px solid var(--border)', borderRadius: 8 }} />
         )}
       </PubSection>
+
+      <AltfelderAbschnitt payload={payload} formConfig={formConfig} />
     </PubWrap>
   )
 }
