@@ -12,6 +12,9 @@
 //   bevor das Seitenende erreicht ist. Nicht tun (am iPhone ausprobiert): auf hell wechseln,
 //   solange der Kopf noch zu sehen ist (die Statusleiste wird dann hell), oder einen festen
 //   Streifen an den unteren Rand legen (die Safari-Leiste wird dann deckend).
+//   Versuch: Mit kopf bleibt html immer hell, und nur body wechselt die Farbe. Hinter dem
+//   Seitenende (schnelles Wischen, Nachfedern) liegt dann die helle Farbe von html. Ob Safari
+//   die Statusleiste nach body färbt, ist am iPhone zu prüfen; sonst zurück auf beide.
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
 //   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
@@ -36,8 +39,10 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       const t = oben ? token : blatt
       const farbe = getComputedStyle(document.documentElement).getPropertyValue(t).trim()
       if (farbe) m.content = farbe
-      // Als CSS-Variable, folgt also der Darstellung
-      document.documentElement.style.backgroundColor = `var(${t})`
+      // Als CSS-Variable, folgt also der Darstellung. Mit kopf (Versuch, Variante 3 des Owners):
+      // html bleibt immer hell, nur body trägt das Rot. Was hinter dem Seitenende liegt (auch beim
+      // Nachfedern), zeigt die Farbe von html; so kann dort kein Rot aufzucken.
+      document.documentElement.style.backgroundColor = `var(${kopf ? blatt : t})`
       document.body.style.backgroundColor = `var(${t})`
     }
     // Ist der rote Kopf noch zu sehen? Höchstens einmal je Bild prüfen, nur bei einem Wechsel neu setzen

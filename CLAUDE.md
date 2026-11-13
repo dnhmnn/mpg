@@ -144,6 +144,8 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
     noch zu sehen ist (macht die Statusleiste hell).
   - Ebenfalls verworfen: das Nachfedern am Seitenende abschalten (`overscroll-behavior`). Das
     Federn bleibt, wie es ist.
+  - Im Versuch (am iPhone zu bestätigen): `html` bleibt immer hell, nur `body` trägt das Rot,
+    damit hinter dem Seitenende beim schnellen Wischen kein Rot aufzuckt.
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
   Scrollen und ganz unten.
 
