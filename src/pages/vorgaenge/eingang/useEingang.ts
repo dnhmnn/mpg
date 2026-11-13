@@ -46,6 +46,14 @@ export function useAbo(aktiv: boolean, thema: string, bei: (e: Ereignis) => void
 }
 
 /** Filter der Organisation, optional einer Vorlage. */
+/** Filter „gehört zu einer dieser Vorlagen“ (Kennungen über pb.filter gebunden). */
+export function vorlagenFilter(ids: string[]): string {
+  const teile = ids.map((_, i) => `template_id = {:v${i}}`)
+  const werte: Record<string, string> = {}
+  ids.forEach((id, i) => { werte[`v${i}`] = id })
+  return pb.filter(`(${teile.join(' || ')})`, werte)
+}
+
 export function orgFilter(orgId: string, vorlage?: string): string {
   return vorlage
     ? pb.filter('organization_id = {:o} && template_id = {:t}', { o: orgId, t: vorlage })
@@ -55,7 +63,9 @@ export function orgFilter(orgId: string, vorlage?: string): string {
 /**
  * Zahl der neuen Einsendungen der Organisation für den Reiter (3.8.6). Ohne Modul oder Recht
  * Vorgänge 0 und kein Abo. Fehlt das Feld `status` (vor Owner-Schritt 6), zählt jede Einsendung
- * als neu; ein Satz mit leerem Status ebenso.
+ * als neu; ein Satz mit leerem Status ebenso. Gezählt wird nur, was der Reiter auch zeigt:
+ * Einsendungen zu Formularen, die es in der Organisation gibt (verwaiste nennt der Reiter
+ * gesondert, sie lassen sich hier nicht bearbeiten).
  */
 export function useNeuZahl(k: VgKontext): number {
   const aktiv = vorgaengeVoll(k) && !!k.orgId
@@ -68,15 +78,25 @@ export function useNeuZahl(k: VgKontext): number {
     let weg = false
     const zaehlen = async () => {
       const liste = pb.collection('form_submissions')
+      // Nur Einsendungen zu vorhandenen Formularen der Organisation (wie die Liste im Reiter)
+      let mitVorlage = ''
       try {
-        const r = await liste.getList(1, 1, { filter: `${orgFilter(orgId)} && (status = "neu" || status = "")`, fields: 'id', requestKey: null })
+        const vorlagen = await pb.collection('form_templates').getFullList<{ id: string }>({ filter: orgFilter(orgId), fields: 'id', requestKey: null })
+        if (weg) return
+        if (!vorlagen.length) { setN(0); return }
+        mitVorlage = vorlagenFilter(vorlagen.map((v) => v.id))
+      } catch {
+        return // Netz: die Zahl bleibt, wie sie war
+      }
+      try {
+        const r = await liste.getList(1, 1, { filter: `${orgFilter(orgId)} && ${mitVorlage} && (status = "neu" || status = "")`, fields: 'id', requestKey: null })
         if (!weg) setN(r.totalItems)
       } catch (e) {
         if (weg) return
         if (status(e) === 400) {
           // Feld status fehlt noch: alle zählen als neu
           try {
-            const r = await liste.getList(1, 1, { filter: orgFilter(orgId), fields: 'id', requestKey: null })
+            const r = await liste.getList(1, 1, { filter: `${orgFilter(orgId)} && ${mitVorlage}`, fields: 'id', requestKey: null })
             if (!weg) setN(r.totalItems)
           } catch { if (!weg) setN(0) }
         } else if (status(e) === 403 || status(e) === 401) setN(0)

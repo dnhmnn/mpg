@@ -8,7 +8,9 @@ export const BV_CSS = `
   --bv-linie: rgba(var(--lbf-grau-rgb), 0.2);
   --bv-feldrand: rgba(var(--lbf-grau-rgb), 0.4);
   --bv-schalter-aus: rgba(var(--lbf-grau-rgb), 0.26);
-  min-height: 100vh; min-height: 100dvh;
+  /* Bis unter die untere Safari-Leiste (größte Höhe, lvh): Auf kurzen Seiten läge dort sonst
+     der rote Hintergrund von html/body hinter dem Seitenende (useStatusleiste). */
+  min-height: 100vh; min-height: 100lvh;
   display: flex; flex-direction: column;
   background: var(--warm-bg); color: var(--lbf-text);
   font-size: 15px; line-height: 1.3; font-variant-numeric: tabular-nums;

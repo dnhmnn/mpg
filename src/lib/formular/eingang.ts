@@ -29,6 +29,8 @@ export const EINGANG_TEXTE = {
   eingang: 'Eingang',
   leerReiter: 'Noch keine Einsendungen.',
   leerReiterHinweis: 'Hier erscheinen eure eigenen Formulare, sobald sie aktiv sind oder etwas eingegangen ist.',
+  /** Einsendungen zu Formularen, die es nicht mehr gibt: nicht verloren, aber hier nicht zu öffnen. */
+  verwaist: (n: number) => `${n === 1 ? 'Eine Einsendung gehört' : `${n} Einsendungen gehören`} zu einem Formular, das es nicht mehr gibt. ${n === 1 ? 'Sie bleibt' : 'Sie bleiben'} gespeichert, lässt sich hier aber nicht öffnen und zählt nicht am Reiter.`,
   leer: { neu: 'Keine neuen Einsendungen.', in_bearbeitung: 'Nichts in Bearbeitung.', archiv: 'Noch nichts im Archiv.' },
   leerSuche: 'Keine Einsendung passt zur Suche.',
   sucheAria: 'Einsendungen durchsuchen',
@@ -172,6 +174,14 @@ export function zaehlen(recs: Obj[] | null | undefined): Zahlen {
 }
 
 /** Zahlen je Vorlage (template_id). */
+/** Zahl der Einsendungen, deren Formular es in der Organisation nicht (mehr) gibt. */
+export function verwaisteEinsendungen(recs: Obj[] | null | undefined, vorlagen: Obj[] | null | undefined): number {
+  const da = new Set((vorlagen ?? []).map((v) => String(v?.id ?? '')))
+  let n = 0
+  for (const r of recs ?? []) if (!da.has(String(r?.template_id ?? ''))) n++
+  return n
+}
+
 export function zaehlenJeVorlage(recs: Obj[] | null | undefined): Record<string, Zahlen> {
   const aus: Record<string, Zahlen> = {}
   for (const r of recs ?? []) {

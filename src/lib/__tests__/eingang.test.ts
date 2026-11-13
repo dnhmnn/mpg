@@ -470,3 +470,16 @@ describe('Fehlertexte', () => {
     expect(eingangFehlerText(null, 'Ersatz')).toBe('Ersatz')
   })
 })
+
+describe('Eingang: verwaiste Einsendungen (Formular gelöscht)', () => {
+  it('zählt Einsendungen ohne vorhandene Vorlage, auch ohne template_id', async () => {
+    const { verwaisteEinsendungen, EINGANG_TEXTE } = await import('../formular/eingang')
+    const vorlagen = [{ id: 'v1' }, { id: 'v2' }]
+    const recs = [{ template_id: 'v1' }, { template_id: 'weg' }, { template_id: '' }, { template_id: 'v2' }]
+    expect(verwaisteEinsendungen(recs, vorlagen)).toBe(2)
+    expect(verwaisteEinsendungen(recs, [])).toBe(4)
+    expect(verwaisteEinsendungen([], vorlagen)).toBe(0)
+    expect(EINGANG_TEXTE.verwaist(1)).toBe('Eine Einsendung gehört zu einem Formular, das es nicht mehr gibt. Sie bleibt gespeichert, lässt sich hier aber nicht öffnen und zählt nicht am Reiter.')
+    expect(EINGANG_TEXTE.verwaist(3)).toContain('3 Einsendungen gehören')
+  })
+})

@@ -7,7 +7,7 @@ import { Abschnitt, Hinweis, Leer, Notiz, Zeile } from '../bausteine'
 import type { VgKontext } from '../kontext'
 import { vorgaengeVoll } from '../logik'
 import {
-  EINGANG_TEXTE as T, vorlageArchiviert, vorlageTitel, vorlagenImEingang, zaehlenJeVorlage, zahlenZeile,
+  EINGANG_TEXTE as T, verwaisteEinsendungen, vorlageArchiviert, vorlageTitel, vorlagenImEingang, zaehlenJeVorlage, zahlenZeile,
 } from '../../../lib/formular/eingang'
 import { EIN_CSS } from './stil'
 import { useUebersicht } from './useEingang'
@@ -17,6 +17,8 @@ export default function EingangReiter({ k }: { k: VgKontext }) {
   const { daten, laedt, fehler, neuLaden } = useUebersicht(k)
   const zahlen = useMemo(() => zaehlenJeVorlage(daten.einsendungen), [daten.einsendungen])
   const liste = useMemo(() => vorlagenImEingang(daten.vorlagen, zahlen), [daten.vorlagen, zahlen])
+  // Einsendungen zu Formularen, die es nicht mehr gibt (etwa im alten Baukasten gelöscht)
+  const verwaist = useMemo(() => verwaisteEinsendungen(daten.einsendungen, daten.vorlagen), [daten.einsendungen, daten.vorlagen])
 
   if (!voll) return <Notiz titel={T.keinZugriffTitel}>{T.keinZugriff}</Notiz>
 
@@ -32,6 +34,7 @@ export default function EingangReiter({ k }: { k: VgKontext }) {
         <>
           <div className="bv-flaeche"><Leer>{T.leerReiter}</Leer></div>
           <Hinweis>{T.leerReiterHinweis}</Hinweis>
+          {verwaist > 0 && <Hinweis>{T.verwaist(verwaist)}</Hinweis>}
         </>
       ) : (
         <>
@@ -50,6 +53,7 @@ export default function EingangReiter({ k }: { k: VgKontext }) {
             })}
           </div>
           <Hinweis>Erledigte Einsendungen stehen im Archiv des Formulars. Gelöscht wird nichts.</Hinweis>
+          {verwaist > 0 && <Hinweis>{T.verwaist(verwaist)}</Hinweis>}
         </>
       )}
     </>

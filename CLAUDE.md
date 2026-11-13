@@ -127,6 +127,20 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 
 ---
 
+### Seiten im Dunkelrot-Design (Benutzer, Vorgänge und alle weiteren)
+- Immer den gemeinsamen Rahmen nehmen: `Seite` aus `src/pages/benutzer/bausteine.tsx`, die Stile
+  `BV_CSS` (`src/pages/benutzer/stil.ts`) und `useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })`.
+  Keinen eigenen Kopf, keine eigene Statusleisten-Lösung bauen.
+- Safari am iPhone (iOS 26) muss so aussehen wie in der Benutzerverwaltung:
+  - Die Statusleiste (Uhr, WLAN, Akku) ist dunkelrot, solange der rote Kopf zu sehen ist.
+  - Beim Scrollen keine rote Linie oder Kante oben.
+  - Die untere Safari-Leiste ist nie rot und bleibt durchsichtig wie in Dateien: Der Inhalt
+    scheint durch, kein deckender Streifen.
+  - Auch kurze Seiten: Die Seite reicht bis unter die Leiste (`100lvh`), und am Seitenende wird
+    der Hintergrund hell (`useStatusleiste`, `endeErreicht`).
+- Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
+  Scrollen und ganz unten.
+
 ## Keyframes (in globals.css oder inline `<style>`)
 ```css
 @keyframes greetNameIn {

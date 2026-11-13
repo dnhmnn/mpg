@@ -7,10 +7,22 @@
 //   Kopf (kopf, ein CSS-Selektor) oben zu sehen ist. Ist er weggescrollt, gilt wieder
 //   der helle Hintergrund (blatt): Dann scheint der Inhalt durch die Leisten wie auf
 //   jeder anderen Seite, und die untere Leiste wird nie rot. Ohne kopf bleibt es rot.
+//   Kurze Seiten (Vorgänge, Rollen): Der Kopf bleibt dort immer zu sehen. Ist nach dem
+//   Scrollen das Seitenende erreicht, gilt deshalb ebenfalls der helle Hintergrund, sonst
+//   stünde unter der Safari-Leiste das Rot hinter dem Seitenende. Damit es in Ruhe gar
+//   nicht erst dazu kommt, reicht die Seite (.bv in benutzer/stil.ts) bis unter die Leiste.
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
 //   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
 import { useEffect } from 'react'
+
+/**
+ * Ist nach dem Scrollen das Ende der Seite erreicht? Dann liegt unter der unteren Safari-Leiste
+ * nichts mehr von der Seite, sondern der Hintergrund von html/body. In Ruhe (ganz oben) nie.
+ */
+export function endeErreicht(w: { scrollY: number; innerHeight: number } = window, hoehe: number = (document.scrollingElement ?? document.documentElement).scrollHeight): boolean {
+  return w.scrollY > 0 && hoehe - (w.scrollY + w.innerHeight) < 2
+}
 
 export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string } = {}): void {
   const { kopf, blatt = '--warm-bg' } = opt
@@ -42,7 +54,8 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       geplant = requestAnimationFrame(() => {
         geplant = 0
         const el = document.querySelector(kopf)
-        const jetzt = el ? el.getBoundingClientRect().bottom > 0 : window.scrollY < 1
+        const kopfDa = el ? el.getBoundingClientRect().bottom > 0 : window.scrollY < 1
+        const jetzt = kopfDa && !endeErreicht()
         if (jetzt !== oben) { oben = jetzt; setzen() }
       })
     }
@@ -53,9 +66,12 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
     mq?.addEventListener?.('change', setzen)
     const mo = new MutationObserver(setzen)
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+    // Ändert sich die Länge der Seite (Liste geladen, Reiter gewechselt), Seitenende neu prüfen
+    const ro = kopf && typeof ResizeObserver !== 'undefined' ? new ResizeObserver(pruefen) : null
     if (kopf) {
       window.addEventListener('scroll', pruefen, { passive: true })
       window.addEventListener('resize', pruefen)
+      ro?.observe(document.body)
     }
     return () => {
       mq?.removeEventListener?.('change', setzen)
@@ -63,6 +79,7 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       cancelAnimationFrame(geplant)
       window.removeEventListener('scroll', pruefen)
       window.removeEventListener('resize', pruefen)
+      ro?.disconnect()
       if (angelegt) m.remove()
       else m.content = vorher
       document.documentElement.style.backgroundColor = html
