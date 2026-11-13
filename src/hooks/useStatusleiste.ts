@@ -12,9 +12,6 @@
 //   bevor das Seitenende erreicht ist. Nicht tun (am iPhone ausprobiert): auf hell wechseln,
 //   solange der Kopf noch zu sehen ist (die Statusleiste wird dann hell), oder einen festen
 //   Streifen an den unteren Rand legen (die Safari-Leiste wird dann deckend).
-//   Mit kopf schaltet der Hook außerdem das Nachfedern am Seitenende ab (overscroll-behavior):
-//   Bei schnellem Wischen schoss eine kurze Seite sonst übers Ende hinaus, und für einen
-//   Augenblick schien dahinter noch das Rot durch, bevor der Hintergrund hell wurde.
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
 //   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
@@ -34,12 +31,6 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
     const vorher = m.content
     const html = document.documentElement.style.backgroundColor
     const body = document.body.style.backgroundColor
-    const federnHtml = document.documentElement.style.overscrollBehaviorY
-    const federnBody = document.body.style.overscrollBehaviorY
-    if (kopf) {
-      document.documentElement.style.overscrollBehaviorY = 'none'
-      document.body.style.overscrollBehaviorY = 'none'
-    }
     let oben = true
     const setzen = () => {
       const t = oben ? token : blatt
@@ -81,8 +72,6 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       else m.content = vorher
       document.documentElement.style.backgroundColor = html
       document.body.style.backgroundColor = body
-      document.documentElement.style.overscrollBehaviorY = federnHtml
-      document.body.style.overscrollBehaviorY = federnBody
     }
   }, [token, kopf, blatt])
 }

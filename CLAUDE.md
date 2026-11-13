@@ -139,11 +139,11 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   - Kurze Seiten verhalten sich wie lange: Das helle Blatt (`.bv-blatt`) ist höher als der
     Bildschirm (mit Reserve über den unteren Rand hinaus), der rote Kopf scrollt also ganz weg,
     bevor das Seitenende kommt. Sonst scheint kurz vor dem Ende das Rot unten durch.
-  - Kein Nachfedern am Seitenende (`overscroll-behavior-y: none`, setzt `useStatusleiste`):
-    Sonst zuckt bei schnellem Wischen kurz das Rot hinter dem Seitenende auf.
   - Am iPhone schon ausprobiert und verworfen: ein fester heller Streifen am unteren Rand (macht
     die Safari-Leiste deckend) und ein Wechsel auf hellen Hintergrund, solange der rote Kopf
     noch zu sehen ist (macht die Statusleiste hell).
+  - Ebenfalls verworfen: das Nachfedern am Seitenende abschalten (`overscroll-behavior`). Das
+    Federn bleibt, wie es ist.
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
   Scrollen und ganz unten.
 
