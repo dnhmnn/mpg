@@ -7,9 +7,8 @@
 //   Kopf (kopf, ein CSS-Selektor) oben zu sehen ist. Ist er weggescrollt, gilt wieder
 //   der helle Hintergrund (blatt): Dann scheint der Inhalt durch die Leisten wie auf
 //   jeder anderen Seite, und die untere Leiste wird nie rot. Ohne kopf bleibt es rot.
-//   Kurze Seiten verhalten sich wie lange: Das helle Blatt ist mindestens so hoch wie der
-//   Bildschirm (.bv-blatt in benutzer/stil.ts), der Kopf scrollt also auch dort ganz weg,
-//   bevor das Seitenende erreicht ist. Nicht tun (am iPhone ausprobiert): auf hell wechseln,
+//   Kurze Seiten: html bleibt immer hell (siehe unten), hinter dem Seitenende liegt also nie
+//   Rot; eine Reserve unter dem Blatt braucht es nicht. Nicht tun (am iPhone ausprobiert): auf hell wechseln,
 //   solange der Kopf noch zu sehen ist (die Statusleiste wird dann hell), oder einen festen
 //   Streifen an den unteren Rand legen (die Safari-Leiste wird dann deckend).
 //   Versuch: Mit kopf bleibt html immer hell, und nur body wechselt die Farbe. Hinter dem
