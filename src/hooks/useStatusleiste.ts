@@ -11,6 +11,10 @@
 //   Scrollen das Seitenende erreicht, gilt deshalb ebenfalls der helle Hintergrund, sonst
 //   stünde unter der Safari-Leiste das Rot hinter dem Seitenende. Damit es in Ruhe gar
 //   nicht erst dazu kommt, reicht die Seite (.bv in benutzer/stil.ts) bis unter die Leiste.
+//   In Ruhe (ganz oben, Safari-Leiste aufgeklappt) färbt Safari den Rand unter der Leiste
+//   trotzdem nach html/body oder nach einem festen Element am unteren Rand. Dafür setzt
+//   der Hook data-bv-ruhe an <html>: Dann zeigt die Seite einen hellen Streifen am Rand
+//   (.bv-bodenkante). Beim Scrollen ist er weg, der Inhalt scheint durch wie in Dateien.
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
 //   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
@@ -55,6 +59,7 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
         geplant = 0
         const el = document.querySelector(kopf)
         const kopfDa = el ? el.getBoundingClientRect().bottom > 0 : window.scrollY < 1
+        document.documentElement.toggleAttribute('data-bv-ruhe', window.scrollY < 1)
         const jetzt = kopfDa && !endeErreicht()
         if (jetzt !== oben) { oben = jetzt; setzen() }
       })
@@ -80,6 +85,7 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       window.removeEventListener('scroll', pruefen)
       window.removeEventListener('resize', pruefen)
       ro?.disconnect()
+      document.documentElement.removeAttribute('data-bv-ruhe')
       if (angelegt) m.remove()
       else m.content = vorher
       document.documentElement.style.backgroundColor = html

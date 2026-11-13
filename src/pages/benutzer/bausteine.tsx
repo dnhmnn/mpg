@@ -30,6 +30,9 @@ export function Seite({ titel, unter, zurueck, zurueckLabel = 'Zurück', rechts,
       {/* Fester Streifen hinter Uhr, WLAN und Akku: Als App vom Homebildschirm liegt die Seite
           unter der Statusleiste, beim Scrollen stünde dort sonst der helle Inhalt */}
       <div className="bv-statusleiste" aria-hidden="true" />
+      {/* Heller Rand unten, nur in Ruhe (useStatusleiste setzt data-bv-ruhe): Safari färbt den
+          Bereich unter der aufgeklappten Leiste sonst nach dem roten Hintergrund */}
+      <div className="bv-bodenkante" aria-hidden="true" />
       <header className="bv-kopf">
         <div className="bv-kopf-innen">
           <div className="bv-zeile1">

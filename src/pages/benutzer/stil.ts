@@ -32,6 +32,12 @@ export const BV_CSS = `
 .bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
 /* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
 @media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
+/* Unten: In Ruhe (ganz oben, Safari-Leiste aufgeklappt) färbt Safari 26 den Rand unter der Leiste
+   nach einem festen Element am unteren Rand, das dort zuoberst liegt, sonst nach dem roten html/body.
+   Dieser helle Streifen hält den Rand dann hell. Beim Scrollen ist er weg (kein data-bv-ruhe), damit
+   der Inhalt durch die eingeklappte Leiste scheint wie in Dateien. Die Aktionsleiste liegt darüber. */
+.bv-bodenkante{ display: none; position: fixed; bottom: 0; left: 0; right: 0; height: max(env(safe-area-inset-bottom), 6px); background: var(--warm-bg); z-index: 45; pointer-events: none; }
+html[data-bv-ruhe] .bv-bodenkante{ display: block; }
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
