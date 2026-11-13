@@ -24,13 +24,15 @@ export const BV_CSS = `
 .bv :focus-visible{ outline: 2px solid var(--lbf-akzent); outline-offset: 2px; }
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
-/* Statusleiste: fester roter Streifen in der Höhe der Uhr-Zeile. Safari 26 färbt die Statusleiste
-   nach einem festen Element, das oben am Rand zuoberst liegt. Solange der rote Kopf die Uhr-Zeile
-   ganz füllt (useStatusleiste setzt data-bv-kopf an <html>), liegt der Streifen deshalb vorn; er ist
-   so rot wie der Kopf darunter und fällt nicht auf. Ist der Kopf weg, liegt er hinter der Seite
-   (z-index -1), damit beim Scrollen keine rote Kante über dem Inhalt steht. html/body bleiben hell. */
-.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
-html[data-bv-kopf] .bv-statusleiste{ z-index: 70; }
+/* Statusleiste: fester roter Streifen am oberen Rand. Safari 26 färbt die Statusleiste nach dem
+   festen Element, das in der Mitte des oberen Rands, 4 px unter der Kante, zuoberst liegt (WebKit,
+   LocalFrameView::fixedContainerEdges); sonst nach dem Hintergrund von body. Der Streifen ist
+   deshalb 12 px hoch (über 10 px zählt seine eigene Farbe) und liegt in der Malreihenfolge über
+   dem roten Kopf und unter dem hellen Blatt: ohne z-index, vor beiden im DOM; das Blatt ist
+   position: relative und deckt ihn beim Scrollen ab. So ist er nie als Strich zu sehen, und
+   sobald das Blatt oben ankommt, gilt für die Statusleiste wieder der helle Hintergrund.
+   Kein z-index setzen und im Kopf nichts positionieren, sonst stimmt die Reihenfolge nicht. */
+.bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 12px); background: var(--lbf-kopf); pointer-events: none; }
 /* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
 @media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
 
