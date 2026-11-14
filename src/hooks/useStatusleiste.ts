@@ -2,23 +2,22 @@
 //
 // Drei Wege, je nach Browser — alle beim Verlassen der Seite zurückgesetzt:
 // - Android und Safari bis iOS 18 nehmen <meta name="theme-color">.
-// - Safari ab iOS 26 kennt theme-color nicht mehr. Es färbt oben und unten nach dem Hintergrund
-//   von body, außer es findet am Rand ein festes oder klebendes Element; dessen Farbe behält es,
-//   solange das Element dargestellt wird (Regeln mit Fundstellen: benutzer/stil.ts).
-//   Ohne kopf (Startseite): html und body tragen das Dunkelrot.
-//   Mit kopf (Seiten mit Rahmen der Benutzerverwaltung): html und body bleiben immer hell, damit
-//   unten nie Rot erscheint (kurze Seiten, schnelles Wischen). Oben färbt der rote Streifen
-//   .bv-statusleiste. Der Hook setzt data-bv-kopf an <html>, solange der rote Kopf zu sehen ist;
-//   nur dann wird der Streifen dargestellt. Ist der Kopf weggescrollt, fällt der Streifen weg,
-//   Safari vergisst die Farbe, und die Statusleiste wird hell wie die Seite.
-//   Am iPhone ausprobiert und verworfen: html/body rot, solange der Kopf zu sehen ist (unten
-//   roter Balken auf kurzen Seiten, oder viel Leerraum als Ausgleich); der Streifen immer da
-//   oder der Kopf selbst sticky (Statusleiste bleibt beim Scrollen rot); der Streifen mit z-index
-//   über dem Inhalt (verdeckt Titel und Knöpfe, roter Strich); auf hell wechseln, solange der
-//   Kopf noch zu sehen ist; ein fester Streifen unten (Safari-Leiste deckend); Nachfedern
+// - Safari ab iOS 26 kennt theme-color nicht mehr und färbt oben und unten weich nach dem
+//   Hintergrund von body. Deshalb bekommen html und body das Dunkelrot, solange der rote Kopf
+//   (kopf, ein CSS-Selektor) zu sehen ist. Ist er weggescrollt, gilt der helle Hintergrund
+//   (blatt), und der Inhalt scheint durch die Leisten wie auf jeder anderen Seite. Ohne kopf
+//   bleibt es rot.
+//   Dieselbe Farbe stünde auch unten, wo die Seite den Bildschirm nicht bedeckt (Ende kurzer
+//   Seiten, Nachfedern). Das verhindert die helle Schürze .bv-schuerze hinter dem Inhalt
+//   (benutzer/stil.ts, dort stehen die Regeln von WebKit mit Fundstellen).
+//   Am iPhone ausprobiert und verworfen: ein festes oder klebendes Element oben als Farbgeber
+//   (roter Streifen, klebender Kopf): Safari macht daraus einen festen Balken, der Titel und
+//   Knöpfe abschneidet und die Farbe behält; html/body immer hell ohne Farbgeber (Statusleiste
+//   hell); ein höheres Blatt als Ausgleich (Leerraum); auf hell wechseln, solange der Kopf noch
+//   zu sehen ist; ein fester Streifen am unteren Rand (Safari-Leiste deckend); Nachfedern
 //   abschalten; nur html hell (Safari nimmt body).
-// - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der Leiste; dort ist
-//   der rote Streifen immer da und hält die Farbe auch beim Scrollen.
+// - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der Leiste; dort hält
+//   ein fester roter Streifen (.bv-statusleiste) die Farbe auch beim Scrollen.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
 import { useEffect } from 'react'
 
@@ -41,13 +40,9 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       const t = oben ? token : blatt
       const farbe = getComputedStyle(document.documentElement).getPropertyValue(t).trim()
       if (farbe) m.content = farbe
-      // Als CSS-Variable, folgt also der Darstellung. Mit kopf bleiben html/body hell; oben färbt
-      // der rote Streifen (.bv-statusleiste). theme-color folgt dem Kopf (Android, älteres Safari)
-      const hg = kopf ? blatt : t
-      document.documentElement.style.backgroundColor = `var(${hg})`
-      document.body.style.backgroundColor = `var(${hg})`
-      // Roter Streifen oben nur, solange der Kopf zu sehen ist (sonst behielte Safari das Rot)
-      document.documentElement.toggleAttribute('data-bv-kopf', !!kopf && oben)
+      // Als CSS-Variable, folgt also der Darstellung
+      document.documentElement.style.backgroundColor = `var(${t})`
+      document.body.style.backgroundColor = `var(${t})`
     }
     // Ist der rote Kopf noch zu sehen? Höchstens einmal je Bild prüfen, nur bei einem Wechsel neu setzen
     let geplant = 0
@@ -81,7 +76,6 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       else m.content = vorher
       document.documentElement.style.backgroundColor = html
       document.body.style.backgroundColor = body
-      document.documentElement.removeAttribute('data-bv-kopf')
     }
   }, [token, kopf, blatt])
 }

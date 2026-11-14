@@ -24,33 +24,35 @@ export const BV_CSS = `
 .bv :focus-visible{ outline: 2px solid var(--lbf-akzent); outline-offset: 2px; }
 .bv .bv-kopf :focus-visible{ outline-color: var(--lbf-kopf-text); }
 
-/* Statusleiste (Uhr, WLAN, Akku) in Safari 26. Die Regeln stehen im Quelltext von WebKit
-   (LocalFrameView::fixedContainerEdges, Page::updateFixedContainerEdges, RenderLayer::hitTestLayer):
-   1. Geprüft wird die Mitte des oberen Rands, 4 px unter der Kante. Gewöhnlicher Inhalt wird dabei
-      übersprungen: Gefunden wird ein festes oder klebendes Element (fixed, sticky) auch dann, wenn
-      etwas anderes darüber liegt. Es muss fast so breit sein wie der Bildschirm; ist es über 10 px
-      hoch, zählt sein eigener Hintergrund.
-   2. Findet Safari dort nichts mehr, behält es die letzte Farbe, solange das zuletzt gefundene
-      Element noch dargestellt wird. Erst ohne dieses Element (display: none) gilt wieder der
-      Hintergrund von body, oben wie unten.
-   Deshalb färbt hier ein eigener roter Streifen die Statusleiste, und useStatusleiste nimmt ihn
-   mit data-bv-kopf an <html> aus der Darstellung, sobald der rote Kopf weggescrollt ist. Dann wird
-   die Statusleiste hell wie die Seite. Der Streifen ist 12 px hoch und liegt über dem Hintergrund
-   des Kopfs, aber unter dessen Inhalt und unter dem Blatt (beide position: relative und später im
-   DOM, der Streifen ohne z-index): Er ist so rot wie der Kopf und verdeckt nichts.
-   Nicht tun: den Kopf selbst sticky machen oder den Streifen stehen lassen (die Leiste bleibt beim
-   Scrollen rot), dem Streifen einen z-index geben (er verdeckt Titel und Knöpfe oder liegt als
-   Strich über dem Blatt), ihn dünner als 5 px machen (Safari findet ihn nicht). */
-.bv-statusleiste{ display: none; position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 12px); background: var(--lbf-kopf); pointer-events: none; }
-html[data-bv-kopf] .bv-statusleiste{ display: block; }
-/* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort immer, vorn und genau so hoch */
-@media (display-mode: standalone){ .bv-statusleiste{ display: block; z-index: 70; height: env(safe-area-inset-top); } }
+/* Safari 26 am iPhone, so soll es aussehen: oben rot, solange der rote Kopf zu sehen ist, und zwar
+   weich (der Kopf scheint beim Scrollen unter Uhr und Akku durch, kein fester Balken); unten nie
+   rot, die Safari-Leiste durchsichtig; kein Leerraum unter dem Inhalt.
+   Die Regeln dahinter (WebKit: LocalFrameView::fixedContainerEdges, Page::updateFixedContainerEdges,
+   RenderLayer::hitTestLayer, RenderLayerCompositor::requiresCompositingForPosition):
+   1. Ohne festes Element am Rand färbt Safari oben und unten weich nach dem Hintergrund von body.
+      Dieselbe Farbe steht überall, wo die Seite den Bildschirm nicht bedeckt: unter der
+      Safari-Leiste am Ende kurzer Seiten und beim Nachfedern.
+   2. Ein festes oder klebendes Element in der Mitte eines Rands (4 px von der Kante, mindestens
+      90 % breit) macht daraus einen festen, deckenden Balken in dessen Farbe, auch wenn Inhalt
+      darüber liegt. Safari behält diese Farbe, solange das Element dargestellt wird.
+   Deshalb: Oben färbt body (useStatusleiste: rot, solange der Kopf zu sehen ist). Damit unten
+   trotzdem nie Rot steht, liegt hinter dem Inhalt eine helle Schürze: fest, z-index -1, von 2 px
+   über dem unteren Rand bis weit darunter, ihr Schatten reicht hinter dem Inhalt nach oben. Sie
+   bedeckt, was die Seite unten freilässt. Safari zählt sie nicht als Balken, weil sie den Prüfpunkt
+   (4 px über dem Rand) nicht berührt und gewöhnlicher Inhalt der Seite davor liegt.
+   Nicht tun: irgendetwas Festes oder Klebendes an den oberen Rand oder auf den unteren Prüfpunkt
+   legen (fester Balken, der Titel und Knöpfe abschneidet oder die Safari-Leiste deckend macht). */
+.bv-schuerze{ position: fixed; left: 0; right: 0; top: calc(100% - 2px); height: 400px; background: var(--warm-bg);
+  box-shadow: 0 max(-320px, -50vh) 0 0 var(--warm-bg); z-index: -1; pointer-events: none; }
+/* Nur als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort hält ein fester roter
+   Streifen in genau dieser Höhe die Farbe. Im Browser gibt es ihn nicht. */
+.bv-statusleiste{ display: none; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--lbf-kopf); pointer-events: none; }
+@media (display-mode: standalone){ .bv-statusleiste{ display: block; z-index: 70; } }
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
   padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 38px max(16px, env(safe-area-inset-left)); }
-/* position: relative: Der Inhalt des Kopfs malt über dem roten Streifen der Statusleiste (siehe oben) */
-.bv-kopf-innen{ max-width: 760px; margin: 0 auto; position: relative; }
+.bv-kopf-innen{ max-width: 760px; margin: 0 auto; }
 .bv-zeile1{ display: flex; align-items: center; gap: 12px; min-height: 48px; }
 .bv .bv-rund{ width: 44px; height: 44px; border-radius: 50%; background: var(--lbf-kopf-feld); color: var(--lbf-kopf-text); display: grid; place-items: center; flex-shrink: 0; }
 .bv .bv-rund.hell{ background: var(--lbf-kopf-text); color: var(--lbf-kopf); }
