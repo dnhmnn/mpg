@@ -37,7 +37,8 @@ export const BV_CSS = `
       90 % breit und über 10 px hoch, färbt Safari diesen Rand in dessen Farbe und deckend.
    Deshalb: Oben färbt body (useStatusleiste: rot, solange der Kopf zu sehen ist). Am Ende kurzer
    Seiten ist der Kopf noch zu sehen, unten stünde also das Rot. Nur dann zeigt die Seite den hellen
-   Streifen .bv-bodenkante am unteren Rand (useStatusleiste setzt data-bv-unten): Safari färbt den
+   Streifen .bv-bodenkante am unteren Rand (useStatusleiste setzt data-bv-unten, sobald das Ende so
+   nah ist, wie Safaris Leisten unter dem Fenster reichen: reichweiteFuer): Safari färbt den
    unteren Rand hell und deckend. Darunter liegt nur der leere Rand des Blatts (padding-bottom
    unten), deckend hell sieht dort aus wie durchsichtig hell. Auf langen Seiten ist der Kopf am Ende
    weggescrollt, der Streifen kommt nie, die Safari-Leiste bleibt durchsichtig.
@@ -74,7 +75,7 @@ html[data-bv-unten] .bv-bodenkante{ display: block; }
 .bv-blatt{ flex: 1; background: var(--warm-bg); border-radius: 24px 24px 0 0; margin-top: -24px; position: relative;
   /* Unten genug leerer Rand, dass unter dem hellen Streifen (.bv-bodenkante, siehe oben) und der
      Safari-Leiste nie Inhalt liegt */
-  padding: 20px max(16px, env(safe-area-inset-right)) calc(100px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  padding: 20px max(16px, env(safe-area-inset-right)) calc(130px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .bv-blatt.mitleiste{ padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .bv-innen{ max-width: 760px; margin: 0 auto; }
 

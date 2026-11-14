@@ -152,9 +152,11 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body sind dunkelrot, solange der rote
   Kopf zu sehen ist, sonst hell. Ist am Ende einer kurzen Seite der Kopf noch zu sehen, setzt
   `useStatusleiste` `data-bv-unten`, und der helle Streifen `.bv-bodenkante` (fest, unten,
-  `z-index: 1`, 12 px) färbt den unteren Rand hell. Darunter liegt nur der leere Rand des Blatts
-  (`padding-bottom` 100 px plus Home-Leiste), deckend hell sieht dort aus wie durchsichtig. Auf
-  langen Seiten kommt der Streifen nie.
+  `z-index: 1`, 12 px) färbt den unteren Rand hell. „Am Ende“ heißt: Der Rest der Seite ist kürzer
+  als der Bereich unter dem Fenster (Bildschirm- minus Fensterhöhe, ändert sich mit Safaris Leiste;
+  `reichweiteFuer`), mit 30 px Nachlauf gegen Hin und Her. Darunter liegt nur der leere Rand des
+  Blatts (`padding-bottom` 130 px plus Home-Leiste), deckend hell sieht dort aus wie durchsichtig.
+  Auf langen Seiten kommt der Streifen nie.
 - Deshalb: nichts Festes oder Klebendes an den oberen Rand legen; den Streifen unten nur unter
   diesen Bedingungen zeigen; den unteren Rand des Blatts nicht verkleinern.
 - Am iPhone ausprobiert und verworfen (nicht noch einmal versuchen):
@@ -166,6 +168,8 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   - Auf hell wechseln, solange der Kopf noch zu sehen ist: Statusleiste hell.
   - Ein heller Streifen unten, der immer da ist: Safari-Leiste deckend über Inhalt.
   - Eine helle Fläche hinter dem Inhalt (`z-index: -1`): Safari findet sie nicht, unten rot.
+  - Der Streifen unten ab einer festen Grenze (90 px): Mit aufgeklappter Safari-Leiste reicht der
+    Bereich unter dem Fenster weiter, kurz vor und am Ende wechselte es zwischen hell und rot.
   - Nachfedern abschalten (`overscroll-behavior`).
   - Nur `html` hell, `body` rot: Safari färbt nach `body`.
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim

@@ -25,13 +25,29 @@ import { useEffect } from 'react'
 
 /**
  * Ist das Ende der Seite in Reichweite des unteren Rands? Unter der Safari-Leiste (iOS 26) liegt
- * bis rund 70 px unter dem Fenster noch Bildschirm; reicht die Seite nicht so weit, sieht man dort
- * den Hintergrund von body. 90 px Spielraum; gilt auch beim Nachfedern (Rest negativ).
+ * unter dem Fenster noch Bildschirm; reicht die Seite nicht so weit, sieht man dort den Hintergrund
+ * von body. Wie weit, hängt von der Leiste ab (aufgeklappt mehr, eingeklappt weniger; am Seitenende
+ * klappt Safari sie wieder auf): `reichweite` ist deshalb Bildschirmhöhe minus Fensterhöhe plus
+ * Spielraum (reichweiteFuer). Gilt auch beim Nachfedern (Rest negativ).
  */
 export const ENDE_NAH_PX = 90
-export function endeNah(scrollY: number, fenster: number, hoehe: number): boolean {
-  return hoehe - (scrollY + fenster) < ENDE_NAH_PX
+export const ENDE_NAH_HOECHSTENS_PX = 180
+export function endeNah(scrollY: number, fenster: number, hoehe: number, reichweite: number = ENDE_NAH_PX): boolean {
+  return hoehe - (scrollY + fenster) < reichweite
 }
+
+/**
+ * Reichweite des Bereichs unter dem Fenster: Bildschirmhöhe (hochkant oder quer, wie das Fenster)
+ * minus Fensterhöhe plus 16 px, mindestens ENDE_NAH_PX, höchstens ENDE_NAH_HOECHSTENS_PX.
+ */
+export function reichweiteFuer(fensterBreite: number, fensterHoehe: number, bildBreite: number, bildHoehe: number): number {
+  const quer = fensterBreite > fensterHoehe
+  const bild = quer ? Math.min(bildBreite, bildHoehe) : Math.max(bildBreite, bildHoehe)
+  const r = (Number.isFinite(bild) && bild > 0 ? bild - fensterHoehe : 0) + 16
+  return Math.min(ENDE_NAH_HOECHSTENS_PX, Math.max(ENDE_NAH_PX, Math.round(r)))
+}
+/** Spielraum, bevor der Streifen wieder verschwindet (kein Hin und Her an der Grenze). */
+export const ENDE_NAH_NACHLAUF_PX = 30
 
 export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string } = {}): void {
   const { kopf, blatt = '--warm-bg' } = opt
@@ -68,7 +84,9 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
         const jetzt = el ? el.getBoundingClientRect().bottom > 0 : window.scrollY < 1
         // Ende der Seite in Reichweite des unteren Rands, während der rote Kopf noch zu sehen ist?
         const hoehe = (document.scrollingElement ?? document.documentElement).scrollHeight
-        const amEnde = jetzt && endeNah(window.scrollY, window.innerHeight, hoehe)
+        const reichweite = reichweiteFuer(window.innerWidth, window.innerHeight, window.screen?.width ?? 0, window.screen?.height ?? 0)
+          + (unten ? ENDE_NAH_NACHLAUF_PX : 0)
+        const amEnde = jetzt && endeNah(window.scrollY, window.innerHeight, hoehe, reichweite)
         if (jetzt !== oben || amEnde !== unten) { oben = jetzt; unten = amEnde; setzen() }
       })
     }
