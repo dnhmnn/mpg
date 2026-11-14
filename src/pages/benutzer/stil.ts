@@ -26,24 +26,27 @@ export const BV_CSS = `
 
 /* Safari 26 am iPhone, so soll es aussehen: oben rot, solange der rote Kopf zu sehen ist, und zwar
    weich (der Kopf scheint beim Scrollen unter Uhr und Akku durch, kein fester Balken); unten nie
-   rot, die Safari-Leiste durchsichtig; kein Leerraum unter dem Inhalt.
+   rot; kein großer Leerraum unter dem Inhalt.
    Die Regeln dahinter (WebKit: LocalFrameView::fixedContainerEdges, Page::updateFixedContainerEdges,
-   RenderLayer::hitTestLayer, RenderLayerCompositor::requiresCompositingForPosition):
+   RenderLayer::hitTestLayer):
    1. Ohne festes Element am Rand färbt Safari oben und unten weich nach dem Hintergrund von body.
       Dieselbe Farbe steht überall, wo die Seite den Bildschirm nicht bedeckt: unter der
-      Safari-Leiste am Ende kurzer Seiten und beim Nachfedern.
-   2. Ein festes oder klebendes Element in der Mitte eines Rands (4 px von der Kante, mindestens
-      90 % breit) macht daraus einen festen, deckenden Balken in dessen Farbe, auch wenn Inhalt
-      darüber liegt. Safari behält diese Farbe, solange das Element dargestellt wird.
-   Deshalb: Oben färbt body (useStatusleiste: rot, solange der Kopf zu sehen ist). Damit unten
-   trotzdem nie Rot steht, liegt hinter dem Inhalt eine helle Schürze: fest, z-index -1, von 2 px
-   über dem unteren Rand bis weit darunter, ihr Schatten reicht hinter dem Inhalt nach oben. Sie
-   bedeckt, was die Seite unten freilässt. Safari zählt sie nicht als Balken, weil sie den Prüfpunkt
-   (4 px über dem Rand) nicht berührt und gewöhnlicher Inhalt der Seite davor liegt.
-   Nicht tun: irgendetwas Festes oder Klebendes an den oberen Rand oder auf den unteren Prüfpunkt
-   legen (fester Balken, der Titel und Knöpfe abschneidet oder die Safari-Leiste deckend macht). */
-.bv-schuerze{ position: fixed; left: 0; right: 0; top: calc(100% - 2px); height: 400px; background: var(--warm-bg);
-  box-shadow: 0 max(-320px, -50vh) 0 0 var(--warm-bg); z-index: -1; pointer-events: none; }
+      Safari-Leiste am Ende jeder Seite und beim Nachfedern.
+   2. Liegt in der Mitte eines Rands (4 px von der Kante) ein festes Element mit eigener Ebene vor
+      dem Inhalt (z-index >= 0; Elemente dahinter oder ohne Ebene findet Safari nicht), mindestens
+      90 % breit und über 10 px hoch, färbt Safari diesen Rand in dessen Farbe und deckend.
+   Deshalb: Oben färbt body (useStatusleiste: rot, solange der Kopf zu sehen ist). Am Ende kurzer
+   Seiten ist der Kopf noch zu sehen, unten stünde also das Rot. Nur dann zeigt die Seite den hellen
+   Streifen .bv-bodenkante am unteren Rand (useStatusleiste setzt data-bv-unten): Safari färbt den
+   unteren Rand hell und deckend. Darunter liegt nur der leere Rand des Blatts (padding-bottom
+   unten), deckend hell sieht dort aus wie durchsichtig hell. Auf langen Seiten ist der Kopf am Ende
+   weggescrollt, der Streifen kommt nie, die Safari-Leiste bleibt durchsichtig.
+   Nicht tun: etwas Festes oder Klebendes an den oberen Rand legen (fester Balken, der Titel und
+   Knöpfe abschneidet), den Streifen unten immer zeigen (deckt Inhalt ab), ihn hinter den Inhalt
+   legen (Safari findet ihn nicht), html oder body hell machen, solange der Kopf zu sehen ist
+   (Statusleiste hell). */
+.bv-bodenkante{ display: none; position: fixed; left: 0; right: 0; bottom: 0; height: calc(12px + env(safe-area-inset-bottom)); background: var(--warm-bg); z-index: 1; pointer-events: none; }
+html[data-bv-unten] .bv-bodenkante{ display: block; }
 /* Nur als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort hält ein fester roter
    Streifen in genau dieser Höhe die Farbe. Im Browser gibt es ihn nicht. */
 .bv-statusleiste{ display: none; position: fixed; top: 0; left: 0; right: 0; height: env(safe-area-inset-top); background: var(--lbf-kopf); pointer-events: none; }
@@ -69,7 +72,9 @@ export const BV_CSS = `
 
 /* Blatt */
 .bv-blatt{ flex: 1; background: var(--warm-bg); border-radius: 24px 24px 0 0; margin-top: -24px; position: relative;
-  padding: 20px max(16px, env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+  /* Unten genug leerer Rand, dass unter dem hellen Streifen (.bv-bodenkante, siehe oben) und der
+     Safari-Leiste nie Inhalt liegt */
+  padding: 20px max(16px, env(safe-area-inset-right)) calc(100px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
 .bv-blatt.mitleiste{ padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .bv-innen{ max-width: 760px; margin: 0 auto; }
 

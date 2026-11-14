@@ -143,27 +143,29 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   (`LocalFrameView::fixedContainerEdges`, `Page::updateFixedContainerEdges`,
   `RenderLayer::hitTestLayer`):
   1. Ohne festes Element am Rand färbt Safari oben und unten weich nach dem Hintergrund von
-     `body`. Dieselbe Farbe steht überall, wo die Seite den Bildschirm nicht bedeckt (unter der
-     Safari-Leiste am Ende kurzer Seiten, beim Nachfedern).
-  2. Ein festes oder klebendes Element (`fixed`, `sticky`) in der Mitte eines Rands, 4 px von
-     der Kante und mindestens 90 % breit, macht daraus einen festen, deckenden Balken in dessen
-     Farbe, auch wenn Inhalt darüber liegt. Safari behält die Farbe, solange das Element
-     dargestellt wird.
+     `body`. Dieselbe Farbe steht überall, wo die Seite den Bildschirm nicht bedeckt: unter der
+     Safari-Leiste am Ende jeder Seite, beim Nachfedern.
+  2. Liegt in der Mitte eines Rands (4 px von der Kante) ein festes Element mit eigener Ebene
+     vor dem Inhalt (`z-index` ≥ 0; dahinter findet Safari es nicht), mindestens 90 % breit und
+     über 10 px hoch, färbt Safari diesen Rand in dessen Farbe, deckend. Die Farbe bleibt,
+     solange das Element dargestellt wird.
 - So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body sind dunkelrot, solange der rote
-  Kopf zu sehen ist, sonst hell. Hinter dem Inhalt liegt am unteren Rand die helle Schürze
-  `.bv-schuerze` (fest, `z-index: -1`, von 2 px über dem unteren Rand bis weit darunter): Sie
-  bedeckt, was die Seite unten freilässt, damit dort nie das Rot steht. Sie berührt den
-  Prüfpunkt nicht und zählt deshalb nicht als Balken.
-- Deshalb: nichts Festes oder Klebendes an den oberen Rand legen, nichts auf den unteren
-  Prüfpunkt; die Schürze nicht höher ansetzen.
+  Kopf zu sehen ist, sonst hell. Ist am Ende einer kurzen Seite der Kopf noch zu sehen, setzt
+  `useStatusleiste` `data-bv-unten`, und der helle Streifen `.bv-bodenkante` (fest, unten,
+  `z-index: 1`, 12 px) färbt den unteren Rand hell. Darunter liegt nur der leere Rand des Blatts
+  (`padding-bottom` 100 px plus Home-Leiste), deckend hell sieht dort aus wie durchsichtig. Auf
+  langen Seiten kommt der Streifen nie.
+- Deshalb: nichts Festes oder Klebendes an den oberen Rand legen; den Streifen unten nur unter
+  diesen Bedingungen zeigen; den unteren Rand des Blatts nicht verkleinern.
 - Am iPhone ausprobiert und verworfen (nicht noch einmal versuchen):
   - Ein Farbgeber oben (fester roter Streifen, auch nur solange der Kopf zu sehen ist, oder der
     Kopf selbst `position: sticky`): fester roter Balken, der beim Scrollen Titel und Knöpfe
     abschneidet; bleibt er dargestellt, bleibt die Statusleiste rot.
   - html/body immer hell ohne Farbgeber: Statusleiste hell über dem roten Kopf.
-  - Ein höheres Blatt (Reserve), damit das Rot unten bedeckt ist: viel Leerraum.
+  - Ein höheres Blatt (Reserve), damit der Kopf vor dem Ende wegscrollt: viel Leerraum.
   - Auf hell wechseln, solange der Kopf noch zu sehen ist: Statusleiste hell.
-  - Ein fester heller Streifen am unteren Rand (auf dem Prüfpunkt): Safari-Leiste deckend.
+  - Ein heller Streifen unten, der immer da ist: Safari-Leiste deckend über Inhalt.
+  - Eine helle Fläche hinter dem Inhalt (`z-index: -1`): Safari findet sie nicht, unten rot.
   - Nachfedern abschalten (`overscroll-behavior`).
   - Nur `html` hell, `body` rot: Safari färbt nach `body`.
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
