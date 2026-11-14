@@ -1,580 +1,204 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+// Hub (/hub): Startseite nach dem Login im Dunkelrot-Design.
+//
+// Rahmen wie die Benutzerverwaltung (Seite, BV_CSS, useStatusleiste; CLAUDE.md, „Seiten im
+// Dunkelrot-Design“): roter Kopf mit Organisation, Datum und Gruß, darunter das Elfenbein-Blatt
+// mit Mitteilung der Organisation, Neuigkeiten und den Apps. Die Seite rollt im Fenster; nichts
+// ist fest oder klebend am Rand. Blätter (Kurzbefehle, Profil) gibt es nur, solange sie offen sind.
+//
+// Welche Apps im Hub stehen und in welcher Reihenfolge, entscheidet jeder selbst
+// („Apps anpassen“, /hub?seite=apps; src/lib/hubApps.ts, Feld users.hub_apps).
+// Nach Updates erscheint einmal „Neu in Responda“ (src/components/NeuInResponda.tsx),
+// nach der Begrüßung und nach einer laufenden Einführung.
+
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
-import { getTheme, setTheme, applyTheme } from '../lib/theme'
-import Widgets from '../components/Widgets'
-import AppGrid from '../components/AppGrid'
-import SettingsModal from '../components/SettingsModal'
-import AppsModal from '../components/AppsModal'
-import EditModal from '../components/EditModal'
-import WidgetsModal from '../components/WidgetsModal'
-import NotificationModal from '../components/NotificationModal'
+import { useStatusleiste } from '../hooks/useStatusleiste'
 import Einfuehrung, { EinfuehrungAutomatisch, useEinfuehrungStand } from '../components/Einfuehrung'
+import NeuInResponda from '../components/NeuInResponda'
 import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
-import { ALL_APPS, hatRecht, zeitpunktBefristung } from '../lib/apps'
-import { appFrei } from '../lib/freigabe'
-import { rollenText } from '../lib/rollen'
+import { befristetBis } from '../lib/hubApps'
 import { pb } from '../lib/pocketbase'
-import type { App } from '../types'
+import { BV_CSS } from './benutzer/stil'
+import { Abschnitt, Icon, Seite } from './benutzer/bausteine'
+import { HUB_CSS } from './hub/stil'
+import { useHubApps } from './hub/useHubApps'
+import Kacheln from './hub/Kacheln'
+import NeuigkeitenListe from './hub/NeuigkeitenListe'
+import Mitteilung from './hub/Mitteilung'
+import KurzbefehleBlatt from './hub/KurzbefehleBlatt'
+import ProfilBlatt, { anzeigeName, initialen } from './hub/ProfilBlatt'
+import AppsSeite from './hub/AppsSeite'
 
-const PREDEFINED_SHORTCUTS = [
-  { id: 'protokoll',   name: 'Protokoll anlegen',          url: '/patienten' },
-  { id: 'mpg',         name: 'MPG Prüfung starten',        url: '/mpg' },
-  { id: 'ausbildung',  name: 'Ausbildungstermin anlegen',  url: '/ausbildungen' },
-  { id: 'lernmodul',   name: 'Lernmodul erstellen',        url: '/lernbar' },
-  { id: 'lernkonzept', name: 'Lernkonzept erstellen',      url: '/lernbar' },
-  { id: 'einbuchen',   name: 'Artikel einbuchen',          url: '/lager' },
-  { id: 'ausbuchen',   name: 'Artikel ausbuchen',          url: '/lager' },
-  { id: 'inventur',    name: 'Inventur starten',           url: '/lager' },
-  { id: 'darkmode',    name: 'Dark Mode umschalten',       url: null },
-  { id: 'dateien',     name: 'Dateien suchen',             url: '/files' },
-] as const
-
-type ShortcutId = typeof PREDEFINED_SHORTCUTS[number]['id']
-
-function ShortcutIcon({ id, color = 'currentColor' }: { id: ShortcutId; color?: string }) {
-  const s = { style: { stroke: color }, strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, fill: 'none' }
-  if (id === 'protokoll') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-  if (id === 'mpg') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-  if (id === 'ausbildung') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-  if (id === 'lernmodul') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
-  if (id === 'lernkonzept') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-  if (id === 'einbuchen') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-  if (id === 'ausbuchen') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-  if (id === 'inventur') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><polyline points="3 6 4 7 6 5"/><polyline points="3 12 4 13 6 11"/><polyline points="3 18 4 19 6 17"/></svg>
-  if (id === 'darkmode') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-  if (id === 'dateien') return <svg width="18" height="18" viewBox="0 0 24 24" {...s}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-  return null
+// Die Seite rollt je nach Darstellung im Fenster oder im body (wie in Unitarii.tsx)
+const scrollPos = () => Math.max(window.scrollY, document.body.scrollTop, document.documentElement.scrollTop)
+function scrollZu(y: number) {
+  window.scrollTo(0, y)
+  document.body.scrollTop = y
+  document.documentElement.scrollTop = y
 }
 
-function initials(name?: string | null): string {
-  if (!name) return 'R'
-  const p = name.trim().split(/\s+/)
-  return p.length > 1 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : name.slice(0, 2).toUpperCase()
-}
+interface InstallEreignis extends Event { prompt: () => Promise<void>; userChoice: Promise<unknown> }
 
 export default function Hub() {
+  // Statusleiste rot nur, solange der rote Kopf zu sehen ist (CLAUDE.md, Safari 26)
+  useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
   const navigate = useNavigate()
+  const location = useLocation()
+  const [sp] = useSearchParams()
+  const seiteApps = sp.get('seite') === 'apps'
   const { user, loading, logout, refresh } = useAuth()
-  // Einführung über das Profil — erreicht jeder, auch ohne Einstellungen
-  const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
-  const { standRef: einfuehrungStandRef, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
+  const apps = useHubApps(user)
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
 
-  const [logoError, setLogoError] = useState(false)
+  // Einführung: automatisch beim ersten Login, sonst über das Profil
+  const [einfuehrungTeile, setEinfuehrungTeile] = useState<Teil[] | null>(null)
+  const [einfuehrungAuto, setEinfuehrungAuto] = useState(false)
+  const { standRef: einfuehrungStandRef, speichern: einfuehrungSpeichern } = useEinfuehrungStand(user ?? null)
 
-  const [showGreeting] = useState(() => {
-    const flag = sessionStorage.getItem('justLoggedIn')
-    if (flag) { sessionStorage.removeItem('justLoggedIn'); return true }
+  // Begrüßung nach dem Login (2,4 s), danach aus dem DOM
+  const [begruessung] = useState(() => {
+    try {
+      if (sessionStorage.getItem('justLoggedIn')) { sessionStorage.removeItem('justLoggedIn'); return true }
+    } catch { /* gesperrt */ }
     return false
   })
-  const [greetingGone, setGreetingGone] = useState(false)
-
+  const [begruessungVorbei, setBegruessungVorbei] = useState(!begruessung)
   useEffect(() => {
-    if (!showGreeting) return
-    const t = setTimeout(() => setGreetingGone(true), 2400)
-    return () => clearTimeout(t)
-  }, [showGreeting])
+    if (!begruessung || !user?.id) return
+    const t = window.setTimeout(() => setBegruessungVorbei(true), 2400)
+    return () => window.clearTimeout(t)
+  }, [begruessung, user?.id])
 
-  const [editMode, setEditMode] = useState(false)
-  const [userApps, setUserApps] = useState<string[]>([])
-  const [availableApps, setAvailableApps] = useState<App[]>([])
+  const [hinweisOffen, setHinweisOffen] = useState(false)
+  const [blatt, setBlatt] = useState<'kurz' | 'profil' | null>(null)
+  const schliessenBlatt = useCallback(() => setBlatt(null), [])
 
-  const [showSettings, setShowSettings] = useState(false)
-  const [showAppsModal, setShowAppsModal] = useState(false)
-  const [showEditModal, setShowEditModal] = useState(false)
-  const [showWidgetsModal, setShowWidgetsModal] = useState(false)
-  const [profileSheetOpen, setProfileSheetOpen] = useState(false)
-
-  const [sheetOpen, setSheetOpen] = useState(false)
-  const [editingShortcuts, setEditingShortcuts] = useState(false)
-  const [enabledShortcuts, setEnabledShortcuts] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('hub_shortcuts')
-      return saved ? JSON.parse(saved) : PREDEFINED_SHORTCUTS.map(s => s.id)
-    } catch { return PREDEFINED_SHORTCUTS.map(s => s.id) }
-  })
-  const touchStartY = useRef(0)
-  const installPromptRef = useRef<any>(null)
-
+  // Installation als App (Android, Chrome); Safari bietet das nicht an
+  const installRef = useRef<InstallEreignis | null>(null)
   useEffect(() => {
-    const handler = (e: Event) => { e.preventDefault(); installPromptRef.current = e }
-    window.addEventListener('beforeinstallprompt', handler)
-    return () => window.removeEventListener('beforeinstallprompt', handler)
+    const merken = (e: Event) => { e.preventDefault(); installRef.current = e as InstallEreignis }
+    window.addEventListener('beforeinstallprompt', merken)
+    return () => window.removeEventListener('beforeinstallprompt', merken)
   }, [])
-
-  function saveEnabledShortcuts(ids: string[]) {
-    setEnabledShortcuts(ids)
-    localStorage.setItem('hub_shortcuts', JSON.stringify(ids))
+  async function installieren(): Promise<boolean> {
+    const e = installRef.current
+    if (!e) return false
+    try { await e.prompt(); await e.userChoice } catch { /* abgebrochen */ }
+    installRef.current = null
+    return true
   }
 
-  function toggleShortcut(id: string) {
-    const next = enabledShortcuts.includes(id)
-      ? enabledShortcuts.filter(x => x !== id)
-      : [...enabledShortcuts, id]
-    saveEnabledShortcuts(next)
-  }
-
-  function runShortcut(id: ShortcutId, url: string | null) {
-    setSheetOpen(false)
-    setEditingShortcuts(false)
-    if (id === 'darkmode') {
-      const next = getTheme() === 'dark' ? 'light' : 'dark'
-      setTheme(next); applyTheme(next)
-    } else if (url) {
-      navigate(url)
-    }
-  }
-
-  useEffect(() => {
-    if (user) loadUserApps()
-  }, [user])
-
-  // Subscribe to own user record so temp-permission grants appear immediately
+  // Eigener Datensatz geändert (befristetes Recht, App-Auswahl auf einem anderen Gerät): neu laden
   useEffect(() => {
     if (!user?.id) return
-    pb.collection('users').subscribe(user.id, async () => {
-      await refresh()
-    })
-    return () => { pb.collection('users').unsubscribe(user.id) }
-  }, [user?.id])
+    const id = user.id
+    pb.collection('users').subscribe(id, async () => { await refresh() }).catch(() => { /* ohne Echtzeit: beim nächsten Öffnen */ })
+    return () => { pb.collection('users').unsubscribe(id).catch(() => { /* egal */ }) }
+  }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  function trackAppClick(id: string) {
-    if (!user) return
-    const key = `hub_recent_${user.id}`
-    const prev = (() => { try { return JSON.parse(localStorage.getItem(key) || '[]') } catch { return [] } })()
-    localStorage.setItem(key, JSON.stringify([id, ...prev.filter((r: string) => r !== id)].slice(0, 20)))
-  }
-
+  // Zurück aus „Apps anpassen“: wieder dort, wo man war
+  const hubScroll = useRef(0)
   useEffect(() => {
-    const handleOpenSettings = () => setShowSettings(true)
-    window.addEventListener('openSettings', handleOpenSettings)
-    return () => window.removeEventListener('openSettings', handleOpenSettings)
-  }, [])
+    if (seiteApps) scrollZu(0)
+    else requestAnimationFrame(() => scrollZu(hubScroll.current))
+  }, [seiteApps])
 
-  function hasPermission(perm: string): boolean {
-    return hatRecht(user, perm)
+  function appsOeffnen() {
+    hubScroll.current = scrollPos()
+    setBlatt(null)
+    navigate({ search: '?seite=apps' }, { state: { hubUnter: true } })
+  }
+  function appsSchliessen() {
+    // Selbst geöffnet: einen Schritt zurück, damit die Seite nicht im Verlauf hängen bleibt
+    if ((location.state as { hubUnter?: boolean } | null)?.hubUnter) navigate(-1)
+    else navigate({ pathname: '/hub', search: '' }, { replace: true })
   }
 
-  // Ein Kurzbefehl führt in ein Modul — nur zeigen, wenn dessen Kachel erlaubt ist
-  function kurzbefehlErlaubt(url: string | null): boolean {
-    if (!url) return true
-    const id = Object.keys(ALL_APPS).find(k => ALL_APPS[k].url === url) ?? (url === '/lernbar' ? 'lernbar' : undefined)
-    return !id || kachelErlaubt(id)
-  }
+  const orgName = user?.organization_name || 'Responda'
+  const vorname = anzeigeName(user).split(' ')[0]
+  const stil = <style>{BV_CSS + HUB_CSS}</style>
 
-  // Eine Kachel erscheint, wenn der Benutzer das Recht hat und das Modul für
-  // die Organisation freigeschaltet ist (Supervisor → Organisation)
-  function kachelErlaubt(id: string): boolean {
-    return hasPermission(ALL_APPS[id].permission) && appFrei(user?.organization, id)
-  }
+  if (loading) return stil
 
-  function getActiveTempPermAppIds(): string[] {
-    const tempPerms = (user as any)?.temp_permissions as Record<string, { until: string }> | undefined
-    if (!tempPerms) return []
-    const now = Date.now()
-    const activePerms = Object.entries(tempPerms)
-      .filter(([, v]) => zeitpunktBefristung(v.until) > now)
-      .map(([k]) => k)
-    return Object.keys(ALL_APPS).filter(id => activePerms.includes(ALL_APPS[id].permission) && appFrei(user?.organization, id))
-  }
+  const einfuehrungOffen = einfuehrungAuto || einfuehrungTeile !== null
+  const datum = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
+  const ausgeblendet = apps.erlaubt.length - apps.kacheln.length
+  const mitteilung = currentNotification && !hinweisOffen ? currentNotification : null
+  const appErlaubt = (id: string) => apps.erlaubt.includes(id)
 
-  function loadUserApps() {
-    if (!user) return
-    const saved = localStorage.getItem(`hub_apps_${user.id}`)
-    let apps: string[]
-    if (saved) {
-      apps = JSON.parse(saved)
-      if (!apps.includes('settings')) apps.push('settings')
-      const newApps = Object.keys(ALL_APPS).filter(id => kachelErlaubt(id) && !apps.includes(id))
-      if (newApps.length > 0) {
-        apps = [...apps, ...newApps]
-        localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(apps))
-      }
-    } else {
-      apps = Object.keys(ALL_APPS).filter(id => kachelErlaubt(id))
-    }
-    // Always inject active temp-permission apps even if user removed them from grid
-    const tempAppIds = getActiveTempPermAppIds()
-    const missing = tempAppIds.filter(id => !apps.includes(id))
-    if (missing.length > 0) apps = [...apps, ...missing]
-    setUserApps(apps)
-    updateAvailableApps(apps)
-  }
-
-  function updateAvailableApps(currentApps: string[]) {
-    if (!user) return
-    const available = Object.keys(ALL_APPS)
-      .filter(id => id !== 'settings' && kachelErlaubt(id) && !currentApps.includes(id))
-      .map(id => ALL_APPS[id])
-    setAvailableApps(available)
-  }
-
-  function saveUserApps(apps: string[]) {
-    if (!user) return
-    localStorage.setItem(`hub_apps_${user.id}`, JSON.stringify(apps))
-  }
-
-  function handleRemoveApp(id: string) {
-    const newApps = userApps.filter(x => x !== id)
-    setUserApps(newApps)
-    saveUserApps(newApps)
-    updateAvailableApps(newApps)
-  }
-
-  function handleAddApp(id: string) {
-    if (userApps.includes(id)) return
-    const newApps = [...userApps, id]
-    setUserApps(newApps)
-    saveUserApps(newApps)
-    updateAvailableApps(newApps)
-  }
-
-  if (loading) return null
-
-  const firstName = (user?.name || user?.email?.split('@')[0] || '').split(' ')[0]
-
+  // Eine Wurzel für Hub und „Apps anpassen“: Hinweis und Einführung bleiben beim Wechsel stehen
   return (
-    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', overscrollBehavior: 'none', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" } as React.CSSProperties}>
-      <style>{`
-        @keyframes greetCurtainOut { 0%,60%{opacity:1} 100%{opacity:0} }
-        @keyframes greetNameSlide { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:none} }
-        .hub-greeting-overlay {
-          position:fixed;inset:0;z-index:9999;background:#3d0408;
-          display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-          animation:greetCurtainOut 2.4s ease forwards;pointer-events:none;
-        }
-        @keyframes controlDrift {
-          0%,100%{transform:translateY(0);opacity:0.45}
-          55%{transform:translateY(5px);opacity:0.9}
-        }
-        .hub-control-handle { animation: controlDrift 2.2s ease-in-out infinite; }
+    <>
+      {stil}
+      {seiteApps ? <AppsSeite user={user} orgName={orgName} apps={apps} schliessen={appsSchliessen} /> : (
+        <Seite titel={orgName} unter={datum}
+          links={<span className="bv-rund hell hub-zeichen" aria-hidden="true"><img src="/logoklein.svg" alt="" /></span>}
+          rechts={<>
+            <button type="button" className="bv-rund hub-kopfknopf" aria-label="Kurzbefehle" aria-haspopup="dialog" data-probe="hub-kurzbefehle-knopf" onClick={() => setBlatt('kurz')}>
+              <svg className="bv-i" viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" />
+                <circle cx="9" cy="7" r="2.2" fill="var(--lbf-kopf-feld)" /><circle cx="15" cy="12" r="2.2" fill="var(--lbf-kopf-feld)" /><circle cx="10" cy="17" r="2.2" fill="var(--lbf-kopf-feld)" />
+              </svg>
+            </button>
+            <button type="button" className="bv-rund hell hub-ini" aria-label="Profil und Abmelden" aria-haspopup="dialog" data-probe="hub-profil-knopf" onClick={() => setBlatt('profil')}>
+              {initialen(anzeigeName(user))}
+            </button>
+          </>}
+          reiter={<p className="hub-gruss" data-probe="hub-gruss">Servus, <em>{vorname}</em></p>}>
 
-        /* App grid + card sizing — mobile first (4 cols, compact) */
-        .hub-app-grid { grid-template-columns: repeat(4, 1fr); gap: 8px; }
-        .hub-app-card { padding: 14px 4px 11px !important; }
-        .hub-app-icon-wrap { width: 50px !important; height: 50px !important; border-radius: 13px !important; }
-        .hub-app-icon-wrap > div { width: 24px !important; height: 24px !important; }
-        .hub-app-label { font-size: 11px !important; max-width: 76px !important; }
+          {mitteilung && (
+            <Mitteilung titel={mitteilung.title} text={mitteilung.message} organisation={user?.organization_name}
+              onVerstanden={dismissNotification} onSpaeter={remindLater} />
+          )}
 
-        /* Mobile column order: greeting+news first, apps second */
-        .hub-cols { display: flex; flex-direction: column; gap: 16px; }
-        .hub-side-col { order: 1; }
-        .hub-module-col { order: 2; }
+          <NeuigkeitenListe user={user} erst={!mitteilung} />
 
-        /* Tablet+ two-column layout */
-        @media (min-width: 768px) {
-          .hub-body { max-width: 1100px !important; }
-          .hub-cols {
-            display: grid;
-            grid-template-columns: 1fr 320px;
-            gap: 48px;
-            align-items: start;
-          }
-          .hub-side-col { order: 2; }
-          .hub-module-col { order: 1; }
-          .hub-app-grid { grid-template-columns: repeat(4, 1fr); gap: 12px; }
-          .hub-app-card { padding: 16px 8px 12px !important; }
-          .hub-app-icon-wrap { width: 52px !important; height: 52px !important; border-radius: 14px !important; }
-          .hub-app-icon-wrap > div { width: 26px !important; height: 26px !important; }
-          .hub-app-label { font-size: 12px !important; max-width: 80px !important; }
-        }
-        @media (min-width: 1100px) {
-          .hub-body { max-width: 1400px !important; }
-          .hub-cols { grid-template-columns: 1fr 360px; gap: 64px; }
-          .hub-app-grid { grid-template-columns: repeat(5, 1fr); }
-        }
-      `}</style>
+          <section data-probe="hub-apps">
+            <Abschnitt titel="Apps" rechts={ausgeblendet > 0 ? `${apps.kacheln.length} von ${apps.erlaubt.length}` : undefined} />
+            {apps.kacheln.length
+              ? <Kacheln ids={apps.kacheln} befristetBis={(id) => apps.befristet.includes(id) ? befristetBis(user, id) : 0} />
+              : <div className="bv-notiz"><p>Du hast noch keine Apps. Die Verantwortlichen deiner Organisation vergeben die Rechte.</p></div>}
+            <div className="bv-flaeche" style={{ marginTop: 22 }}>
+              <button type="button" className="bv-z" data-probe="hub-apps-anpassen-zeile" onClick={appsOeffnen}>
+                <span className="bv-tx"><b>Apps anpassen</b><small>{ausgeblendet > 0 ? `${ausgeblendet} ausgeblendet` : 'Auswahl und Reihenfolge'}</small></span>
+                <Icon n="weiter" className="bv-pfeil" />
+              </button>
+            </div>
+          </section>
+        </Seite>
+      )}
 
-      {/* Greeting overlay */}
-      {showGreeting && !greetingGone && (
-        <div className="hub-greeting-overlay">
-          <span style={{ fontSize: 15, fontStyle: 'italic', color: 'rgba(253,232,216,0.5)', letterSpacing: '0.04em', animation: 'greetNameSlide 0.5s ease-out both' }}>Servus,</span>
-          <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#fde8d8', fontSize: 'clamp(48px,13vw,80px)', lineHeight: 1, animation: 'greetNameSlide 0.5s 0.12s ease-out both' }}>
-            {firstName}
-          </span>
+      {/* Begrüßung nach dem Login, danach aus dem DOM */}
+      {begruessung && !begruessungVorbei && user && !seiteApps && (
+        <div className="hub-begruessung" data-probe="hub-begruessung" aria-hidden="true">
+          <span>Servus,</span>
+          <b>{vorname}</b>
         </div>
       )}
 
-      {/* Masthead header — sticky, handles safe area */}
-      <div style={{
-        background: 'var(--lbf-card)',
-        borderBottom: '0.5px solid var(--lbf-border)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'max(20px, env(safe-area-inset-left))',
-        paddingRight: 'max(20px, env(safe-area-inset-right))',
-      } as React.CSSProperties}>
-        <div style={{ height: 60, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-            <img src="/logoklein.svg" alt="Responda" style={{ height: 34, width: 34, objectFit: 'contain' }} />
-          </div>
-          <div style={{ flex: 1, textAlign: 'center', padding: '0 12px' }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', lineHeight: 1.2 }}>
-              {user?.organization_name || 'Responda'}
-            </div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
-              {new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })}
-            </div>
-          </div>
-          <button
-            onClick={() => setProfileSheetOpen(true)}
-            style={{ width: 34, height: 34, borderRadius: '50%', border: '1.5px solid var(--lbf-akzent)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 12, color: 'var(--lbf-akzent)', cursor: 'pointer', flexShrink: 0, fontFamily: 'inherit' } as React.CSSProperties}
-          >
-            {initials(user?.name || user?.email)}
-          </button>
-        </div>
-      </div>
-
-      {/* Page content */}
-      <div className="hub-body" style={{
-        maxWidth: 640,
-        margin: '0 auto',
-        padding: '24px max(20px, env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 48px)',
-      } as React.CSSProperties}>
-        <div className="hub-cols">
-
-          {/* Left / main column: Module grid */}
-          <div className="hub-module-col" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Module</div>
-              <button
-                onClick={() => setEditMode(prev => !prev)}
-                style={{ fontSize: 11, fontWeight: 600, color: editMode ? 'var(--lbf-akzent)' : 'var(--warm-gray)', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: '2px 0' }}
-              >
-                {editMode ? 'Fertig' : 'Bearbeiten'}
-              </button>
-            </div>
-            <AppGrid
-              // Gespeicherte Kachellisten können gesperrte Module enthalten
-              userApps={userApps.filter(id => !ALL_APPS[id] || appFrei(user?.organization, id))}
-              editMode={editMode}
-              onRemoveApp={handleRemoveApp}
-              onAppClick={trackAppClick}
-            />
-            {editMode && (
-              <button
-                onClick={() => { setEditMode(false); setShowAppsModal(true) }}
-                style={{ width: '100%', padding: '12px', background: 'var(--lbf-card)', border: '1px dashed rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 12, fontSize: 13, fontWeight: 600, color: 'var(--warm-gray)', cursor: 'pointer', fontFamily: 'inherit' }}
-              >
-                + App hinzufügen
-              </button>
-            )}
-          </div>
-
-          {/* Right / side column: Greeting + News */}
-          <div className="hub-side-col" style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-            <div>
-              <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--lbf-text)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                Servus, <span style={{ color: 'var(--lbf-akzent)', fontStyle: 'italic' }}>{firstName}</span>
-              </div>
-            </div>
-            <Widgets user={user} />
-          </div>
-
-        </div>
-
-
-      </div>
-
-      {/* Animated Control handle — fixed below header, above user avatar */}
-      <div
-        className="hub-control-handle"
-        style={{ position: 'fixed', top: 'calc(env(safe-area-inset-top) + 68px)', right: 16, zIndex: 399, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none' } as React.CSSProperties}
-        onClick={() => setSheetOpen(true)}
-        onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-        onTouchEnd={e => { if (touchStartY.current - e.changedTouches[0].clientY > 30) setSheetOpen(true) }}
-      >
-        <div style={{ width: 32, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.3)' }} />
-        <div style={{ width: 24, height: 2, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.18)' }} />
-        <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', letterSpacing: '0.14em', textTransform: 'uppercase', marginTop: 1 }}>Control</span>
-      </div>
-
-      <SettingsModal isOpen={showSettings} onClose={() => setShowSettings(false)} user={user} />
-      {/* Einführung für neue Benutzer und Organisationen — nach der Begrüßung */}
-      <EinfuehrungAutomatisch user={user} verzoegerung={showGreeting ? 2600 : 500} />
+      {/* Einführung für neue Benutzer und Organisationen, nach der Begrüßung */}
+      <EinfuehrungAutomatisch user={user} verzoegerung={begruessung ? 2600 : 500} onSichtbar={setEinfuehrungAuto} />
       {einfuehrungTeile && user && (
         <Einfuehrung user={user} teile={einfuehrungTeile}
           onEnde={() => { einfuehrungSpeichern(vermerken(einfuehrungStandRef.current, einfuehrungTeile, new Date())); setEinfuehrungTeile(null) }} />
       )}
-      <AppsModal
-        isOpen={showAppsModal}
-        onClose={() => { setShowAppsModal(false); setEditMode(false) }}
-        availableApps={availableApps}
-        onAddApp={handleAddApp}
-      />
-      <EditModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onEditApps={() => { setEditMode(true); setShowAppsModal(true) }}
-        onEditWidgets={() => setShowWidgetsModal(true)}
-      />
-      <WidgetsModal isOpen={showWidgetsModal} onClose={() => setShowWidgetsModal(false)} />
-      {currentNotification && (
-        <NotificationModal
-          isOpen={true}
-          type={currentNotification.type}
-          title={currentNotification.title}
-          message={currentNotification.message}
-          onDismiss={dismissNotification}
-          onRemindLater={remindLater}
-        />
+
+      {user && (
+        <NeuInResponda user={user} bereit={begruessungVorbei && !einfuehrungOffen && !seiteApps} onOffen={setHinweisOffen} />
       )}
 
-      {/* Kurzbefehle bottom sheet */}
-      <div
-        style={{ position: 'fixed', inset: 0, zIndex: 500, background: sheetOpen ? 'rgba(0,0,0,0.3)' : 'transparent', pointerEvents: sheetOpen ? 'all' : 'none', transition: 'background .3s', backdropFilter: sheetOpen ? 'blur(8px)' : 'none', WebkitBackdropFilter: sheetOpen ? 'blur(8px)' : 'none' } as React.CSSProperties}
-        onClick={() => { setSheetOpen(false); setEditingShortcuts(false) }}
-      >
-        <div
-          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', padding: '12px 20px calc(24px + env(safe-area-inset-bottom))', transform: sheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', maxHeight: '75vh', overflowY: 'auto', boxShadow: '0 -4px 32px rgba(0,0,0,0.1)' } as React.CSSProperties}
-          onClick={e => e.stopPropagation()}
-          onTouchStart={e => { touchStartY.current = e.touches[0].clientY }}
-          onTouchEnd={e => { if (e.changedTouches[0].clientY - touchStartY.current > 50) { setSheetOpen(false); setEditingShortcuts(false) } }}
-        >
-          <div style={{ width: 36, height: 3, borderRadius: 99, background: 'var(--lbf-input-border)', margin: '0 auto 20px' }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, paddingBottom: 14, borderBottom: '0.5px solid var(--lbf-border-light)' }}>
-            <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>Kurzbefehle</span>
-            <button
-              onClick={() => setEditingShortcuts(prev => !prev)}
-              style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: 99, padding: '6px 14px', fontWeight: 600, fontSize: 11, color: 'var(--lbf-akzent)', cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              {editingShortcuts ? 'Fertig' : 'Bearbeiten'}
-            </button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px 10px' }}>
-            {(editingShortcuts ? PREDEFINED_SHORTCUTS : PREDEFINED_SHORTCUTS.filter(s => enabledShortcuts.includes(s.id))).filter(s => kurzbefehlErlaubt(s.url)).map(s => {
-              const on = enabledShortcuts.includes(s.id)
-              return (
-                <div key={s.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                  <div style={{ position: 'relative' }}>
-                    <button
-                      onClick={() => editingShortcuts ? toggleShortcut(s.id) : runShortcut(s.id, s.url)}
-                      style={{ width: 60, height: 60, borderRadius: 14, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: on ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.07)', transition: 'background .2s, transform .1s' }}
-                      onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.92)' }}
-                      onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
-                    >
-                      <ShortcutIcon id={s.id} color={on ? '#fff' : 'var(--lbf-akzent)'} />
-                    </button>
-                    {editingShortcuts && (
-                      <div style={{ position: 'absolute', top: -4, right: -4, width: 18, height: 18, borderRadius: '50%', background: on ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.2)', border: '2px solid var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {on
-                          ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                          : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        }
-                      </div>
-                    )}
-                  </div>
-                  <span style={{ fontSize: 10, fontWeight: 600, color: on ? 'var(--lbf-text)' : 'var(--warm-gray)', textAlign: 'center', lineHeight: 1.3, maxWidth: 64 }}>{s.name}</span>
-                </div>
-              )
-            })}
-            {!editingShortcuts && enabledShortcuts.length === 0 && (
-              <div style={{ gridColumn: '1/-1', textAlign: 'center', color: 'var(--warm-gray)', fontSize: 13, fontStyle: 'italic', padding: '16px 0' }}>
-                Tippe auf „Bearbeiten" um Kurzbefehle hinzuzufügen.
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Profile bottom sheet */}
-      {(() => {
-        // Vorgegebene und eigene Rollen der Organisation (src/lib/rollen.ts)
-        const roleLabel = user?.supervisor ? 'Supervisor' : user ? rollenText(user, user.organization) : ''
-
-        async function handleInstall() {
-          if (installPromptRef.current) {
-            installPromptRef.current.prompt()
-            await installPromptRef.current.userChoice
-            installPromptRef.current = null
-          } else {
-            alert('Öffne das Teilen-Menü in Safari und tippe auf „Zum Home-Bildschirm".')
-          }
-        }
-
-        return (
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 600, background: profileSheetOpen ? 'rgba(26,14,8,0.5)' : 'transparent', pointerEvents: profileSheetOpen ? 'all' : 'none', transition: 'background .3s' } as React.CSSProperties}
-            onClick={() => setProfileSheetOpen(false)}
-          >
-            <div
-              style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderRadius: '22px 22px 0 0', transform: profileSheetOpen ? 'translateY(0)' : 'translateY(100%)', transition: 'transform .38s cubic-bezier(0.32,0.72,0,1)', overflow: 'hidden', display: 'flex', flexDirection: 'column' } as React.CSSProperties}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ width: 36, height: 3, borderRadius: 99, background: 'var(--lbf-input-border)', margin: '12px auto 0', flexShrink: 0 }} />
-              <div style={{ overflowY: 'auto', padding: '16px 20px calc(24px + env(safe-area-inset-bottom))' }}>
-
-                {/* Abmelden */}
-                <button
-                  onClick={() => { logout(); setProfileSheetOpen(false) }}
-                  style={{ width: '100%', background: 'rgba(220,38,38,0.06)', border: '0.5px solid rgba(220,38,38,0.18)', borderRadius: 12, padding: '14px', color: '#dc2626', fontWeight: 700, fontSize: 15, cursor: 'pointer', fontFamily: 'inherit', marginBottom: 16 } as React.CSSProperties}
-                >
-                  Abmelden
-                </button>
-
-                {/* User info */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 16px', background: 'var(--warm-bg)', borderRadius: 12, marginBottom: 20 }}>
-                  <div style={{ width: 48, height: 48, borderRadius: '50%', border: '2px solid var(--lbf-akzent)', background: 'var(--lbf-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 16, color: 'var(--lbf-akzent)', flexShrink: 0 }}>
-                    {initials(user?.name || user?.email)}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 15, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || user?.email?.split('@')[0]}</div>
-                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.email}</div>
-                    <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 5, background: 'rgba(var(--lbf-rot-rgb),0.07)', borderRadius: 99, padding: '2px 8px', display: 'inline-block' }}>{roleLabel}</div>
-                  </div>
-                </div>
-
-                {/* Ausweis */}
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>Ausweis</div>
-                <div style={{ background: 'var(--lbf-akzent-grund)', borderRadius: 16, padding: '22px 20px 20px', position: 'relative', overflow: 'hidden', marginBottom: 12 }}>
-                  <div style={{ position: 'absolute', top: -24, right: -24, width: 130, height: 130, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
-                  <div style={{ position: 'absolute', bottom: -30, left: -10, width: 90, height: 90, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-                    <div>
-                      <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(253,232,216,0.55)', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Responda</div>
-                      <div style={{ fontSize: 11, color: 'rgba(253,232,216,0.75)', fontStyle: 'italic', marginTop: 3 }}>{user?.organization_name || ''}</div>
-                    </div>
-                    <img src="/logoklein.svg" alt="" style={{ height: 26, opacity: 0.4 }} />
-                  </div>
-                  <div style={{ fontSize: 24, fontWeight: 800, fontStyle: 'italic', color: '#fde8d8', letterSpacing: '-0.01em', marginBottom: 6, lineHeight: 1.1 }}>
-                    {user?.name || user?.email?.split('@')[0]}
-                  </div>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'rgba(253,232,216,0.65)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>
-                    {roleLabel}
-                  </div>
-                </div>
-
-                {/* Add to home screen */}
-                <button
-                  onClick={handleInstall}
-                  style={{ width: '100%', background: 'var(--warm-bg)', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 12, padding: '13px 16px', color: 'var(--lbf-text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14M5 12l7-7 7 7"/>
-                  </svg>
-                  Zum Homebildschirm hinzufügen
-                </button>
-
-                {/* Einführung — für alle erreichbar, auch ohne Einstellungen */}
-                <button
-                  onClick={() => { setProfileSheetOpen(false); setEinfuehrungTeile(istVerantwortlich(user) ? ['basis', 'organisation'] : ['basis']) }}
-                  style={{ width: '100%', marginTop: 10, background: 'none', border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', borderRadius: 12, padding: '13px 16px', color: 'var(--lbf-text)', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 } as React.CSSProperties}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style={{ stroke: 'var(--lbf-akzent)' }} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  Einführung ansehen
-                </button>
-
-              </div>
-            </div>
-          </div>
-        )
-      })()}
-    </div>
+      {blatt === 'kurz' && !seiteApps && <KurzbefehleBlatt appErlaubt={appErlaubt} onClose={schliessenBlatt} />}
+      {blatt === 'profil' && user && !seiteApps && (
+        <ProfilBlatt user={user} onClose={schliessenBlatt}
+          onApps={appsOeffnen}
+          onEinstellungen={() => { setBlatt(null); navigate('/settings') }}
+          onSupervisor={() => { setBlatt(null); navigate('/supervisor?tab=hinweise') }}
+          onEinfuehrung={() => { setBlatt(null); setEinfuehrungTeile(istVerantwortlich(user) ? ['basis', 'organisation'] : ['basis']) }}
+          onInstallieren={installieren}
+          onAbmelden={() => { setBlatt(null); void logout() }} />
+      )}
+    </>
   )
 }

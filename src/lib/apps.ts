@@ -2,10 +2,10 @@ import type { App, User } from '../types'
 import { appFrei, rechtFrei } from './freigabe'
 
 export const ALL_APPS: Record<string, App> = {
-  einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze',                permission: 'einsaetze',           color: '#600812' },
+  einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze',                permission: 'einsaetze',           color: '#600812', isInternal: true },
   eks:          { id: 'eks',          name: 'EKS',           icon: 'eks',        url: '/eks',                       permission: 'eks',                 color: '#3d0408', isInternal: true },
   patienten:    { id: 'patienten',    name: 'Patienten',     icon: 'clipboard',  url: '/patienten',                 permission: 'patienten',           color: '#600812', isInternal: true },
-  dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/dokumente-bearbeiten.html', permission: 'dokumente',           color: '#7a1020' },
+  dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/vorgaenge',                 permission: 'dokumente',           color: '#7a1020', isInternal: true },
   lager:        { id: 'lager',        name: 'Lager',         icon: 'package',    url: '/lager',                     permission: 'lager',               color: '#5c3800', isInternal: true },
   dateien:      { id: 'dateien',      name: 'Dateien',       icon: 'folder',     url: '/files',                     permission: 'dateien',             color: '#8a7a68', isInternal: true },
   office:       { id: 'office',       name: 'Schreibstube',  icon: 'file-text',  url: '/office',                    permission: 'dateien',             color: '#1e3a8a', isInternal: true },

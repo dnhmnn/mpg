@@ -20,9 +20,12 @@ export function Icon({ n, className = '' }: { n: keyof typeof PFADE | string; cl
   return <svg className={`bv-i ${className}`} viewBox="0 0 24 24" aria-hidden="true">{PFADE[n]}</svg>
 }
 
-/** Ganze Seite: dunkelroter Kopf, Elfenbein-Blatt, darunter optional die Leiste */
-export function Seite({ titel, unter, zurueck, zurueckLabel = 'Zurück', rechts, reiter, leiste, children }: {
-  titel: string; unter?: string; zurueck: () => void; zurueckLabel?: string
+/**
+ * Ganze Seite: dunkelroter Kopf, Elfenbein-Blatt, darunter optional die Leiste.
+ * Links im Kopf der Zurück-Knopf (zurueck) oder etwas Eigenes (links, z. B. das Zeichen im Hub).
+ */
+export function Seite({ titel, unter, zurueck, zurueckLabel = 'Zurück', links, rechts, reiter, leiste, children }: {
+  titel: string; unter?: string; zurueck?: () => void; zurueckLabel?: string; links?: React.ReactNode
   rechts?: React.ReactNode; reiter?: React.ReactNode; leiste?: React.ReactNode; children: React.ReactNode
 }) {
   return (
@@ -33,7 +36,7 @@ export function Seite({ titel, unter, zurueck, zurueckLabel = 'Zurück', rechts,
       <header className="bv-kopf">
         <div className="bv-kopf-innen">
           <div className="bv-zeile1">
-            <button type="button" className="bv-rund" aria-label={zurueckLabel} onClick={zurueck}><Icon n="zurueck" /></button>
+            {links ?? (zurueck && <button type="button" className="bv-rund" aria-label={zurueckLabel} onClick={zurueck}><Icon n="zurueck" /></button>)}
             <div className="bv-titel"><b>{titel}</b>{unter && <span>{unter}</span>}</div>
             {rechts}
           </div>

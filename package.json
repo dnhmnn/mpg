@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:only": "vite build",
+    "hub-icons": "node scripts/hub-icons-bauen.mjs",
     "verify": "npm run typecheck && npm run test && npm run build:only"
   },
   "dependencies": {

@@ -192,3 +192,25 @@ describe('Einführung: welche Schritte jemand sieht', () => {
     expect(schritte(nutzer(), [])).toEqual([])
   })
 })
+
+describe('Einführung: Texte zum Hub im Dunkelrot-Design', () => {
+  const u = nutzer({ permissions: { lernbar: true, chat: true, dashboard: true } })
+  const s = (id: string) => schritte(u, ['basis']).find((x) => x.id === id)!
+  const alles = (id: string) => [s(id).titel, s(id).text, ...(s(id).punkte ?? [])].join(' ')
+
+  it('Hub nennt „Apps anpassen“, Kurzbefehle sitzen im roten Kopf (kein „Control“ mehr)', () => {
+    expect(alles('hub')).toContain('„Apps anpassen“')
+    expect(s('control').titel).toBe('Kurzbefehle')
+    expect(alles('control')).toContain('roten Kopf')
+    expect(alles('control')).not.toMatch(/Control/)
+  })
+
+  it('Profil: App-Auswahl bleibt beim Abmelden im Konto', () => {
+    expect(alles('profil')).toContain('App-Auswahl bleibt im Konto')
+    expect(alles('profil')).not.toContain('Kachelauswahl')
+  })
+
+  it('keine Gedankenstriche in den drei Hub-Schritten', () => {
+    for (const id of ['hub', 'control', 'profil']) expect(alles(id), id).not.toMatch(/[–—]/)
+  })
+})

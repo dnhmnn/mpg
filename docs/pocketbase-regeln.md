@@ -1461,3 +1461,116 @@ direkten Anlagen mehr auftauchen:
    (Geräteliste der Defektmeldung).
 
 Rücknahme: die notierten Regeln wieder eintragen.
+
+## Hub und Hinweise
+
+Der Hub merkt sich am Konto, welche Apps jemand sehen will (App-Auswahl), und „Neu in Responda“
+zeigt jedem Benutzer nach einem Update einmal eine kurze Info des Supervisors. Dafür zwei neue
+Felder an `users` und die neue Sammlung `responda_hinweise`. Schritte in der richtigen
+Reihenfolge: `docs/hub-und-hinweise-einfuehrung.md`. Die App läuft schon vorher (Rückhalt auf dem
+Gerät, ohne Sammlung erscheint kein Hinweis).
+
+### users: hub_apps und hinweis_gesehen_am
+
+| Feld | Typ | Inhalt |
+|---|---|---|
+| `hub_apps` | JSON, nicht Pflicht, Max size 4000 | `{ "ausgeblendet": [...], "reihenfolge": [...] }`: App-IDs aus `src/lib/apps.ts`. Ausgeblendete statt sichtbarer Liste, damit neu erteilte Apps von selbst erscheinen (`src/lib/hubApps.ts`) |
+| `hinweis_gesehen_am` | Date, nicht Pflicht | `veroeffentlicht_am` des zuletzt bestätigten Hinweises (`src/lib/hinweise.ts`) |
+
+**Keine Regeländerung nötig.** Die Update-Regel aus „users: Rechte vergeben nur
+Verantwortliche“ (Fassung mit `zusatzrollen`) erlaubt im eigenen Zweig
+(`id = @request.auth.id && …`) alles außer einer **Sperrliste** heikler Felder: `permissions`,
+`temp_permissions`, `role`, `supervisor`, `organization_id`, `disabled`, `expires_at`,
+`permissions_migrated`, `zusatzrollen`. `hub_apps` und `hinweis_gesehen_am` stehen nicht darauf:
+Jeder darf sie an sich selbst schreiben (wie heute schon `einfuehrung`), mit aktivem Konto (die
+Bedingung vorn in der Regel). Fremde Konten ändern wie bei jedem Feld nur Admin und Verwalter
+(eigene Organisation) und der Supervisor. Der Hook `pb_hooks/mitglieder-namen.pb.js` prüft beim
+Ändern nur den Namen. Harmlos: Wer sich selbst Unsinn in die Felder schreibt, ändert nur seinen
+eigenen Hub bzw. sieht einen Hinweis nicht. Steht noch die Übergangsregel, gilt dasselbe (gleicher
+eigener Zweig).
+
+Ohne die Felder verwirft PocketBase die Werte still; die App merkt sich Auswahl und Bestätigung
+dann nur auf dem Gerät (`hub_wahl_<id>`, `hinweis_gesehen_<id>`). Mit Feld steht eine Änderung der
+App-Auswahl, die noch nicht im Konto ist (ohne Netz), gekennzeichnet auf dem Gerät
+(`hub_wahl_<id>` und `hub_wahl_offen_<id>`): Sie gilt dort vor dem Kontowert und wird beim
+nächsten Öffnen des Hubs, wenn das Netz wiederkommt oder die App wieder in den Vordergrund kommt,
+ins Konto geschrieben. Die letzte Änderung gewinnt. Beim Abmelden leert die App den
+Gerätespeicher: Ohne Felder geht die Auswahl dann verloren, und ein schon bestätigter Hinweis
+kann noch einmal erscheinen.
+
+### responda_hinweise: API-Regeln
+
+Neue Sammlung, Typ **Base**, Name `responda_hinweise`:
+
+| Feld | Typ | |
+|---|---|---|
+| `titel` | Plain text | Nonempty, Max length 120 |
+| `text` | Plain text | Max length 5000. Absätze mit Leerzeile, Aufzählung mit „- “, kein HTML (die App zeigt ihn nur als Text) |
+| `veroeffentlicht` | Bool | |
+| `veroeffentlicht_am` | Date | beim ersten Veröffentlichen gesetzt, nach der **Serverzeit**, bleibt danach |
+| `erstellt_von` | Plain text | Max length 120, Name des Supervisors, sonst „Supervisor“; nie die E-Mail. Die App zeigt es nur in der Verwaltung, lesbar ist es aber für jeden Angemeldeten (siehe unten) |
+| `created`, `updated` | Autodate | wie PocketBase sie anlegt, nicht löschen: `updated` liefert beim Veröffentlichen die Serverzeit |
+
+Hinweise gelten für alle Organisationen (Betreiber-Info nach Updates). Lesen dürfen angemeldete
+Benutzer nur veröffentlichte, der Supervisor alle; schreiben nur der Supervisor mit aktivem Konto;
+löschen nur Unveröffentlichtes (ein veröffentlichter Hinweis wird zurückgezogen, nicht gelöscht).
+
+**List/Search**
+```
+@request.auth.id != "" && (veroeffentlicht = true || @request.auth.supervisor = true)
+```
+
+**View**
+```
+@request.auth.id != "" && (veroeffentlicht = true || @request.auth.supervisor = true)
+```
+
+**Create**
+```
+@request.auth.id != "" && @request.auth.supervisor = true && @request.auth.disabled != true
+```
+
+**Update**
+```
+@request.auth.id != "" && @request.auth.supervisor = true && @request.auth.disabled != true
+```
+
+**Delete**
+```
+@request.auth.id != "" && @request.auth.supervisor = true && @request.auth.disabled != true && veroeffentlicht != true
+```
+
+Ohne Anmeldung: Liste leer, Ansicht 404. Ohne eingetragene Regel (Schloss) sieht nur der Superuser
+etwas; die App zeigt dann keinen Hinweis und der Supervisor bekommt beim Laden eine Ablehnung.
+
+List und View geben bei veröffentlichten Hinweisen **alle Felder** heraus, auch `erstellt_von`, an
+jeden angemeldeten Benutzer aller Organisationen. Die App schreibt dort deshalb nur den Namen des
+Supervisors (ohne Namen „Supervisor“), nie seine E-Mail, und das Blatt „Neu in Responda“ fragt nur
+`id,titel,text,veroeffentlicht,veroeffentlicht_am` ab.
+
+**Datum nach der Serverzeit.** Welcher Hinweis der neueste ist und wer ihn schon gesehen hat,
+entscheidet allein `veroeffentlicht_am`. Ginge die Uhr des Supervisor-Geräts vor, verdeckte ein zu
+spät datierter Hinweis jeden späteren. Die Verwaltung veröffentlicht deshalb in zwei Schritten:
+erst speichern (in der Liste ohne Änderung), dann `veroeffentlicht: true` mit
+`veroeffentlicht_am` = Serverzeit. Die Serverzeit kommt aus `updated` der ersten Antwort (PocketBase
+setzt `updated` bei jedem Speichern neu, auch ohne Änderung; geprüft mit 0.28.4 und 0.40.5). Geht
+die Uhr des Geräts mehr als 2 Minuten falsch, sagt die Verwaltung das. Ohne `updated` gilt die
+Geräte-Uhr.
+
+### Geprüft
+
+Gegen **PocketBase 0.28.4 und 0.40.5** mit den Regeln aus diesem Abschnitt (gelesen aus dieser
+Datei) und der Update-Regel von `users` aus „users: Rechte vergeben nur Verantwortliche“: **67
+Prüfungen je Version, alle bestanden**. Geprüft: Liste, Ansicht und Filter auf Entwürfe ohne
+Anmeldung, als Mitglied, als Leitung (kein Supervisor) und als Supervisor; Anlegen, Ändern,
+Veröffentlichen und Löschen (Entwurf, veröffentlicht, zurückgezogen) für alle, dazu ein gesperrter
+Supervisor mit noch gültigem Token und Löschen per Batch; Titel leer, 121 Zeichen, 120 Umlaute,
+Text 5001 Zeichen. An `users`: eigenes `hub_apps` und `hinweis_gesehen_am` schreiben ja, fremdes
+nein, zusammen mit `permissions` nein, `hub_apps` über 4000 Bytes nein, Leitung für ein Mitglied
+der eigenen Organisation ja; ohne die Felder 200 mit still verworfenen Werten; ohne Sammlung 404.
+Dazu die Browserprobe (gebaute App gegen 0.40.5, Abschnitte 34 bis 37, 103 Prüfungen): Supervisor
+→ Hinweise, das Blatt nach dem Login und ohne Login, nach der Einführung, in der Lernbar, nur der
+neueste, einmal (auch nach Ab- und Anmelden), neue Konten ohne Blatt, HTML bleibt Text, ohne Feld
+am Konto (Gerät), ohne Sammlung und ohne Netz kein Blatt und kein Fehler; Supervisor-Gerät mit
+einen Tag vorgehender Uhr (Datum nach der Serverzeit, Satz zur Uhr), Konto ohne Namen
+(`erstellt_von` = „Supervisor“), das Blatt fragt nur seine Felder ab.

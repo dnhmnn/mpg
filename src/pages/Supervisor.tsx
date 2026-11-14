@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
@@ -10,6 +10,7 @@ import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { zufallsPasswort } from '../lib/passwort'
 import WillkommenKnopf from '../components/WillkommenKnopf'
 import KachelGenerator from './KachelGenerator'
+import HinweiseVerwaltung from './supervisor/HinweiseVerwaltung'
 import { KONTAKT_EMAIL } from '../lib/landingSchema'
 
 /**
@@ -317,7 +318,11 @@ export default function Supervisor() {
   const navigate = useNavigate()
   const { user, loading } = useAuth()
 
-  const [tab, setTab] = useState<'orgs' | 'profil' | 'website' | 'legal' | 'kachel'>('orgs')
+  // /supervisor?tab=hinweise öffnet den Reiter „Hinweise“ direkt (Profil-Blatt im Hub)
+  const [suche] = useSearchParams()
+  const [tab, setTab] = useState<'orgs' | 'profil' | 'website' | 'legal' | 'kachel' | 'hinweise'>(() => (suche.get('tab') === 'hinweise' ? 'hinweise' : 'orgs'))
+  // Direkt geöffnet: den Reiter „Hinweise“ in der waagrecht rollenden Leiste einmal sichtbar machen (Telefon)
+  const hinweiseGezeigt = useRef(false)
 
   const [orgs, setOrgs] = useState<Org[]>([])
   const [dataLoading, setDataLoading] = useState(true)
@@ -797,7 +802,7 @@ export default function Supervisor() {
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', letterSpacing: '-0.01em' }}>Supervisor</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
-              {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : tab === 'kachel' ? 'Kachel-Generator' : 'Rechtliche Texte'}
+              {tab === 'orgs' ? 'Organisationsverwaltung' : tab === 'profil' ? 'Mein Profil' : tab === 'website' ? 'Website-Inhalt' : tab === 'kachel' ? 'Kachel-Generator' : tab === 'hinweise' ? 'Hinweise nach Updates' : 'Rechtliche Texte'}
             </div>
           </div>
           <button onClick={() => navigate('/website')} title="Website-Editor (responda.systems)" style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid rgba(var(--lbf-rot-rgb),0.25)', borderRadius: 10, background: 'transparent', color: 'var(--lbf-akzent)', padding: '8px 12px', fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
@@ -818,9 +823,11 @@ export default function Supervisor() {
           { key: 'website', label: 'Website' },
           { key: 'legal', label: 'Rechtliches' },
           { key: 'kachel', label: 'Kachel' },
+          { key: 'hinweise', label: 'Hinweise' },
         ] as const).map(t => (
           <button
             key={t.key}
+            ref={t.key === 'hinweise' ? (el) => { if (el && tab === 'hinweise' && !hinweiseGezeigt.current) { hinweiseGezeigt.current = true; el.scrollIntoView({ block: 'nearest', inline: 'end' }) } } : undefined}
             onClick={() => {
               setTab(t.key)
               if (t.key === 'website' && !website.id && !websiteLoading) loadWebsite()
@@ -1224,6 +1231,8 @@ export default function Supervisor() {
       )}
 
       {tab === 'kachel' && <KachelGenerator />}
+
+      {tab === 'hinweise' && user && <HinweiseVerwaltung user={user} />}
 
       {selectedOrg && (
         <div

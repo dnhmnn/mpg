@@ -1736,3 +1736,15 @@ body.loaded {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Hub-Symbole (src/components/HubIcon.tsx): hell und dunkel liegen beide im DOM,
+   gezeigt wird das zur Darstellung passende. Retro nimmt die hellen Kacheln. */
+.hub-icon{display:inline-block;flex-shrink:0;line-height:0}
+.hub-icon img{display:block;width:100%;height:100%}
+.hub-icon .dunkel{display:none}
+[data-theme="dark"] .hub-icon .hell{display:none}
+[data-theme="dark"] .hub-icon .dunkel{display:block}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme]) .hub-icon .hell{display:none}
+  :root:not([data-theme]) .hub-icon .dunkel{display:block}
+}

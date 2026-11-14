@@ -10,13 +10,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type React from 'react'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
-import { ALL_APPS, hatRecht, kachelFarbe } from '../lib/apps'
+import { ALL_APPS, hatRecht } from '../lib/apps'
 import {
   automatisch, cookieLesen, cookieText, schritte, standLeer, standLesen, standWaehlen, vermerken,
   type Bild, type EinfSchritt, type Stand, type Teil,
 } from '../lib/einfuehrung'
 import type { User } from '../types'
-import AppIcon from './AppIcon'
+import HubIcon from './HubIcon'
 import OrgCheckliste from './OrgCheckliste'
 
 const SCHRIFT = "'Atkinson Hyperlegible', -apple-system, sans-serif"
@@ -87,25 +87,34 @@ export function useEinfuehrungStand(user: User | null) {
  * sich sein Datensatz ändert — beim ersten Login etwa, wenn die Rechte aus der
  * Rollen-Vorlage nachgetragen werden. Hinge der Start am Benutzer-Objekt,
  * bräche dieses Neuladen die wartende Einführung ab.
+ *
+ * onSichtbar meldet true, sobald die Einführung kommen wird (schon während sie auf
+ * das Ende der Begrüßung wartet), und false, wenn sie vorbei ist. Der Hub hält
+ * damit andere Fenster zurück (Hinweis „Neu in Responda“).
  */
-export function EinfuehrungAutomatisch({ user, verzoegerung = 0 }: { user: User | null; verzoegerung?: number }) {
+export function EinfuehrungAutomatisch({ user, verzoegerung = 0, onSichtbar }: {
+  user: User | null; verzoegerung?: number; onSichtbar?: (sichtbar: boolean) => void
+}) {
   const { standRef, speichern } = useEinfuehrungStand(user)
   const [teile, setTeile] = useState<Teil[]>([])
   const nutzerRef = useRef(user)
   nutzerRef.current = user
+  const meldenRef = useRef(onSichtbar)
+  meldenRef.current = onSichtbar
   useEffect(() => {
     const u = nutzerRef.current
     if (!u) return
     const t = automatisch(u as User & { created?: string }, standHolen(u))
     if (!t.length) return
+    meldenRef.current?.(true)
     const uhr = window.setTimeout(() => setTeile(t), verzoegerung)
-    return () => window.clearTimeout(uhr)
+    return () => { window.clearTimeout(uhr); meldenRef.current?.(false) }
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user || !teile.length) return null
   return (
     <Einfuehrung user={user} teile={teile}
-      onEnde={() => { speichern(vermerken(standRef.current, teile, new Date())); setTeile([]) }} />
+      onEnde={() => { speichern(vermerken(standRef.current, teile, new Date())); setTeile([]); meldenRef.current?.(false) }} />
   )
 }
 
@@ -268,15 +277,14 @@ function Flaeche({ children, hoehe = 150 }: { children: React.ReactNode; hoehe?:
   )
 }
 
+// Die Farbkacheln wie im Hub (HubIcon, hell und dunkel nach Darstellung)
 function Kachel({ id, gross = false }: { id: string; gross?: boolean }) {
   const app = ALL_APPS[id]
   if (!app) return null
   const k = gross ? 46 : 38
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, width: gross ? 72 : 68 }}>
-      <div style={{ width: k, height: k, borderRadius: 11, background: kachelFarbe(app.color || '#600812'), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ width: k * 0.5, height: k * 0.5 }}><AppIcon icon={app.icon} /></div>
-      </div>
+      <HubIcon id={id} groesse={k} />
       <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-text)', textAlign: 'center', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{app.name}</span>
     </div>
   )
@@ -314,34 +322,39 @@ function Abbildung({ bild, user, schritt }: { bild: Bild; user: User; schritt: E
       )
     }
     case 'control':
+      // Der rote Kopf des Hubs: rechts der Knopf mit den Reglern (Kurzbefehle) und die Initialen
       return (
-        <Flaeche>
-          <div style={{ position: 'absolute', top: 14, right: 18, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
-            <div style={{ width: 30, height: 3, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.45)' }} />
-            <div style={{ width: 22, height: 2, borderRadius: 99, background: 'rgba(var(--lbf-rot-rgb),0.3)' }} />
-            <span style={{ fontSize: 9, fontWeight: 700, color: 'var(--lbf-akzent)', letterSpacing: '0.14em' }}>CONTROL</span>
+        <div aria-hidden="true" style={{ borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--lbf-border-light)', background: 'var(--warm-bg)' }}>
+          <div style={{ background: 'var(--lbf-kopf)', color: 'var(--lbf-kopf-text)', padding: '12px 14px 30px', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.organization_name || 'Responda'}</div>
+              <div style={{ fontSize: 11, color: 'var(--lbf-kopf-text-2)', marginTop: 2 }}>Kurzbefehle und Profil</div>
+            </div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-feld)', display: 'grid', placeItems: 'center', boxShadow: '0 0 0 2px var(--lbf-kopf-text)' }}>
+              {ikon(<><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /><circle cx="9" cy="7" r="2.2" fill="var(--lbf-kopf-feld)" /><circle cx="15" cy="12" r="2.2" fill="var(--lbf-kopf-feld)" /><circle cx="10" cy="17" r="2.2" fill="var(--lbf-kopf-feld)" /></>, 18)}
+            </div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-text)', color: 'var(--lbf-kopf)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700 }}>{initialen(user.name || user.email)}</div>
           </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 26 }}>
-            {[<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></>,
-              <><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /></>,
-              <><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><path d="M14 14h3v3h-3zM20 20h1" /></>,
-              <><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>,
-            ].map((p, n) => (
-              <div key={n} style={{ width: 46, height: 46, borderRadius: 12, background: n === 0 ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.08)', color: n === 0 ? '#fff' : 'var(--lbf-akzent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{ikon(p, 20)}</div>
+          <div style={{ margin: '-18px 10px 12px', background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)' }}>
+            {['Protokoll anlegen', 'Darstellung umschalten'].map((t, n) => (
+              <div key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px', borderTop: n ? '1px solid rgba(var(--lbf-grau-rgb),0.2)' : 'none', fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>
+                <span style={{ color: 'var(--lbf-akzent)', display: 'grid' }}>{ikon(n ? <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /> : <><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /></>, 18)}</span>
+                {t}
+              </div>
             ))}
           </div>
-        </Flaeche>
+        </div>
       )
     case 'profil':
       return (
         <Flaeche>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', border: '1.5px solid var(--lbf-akzent)', color: 'var(--lbf-akzent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>{initialen(user.name || user.email)}</div>
-            <div style={{ width: 170, borderRadius: 12, background: 'var(--lbf-akzent-grund)', padding: '12px 14px', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -18, right: -18, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
-              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.6)', letterSpacing: '0.2em' }}>RESPONDA</div>
-              <div style={{ fontSize: 15, fontStyle: 'italic', fontWeight: 800, color: '#fde8d8', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name || vorname}</div>
-              <div style={{ fontSize: 8, fontWeight: 700, color: 'rgba(253,232,216,0.65)', letterSpacing: '0.14em', marginTop: 2 }}>AUSWEIS</div>
+            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'var(--lbf-kopf)', color: 'var(--lbf-kopf-text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14 }}>{initialen(user.name || user.email)}</div>
+            {/* Der Ausweis wie im Profil: ruhig, ohne Verzierung */}
+            <div style={{ width: 170, borderRadius: 12, background: 'var(--lbf-kopf)', color: 'var(--lbf-kopf-text)', padding: '12px 14px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--lbf-kopf-text-2)' }}>Responda</div>
+              <div style={{ fontSize: 15, fontStyle: 'italic', fontWeight: 800, marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.name || vorname}</div>
+              <div style={{ fontSize: 10, color: 'var(--lbf-kopf-text-2)', marginTop: 2 }}>Ausweis</div>
             </div>
           </div>
         </Flaeche>

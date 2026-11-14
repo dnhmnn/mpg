@@ -184,6 +184,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Ausbildungen | `src/pages/ausbildungen/Ausbildungen.tsx` | Admin-Verwaltung Ausbildungen |
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
 | MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Fristen (STK/MTK), Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/` (STK/MTK: `fristen.ts`, `kontrollen.ts`; eine überfällige oder nicht bestandene STK oder MTK sperrt), Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
+| Hub | `src/pages/Hub.tsx`, `src/pages/hub/` | Startseite nach dem Login im Dunkelrot-Design: Gruß, Neuigkeiten, Apps (Auswahl und Reihenfolge je Benutzer: `src/lib/hubApps.ts`, Feld `users.hub_apps`), Kurzbefehle, Profil. Symbole: `src/lib/hubIcons.ts`, erzeugt mit `npm run hub-icons` aus `docs/entwuerfe/hub-icons/bau.mjs` |
 | Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |
 
 ## PocketBase Collections (wichtigste)
@@ -195,11 +196,12 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | `ausbildungen_termine` | Termine |
 | `ausbildungen_module` | Lernmodule |
 | `organizations` | Organisationen mit Logo, Rollen-Vorlagen (`role_permissions`), eigene Rollen (`eigene_rollen`, nur über `src/lib/rollen.ts` lesen) und verknüpfte Rechte. Update-Regel: Lizenz und Module nur Supervisor, Rollen und Vorlagen Admin/Benutzerverwaltung, Formulare Vorgänge — `docs/pocketbase-regeln.md`, „Eigene Rollen der Organisationen“ |
-| `users` | User mit `organization_id`, `organization_name`, `organization_logo`; Rollen: erste in `role`, weitere in `zusatzrollen` (JSON). Was jemand darf, kommt nur aus den Rollen (`src/lib/rollen.ts`, `rechteAusRollen`), gespeichert als Kopie in `permissions`; je Person weicht nur `temp_permissions` ab. Leitung (`admin`) und Teilnehmende sind fest. Passwörter legt jeder selbst fest (Link), nur der Supervisor setzt fremde. Ohne E-Mail: Platzhalter `…@kein-email.intern` (`isPlaceholderEmail`, nie anzeigen: `sichtbareEmail`) — `docs/pocketbase-regeln.md`, „users: Passwörter legt jeder selbst fest“ |
+| `users` | User mit `organization_id`, `organization_name`, `organization_logo`; Rollen: erste in `role`, weitere in `zusatzrollen` (JSON). Was jemand darf, kommt nur aus den Rollen (`src/lib/rollen.ts`, `rechteAusRollen`), gespeichert als Kopie in `permissions`; je Person weicht nur `temp_permissions` ab. Leitung (`admin`) und Teilnehmende sind fest. Passwörter legt jeder selbst fest (Link), nur der Supervisor setzt fremde. Ohne E-Mail: Platzhalter `…@kein-email.intern` (`isPlaceholderEmail`, nie anzeigen: `sichtbareEmail`) — `docs/pocketbase-regeln.md`, „users: Passwörter legt jeder selbst fest“. App-Auswahl im Hub in `hub_apps` (JSON), zuletzt bestätigter Hinweis in `hinweis_gesehen_am`. |
 | `eks_events` | EKS-Ereignislog (anhängend, **unveränderlich** — Update/Delete gesperrt). ID wird vom Client vergeben (15× `[a-z0-9]`) |
 | `inventory_transactions` | Lager-Journal (**unveränderlich**, Hook `pb_hooks/lager.pb.js`). Buchungen nur über `src/lib/lagerBuchung.ts` (Batch, Client-ID, genau einmal); Korrektur = Gegenbuchung (`storno_von`) |
 | `inventory_items`, `inventory_locations` | Lager-Stammdaten; benutzt → `archiviert` statt löschen |
 | `mpg_ereignisse` | MPG-Gerätebuch (**unveränderlich**, Hook `pb_hooks/mpg.pb.js`): Sperren, Freigaben, Stammdatenänderungen, Außerbetriebnahme, STK/MTK (mit `angaben`), Vermerke. Geschrieben nur über die Pläne in `src/lib/mpg/aktionen.ts` und `src/lib/mpg/kontrollen.ts`; Korrektur = Vermerk mit `bezug` |
+| `responda_hinweise` | „Neu in Responda“: kurze Info des Supervisors nach Updates; jeder sieht den neuesten veröffentlichten einmal (`users.hinweis_gesehen_am`). Logik `src/lib/hinweise.ts`; Regeln `docs/pocketbase-regeln.md`, „Hub und Hinweise“ |
 | `mpg_devices`, `mpg_inspections`, `mpg_defects` | MPG; Prüfprotokolle unveränderlich, Defekte nicht löschbar, Gerät mit Nachweisen → `ausser_betrieb` statt löschen. Regeln: `docs/pocketbase-regeln.md`, „MPG: API-Regeln“ |
 
 ---

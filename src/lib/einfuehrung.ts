@@ -208,8 +208,8 @@ export const SCHRITTE: EinfSchritt[] = [
   },
   {
     id: 'hub', teil: 'basis', bild: 'hub',
-    titel: 'Das Hub — dein Startpunkt',
-    text: 'Nach der Anmeldung landest du im Hub. Deine Module liegen dort als Kacheln — neue erscheinen, sobald du das Recht dafür bekommst.',
+    titel: 'Der Hub, dein Startpunkt',
+    text: 'Nach der Anmeldung landest du im Hub. Deine Apps liegen dort als Kacheln. Welche erscheinen und in welcher Reihenfolge, legst du unter „Apps anpassen“ fest; neue erscheinen von selbst.',
     punkte: [
       'Unter „Neuigkeiten“ stehen offene Punkte, zum Beispiel offene Protokolle. Antippen öffnet das Modul.',
       'Fehlt dir ein Modul, das du brauchst? Die Verantwortlichen deiner Organisation vergeben die Rechte.',
@@ -218,8 +218,8 @@ export const SCHRITTE: EinfSchritt[] = [
   },
   {
     id: 'control', teil: 'basis', bild: 'control',
-    titel: 'Control und Kurzbefehle',
-    text: 'Rechts unter der Kopfzeile sitzt „Control“. Antippen oder nach oben wischen öffnet die Kurzbefehle: Sprünge in häufige Module und das Umschalten der Darstellung.',
+    titel: 'Kurzbefehle',
+    text: 'Oben rechts im roten Kopf, neben deinen Initialen, öffnet der Knopf mit den Reglern die Kurzbefehle: Sprünge in häufige Module und das Umschalten der Darstellung.',
     punkte: [
       'Mit „Bearbeiten“ legst du fest, welche Kurzbefehle erscheinen.',
       'Ein Kurzbefehl öffnet nur das Modul; angelegt wird dabei noch nichts.',
@@ -230,11 +230,11 @@ export const SCHRITTE: EinfSchritt[] = [
   {
     id: 'profil', teil: 'basis', bild: 'profil',
     titel: 'Dein Profil',
-    text: 'Oben rechts stehen deine Initialen. Dahinter findest du Name, Rolle und deinen Ausweis — und dort meldest du dich ab.',
+    text: 'Oben rechts stehen deine Initialen. Dahinter findest du Name, Rolle und deinen Ausweis, und dort meldest du dich ab.',
     punkte: [
       '„Zum Homebildschirm hinzufügen“: Responda startet dann wie eine App.',
       'Dort findest du auch diese Einführung wieder.',
-      'Beim Abmelden werden Kachelauswahl, Kurzbefehle und Darstellung auf diesem Gerät zurückgesetzt — und Protokolle, die dort noch auf die Übertragung warten, gehen verloren.',
+      'Beim Abmelden werden Kurzbefehle und Darstellung auf diesem Gerät zurückgesetzt; deine App-Auswahl bleibt im Konto. Protokolle, die noch auf die Übertragung warten, gehen verloren.',
     ],
     imHub: true,
   },
