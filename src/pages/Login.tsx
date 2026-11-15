@@ -1,9 +1,22 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link, useSearchParams } from 'react-router-dom'
+import { useNavigate, Link, Navigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
+import { zielMitSitzung, zielNachAnmeldung, type AnmeldeKonto } from '../lib/anmeldung'
 import { NEU_SEKUNDEN, anforderFehler, codeFehler, istEmail, maskiereEmail, restZeit } from '../lib/zweiFaktor'
 
+/**
+ * Anmeldung. Mit einer gültigen, gespeicherten Sitzung geht der einfache Aufruf von /login gleich weiter
+ * (App vom Homebildschirm, Lesezeichen). Mit Hinweis (?reason=…) oder Link aus der Willkommens-E-Mail
+ * (?email=…, ?passwort=neu) bleibt die Maske wie bisher.
+ */
 export default function Login() {
+  const [searchParams] = useSearchParams()
+  const mitAnlass = ['reason', 'email', 'passwort'].some((k) => searchParams.has(k))
+  const ziel = mitAnlass ? null : zielMitSitzung(pb.authStore.isValid, pb.authStore.model as AnmeldeKonto | null, Date.now())
+  return ziel ? <Navigate to={ziel} replace /> : <LoginMaske />
+}
+
+function LoginMaske() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const disabledHint = searchParams.get('reason') === 'disabled'
@@ -56,10 +69,8 @@ export default function Login() {
     } catch (keyErr) {
       console.warn('Key init failed, chat will prompt for password:', keyErr)
     }
-    const perms = record?.permissions || {}
-    const isLernbarOnly = perms.lernbar && !Object.entries(perms).some(([k, v]) => k !== 'lernbar' && v)
     sessionStorage.setItem('justLoggedIn', '1')
-    navigate(isLernbarOnly ? '/lernbar' : '/hub', { replace: true })
+    navigate(zielNachAnmeldung(record), { replace: true })
   }
 
   async function handleLogin(e: React.FormEvent) {

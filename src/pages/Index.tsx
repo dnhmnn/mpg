@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import LandingPage from './LandingPage'
+import { pb } from '../lib/pocketbase'
+import { zielMitSitzung, type AnmeldeKonto } from '../lib/anmeldung'
 
 const TAGLINES = [
   'Digitalisierung, die zuverlässig funktioniert.',
@@ -11,7 +13,19 @@ const TAGLINES = [
   'Sicher. Schnell. Vernetzt.',
 ]
 
+/**
+ * Startseite (/). Die App vom Homebildschirm startet hier: Mit einer gültigen, gespeicherten Sitzung
+ * geht es gleich in den Hub (bzw. die Lernbar), sonst wie bisher die Startseite mit „Anmelden“. Auf der
+ * Marketing-Domain bleibt es die Website. Ohne eigene Hooks, damit die Weiche nie die Reihenfolge der
+ * Hooks der Startseite ändert.
+ */
 export default function Index() {
+  const website = window.location.hostname === 'responda.systems' || window.location.hostname === 'www.responda.systems'
+  const ziel = website ? null : zielMitSitzung(pb.authStore.isValid, pb.authStore.model as AnmeldeKonto | null, Date.now())
+  return ziel ? <Navigate to={ziel} replace /> : <IndexStart />
+}
+
+function IndexStart() {
   const navigate = useNavigate()
 
   if (window.location.hostname === 'responda.systems' || window.location.hostname === 'www.responda.systems') {
