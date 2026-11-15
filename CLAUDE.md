@@ -184,6 +184,10 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   kostete eine Reihe Apps, also keinen eigenen Abstand für Safari einbauen. Höhe der Seite `100dvh`.
   Niedriger als 560 px (Telefon quer): Kopf knapper, ohne Gruß; quer steht der Titel in der Zeile
   der Knöpfe.
+- Luft im Kopf (Owner, 15.11.2026): Bleibt unter den Apps Platz, kommen bis zu 32 px davon in den
+  Kopf, je zur Hälfte zwischen Datum und Gruß und unter dem Gruß (`.hub-luft`, gemeldet von
+  `AppSeiten`, Rechnung `restHoehe`/`kopfLuft` in `src/lib/hubSeiten.ts`). Gemessen wird ohne diese
+  Luft, sie kostet also nie eine Reihe; bei langem Namen der Organisation fällt sie weg.
   Die Blätter (Glocke, Kurzbefehle, Profil) und „Neu in Responda“ halten in Safari am Telefon
   vorerst unten 64 px plus Home-Leiste frei (am Gerät noch nicht angesehen).
 - Notausgang (Zoom, sehr wenig Höhe): Passt nicht einmal eine Reihe Apps samt Pfeilen, stehen alle

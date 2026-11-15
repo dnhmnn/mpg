@@ -124,6 +124,9 @@ export default function Hub() {
   const appSeiteMerken = useCallback((n: number) => { appSeite.current = n }, [])
   // Notausgang: Passt nicht einmal eine Reihe Apps (Zoom, sehr wenig Höhe), rollen Kopf und Blatt innen
   const [rolltInnen, setRolltInnen] = useState(false)
+  // Luft im Kopf (zwischen Datum und Gruß, unter dem Gruß): nur aus dem Platz, der unter den Apps übrig ist
+  const [luft, setLuft] = useState({ oben: 0, unten: 0 })
+  const luftMelden = useCallback((l: { oben: number; unten: number }) => setLuft((v) => (v.oben === l.oben && v.unten === l.unten ? v : l)), [])
   useEffect(() => { if (seiteApps) nachOben() }, [seiteApps])
 
   function appsOeffnen() {
@@ -166,7 +169,11 @@ export default function Hub() {
               {initialen(anzeigeName(user))}
             </button>
           </>}
-          reiter={<p className="hub-gruss" data-probe="hub-gruss">Servus, <em>{vorname}</em></p>}>
+          reiter={<>
+            <span className="hub-luft" aria-hidden="true" data-probe="hub-luft-oben" style={{ height: luft.oben }} />
+            <p className="hub-gruss" data-probe="hub-gruss">Servus, <em>{vorname}</em></p>
+            <span className="hub-luft" aria-hidden="true" data-probe="hub-luft-unten" style={{ height: luft.unten }} />
+          </>}>
 
           <section className="hub-apps" data-probe="hub-apps" aria-labelledby="hub-apps-titel">
             <div className="bv-ab erst">
@@ -178,7 +185,7 @@ export default function Hub() {
             </div>
             {apps.kacheln.length
               ? <AppSeiten ids={apps.kacheln} befristetBis={(id) => apps.befristet.includes(id) ? befristetBis(user, id) : 0}
-                  start={appSeite.current} onSeite={appSeiteMerken} onRolltInnen={setRolltInnen} />
+                  start={appSeite.current} onSeite={appSeiteMerken} onRolltInnen={setRolltInnen} onLuft={luftMelden} />
               : <div className="bv-notiz"><p>Du hast noch keine Apps. Die Verantwortlichen deiner Organisation vergeben die Rechte.</p></div>}
           </section>
         </Seite>

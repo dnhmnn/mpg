@@ -12,12 +12,14 @@ export const HUB_CSS = `
 .hub-gruss{ margin: 14px 2px 0; font-size: 30px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; color: var(--lbf-kopf-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hub-gruss em{ font-style: italic; }
+/* Luft im Kopf (Hub.tsx, AppSeiten meldet sie): Platz, der unter den Apps übrig ist, höchstens 32 px */
+.hub-luft{ display: block; }
 .bv .hub-kopfknopf svg{ width: 22px; height: 22px; }
 .bv .hub-ini{ font-size: 14px; font-weight: 700; letter-spacing: 0.02em; }
 /* Sehr niedrige Bildschirme (Telefon quer): ohne Gruß, Zeichen so groß wie die Knöpfe */
 @media (max-height: 559px){
   .bv .hub-zeichen{ width: 44px; height: 44px; padding: 6px; }
-  .bv.statisch .hub-gruss{ display: none; }
+  .bv.statisch .hub-gruss, .bv.statisch .hub-luft{ display: none; }
 }
 /* Äußerst schmal (Seitenzoom 300 %): Zeichen so groß wie die Knöpfe, damit es mit der Glocke in eine Zeile passt */
 @media (max-width: 159px){

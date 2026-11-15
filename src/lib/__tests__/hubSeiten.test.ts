@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  REIHEN_ABSTAND, SEITEN_RAND, SPALTEN_ABSTAND, STEUER_HOEHE, aufSeiten, ganzeReihen, kachelHoehe, reihenFuerHoehe, seiteAusScroll, seiteBegrenzen,
-  seiteNachUmbau, seiteVon, seitenPlan, spaltenFuerBreite, spaltenFuerPlatz, symbolGroesse,
+  LUFT_MAX, LUFT_RESERVE, REIHEN_ABSTAND, SEITEN_RAND, SPALTEN_ABSTAND, STEUER_HOEHE, aufSeiten, ganzeReihen, kachelHoehe, kopfLuft, reihenFuerHoehe,
+  restHoehe, seiteAusScroll, seiteBegrenzen, seiteNachUmbau, seiteVon, seitenPlan, spaltenFuerBreite, spaltenFuerPlatz, symbolGroesse,
 } from '../hubSeiten'
 
 describe('Hub-Seiten: Spalten und Kachelhöhe', () => {
@@ -224,5 +224,64 @@ describe('Hub-Seiten: welche Seite zu sehen ist', () => {
     // Es gibt weniger Seiten: auf die letzte
     expect(seiteNachUmbau(3, 6, 6, 2)).toBe(1)
     expect(seiteNachUmbau(0, 0, 0, 1)).toBe(0)
+  })
+})
+
+describe('Hub-Seiten: Luft im Kopf aus dem Rest unter den Apps', () => {
+  const k = kachelHoehe(375, false)
+  const plan = (anzahl: number, hoehe: number, kachel = k) => seitenPlan({ anzahl, hoehe, spalten: 4, kachel })
+
+  it('iPhone des Owners (375 × 812, Safari, 14 Apps): 3 Reihen, 45 px Rest, je 16 px Luft über und unter dem Gruß', () => {
+    const p = plan(14, 410)
+    expect([p.reihen, p.proSeite, p.seiten, p.steuerung]).toEqual([3, 12, 2, true])
+    expect(restHoehe(p, 14, 410, k)).toBe(410 - (SEITEN_RAND + 3 * 91 + 2 * REIHEN_ABSTAND + STEUER_HOEHE))
+    expect(restHoehe(p, 14, 410, k)).toBe(45)
+    expect(kopfLuft(45)).toEqual({ oben: 16, unten: 16 })
+  })
+
+  it('langer Name der Organisation (3 Zeilen, 42 px weniger): kaum Rest, keine Luft, weiter 3 Reihen', () => {
+    const p = plan(14, 368)
+    expect(p.reihen).toBe(3)
+    expect(restHoehe(p, 14, 368, k)).toBe(3)
+    expect(kopfLuft(3)).toEqual({ oben: 0, unten: 0 })
+  })
+
+  it('eine Seite mit wenigen Apps: es zählen nur die belegten Reihen', () => {
+    const p = plan(6, 600)
+    expect(p.seiten).toBe(1)
+    expect(restHoehe(p, 6, 600, k)).toBe(600 - (SEITEN_RAND + 2 * 91 + REIHEN_ABSTAND))
+    expect(kopfLuft(restHoehe(p, 6, 600, k))).toEqual({ oben: LUFT_MAX / 2, unten: LUFT_MAX / 2 })
+  })
+
+  it('Notausgang, ohne Messung oder Unsinn: kein Rest, keine Luft', () => {
+    expect(restHoehe(plan(14, 60), 14, 60, k)).toBe(0)
+    expect(restHoehe(plan(14, 0), 14, 0, k)).toBe(0)
+    expect(restHoehe(plan(14, 410), 14, Number.NaN, k)).toBe(0)
+    expect(kopfLuft(Number.NaN)).toEqual({ oben: 0, unten: 0 })
+    expect(kopfLuft(-40)).toEqual({ oben: 0, unten: 0 })
+  })
+
+  it('Luft: höchstens LUFT_MAX, LUFT_RESERVE bleibt unter der letzten Reihe, oben die größere Hälfte', () => {
+    expect(kopfLuft(LUFT_RESERVE)).toEqual({ oben: 0, unten: 0 })
+    expect(kopfLuft(LUFT_RESERVE + 1)).toEqual({ oben: 1, unten: 0 })
+    expect(kopfLuft(LUFT_RESERVE + 7)).toEqual({ oben: 4, unten: 3 })
+    expect(kopfLuft(500)).toEqual({ oben: 16, unten: 16 })
+    expect(kopfLuft(20, 10, 0)).toEqual({ oben: 5, unten: 5 })
+  })
+
+  it('die Luft kostet nie eine Reihe und nie eine Seite (alle Höhen, Anzahlen, mit und ohne „bis“)', () => {
+    for (const kachel of [kachelHoehe(375, false), kachelHoehe(375, true), kachelHoehe(800, false)]) {
+      for (let anzahl = 0; anzahl <= 24; anzahl++) {
+        for (let hoehe = 40; hoehe <= 900; hoehe += 3) {
+          const vorher = plan(anzahl, hoehe, kachel)
+          const l = kopfLuft(restHoehe(vorher, anzahl, hoehe, kachel))
+          const nachher = plan(anzahl, hoehe - l.oben - l.unten, kachel)
+          expect(l.oben + l.unten).toBeLessThanOrEqual(LUFT_MAX)
+          expect(nachher.passt).toBe(vorher.passt)
+          expect(nachher.seiten).toBe(vorher.seiten)
+          if (vorher.seiten > 1) expect(nachher.proSeite).toBe(vorher.proSeite)
+        }
+      }
+    }
   })
 })

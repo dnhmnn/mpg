@@ -17,9 +17,14 @@
 // Dokument bleibt fest. Gemessen wird so, dass es in beiden Fällen dieselbe Zahl ergibt (der Platz
 // von hier bis zum unteren Innenrand des Blatts, wenn es den Rest des Bildschirms füllt), sonst
 // könnte es hin und her springen.
+//
+// Luft im Kopf: Bleibt unter den Apps Platz, meldet die Seite einen Teil davon (onLuft); der Hub legt
+// ihn zwischen Datum und Gruß und unter den Gruß (.hub-luft), die Apps rücken tiefer. Gemessen wird
+// die Höhe ohne diese Luft (Rahmen plus die Höhe der .hub-luft im Kopf), sonst würde die Luft die
+// Rechnung verschieben; so bleibt die Zahl gleich und kostet nie eine Reihe (src/lib/hubSeiten.ts).
 
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent } from 'react'
-import { aufSeiten, kachelHoehe, seiteAusScroll, seiteBegrenzen, seiteNachUmbau, seiteVon, seitenPlan, spaltenFuerPlatz } from '../../lib/hubSeiten'
+import { aufSeiten, kachelHoehe, kopfLuft, restHoehe, seiteAusScroll, seiteBegrenzen, seiteNachUmbau, seiteVon, seitenPlan, spaltenFuerPlatz } from '../../lib/hubSeiten'
 import { Icon } from '../benutzer/bausteine'
 import { Kachel } from './Kacheln'
 
@@ -41,6 +46,13 @@ function freieHoehe(rahmen: HTMLElement): number {
   return s.top + seite.clientTop + seite.clientHeight - unten - (r.top + seite.scrollTop)
 }
 
+/** Die Luft, die gerade im Kopf steht (Höhe der .hub-luft; 0, wenn sie ausgeblendet ist, etwa quer). */
+function luftImKopf(rahmen: HTMLElement): number {
+  let summe = 0
+  for (const l of rahmen.closest('.bv')?.querySelectorAll<HTMLElement>('.hub-luft') ?? []) summe += l.getBoundingClientRect().height
+  return summe
+}
+
 /** Die Kachel einer App im Band (ohne Selektor, damit keine Kennung maskiert werden muss). */
 function kachelVon(band: HTMLElement | null, app: string): HTMLElement | null {
   if (!band) return null
@@ -48,7 +60,7 @@ function kachelVon(band: HTMLElement | null, app: string): HTMLElement | null {
   return null
 }
 
-export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRolltInnen }: {
+export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRolltInnen, onLuft }: {
   ids: string[]
   /** Ende einer befristeten Freigabe (ms) oder 0 */
   befristetBis: (id: string) => number
@@ -58,6 +70,8 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
   onSeite?: (seite: number) => void
   /** Meldet den Notausgang: true, wenn nicht einmal eine Reihe passt und die Seite innen rollen muss */
   onRolltInnen?: (ja: boolean) => void
+  /** Meldet die Luft für den Kopf (oben: zwischen Datum und Gruß, unten: unter dem Gruß), beim Abbau 0 */
+  onLuft?: (luft: { oben: number; unten: number }) => void
 }) {
   const rahmen = useRef<HTMLDivElement>(null)
   const band = useRef<HTMLDivElement>(null)
@@ -73,7 +87,8 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
     if (!el) return
     const messen = () => {
       const r = el.getBoundingClientRect()
-      const neu = { hoehe: Math.floor(freieHoehe(el)), weite: Math.round(r.width), fenster: window.innerWidth }
+      // Ohne die Luft im Kopf gemessen: die Rechnung hängt nicht davon ab, wie viel Luft gerade dort steht
+      const neu = { hoehe: Math.floor(freieHoehe(el) + luftImKopf(el)), weite: Math.round(r.width), fenster: window.innerWidth }
       setMass((m) => (m && m.hoehe === neu.hoehe && m.weite === neu.weite && m.fenster === neu.fenster ? m : neu))
     }
     messen()
@@ -103,6 +118,15 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
   meldenRef.current = onSeite
   const innenRef = useRef(onRolltInnen)
   innenRef.current = onRolltInnen
+  const luftRef = useRef(onLuft)
+  luftRef.current = onLuft
+
+  // Luft im Kopf aus dem Rest unter den Apps (vor dem Zeichnen gemeldet, im selben Bild); beim Abbau 0
+  const luft = mass ? kopfLuft(restHoehe(plan, ids.length, mass.hoehe, kachel)) : null
+  useLayoutEffect(() => {
+    if (luft) luftRef.current?.(luft)
+  }, [luft?.oben, luft?.unten]) // eslint-disable-line react-hooks/exhaustive-deps
+  useLayoutEffect(() => () => luftRef.current?.({ oben: 0, unten: 0 }), [])
 
   // Notausgang melden (vor dem Zeichnen, damit der Rahmen im selben Bild umschaltet). Zurück im
   // Normalfall steht die Seite (.bv, die im Notausgang rollt) wieder oben; beim Abbau (keine Apps

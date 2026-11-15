@@ -154,3 +154,37 @@ export function seiteNachUmbau(seite: number, alterProSeite: number, neuerProSei
   const erste = Math.max(0, Math.floor(seite) || 0) * alt
   return seiteBegrenzen(Math.floor(erste / neu), seiten)
 }
+
+/**
+ * Luft im Kopf: Bleibt unter den Apps Platz übrig, rückt der Hub die Apps etwas tiefer und lässt
+ * zwischen Datum und Gruß mehr Raum (Wunsch des Owners, 15.11.2026). Die Luft kommt nur aus diesem
+ * Rest, kostet also nie eine Reihe: bei einem langen Namen der Organisation, einer Zeile „bis …“ oder
+ * auf einem kleinen Telefon wird sie kleiner oder fällt weg. Höchstens LUFT_MAX, und LUFT_RESERVE
+ * bleibt unter der letzten Reihe.
+ */
+export const LUFT_MAX = 32
+export const LUFT_RESERVE = 8
+
+/**
+ * Was in der Höhe (ohne Luft gemessen) nach den belegten Reihen und den Pfeilen übrig bleibt; 0 im
+ * Notausgang und ohne Messung. Auf einer einzigen Seite zählen nur die Reihen, die Apps tragen.
+ */
+export function restHoehe(plan: SeitenPlan, anzahl: number, hoehe: number, kachel: number,
+  abstand: number = REIHEN_ABSTAND, rand: number = SEITEN_RAND, steuer: number = STEUER_HOEHE): number {
+  if (!plan.passt || !(hoehe > 0) || !(kachel > 0)) return 0
+  const n = Math.max(0, Math.floor(anzahl) || 0)
+  const reihen = plan.seiten > 1 ? plan.reihen : Math.min(plan.reihen, Math.max(1, Math.ceil(n / Math.max(1, plan.spalten))))
+  const belegt = rand + reihen * kachel + (reihen - 1) * abstand + (plan.steuerung ? steuer : 0)
+  return Math.max(0, Math.floor(hoehe - belegt))
+}
+
+/**
+ * Luft für den Kopf aus dem Rest unter den Apps: was über LUFT_RESERVE hinausgeht, höchstens LUFT_MAX,
+ * je zur Hälfte zwischen Datum und Gruß (oben) und unter dem Gruß (unten).
+ */
+export function kopfLuft(rest: number, max: number = LUFT_MAX, reserve: number = LUFT_RESERVE): { oben: number; unten: number } {
+  const r = Number.isFinite(rest) ? rest : 0
+  const l = Math.max(0, Math.min(Math.max(0, max), Math.floor(r - Math.max(0, reserve))))
+  const oben = Math.ceil(l / 2)
+  return { oben, unten: l - oben }
+}
