@@ -178,11 +178,14 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   `overflow: hidden` und `overscroll-behavior: none`. Beim Verlassen und beim Wechsel auf eine
   rollende Seite (auch „Apps anpassen“ unter `/hub?seite=apps`) stellt `useStatusleiste` die
   vorherigen Werte wieder her. Ein hängengebliebenes `overflow: hidden` wäre ein schwerer Fehler.
-- Unten bleibt Platz für Safaris schwebende Leiste: im Browser am iPhone 64 px plus Home-Leiste,
-  sonst 16 px plus Home-Leiste; Pfeile und Punkte stehen darüber. Höhe der Seite `100dvh`.
+- Unten bleiben 16 px plus Home-Leiste, überall, auch in Safari am iPhone: Safari hält den Platz
+  seiner schwebenden Leiste selbst frei (`100dvh` und Rand enden über ihr). Am iPhone gemessen am
+  15.11.2026: Ein zusätzlicher Abstand von 64 px schob die Pfeile 100 px über die Leiste und
+  kostete eine Reihe Apps, also keinen eigenen Abstand für Safari einbauen. Höhe der Seite `100dvh`.
   Niedriger als 560 px (Telefon quer): Kopf knapper, ohne Gruß; quer steht der Titel in der Zeile
-  der Knöpfe und unten bleiben 16 px (Safaris Leiste steht quer oben; am iPhone bestätigen).
-  Die Blätter (Glocke, Kurzbefehle, Profil) halten unten am Telefon dieselbe Reserve.
+  der Knöpfe.
+  Die Blätter (Glocke, Kurzbefehle, Profil) und „Neu in Responda“ halten in Safari am Telefon
+  vorerst unten 64 px plus Home-Leiste frei (am Gerät noch nicht angesehen).
 - Notausgang (Zoom, sehr wenig Höhe): Passt nicht einmal eine Reihe Apps samt Pfeilen, stehen alle
   Apps untereinander, und Kopf und Blatt rollen zusammen innen in `.bv` (`Seite` mit `rolltInnen`,
   `.bv.statisch.rollt-innen`); bei Seitenzoom 300 % füllt der Kopf allein fast den Bildschirm. Der rote

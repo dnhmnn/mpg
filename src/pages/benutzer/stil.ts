@@ -79,15 +79,9 @@ export const BV_CSS = `
 .bv.statisch > .bv-blatt{ flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
   padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 .bv.statisch > .bv-blatt > .bv-innen{ flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: column; }
-/* Safari am iPhone im Browser: Die schwebende Leiste liegt unten über der Seite, Bedienbares bleibt darüber.
-   Nur in Telefonbreite: Am iPad steht Safaris Leiste oben (quer gilt unten die Regel für wenig Höhe). */
-@media (max-width: 639px){
-  @supports (-webkit-touch-callout: none){
-    @media not all and (display-mode: standalone){
-      .bv.statisch > .bv-blatt{ padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
-    }
-  }
-}
+/* Safari am iPhone im Browser braucht keinen eigenen Abstand: Safari hält den Platz seiner Leiste unten
+   selbst frei (100dvh und Rand enden über ihr). Am iPhone gemessen am 15.11.2026: Mit zusätzlich 64 px
+   standen die Pfeile 100 px über der Leiste, und eine dritte Reihe Apps passte nicht mehr. */
 /* Notausgang (Seite rolltInnen): Passt der Inhalt nicht unter den Kopf (sehr wenig Höhe, Seitenzoom,
    Zoom 400 %), rollen Kopf und Blatt zusammen innen in .bv: Bei Seitenzoom 300 % füllt der Kopf allein
    fast den Bildschirm, nur so kommt jede App über Safaris Leiste. Das Dokument bleibt fest, html und
@@ -119,7 +113,6 @@ export const BV_CSS = `
 }
 /* Telefon quer: Safaris Leiste steht oben, der Titel rückt in die Zeile der Knöpfe */
 @media (max-height: 559px) and (orientation: landscape){
-  .bv.statisch > .bv-blatt{ padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   .bv.statisch .bv-kopf-innen{ display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
   .bv.statisch .bv-kopf-innen > .bv-zeile1{ display: contents; }
   .bv.statisch .bv-zeile1 > :first-child{ order: -2; }
