@@ -184,8 +184,9 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   der Knöpfe und unten bleiben 16 px (Safaris Leiste steht quer oben; am iPhone bestätigen).
   Die Blätter (Glocke, Kurzbefehle, Profil) halten unten am Telefon dieselbe Reserve.
 - Notausgang (Zoom, sehr wenig Höhe): Passt nicht einmal eine Reihe Apps samt Pfeilen, stehen alle
-  Apps untereinander und das Blatt unter dem Kopf rollt innen (`Seite` mit `rolltInnen`,
-  `.bv.statisch.rollt-innen`). Das Dokument bleibt fest, html und body bleiben hell.
+  Apps untereinander, und Kopf und Blatt rollen zusammen innen in `.bv` (`Seite` mit `rolltInnen`,
+  `.bv.statisch.rollt-innen`); bei Seitenzoom 300 % füllt der Kopf allein fast den Bildschirm. Der rote
+  Streifen oben bleibt vorn stehen, das Dokument bleibt fest, html und body bleiben hell.
 - Rollende Seiten (Benutzer, Vorgänge, „Apps anpassen“ und alle weiteren) bleiben beim Standard
   oben, ohne Ausnahme.
 

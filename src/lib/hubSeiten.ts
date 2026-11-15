@@ -10,11 +10,14 @@
 //
 // Notausgang: Passt nicht einmal eine ganze Reihe (mit Pfeilen und Punkten, wenn es mehrere Seiten
 // braucht), etwa bei Seitenzoom, Zoom 400 % oder einem Telefon quer, gilt der Plan als „passt
-// nicht“. Dann stehen alle Apps auf einer Seite untereinander, und das Blatt rollt innen (Seite
-// rolltInnen); das Dokument selbst bleibt fest. So bleibt jede App erreichbar.
+// nicht“. Dann stehen alle Apps auf einer Seite untereinander, und Kopf und Blatt rollen zusammen
+// innen (Seite rolltInnen); das Dokument selbst bleibt fest. So bleibt jede App erreichbar, auch
+// wenn der Kopf allein schon den Bildschirm füllt (Seitenzoom 300 %).
 
 /** Abstand zwischen zwei Reihen in px (row-gap der Seite). */
 export const REIHEN_ABSTAND = 16
+/** Abstand zwischen zwei Spalten in px (column-gap der Seite). */
+export const SPALTEN_ABSTAND = 6
 /** Innenabstand einer Seite oben und unten zusammen, Platz für den Fokusrahmen (je 4 px). */
 export const SEITEN_RAND = 8
 /** Höhe der Steuerung unter den Seiten: Pfeile (44 px) und 8 px Abstand darüber. */
@@ -29,14 +32,32 @@ export function spaltenFuerBreite(breite: number): number {
   return breite >= 720 ? 6 : breite >= 600 ? 5 : breite >= 300 ? 4 : breite >= 232 ? 3 : 2
 }
 
+/** Kantenlänge des Symbols einer Kachel in px: 60, ab 600 px Fensterbreite 64 (wie HUB_CSS). */
+export function symbolGroesse(breite: number): number {
+  return breite >= 600 ? 64 : 60
+}
+
+/**
+ * Spalten für den Platz, den die Seite wirklich hat (Breite des Rahmens der Apps): höchstens so
+ * viele wie spaltenFuerBreite, aber nur so viele, dass jede Spalte mindestens so breit ist wie ein
+ * Symbol. Das greift nur, wenn der Platz knapp ist: bei Seitenzoom 300 % (130 px Fenster, 98 px
+ * Platz) steht eine Spalte statt zwei übereinanderliegender Symbole, und Ränder neben der Notch
+ * (quer) schmälern den Platz. Ohne Messung (0) gilt spaltenFuerBreite.
+ */
+export function spaltenFuerPlatz(fenster: number, platz: number, abstand: number = SPALTEN_ABSTAND): number {
+  const n = spaltenFuerBreite(fenster)
+  if (!(platz > 0)) return n
+  const a = Number.isFinite(abstand) ? Math.max(0, abstand) : 0
+  return Math.max(1, Math.min(n, Math.floor((platz + a) / (symbolGroesse(fenster) + a))))
+}
+
 /**
  * Höhe einer Kachel in px: Innenabstand oben 4, Symbol 60 (ab 600 px 64), Abstand 7, Name 18,
  * Innenabstand unten 2. Mit der Zeile „bis 16.11.“ (befristete App) 16 mehr (Abstand 7, Zeile 14,
  * 5 nach oben gezogen).
  */
 export function kachelHoehe(breite: number, mitBis: boolean): number {
-  const symbol = breite >= 600 ? 64 : 60
-  return 4 + symbol + 7 + 18 + 2 + (mitBis ? 16 : 0)
+  return 4 + symbolGroesse(breite) + 7 + 18 + 2 + (mitBis ? 16 : 0)
 }
 
 /** Wie viele ganze Reihen in eine Höhe passen; 0, wenn nicht einmal eine (oder nichts gemessen ist). */
@@ -62,7 +83,7 @@ export interface SeitenPlan {
   steuerung: boolean
   /**
    * Passt mindestens eine ganze Reihe hinein (mit Steuerung, wenn es mehrere Seiten braucht)?
-   * Sonst Notausgang: alle Apps auf einer Seite, ohne Steuerung, das Blatt rollt innen.
+   * Sonst Notausgang: alle Apps auf einer Seite, ohne Steuerung, Kopf und Blatt rollen innen.
    */
   passt: boolean
 }
@@ -111,6 +132,16 @@ export function seiteBegrenzen(seite: number, seiten: number): number {
 export function seiteAusScroll(scrollLeft: number, breite: number, seiten: number): number {
   if (!(breite > 0) || !Number.isFinite(scrollLeft)) return 0
   return seiteBegrenzen(Math.round(Math.abs(scrollLeft) / breite), seiten)
+}
+
+/**
+ * Die Seite, auf der die App an der Stelle index (ab 0) steht; begrenzt auf die Seitenzahl. Hat eine
+ * Kachel den Fokus, zeigt der Hub nach einem Umbau ihre Seite (AppSeiten.tsx).
+ */
+export function seiteVon(index: number, proSeite: number, seiten: number): number {
+  const n = Math.max(1, Math.floor(proSeite) || 1)
+  const i = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0
+  return seiteBegrenzen(Math.floor(i / n), seiten)
 }
 
 /**

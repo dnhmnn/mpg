@@ -89,11 +89,24 @@ export const BV_CSS = `
   }
 }
 /* Notausgang (Seite rolltInnen): Passt der Inhalt nicht unter den Kopf (sehr wenig Höhe, Seitenzoom,
-   Zoom 400 %), rollt das Blatt innen. Das Dokument bleibt fest, html und body bleiben hell, der
-   Streifen oben bleibt. Als Block, damit der Innenabstand unten mitrollt. */
-.bv.statisch.rollt-innen > .bv-blatt{ display: block; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+   Zoom 400 %), rollen Kopf und Blatt zusammen innen in .bv: Bei Seitenzoom 300 % füllt der Kopf allein
+   fast den Bildschirm, nur so kommt jede App über Safaris Leiste. Das Dokument bleibt fest, html und
+   body bleiben hell, der rote Streifen oben bleibt vorn stehen, der Kopf rollt unter ihm weg. Das Blatt
+   ist so hoch wie sein Inhalt, mindestens der Rest des Bildschirms; der Innenabstand unten rollt mit.
+   Beim Nachfedern scheint oben das Kopf-Rot durch, unten das Helle (Hintergrund steht still). */
+.bv.statisch.rollt-innen{ overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch;
+  background: linear-gradient(var(--lbf-kopf) 50%, var(--warm-bg) 50%); }
+.bv.statisch.rollt-innen > .bv-blatt{ flex: 1 0 auto; display: block; overflow: visible; }
 /* Sehr schmal (Zoom): Die Knöpfe im Kopf rücken in eine zweite Zeile, statt abgeschnitten zu werden */
 .bv.statisch .bv-zeile1{ flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
+/* Äußerst schmal (Seitenzoom 300 %, 125 bis 131 px): je Zeile zwei runde Teile (Zeichen und Glocke,
+   dann Kurzbefehle und Profil, 44 + 4 + 44 px) statt jedes in einer eigenen Zeile; das Zeichen so groß
+   wie die Knöpfe (HUB_CSS) */
+@media (max-width: 159px){
+  .bv.statisch .bv-zeile1{ column-gap: 4px; }
+  .bv.statisch .bv-zeile1 > .bv-luecke{ display: none; }
+  .bv.statisch .bv-zeile1 > :first-child{ margin-right: auto; }
+}
 /* Sehr niedrige Bildschirme: Kopf knapper, damit mindestens eine Reihe Platz hat */
 @media (max-height: 559px){
   .bv.statisch > .bv-kopf{ padding-bottom: 32px; }

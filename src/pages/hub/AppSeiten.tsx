@@ -7,30 +7,45 @@
 // einer Seite. Nach Drehen oder „Apps anpassen“ bleibt die Seite, auf der man war, so gut es geht.
 // Die Rechnung steht in src/lib/hubSeiten.ts (mit Prüffällen), die Maße in HUB_CSS.
 //
+// Fokus: Verteilt ein Umbau (Zoom, Drehen, Notausgang) die Apps neu, wandern Kacheln auf eine andere
+// Seite, und React hängt sie dort neu ein. Hatte eine davon den Fokus, bekommt sie ihn zurück, und
+// ihre Seite ist zu sehen; sonst stünde der Fokus auf body, und Tab finge vorn an.
+//
 // Notausgang (sehr wenig Höhe, Seitenzoom, Zoom 400 %): Passt nicht einmal eine ganze Reihe, stehen
 // alle Apps untereinander auf einer Seite, ohne Pfeile und Punkte, und die Seite meldet das
-// (onRolltInnen). Der Hub lässt dann das Blatt unter dem Kopf innen rollen (Seite rolltInnen);
-// das Dokument bleibt fest. Gemessen wird so, dass es in beiden Fällen dieselbe Zahl ergibt (der
-// Platz von hier bis zum unteren Innenrand des Blatts), sonst könnte es hin und her springen.
+// (onRolltInnen). Der Hub lässt dann Kopf und Blatt zusammen innen rollen (Seite rolltInnen); das
+// Dokument bleibt fest. Gemessen wird so, dass es in beiden Fällen dieselbe Zahl ergibt (der Platz
+// von hier bis zum unteren Innenrand des Blatts, wenn es den Rest des Bildschirms füllt), sonst
+// könnte es hin und her springen.
 
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
-import { aufSeiten, kachelHoehe, seiteAusScroll, seiteBegrenzen, seiteNachUmbau, seitenPlan, spaltenFuerBreite } from '../../lib/hubSeiten'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent } from 'react'
+import { aufSeiten, kachelHoehe, seiteAusScroll, seiteBegrenzen, seiteNachUmbau, seiteVon, seitenPlan, spaltenFuerPlatz } from '../../lib/hubSeiten'
 import { Icon } from '../benutzer/bausteine'
 import { Kachel } from './Kacheln'
 
 interface Mass { hoehe: number; weite: number; fenster: number }
 
 /**
- * Freie Höhe für die Seiten: von der Oberkante des Rahmens bis zum unteren Innenrand des Blatts.
- * Hängt nicht davon ab, ob das Blatt gerade innen rollt (Notausgang) oder wie weit.
+ * Freie Höhe für die Seiten: von der Oberkante des Rahmens bis zum unteren Innenrand des Blatts, so
+ * wie das Blatt ohne Notausgang den Rest unter dem Kopf füllt, also bis zum unteren Rand der Seite
+ * (.bv, so hoch wie der Bildschirm) ohne die Reserve unten. Hängt nicht davon ab, ob die Seite gerade
+ * innen rollt (Notausgang) oder wie weit.
  */
 function freieHoehe(rahmen: HTMLElement): number {
   const r = rahmen.getBoundingClientRect()
   const blatt = rahmen.closest<HTMLElement>('.bv-blatt')
-  if (!blatt) return r.height
-  const b = blatt.getBoundingClientRect()
+  const seite = blatt?.parentElement
+  if (!blatt || !seite) return r.height
+  const s = seite.getBoundingClientRect()
   const unten = parseFloat(getComputedStyle(blatt).paddingBottom) || 0
-  return b.top + blatt.clientTop + blatt.clientHeight - unten - (r.top + blatt.scrollTop)
+  return s.top + seite.clientTop + seite.clientHeight - unten - (r.top + seite.scrollTop)
+}
+
+/** Die Kachel einer App im Band (ohne Selektor, damit keine Kennung maskiert werden muss). */
+function kachelVon(band: HTMLElement | null, app: string): HTMLElement | null {
+  if (!band) return null
+  for (const k of band.querySelectorAll<HTMLElement>('[data-app]')) if (k.dataset.app === app) return k
+  return null
 }
 
 export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRolltInnen }: {
@@ -41,7 +56,7 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
   start?: number
   /** Meldet die gezeigte Seite (der Hub merkt sie sich) */
   onSeite?: (seite: number) => void
-  /** Meldet den Notausgang: true, wenn nicht einmal eine Reihe passt und das Blatt innen rollen muss */
+  /** Meldet den Notausgang: true, wenn nicht einmal eine Reihe passt und die Seite innen rollen muss */
   onRolltInnen?: (ja: boolean) => void
 }) {
   const rahmen = useRef<HTMLDivElement>(null)
@@ -51,8 +66,8 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
   const [mass, setMass] = useState<Mass | null>(null)
   const [seite, setSeite] = useState(start)
 
-  // Freie Höhe messen: vor dem ersten Bild und danach bei jeder Größenänderung (auch des Blatts und
-  // der Überschrift darüber, die im Notausgang ihre Größe nicht über den Rahmen verraten)
+  // Freie Höhe messen: vor dem ersten Bild und danach bei jeder Größenänderung (auch des Blatts, des
+  // Kopfs und der Überschrift darüber, die im Notausgang ihre Größe nicht über den Rahmen verraten)
   useLayoutEffect(() => {
     const el = rahmen.current
     if (!el) return
@@ -63,16 +78,19 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
     }
     messen()
     const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(messen) : null
-    for (const z of [el, el.parentElement, el.closest('.bv-blatt')]) if (z) ro?.observe(z)
+    const blatt = el.closest('.bv-blatt')
+    const kopf = blatt?.parentElement?.querySelector(':scope > .bv-kopf')
+    for (const z of [el, el.parentElement, blatt, kopf]) if (z) ro?.observe(z)
     window.addEventListener('resize', messen)
     return () => { ro?.disconnect(); window.removeEventListener('resize', messen) }
   }, [])
 
-  // Spalten und Kachelgröße folgen der Fensterbreite wie die Media Queries in HUB_CSS
+  // Spalten und Kachelgröße folgen der Fensterbreite wie die Media Queries in HUB_CSS; wird der Platz
+  // knapp (Seitenzoom, Ränder neben der Notch), weniger Spalten, damit kein Symbol über dem nächsten liegt
   const fenster = mass?.fenster ?? window.innerWidth
   const bis = new Map(ids.map((id) => [id, befristetBis(id)] as const))
   const kachel = kachelHoehe(fenster, [...bis.values()].some((b) => b > 0))
-  const plan = seitenPlan({ anzahl: ids.length, hoehe: mass?.hoehe ?? 0, spalten: spaltenFuerBreite(fenster), kachel })
+  const plan = seitenPlan({ anzahl: ids.length, hoehe: mass?.hoehe ?? 0, spalten: spaltenFuerPlatz(fenster, mass?.weite ?? 0), kachel })
   const seiten = aufSeiten(ids, plan.proSeite)
   const anzahl = seiten.length
   const aktuell = seiteBegrenzen(seite, anzahl)
@@ -87,33 +105,76 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
   innenRef.current = onRolltInnen
 
   // Notausgang melden (vor dem Zeichnen, damit der Rahmen im selben Bild umschaltet). Zurück im
-  // Normalfall steht das Blatt wieder oben; beim Abbau (keine Apps mehr, „Apps anpassen“) gilt er nicht mehr.
+  // Normalfall steht die Seite (.bv, die im Notausgang rollt) wieder oben; beim Abbau (keine Apps
+  // mehr, „Apps anpassen“) gilt er nicht mehr.
   const innen = !!mass && !plan.passt
   useLayoutEffect(() => {
     if (!mass) return
     if (!innen) {
-      const blatt = rahmen.current?.closest<HTMLElement>('.bv-blatt')
-      if (blatt && blatt.scrollTop) blatt.scrollTop = 0
+      const s = rahmen.current?.closest<HTMLElement>('.bv-blatt')?.parentElement
+      if (s && s.scrollTop) s.scrollTop = 0
     }
     innenRef.current?.(innen)
   }, [innen, !!mass]) // eslint-disable-line react-hooks/exhaustive-deps
-  useLayoutEffect(() => () => innenRef.current?.(false), [])
+  useLayoutEffect(() => {
+    const s = rahmen.current?.closest<HTMLElement>('.bv-blatt')?.parentElement ?? null
+    return () => {
+      if (s && s.scrollTop) s.scrollTop = 0
+      innenRef.current?.(false)
+    }
+  }, [])
 
-  // Nach einem Umbau (Größe, Seitenzahl) ohne Bewegung auf die richtige Seite stellen. Hängt nicht an
-  // der Seite selbst: Beim Wischen setzt das Band die Seite, hier würde es sonst zurückspringen.
+  // Die Kachel mit dem Fokus (data-app). Ein Aushängen beim Umverteilen zählt nicht als Verlassen:
+  // Die Kachel ist dann schon aus dem Dokument, und der Umbau gibt ihr den Fokus zurück.
+  const fokusApp = useRef<string | null>(null)
+  function fokusRein(e: FocusEvent<HTMLDivElement>) {
+    fokusApp.current = (e.target as HTMLElement).closest<HTMLElement>('[data-app]')?.dataset.app ?? null
+  }
+  function fokusRaus(e: FocusEvent<HTMLDivElement>) {
+    const weg = e.target as HTMLElement
+    if (!weg.isConnected || !document.hasFocus()) return
+    const neu = e.relatedTarget as Node | null
+    if (!neu || !band.current?.contains(neu)) fokusApp.current = null
+  }
+
+  // Nach einem Umbau (Größe, Seitenzahl) ohne Bewegung auf die richtige Seite stellen: die Seite der
+  // Kachel mit dem Fokus, sonst die, auf der die erste App der bisherigen Seite jetzt steht. Hängt nicht
+  // an der Seite selbst: Beim Wischen setzt das Band die Seite, hier würde es sonst zurückspringen.
   const vorherProSeite = useRef<number | null>(null)
   useLayoutEffect(() => {
     const el = band.current
     if (!mass || !el) return
     const alt = vorherProSeite.current
     vorherProSeite.current = plan.proSeite
-    const soll = alt != null && alt !== plan.proSeite
-      ? seiteNachUmbau(seiteRef.current, alt, plan.proSeite, anzahl)
-      : seiteBegrenzen(seiteRef.current, anzahl)
+    const stelle = fokusApp.current ? ids.indexOf(fokusApp.current) : -1
+    const soll = stelle >= 0
+      ? seiteVon(stelle, plan.proSeite, anzahl)
+      : alt != null && alt !== plan.proSeite
+        ? seiteNachUmbau(seiteRef.current, alt, plan.proSeite, anzahl)
+        : seiteBegrenzen(seiteRef.current, anzahl)
     const links = soll * el.clientWidth
     if (Math.abs(el.scrollLeft - links) > 1) el.scrollLeft = links
     if (soll !== seite) setSeite(soll)
   }, [mass, plan.proSeite, anzahl]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fokus zurückgeben, wenn die Kachel beim Umverteilen neu eingehängt wurde (der Fokus steht dann auf
+  // body); ohne Rollen, die Seite der Kachel stellt der Umbau oben ein. Im Notausgang gibt es nur eine
+  // Seite: Dort holt jeder Umbau (und jeder Zoomschritt) die Kachel mit dem Fokus ins Bild, sobald die
+  // Seite innen rollt (nächstes Bild).
+  const gemessen = useRef<Mass | null>(null)
+  useLayoutEffect(() => {
+    const umbau = mass !== gemessen.current
+    gemessen.current = mass
+    const app = fokusApp.current
+    if (!app) return
+    const k = kachelVon(band.current, app)
+    const jetzt = document.activeElement
+    const verloren = !jetzt || jetzt === document.body || jetzt === document.documentElement
+    if (!k) { if (verloren) fokusApp.current = null; return }
+    if (verloren) k.focus({ preventScroll: true })
+    else if (jetzt !== k) return
+    if (innen && (verloren || umbau)) requestAnimationFrame(() => { if (document.activeElement === k) k.scrollIntoView({ block: 'nearest', inline: 'nearest' }) })
+  })
 
   useEffect(() => { meldenRef.current?.(aktuell) }, [aktuell])
 
@@ -166,7 +227,7 @@ export default function AppSeiten({ ids, befristetBis, start = 0, onSeite, onRol
   return (
     <div className="hub-seiten-rahmen" ref={rahmen}>
       <div className="hub-seiten" ref={band} data-probe="hub-seiten" data-seiten={anzahl} data-seite={aktuell} data-rollt-innen={innen ? '' : undefined}
-        onScroll={beimScrollen} onPointerDown={() => { ziel.current = null }}>
+        onScroll={beimScrollen} onPointerDown={() => { ziel.current = null }} onFocus={fokusRein} onBlur={fokusRaus}>
         {seiten.map((liste, i) => (
           <div key={i} className="hub-seite" data-probe="hub-seite" style={raster}
             role={mehrere ? 'group' : undefined} aria-label={mehrere ? `Seite ${i + 1} von ${anzahl}` : undefined}>

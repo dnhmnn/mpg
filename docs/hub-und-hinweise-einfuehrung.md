@@ -9,8 +9,8 @@ Abschnitt „Hub und Hinweise“.
 Der Hub hat das Dunkelrot der Benutzerverwaltung bekommen und neue Symbole für alle Apps (Entwurf
 „Farbkacheln“). Er rollt nicht, am Telefon wie am Tablet und am Rechner. Der Name der
 Organisation steht oben ganz da, auch wenn er lang ist. Nur wenn nicht einmal eine Reihe Apps
-Platz hat (stark vergrößerte Ansicht, Telefon quer mit Zoom), rollt der Bereich unter dem roten
-Kopf innen, damit jede App erreichbar bleibt.
+Platz hat (stark vergrößerte Ansicht, Telefon quer mit Zoom), rollt der Hub innen, samt rotem
+Kopf, damit jede App erreichbar bleibt.
 
 - **Glocke statt Neuigkeiten im Hub.** Was es Neues gibt (offene Protokolle, MPG, Lager,
   Ausbildungen, CIRS, wie bisher) und die Mitteilung der Organisation stehen in einem Blatt hinter

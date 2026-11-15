@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  REIHEN_ABSTAND, SEITEN_RAND, STEUER_HOEHE, aufSeiten, ganzeReihen, kachelHoehe, reihenFuerHoehe, seiteAusScroll, seiteBegrenzen,
-  seiteNachUmbau, seitenPlan, spaltenFuerBreite,
+  REIHEN_ABSTAND, SEITEN_RAND, SPALTEN_ABSTAND, STEUER_HOEHE, aufSeiten, ganzeReihen, kachelHoehe, reihenFuerHoehe, seiteAusScroll, seiteBegrenzen,
+  seiteNachUmbau, seiteVon, seitenPlan, spaltenFuerBreite, spaltenFuerPlatz, symbolGroesse,
 } from '../hubSeiten'
 
 describe('Hub-Seiten: Spalten und Kachelhöhe', () => {
@@ -22,6 +22,44 @@ describe('Hub-Seiten: Spalten und Kachelhöhe', () => {
     expect(spaltenFuerBreite(187)).toBe(2)
     // 2 Spalten passen noch: 2 × 60 + 6 Abstand + 8 Rand der Seite + 32 Rand des Blatts
     expect(2 * 60 + 6 + 8 + 32).toBeLessThanOrEqual(187)
+  })
+
+  it('Spalten nach dem Platz: wie nach der Fensterbreite, solange jede Spalte so breit ist wie ein Symbol', () => {
+    // Platz = Breite des Rahmens (Fenster minus 2 × 16 Rand des Blatts)
+    expect(spaltenFuerPlatz(390, 358)).toBe(4)
+    expect(spaltenFuerPlatz(375, 343)).toBe(4)
+    expect(spaltenFuerPlatz(320, 288)).toBe(4)
+    expect(spaltenFuerPlatz(300, 268)).toBe(4)
+    expect(spaltenFuerPlatz(844, 760)).toBe(6)
+    expect(spaltenFuerPlatz(844, 726)).toBe(6)
+    expect(spaltenFuerPlatz(600, 568)).toBe(5)
+    expect(spaltenFuerPlatz(1280, 760)).toBe(6)
+    expect(spaltenFuerPlatz(568, 536)).toBe(4)
+    expect(spaltenFuerPlatz(232, 200)).toBe(3)
+    // iPhone SE mit Zoom 200 % (187 px): zwei Spalten wie bisher
+    expect(spaltenFuerPlatz(187, 155)).toBe(2)
+  })
+
+  it('Seitenzoom 300 % (130 px Fenster, 98 px Platz): eine Spalte, die Symbole liegen nicht übereinander', () => {
+    expect(spaltenFuerBreite(130)).toBe(2)
+    expect(spaltenFuerPlatz(130, 98)).toBe(1)
+    expect(spaltenFuerPlatz(125, 93)).toBe(1)
+    // Zwei Spalten ab 2 × 60 + 6 = 126 px Platz
+    expect(spaltenFuerPlatz(158, 126)).toBe(2)
+    expect(spaltenFuerPlatz(157, 125)).toBe(1)
+    // Quer mit Rändern neben der Notch: der Platz zählt, nicht die Fensterbreite
+    expect(spaltenFuerPlatz(281, 163)).toBe(2)
+    // Ab 600 px sind die Symbole 64 px groß
+    expect(symbolGroesse(599)).toBe(60)
+    expect(symbolGroesse(600)).toBe(64)
+    expect(spaltenFuerPlatz(600, 4 * 64 + 3 * SPALTEN_ABSTAND)).toBe(4)
+  })
+
+  it('Spalten nach dem Platz: nie weniger als eine, ohne Messung nach der Fensterbreite', () => {
+    expect(spaltenFuerPlatz(390, 0)).toBe(4)
+    expect(spaltenFuerPlatz(187, Number.NaN)).toBe(2)
+    expect(spaltenFuerPlatz(100, 20)).toBe(1)
+    expect(spaltenFuerPlatz(390, 358, Number.NaN)).toBe(4)
   })
 
   it('Kachel 91 px, ab 600 px 95 px, mit „bis“-Zeile je 16 mehr', () => {
@@ -160,6 +198,22 @@ describe('Hub-Seiten: welche Seite zu sehen ist', () => {
     expect(seiteBegrenzen(1, 0)).toBe(0)
     expect(seiteBegrenzen(Number.NaN, 3)).toBe(0)
     expect(seiteBegrenzen(1.7, 3)).toBe(1)
+  })
+
+  it('die Seite einer App (für die Kachel mit dem Fokus nach einem Umbau)', () => {
+    // 14 Apps, 8 je Seite: notizen (Stelle 12) steht auf Seite 2 (Index 1)
+    expect(seiteVon(12, 8, 2)).toBe(1)
+    expect(seiteVon(7, 8, 2)).toBe(0)
+    expect(seiteVon(8, 8, 2)).toBe(1)
+    // Notausgang: alle auf einer Seite
+    expect(seiteVon(13, 16, 1)).toBe(0)
+    // quer, eine Reihe zu 6: Stelle 13 auf Seite 3 (Index 2)
+    expect(seiteVon(13, 6, 3)).toBe(2)
+    // begrenzt und abgesichert
+    expect(seiteVon(40, 4, 3)).toBe(2)
+    expect(seiteVon(-1, 4, 3)).toBe(0)
+    expect(seiteVon(5, 0, 3)).toBe(2)
+    expect(seiteVon(Number.NaN, 4, 3)).toBe(0)
   })
 
   it('nach einem Umbau die Seite, auf der die erste App der bisherigen Seite jetzt steht', () => {

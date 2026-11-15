@@ -5,7 +5,7 @@
 // nicht. Roter Kopf mit Zeichen und den runden Knöpfen (Glocke, Kurzbefehle, Profil), darunter die
 // Organisation voll ausgeschrieben, Datum und Gruß; im Elfenbein-Blatt nur die Apps. Passen nicht
 // alle, stehen sie auf Seiten zum Wischen mit Pfeilen (hub/AppSeiten.tsx, src/lib/hubSeiten.ts).
-// Passt nicht einmal eine Reihe (Zoom), rollt das Blatt innen (Notausgang, Seite rolltInnen).
+// Passt nicht einmal eine Reihe (Zoom), rollen Kopf und Blatt zusammen innen (Notausgang, Seite rolltInnen).
 // Neuigkeiten und die Mitteilung der Organisation stehen hinter der Glocke (hub/GlockeBlatt.tsx).
 // Blätter (Glocke, Kurzbefehle, Profil) gibt es nur, solange sie offen sind.
 //
@@ -122,7 +122,7 @@ export default function Hub() {
   // „Apps anpassen“ beginnt oben; zurück im Hub steht die Seite der Apps, auf der man war
   const appSeite = useRef(0)
   const appSeiteMerken = useCallback((n: number) => { appSeite.current = n }, [])
-  // Notausgang: Passt nicht einmal eine Reihe Apps (Zoom, sehr wenig Höhe), rollt das Blatt innen
+  // Notausgang: Passt nicht einmal eine Reihe Apps (Zoom, sehr wenig Höhe), rollen Kopf und Blatt innen
   const [rolltInnen, setRolltInnen] = useState(false)
   useEffect(() => { if (seiteApps) nachOben() }, [seiteApps])
 
@@ -172,7 +172,7 @@ export default function Hub() {
             <div className="bv-ab erst">
               <h2 id="hub-apps-titel">Apps</h2>
               <span className="hub-apps-rechts">
-                {ausgeblendet > 0 && <span data-probe="hub-apps-zahl">{apps.kacheln.length} von {apps.erlaubt.length}</span>}
+                {ausgeblendet > 0 && <span className="hub-apps-zahl" data-probe="hub-apps-zahl">{apps.kacheln.length} von {apps.erlaubt.length}</span>}
                 <button type="button" className="hub-anpassen" aria-label="Apps anpassen" data-probe="hub-apps-anpassen-knopf" onClick={appsOeffnen}>Anpassen</button>
               </span>
             </div>

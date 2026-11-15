@@ -19,11 +19,20 @@ export const HUB_CSS = `
   .bv .hub-zeichen{ width: 44px; height: 44px; padding: 6px; }
   .bv.statisch .hub-gruss{ display: none; }
 }
+/* Äußerst schmal (Seitenzoom 300 %): Zeichen so groß wie die Knöpfe, damit es mit der Glocke in eine Zeile passt */
+@media (max-width: 159px){
+  .bv .hub-zeichen{ width: 44px; height: 44px; padding: 6px; }
+}
 
 /* Apps: füllen den Platz unter dem Kopf, rechts in der Überschrift „Anpassen“ */
 .hub-apps{ flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; }
-.hub-apps > .bv-ab{ flex: none; }
-.bv-ab .hub-apps-rechts{ display: flex; align-items: center; gap: 4px; }
+/* Die Überschrift bricht um, wenn der Platz nicht reicht (Zoom), statt „Anpassen“ abzuschneiden:
+   zuerst rückt „N von M“ unter „Anpassen“ (rechts; von rechts gefüllt, „Anpassen“ zuerst), reicht es
+   auch dafür nicht, rückt der rechte Teil unter „Apps“. Sonst eine Zeile wie bisher. Zeilenabstand
+   12 px: „Anpassen“ ist 44 px hoch und ragt 12 px über seine Zeile, ohne andere Zeilen zu überdecken. */
+.hub-apps > .bv-ab{ flex: none; flex-wrap: wrap; row-gap: 12px; }
+.bv-ab .hub-apps-rechts{ flex: 1 1 0; display: flex; flex-direction: row-reverse; flex-wrap: wrap; align-items: center; column-gap: 4px; row-gap: 12px; }
+.bv-ab .hub-apps-zahl{ order: 1; }
 .bv .hub-anpassen{ min-height: 44px; margin: -12px -10px -12px 0; padding: 0 10px; border-radius: 12px;
   font-size: 14px; font-weight: 700; color: var(--lbf-akzent); white-space: nowrap; }
 .bv .hub-anpassen:active{ background: rgba(var(--lbf-grau-rgb), 0.1); }
@@ -44,8 +53,8 @@ export const HUB_CSS = `
 .hub-punkte{ flex: 1; min-width: 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; }
 .hub-punkte i{ display: block; width: 7px; height: 7px; border-radius: 50%; background: rgba(var(--lbf-grau-rgb), 0.35); }
 .hub-punkte i.an{ background: var(--lbf-akzent); }
-/* Notausgang (AppSeiten meldet, dass nicht einmal eine Reihe passt): alle Apps untereinander, das Blatt
-   rollt innen (Seite rolltInnen, BV_CSS). Rahmen und Band so hoch wie ihr Inhalt. */
+/* Notausgang (AppSeiten meldet, dass nicht einmal eine Reihe passt): alle Apps untereinander, Kopf und
+   Blatt rollen innen (Seite rolltInnen, BV_CSS). Rahmen und Band so hoch wie ihr Inhalt. */
 .bv.rollt-innen .hub-apps, .bv.rollt-innen .hub-seiten-rahmen, .bv.rollt-innen .hub-seiten{ flex: none; }
 .hub-sr{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 

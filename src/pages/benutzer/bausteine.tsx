@@ -28,7 +28,8 @@ export function Icon({ n, className = '' }: { n: keyof typeof PFADE | string; cl
  * wie der Bildschirm, das Blatt füllt den Rest unter dem Kopf; dazu gehört
  * useStatusleiste('--lbf-kopf', { statisch: true }).
  * rolltInnen (nur mit statisch): Notausgang, wenn der Inhalt nicht unter den Kopf passt (sehr wenig
- * Höhe, Seitenzoom, Zoom 400 %). Dann rollt das Blatt unter dem Kopf innen; das Dokument bleibt fest.
+ * Höhe, Seitenzoom, Zoom 400 %). Dann rollen Kopf und Blatt zusammen innen (in .bv), der rote Streifen
+ * oben bleibt stehen; das Dokument bleibt fest.
  * titelUnten: Titel und Unterzeile als eigene Zeile unter Knöpfen und Zeichen, voll ausgeschrieben
  * (bricht um, höchstens drei Zeilen) statt abgeschnitten neben den Knöpfen.
  */
