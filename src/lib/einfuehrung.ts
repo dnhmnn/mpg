@@ -211,7 +211,8 @@ export const SCHRITTE: EinfSchritt[] = [
     titel: 'Der Hub, dein Startpunkt',
     text: 'Nach der Anmeldung landest du im Hub. Deine Apps liegen dort als Kacheln. Welche erscheinen und in welcher Reihenfolge, legst du unter „Apps anpassen“ fest; neue erscheinen von selbst.',
     punkte: [
-      'Unter „Neuigkeiten“ stehen offene Punkte, zum Beispiel offene Protokolle. Antippen öffnet das Modul.',
+      'Passen nicht alle Apps auf den Bildschirm, wischst du zur nächsten Seite oder tippst auf die Pfeile darunter.',
+      'Die Glocke oben im roten Kopf zeigt Neuigkeiten, zum Beispiel offene Protokolle und Mitteilungen deiner Organisation. Gibt es Neues, steht eine Zahl daran. Antippen öffnet die Liste.',
       'Fehlt dir ein Modul, das du brauchst? Die Verantwortlichen deiner Organisation vergeben die Rechte.',
     ],
     imHub: true,
@@ -219,7 +220,7 @@ export const SCHRITTE: EinfSchritt[] = [
   {
     id: 'control', teil: 'basis', bild: 'control',
     titel: 'Kurzbefehle',
-    text: 'Oben rechts im roten Kopf, neben deinen Initialen, öffnet der Knopf mit den Reglern die Kurzbefehle: Sprünge in häufige Module und das Umschalten der Darstellung.',
+    text: 'Oben rechts im roten Kopf stehen drei runde Knöpfe: die Glocke, die Regler und deine Initialen. Die Regler öffnen die Kurzbefehle: Sprünge in häufige Module und das Umschalten der Darstellung.',
     punkte: [
       'Mit „Bearbeiten“ legst du fest, welche Kurzbefehle erscheinen.',
       'Ein Kurzbefehl öffnet nur das Modul; angelegt wird dabei noch nichts.',
@@ -270,7 +271,7 @@ export const SCHRITTE: EinfSchritt[] = [
   {
     id: 'einstellungen', teil: 'basis', bild: 'einstellungen',
     titel: 'Einstellungen',
-    text: 'In den Einstellungen wählst du die Darstellung — hell, dunkel oder wie dein Gerät — und legst fest, welche Hinweise unter „Neuigkeiten“ erscheinen. Dort änderst du auch Profil und Passwort.',
+    text: 'In den Einstellungen wählst du die Darstellung (hell, dunkel oder wie dein Gerät) und legst unter „Neuigkeiten“ fest, welche Hinweise hinter der Glocke im Hub erscheinen. Dort änderst du auch Profil und Passwort.',
     punkte: ['Darstellung und Hinweise gelten für dieses Gerät.'],
     rechte: ['dashboard'],
   },

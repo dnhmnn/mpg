@@ -322,18 +322,23 @@ function Abbildung({ bild, user, schritt }: { bild: Bild; user: User; schritt: E
       )
     }
     case 'control':
-      // Der rote Kopf des Hubs: rechts der Knopf mit den Reglern (Kurzbefehle) und die Initialen
+      // Der rote Kopf des Hubs: rechts drei runde Knöpfe, die Glocke (Neuigkeiten), die Regler
+      // (Kurzbefehle, hervorgehoben) und die Initialen
       return (
         <div aria-hidden="true" style={{ borderRadius: 14, overflow: 'hidden', border: '0.5px solid var(--lbf-border-light)', background: 'var(--warm-bg)' }}>
-          <div style={{ background: 'var(--lbf-kopf)', color: 'var(--lbf-kopf-text)', padding: '12px 14px 30px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ background: 'var(--lbf-kopf)', color: 'var(--lbf-kopf-text)', padding: '12px 14px 30px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 14, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.organization_name || 'Responda'}</div>
-              <div style={{ fontSize: 11, color: 'var(--lbf-kopf-text-2)', marginTop: 2 }}>Kurzbefehle und Profil</div>
+              <div style={{ fontSize: 11, color: 'var(--lbf-kopf-text-2)', marginTop: 2 }}>Neuigkeiten, Kurzbefehle, Profil</div>
             </div>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-feld)', display: 'grid', placeItems: 'center', boxShadow: '0 0 0 2px var(--lbf-kopf-text)' }}>
+            <div style={{ position: 'relative', width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-feld)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+              {ikon(<><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></>, 18)}
+              <span style={{ position: 'absolute', top: -3, right: -3, minWidth: 16, height: 16, padding: '0 4px', borderRadius: 8, background: 'var(--lbf-kopf-text)', color: 'var(--lbf-kopf)', boxShadow: '0 0 0 2px var(--lbf-kopf)', fontSize: 10, fontWeight: 700, lineHeight: '16px', textAlign: 'center' }}>2</span>
+            </div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-feld)', display: 'grid', placeItems: 'center', flexShrink: 0, boxShadow: '0 0 0 2px var(--lbf-kopf-text)' }}>
               {ikon(<><line x1="4" y1="7" x2="20" y2="7" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="17" x2="20" y2="17" /><circle cx="9" cy="7" r="2.2" fill="var(--lbf-kopf-feld)" /><circle cx="15" cy="12" r="2.2" fill="var(--lbf-kopf-feld)" /><circle cx="10" cy="17" r="2.2" fill="var(--lbf-kopf-feld)" /></>, 18)}
             </div>
-            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-text)', color: 'var(--lbf-kopf)', display: 'grid', placeItems: 'center', fontSize: 12, fontWeight: 700 }}>{initialen(user.name || user.email)}</div>
+            <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'var(--lbf-kopf-text)', color: 'var(--lbf-kopf)', display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: 12, fontWeight: 700 }}>{initialen(user.name || user.email)}</div>
           </div>
           <div style={{ margin: '-18px 10px 12px', background: 'var(--lbf-card)', borderRadius: 12, boxShadow: 'var(--lbf-shadow)' }}>
             {['Protokoll anlegen', 'Darstellung umschalten'].map((t, n) => (

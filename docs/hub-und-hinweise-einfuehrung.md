@@ -1,4 +1,4 @@
-# Hub im Dunkelrot-Design, App-Auswahl und „Neu in Responda“. Einführung
+# Hub im Dunkelrot-Design, App-Auswahl, Glocke und „Neu in Responda“. Einführung
 
 Notiz für den Owner. Was neu ist, was schon vor den Schritten in PocketBase geht, und in welcher
 Reihenfolge du es einführst. Regeln und Felder im Einzelnen: `docs/pocketbase-regeln.md`,
@@ -7,12 +7,27 @@ Abschnitt „Hub und Hinweise“.
 ## 1. Was neu ist
 
 Der Hub hat das Dunkelrot der Benutzerverwaltung bekommen und neue Symbole für alle Apps (Entwurf
-„Farbkacheln“). Jeder Benutzer legt unter „Apps anpassen“ selbst fest, welche seiner Apps im Hub
-stehen und in welcher Reihenfolge; die Auswahl gilt auf allen Geräten. Wer sie ohne Netz ändert,
-behält sie auf dem Gerät, und Responda schreibt sie ins Konto, sobald wieder Netz da ist (geht
-nur verloren, wenn er sich vorher abmeldet). Nach einem Update schreibst
-du als Supervisor eine kurze Info („Neu in Responda“), die jeder Benutzer einmal sieht, wenn er den
-Hub (oder die Lernbar) öffnet.
+„Farbkacheln“). Er rollt nicht, am Telefon wie am Tablet und am Rechner. Der Name der
+Organisation steht oben ganz da, auch wenn er lang ist. Nur wenn nicht einmal eine Reihe Apps
+Platz hat (stark vergrößerte Ansicht, Telefon quer mit Zoom), rollt der Bereich unter dem roten
+Kopf innen, damit jede App erreichbar bleibt.
+
+- **Glocke statt Neuigkeiten im Hub.** Was es Neues gibt (offene Protokolle, MPG, Lager,
+  Ausbildungen, CIRS, wie bisher) und die Mitteilung der Organisation stehen in einem Blatt hinter
+  der Glocke im roten Kopf. Gibt es Neues, steht eine kleine Zahl daran. Sie zählt die Bereiche
+  mit Neuem (viele offene Protokolle zählen also als eins) und eine ungelesene Mitteilung. Eine
+  ungelesene Mitteilung öffnet das Blatt einmal von selbst (nach der Begrüßung und nach „Neu in
+  Responda“), damit sie niemand übersieht. Mit „Später“ steht sie beim nächsten Öffnen des Hubs
+  wieder unter der Glocke, mit „Verstanden“ nicht mehr. Neuigkeiten allein öffnen das Blatt nie.
+- **Apps auf Seiten zum Wischen.** Passen nicht alle Apps auf den Bildschirm, verteilt der Hub sie
+  auf Seiten. Man wischt zur Seite oder tippt auf die Pfeile links und rechts; Punkte zeigen, auf
+  welcher Seite man ist.
+- **App-Auswahl.** Jeder Benutzer legt unter „Anpassen“ (neben der Überschrift „Apps“, auch im
+  Profil) selbst fest, welche seiner Apps im Hub stehen und in welcher Reihenfolge; die Auswahl
+  gilt auf allen Geräten. Wer sie ohne Netz ändert, behält sie auf dem Gerät, und Responda schreibt
+  sie ins Konto, sobald wieder Netz da ist (geht nur verloren, wenn er sich vorher abmeldet).
+- **„Neu in Responda“.** Nach einem Update schreibst du als Supervisor eine kurze Info, die jeder
+  Benutzer einmal sieht, wenn er den Hub (oder die Lernbar) öffnet.
 
 ## 2. Was schon vor den Schritten geht
 
@@ -64,11 +79,14 @@ Die App läuft auch ohne die neuen Felder und ohne die neue Sammlung. Nichts geh
    „Neu in Responda“ einmal. „Verstanden“ drücken, Seite neu laden: Es kommt nicht wieder. Auch
    nicht nach Ab- und Anmelden (dann ist Schritt 2 richtig gemacht).
 
-Vor dem Veröffentlichen am iPhone (Safari, iOS 26) ansehen, wie in CLAUDE.md beschrieben: Hub und
-„Apps anpassen“, kurze und lange Seite, jeweils oben, beim Scrollen und ganz unten. Die
-Statusleiste ist weich dunkelrot über dem roten Kopf und hell, wenn der Kopf weggescrollt ist; die
-Safari-Leiste unten ist nie rot. Nach der Begrüßung und nach dem Schließen jedes Blatts (auch
-„Neu in Responda“) bleibt keine Farbe hängen.
+Vor dem Veröffentlichen am iPhone (Safari, iOS 26) ansehen, wie in CLAUDE.md beschrieben. Der Hub
+rollt nicht: Die Statusleiste ist dunkelrot, die Safari-Leiste unten nie rot, und auch beim Wischen
+nach oben oder unten bewegt sich die Seite nicht. Pfeile und Punkte der App-Seiten liegen oberhalb der
+Safari-Leiste und lassen sich antippen. „Apps anpassen“ rollt wie bisher: oben, beim Scrollen und
+ganz unten ansehen; die Statusleiste ist weich dunkelrot über dem roten Kopf und hell, wenn der
+Kopf weggescrollt ist. Nach der Begrüßung und nach dem Schließen jedes Blatts (Glocke,
+Kurzbefehle, Profil, „Neu in Responda“) bleibt keine Farbe hängen, und zurück aus dem Hub rollen
+die anderen Seiten wieder.
 
 ## 4. Nach jedem weiteren Update
 

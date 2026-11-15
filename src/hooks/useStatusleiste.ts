@@ -14,11 +14,45 @@
 //   Streifen an den unteren Rand legen (die Safari-Leiste wird dann deckend).
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
 //   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
+//
+// Statische Seiten (statisch: true, der Hub; CLAUDE.md, „Statische Seiten“): Die Seite rollt
+// nicht. html und body bleiben die ganze Zeit hell (blatt), oben färbt der feste rote Streifen
+// .bv-statusleiste (vorn, siehe BV_CSS) Safaris Leiste, theme-color ist das Dunkelrot. Solange
+// die Seite zu sehen ist, bekommen html und body height 100 %, overflow hidden und
+// overscroll-behavior none (kein Scrollen, kein Nachfedern). Beim Verlassen und beim Wechsel
+// auf eine rollende Seite stellt das Aufräumen genau die vorherigen Werte wieder her.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
 import { useEffect } from 'react'
 
-export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string } = {}): void {
-  const { kopf, blatt = '--warm-bg' } = opt
+/** Was eine statische Seite an html und body festsetzt (Längsschreibweise, damit das Zurücksetzen genau ist). */
+const FEST: [string, string][] = [
+  ['height', '100%'],
+  ['overflow-x', 'hidden'],
+  ['overflow-y', 'hidden'],
+  ['overscroll-behavior-x', 'none'],
+  ['overscroll-behavior-y', 'none'],
+]
+
+/** html und body festsetzen; gibt zurück, was das Aufräumen wiederherstellt. */
+function feststellen(): () => void {
+  const elemente = [document.documentElement, document.body]
+  const vorher = elemente.map((el) => FEST.map(([k]) => [el.style.getPropertyValue(k), el.style.getPropertyPriority(k)] as const))
+  for (const el of elemente) for (const [k, v] of FEST) el.style.setProperty(k, v)
+  // War die vorige Seite weiter unten, steht die feste Seite sonst verschoben da
+  window.scrollTo(0, 0)
+  document.body.scrollTop = 0
+  document.documentElement.scrollTop = 0
+  return () => {
+    elemente.forEach((el, i) => FEST.forEach(([k], j) => {
+      const [wert, prio] = vorher[i][j]
+      if (wert) el.style.setProperty(k, wert, prio)
+      else el.style.removeProperty(k)
+    }))
+  }
+}
+
+export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string; statisch?: boolean } = {}): void {
+  const { kopf, blatt = '--warm-bg', statisch = false } = opt
   useEffect(() => {
     let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     const angelegt = !meta
@@ -31,19 +65,23 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
     const vorher = m.content
     const html = document.documentElement.style.backgroundColor
     const body = document.body.style.backgroundColor
+    const loesen = statisch ? feststellen() : null
     let oben = true
     const setzen = () => {
-      const t = oben ? token : blatt
-      const farbe = getComputedStyle(document.documentElement).getPropertyValue(t).trim()
+      // Statisch: theme-color immer das Dunkelrot, html und body immer hell
+      const leiste = statisch || oben ? token : blatt
+      const grund = statisch ? blatt : leiste
+      const farbe = getComputedStyle(document.documentElement).getPropertyValue(leiste).trim()
       if (farbe) m.content = farbe
       // Als CSS-Variable, folgt also der Darstellung
-      document.documentElement.style.backgroundColor = `var(${t})`
-      document.body.style.backgroundColor = `var(${t})`
+      document.documentElement.style.backgroundColor = `var(${grund})`
+      document.body.style.backgroundColor = `var(${grund})`
     }
     // Ist der rote Kopf noch zu sehen? Höchstens einmal je Bild prüfen, nur bei einem Wechsel neu setzen
+    const beobachten = !!kopf && !statisch
     let geplant = 0
     const pruefen = () => {
-      if (!kopf || geplant) return
+      if (!beobachten || !kopf || geplant) return
       geplant = requestAnimationFrame(() => {
         geplant = 0
         const el = document.querySelector(kopf)
@@ -58,7 +96,7 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
     mq?.addEventListener?.('change', setzen)
     const mo = new MutationObserver(setzen)
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-    if (kopf) {
+    if (beobachten) {
       window.addEventListener('scroll', pruefen, { passive: true })
       window.addEventListener('resize', pruefen)
     }
@@ -72,6 +110,7 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
       else m.content = vorher
       document.documentElement.style.backgroundColor = html
       document.body.style.backgroundColor = body
+      loesen?.()
     }
-  }, [token, kopf, blatt])
+  }, [token, kopf, blatt, statisch])
 }

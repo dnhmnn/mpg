@@ -210,6 +210,14 @@ describe('Einführung: Texte zum Hub im Dunkelrot-Design', () => {
     expect(alles('profil')).not.toContain('Kachelauswahl')
   })
 
+  it('Neuigkeiten stehen hinter der Glocke, die Apps auf Seiten zum Wischen', () => {
+    expect(alles('hub')).toContain('Glocke')
+    expect(alles('hub')).toContain('wischst du zur nächsten Seite')
+    expect(alles('hub')).not.toContain('Unter „Neuigkeiten“')
+    expect(alles('control')).toContain('drei runde Knöpfe')
+    expect(alles('einstellungen')).toContain('hinter der Glocke')
+  })
+
   it('keine Gedankenstriche in den drei Hub-Schritten', () => {
     for (const id of ['hub', 'control', 'profil']) expect(alles(id), id).not.toMatch(/[–—]/)
   })

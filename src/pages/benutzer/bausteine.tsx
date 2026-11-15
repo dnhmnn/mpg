@@ -23,23 +23,35 @@ export function Icon({ n, className = '' }: { n: keyof typeof PFADE | string; cl
 /**
  * Ganze Seite: dunkelroter Kopf, Elfenbein-Blatt, darunter optional die Leiste.
  * Links im Kopf der Zurück-Knopf (zurueck) oder etwas Eigenes (links, z. B. das Zeichen im Hub).
+ *
+ * statisch: Die Seite rollt nicht (der Hub; CLAUDE.md, „Statische Seiten“). Sie ist genau so hoch
+ * wie der Bildschirm, das Blatt füllt den Rest unter dem Kopf; dazu gehört
+ * useStatusleiste('--lbf-kopf', { statisch: true }).
+ * rolltInnen (nur mit statisch): Notausgang, wenn der Inhalt nicht unter den Kopf passt (sehr wenig
+ * Höhe, Seitenzoom, Zoom 400 %). Dann rollt das Blatt unter dem Kopf innen; das Dokument bleibt fest.
+ * titelUnten: Titel und Unterzeile als eigene Zeile unter Knöpfen und Zeichen, voll ausgeschrieben
+ * (bricht um, höchstens drei Zeilen) statt abgeschnitten neben den Knöpfen.
  */
-export function Seite({ titel, unter, zurueck, zurueckLabel = 'Zurück', links, rechts, reiter, leiste, children }: {
+export function Seite({ titel, unter, zurueck, zurueckLabel = 'Zurück', links, rechts, reiter, leiste, statisch, rolltInnen, titelUnten, children }: {
   titel: string; unter?: string; zurueck?: () => void; zurueckLabel?: string; links?: React.ReactNode
-  rechts?: React.ReactNode; reiter?: React.ReactNode; leiste?: React.ReactNode; children: React.ReactNode
+  rechts?: React.ReactNode; reiter?: React.ReactNode; leiste?: React.ReactNode
+  statisch?: boolean; rolltInnen?: boolean; titelUnten?: boolean; children: React.ReactNode
 }) {
+  const titelBlock = <div className={titelUnten ? 'bv-titel bv-titel-unten' : 'bv-titel'}><b>{titel}</b>{unter && <span>{unter}</span>}</div>
   return (
-    <div className="bv">
+    <div className={statisch ? (rolltInnen ? 'bv statisch rollt-innen' : 'bv statisch') : 'bv'}>
       {/* Fester Streifen hinter Uhr, WLAN und Akku: Als App vom Homebildschirm liegt die Seite
-          unter der Statusleiste, beim Scrollen stünde dort sonst der helle Inhalt */}
+          unter der Statusleiste, beim Scrollen stünde dort sonst der helle Inhalt.
+          Auf statischen Seiten liegt er immer vorn und gibt Safari das Rot oben. */}
       <div className="bv-statusleiste" aria-hidden="true" />
       <header className="bv-kopf">
         <div className="bv-kopf-innen">
           <div className="bv-zeile1">
             {links ?? (zurueck && <button type="button" className="bv-rund" aria-label={zurueckLabel} onClick={zurueck}><Icon n="zurueck" /></button>)}
-            <div className="bv-titel"><b>{titel}</b>{unter && <span>{unter}</span>}</div>
+            {titelUnten ? <span className="bv-luecke" /> : titelBlock}
             {rechts}
           </div>
+          {titelUnten && titelBlock}
           {reiter}
         </div>
       </header>

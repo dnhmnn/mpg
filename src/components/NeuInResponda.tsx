@@ -49,6 +49,16 @@ const NR_CSS = `
   .nr-grund{align-items:center;padding:24px}
   .nr-blatt{max-width:560px;border-radius:24px;padding:28px 28px 22px;max-height:min(88dvh,760px)}
 }
+/* Safari am iPhone im Browser: Die schwebende Leiste liegt unten über dem Blatt; „Verstanden“ bleibt
+   darüber, wie bei den Blättern im Hub (HUB_CSS). Nur bei genug Höhe: Quer steht Safaris Leiste oben,
+   und bei starkem Seitenzoom bliebe sonst kein Platz für den Text. */
+@media (max-width:639px) and (min-height:480px){
+  @supports (-webkit-touch-callout:none){
+    @media not all and (display-mode:standalone){
+      .nr-blatt{padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+    }
+  }
+}
 @keyframes nr-ein{from{opacity:0}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){.nr-grund{animation:none}}
 `

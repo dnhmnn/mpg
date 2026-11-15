@@ -1,4 +1,4 @@
-// Gemeinsamer Rahmen der Blätter im Hub (Kurzbefehle, Profil).
+// Gemeinsamer Rahmen der Blätter im Hub (Glocke, Kurzbefehle, Profil).
 // Nur im DOM, solange offen: Ein durchsichtiges festes Element am Rand könnte Safari
 // sonst die Leistenfarbe halten lassen. Am Telefon unten, ab 640 px mittig.
 // Schließen: Knopf, daneben tippen, Escape, an der Kopfzeile nach unten wischen.

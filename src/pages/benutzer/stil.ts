@@ -61,6 +61,60 @@ export const BV_CSS = `
 .bv-blatt.mitleiste{ padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
 .bv-innen{ max-width: 760px; margin: 0 auto; }
 
+/* Titel als eigene Zeile unter Zeichen und Knöpfen (Seite titelUnten): voll ausgeschrieben,
+   bricht um, erst nach drei Zeilen gekürzt */
+.bv-luecke{ flex: 1; min-width: 0; }
+.bv-titel-unten{ margin-top: 12px; padding: 0 2px; }
+.bv-titel-unten b{ font-size: 17px; line-height: 1.25; white-space: normal; text-overflow: clip; overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto;
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
+.bv-titel-unten span{ margin-top: 3px; }
+
+/* Statische Seite (Seite statisch, der Hub; CLAUDE.md, „Statische Seiten“): genau so hoch wie der
+   Bildschirm, rollt nicht. html und body bleiben hell (useStatusleiste mit statisch), der feste
+   rote Streifen oben liegt vorn und gibt Safari das Rot für die Statusleiste. Unten ist nichts fest. */
+.bv.statisch{ height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+.bv.statisch > .bv-statusleiste{ z-index: 60; height: max(env(safe-area-inset-top), 12px); }
+/* Der Inhalt des Kopfs beginnt unter dem Streifen (auch ohne Statusleiste mindestens 12 px) */
+.bv.statisch > .bv-kopf{ flex: none; padding-top: calc(14px + env(safe-area-inset-top)); }
+.bv.statisch > .bv-blatt{ flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+.bv.statisch > .bv-blatt > .bv-innen{ flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: column; }
+/* Safari am iPhone im Browser: Die schwebende Leiste liegt unten über der Seite, Bedienbares bleibt darüber.
+   Nur in Telefonbreite: Am iPad steht Safaris Leiste oben (quer gilt unten die Regel für wenig Höhe). */
+@media (max-width: 639px){
+  @supports (-webkit-touch-callout: none){
+    @media not all and (display-mode: standalone){
+      .bv.statisch > .bv-blatt{ padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+    }
+  }
+}
+/* Notausgang (Seite rolltInnen): Passt der Inhalt nicht unter den Kopf (sehr wenig Höhe, Seitenzoom,
+   Zoom 400 %), rollt das Blatt innen. Das Dokument bleibt fest, html und body bleiben hell, der
+   Streifen oben bleibt. Als Block, damit der Innenabstand unten mitrollt. */
+.bv.statisch.rollt-innen > .bv-blatt{ display: block; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; }
+/* Sehr schmal (Zoom): Die Knöpfe im Kopf rücken in eine zweite Zeile, statt abgeschnitten zu werden */
+.bv.statisch .bv-zeile1{ flex-wrap: wrap; justify-content: flex-end; row-gap: 8px; }
+/* Sehr niedrige Bildschirme: Kopf knapper, damit mindestens eine Reihe Platz hat */
+@media (max-height: 559px){
+  .bv.statisch > .bv-kopf{ padding-bottom: 32px; }
+  .bv.statisch .bv-titel-unten{ margin-top: 6px; }
+  .bv.statisch > .bv-blatt{ padding-top: 14px; }
+}
+/* Äußerst niedrig (Zoom 400 %): ohne Datum, damit unter dem Kopf noch eine Reihe zu sehen ist */
+@media (max-height: 299px){
+  .bv.statisch .bv-titel-unten span{ display: none; }
+}
+/* Telefon quer: Safaris Leiste steht oben, der Titel rückt in die Zeile der Knöpfe */
+@media (max-height: 559px) and (orientation: landscape){
+  .bv.statisch > .bv-blatt{ padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+  .bv.statisch .bv-kopf-innen{ display: flex; flex-wrap: wrap; align-items: center; column-gap: 12px; }
+  .bv.statisch .bv-kopf-innen > .bv-zeile1{ display: contents; }
+  .bv.statisch .bv-zeile1 > :first-child{ order: -2; }
+  .bv.statisch .bv-kopf-innen > .bv-titel-unten{ order: -1; flex: 1; min-width: 0; margin-top: 0; }
+  .bv.statisch .bv-zeile1 > .bv-luecke{ display: none; }
+  .bv.statisch .bv-kopf-innen > :not(.bv-zeile1):not(.bv-titel-unten){ flex: 0 0 100%; }
+}
+
 /* Abschnitte und Text */
 .bv-ab{ display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 30px 2px 10px; }
 .bv-ab.erst{ margin-top: 4px; }

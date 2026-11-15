@@ -129,7 +129,8 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 
 ### Seiten im Dunkelrot-Design (Benutzer, Vorgänge und alle weiteren)
 - Immer den gemeinsamen Rahmen nehmen: `Seite` aus `src/pages/benutzer/bausteine.tsx`, die Stile
-  `BV_CSS` (`src/pages/benutzer/stil.ts`) und `useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })`.
+  `BV_CSS` (`src/pages/benutzer/stil.ts`) und `useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })`
+  (statische Seiten wie der Hub: `{ statisch: true }`, siehe unten).
   Keinen eigenen Kopf, keine eigene Statusleisten-Lösung bauen.
 - Safari am iPhone (iOS 26), festgelegt vom Owner am 14.11.2026 (nicht weiter daran herumprobieren):
   - Die Statusleiste (Uhr, WLAN, Akku) ist dunkelrot, solange der rote Kopf zu sehen ist, und
@@ -161,6 +162,33 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - Vor dem Veröffentlichen im Telefonformat prüfen: kurze und lange Seite, jeweils oben, beim
   Scrollen und ganz unten.
 
+#### Statische Seiten (der Hub), festgelegt vom Owner am 14.11.2026
+- Der Hub rollt nicht, weder am Telefon noch am Tablet oder Computer. Die Apps füllen den Platz
+  unter dem Kopf; passen nicht alle, stehen sie auf Seiten zum Wischen mit Pfeilen und Punkten
+  (`src/pages/hub/AppSeiten.tsx`, Rechnung in `src/lib/hubSeiten.ts`).
+- Gebaut im gemeinsamen Rahmen, nicht als eigene Lösung: `Seite` mit `statisch` (und `titelUnten`
+  für den voll ausgeschriebenen Titel), `useStatusleiste('--lbf-kopf', { statisch: true })`, die
+  Regeln `.bv.statisch` in `BV_CSS`.
+- Oben liegt der feste rote Streifen `.bv-statusleiste` vorn (`z-index` 60, mindestens 12 px hoch)
+  und gibt Safari das Rot. html und body bleiben die ganze Zeit hell; unten ist nichts fest, die
+  Safari-Leiste bleibt also hell. theme-color ist das Dunkelrot. Die Ablehnung „Farbgeber oben“
+  galt rollenden Seiten (der Balken schnitt beim Scrollen Titel und Knöpfe ab); eine Seite, die
+  nicht rollt, hat das Problem nicht.
+- Nur solange die statische Seite zu sehen ist, haben html und body `height: 100%`,
+  `overflow: hidden` und `overscroll-behavior: none`. Beim Verlassen und beim Wechsel auf eine
+  rollende Seite (auch „Apps anpassen“ unter `/hub?seite=apps`) stellt `useStatusleiste` die
+  vorherigen Werte wieder her. Ein hängengebliebenes `overflow: hidden` wäre ein schwerer Fehler.
+- Unten bleibt Platz für Safaris schwebende Leiste: im Browser am iPhone 64 px plus Home-Leiste,
+  sonst 16 px plus Home-Leiste; Pfeile und Punkte stehen darüber. Höhe der Seite `100dvh`.
+  Niedriger als 560 px (Telefon quer): Kopf knapper, ohne Gruß; quer steht der Titel in der Zeile
+  der Knöpfe und unten bleiben 16 px (Safaris Leiste steht quer oben; am iPhone bestätigen).
+  Die Blätter (Glocke, Kurzbefehle, Profil) halten unten am Telefon dieselbe Reserve.
+- Notausgang (Zoom, sehr wenig Höhe): Passt nicht einmal eine Reihe Apps samt Pfeilen, stehen alle
+  Apps untereinander und das Blatt unter dem Kopf rollt innen (`Seite` mit `rolltInnen`,
+  `.bv.statisch.rollt-innen`). Das Dokument bleibt fest, html und body bleiben hell.
+- Rollende Seiten (Benutzer, Vorgänge, „Apps anpassen“ und alle weiteren) bleiben beim Standard
+  oben, ohne Ausnahme.
+
 ## Keyframes (in globals.css oder inline `<style>`)
 ```css
 @keyframes greetNameIn {
@@ -184,7 +212,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Ausbildungen | `src/pages/ausbildungen/Ausbildungen.tsx` | Admin-Verwaltung Ausbildungen |
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
 | MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Fristen (STK/MTK), Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/` (STK/MTK: `fristen.ts`, `kontrollen.ts`; eine überfällige oder nicht bestandene STK oder MTK sperrt), Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
-| Hub | `src/pages/Hub.tsx`, `src/pages/hub/` | Startseite nach dem Login im Dunkelrot-Design: Gruß, Neuigkeiten, Apps (Auswahl und Reihenfolge je Benutzer: `src/lib/hubApps.ts`, Feld `users.hub_apps`), Kurzbefehle, Profil. Symbole: `src/lib/hubIcons.ts`, erzeugt mit `npm run hub-icons` aus `docs/entwuerfe/hub-icons/bau.mjs` |
+| Hub | `src/pages/Hub.tsx`, `src/pages/hub/` | Startseite nach dem Login im Dunkelrot-Design, statisch (rollt nicht): Gruß, Organisation voll ausgeschrieben, Glocke mit Neuigkeiten und Mitteilung der Organisation (Blatt), Apps auf Seiten zum Wischen mit Pfeilen (`src/lib/hubSeiten.ts`; Auswahl und Reihenfolge je Benutzer: `src/lib/hubApps.ts`, Feld `users.hub_apps`), Kurzbefehle, Profil. Symbole: `src/lib/hubIcons.ts`, erzeugt mit `npm run hub-icons` aus `docs/entwuerfe/hub-icons/bau.mjs` |
 | Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |
 
 ## PocketBase Collections (wichtigste)

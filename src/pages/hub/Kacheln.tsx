@@ -1,5 +1,7 @@
-// Das Raster der Apps im Hub: je App die Farbkachel und darunter der Name.
+// Eine App im Hub: die Farbkachel und darunter der Name.
 // Befristet freigegebene Apps tragen eine zweite Zeile „bis 16.11.“.
+// Verteilt auf Seiten zum Wischen werden die Kacheln in AppSeiten.tsx; die Höhe einer Kachel
+// rechnet src/lib/hubSeiten.ts (kachelHoehe) passend zu HUB_CSS.
 
 import { useNavigate } from 'react-router-dom'
 import HubIcon from '../../components/HubIcon'
@@ -15,24 +17,17 @@ export function appOeffnen(id: string, navigate: (pfad: string) => void) {
 
 export const tagText = (ms: number) => new Date(ms).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
 
-export default function Kacheln({ ids, befristetBis }: { ids: string[]; befristetBis: (id: string) => number }) {
+export function Kachel({ id, bis }: { id: string; bis: number }) {
   const navigate = useNavigate()
+  const app = ALL_APPS[id]
+  if (!app) return null
   return (
-    <div className="hub-raster">
-      {ids.map((id) => {
-        const app = ALL_APPS[id]
-        if (!app) return null
-        const bis = befristetBis(id)
-        return (
-          <button key={id} type="button" className="hub-kachel" data-probe="hub-kachel" data-app={id}
-            aria-label={bis ? `${app.name}, befristet bis ${tagText(bis)}` : app.name}
-            onClick={() => appOeffnen(id, navigate)}>
-            <HubIcon id={id} groesse={60} />
-            <span className="hub-kachel-name">{app.name}</span>
-            {bis > 0 && <span className="hub-kachel-bis">bis {tagText(bis)}</span>}
-          </button>
-        )
-      })}
-    </div>
+    <button type="button" className="hub-kachel" data-probe="hub-kachel" data-app={id}
+      aria-label={bis ? `${app.name}, befristet bis ${tagText(bis)}` : app.name}
+      onClick={() => appOeffnen(id, navigate)}>
+      <HubIcon id={id} groesse={60} />
+      <span className="hub-kachel-name">{app.name}</span>
+      {bis > 0 && <span className="hub-kachel-bis">bis {tagText(bis)}</span>}
+    </button>
   )
 }
