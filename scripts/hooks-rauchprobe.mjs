@@ -90,8 +90,10 @@ else {
       body: JSON.stringify({ identity: 'rauchprobe@example.invalid', password: 'rauchprobe-12345' }),
     })
     const token = (await auth.json().catch(() => ({}))).token
+    // POST /api/crons/{id} gibt es erst ab PocketBase 0.24; auf 0.23.x (Produktion) antwortet es 404.
     const cron = await fetch(`${B}/api/crons/doku_frist`, { method: 'POST', headers: { Authorization: token || '' } })
-    if (cron.status !== 204) ende(1, `POST /api/crons/doku_frist: ${cron.status} ${await cron.text()}`)
+    const ohneCronRoute = cron.status === 404
+    if (cron.status !== 204 && !ohneCronRoute) ende(1, `POST /api/crons/doku_frist: ${cron.status} ${await cron.text()}`)
     else {
       const diag = await fetch(`${B}/api/responda/formular/diagnose`, { headers: { Authorization: token || '' } })
       const d = await diag.json().catch(() => ({}))
@@ -103,9 +105,12 @@ else {
         const pb = await push.json().catch(() => null)
         if (push.status !== 401 || !pb || pb.grund !== 'nicht_angemeldet') ende(1, `GET /api/responda/push/stand: ${push.status} ${JSON.stringify(pb)} (push.pb.js nicht geladen?)`)
         else {
-          const takt = await fetch(`${B}/api/crons/responda_push_takt`, { method: 'POST', headers: { Authorization: token || '' } })
-          if (takt.status !== 204) ende(1, `POST /api/crons/responda_push_takt: ${takt.status} ${await takt.text()}`)
-          else ende(0, `Rauchprobe bestanden: ${bin} startet mit ${hooks}, Formular-Routen (mit eigenen Formularen), Frist-Lauf, Push-Routen und Push-Takt sind geladen.`)
+          // Ohne /api/crons (0.23.x): den Takt über die eigene Route der Push-Hooks anstoßen
+          const takt = ohneCronRoute
+            ? await fetch(`${B}/api/responda/push/takt`, { method: 'POST', headers: { Authorization: token || '', 'Content-Type': 'application/json' }, body: '{}' })
+            : await fetch(`${B}/api/crons/responda_push_takt`, { method: 'POST', headers: { Authorization: token || '' } })
+          if (takt.status !== (ohneCronRoute ? 200 : 204)) ende(1, `Push-Takt: ${takt.status} ${await takt.text()}`)
+          else ende(0, `Rauchprobe bestanden: ${bin} startet mit ${hooks}, Formular-Routen (mit eigenen Formularen), ${ohneCronRoute ? 'Frist-Lauf registriert (von Hand anstoßen geht in dieser Version nicht)' : 'Frist-Lauf'}, Push-Routen und Push-Takt sind geladen.`)
         }
       }
     }

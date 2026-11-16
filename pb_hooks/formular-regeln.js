@@ -1887,7 +1887,7 @@ function feldDa(app, sammlung, feld) {
 /** Fenster im Speicher zählen (atomar). Ergebnis aus fensterZaehlen. */
 function zaehlen(app, schluessel, cfg, jetzt) {
   let erg = null
-  app.store().setFunc(PREFIX + schluessel, (alt) => {
+  speicherSetzen(app.store(), PREFIX + schluessel, (alt) => {
     erg = fensterZaehlen(alt, jetzt, cfg.fensterMs, cfg.max)
     return erg.neu
   })
@@ -1923,10 +1923,10 @@ function passwortPruefen(app, kandidaten, passwort, ip, g, jetzt) {
   const blk = ipBlock(ip)
   const reservieren = (schluessel, f) => {
     let r = null
-    store.setFunc(PREFIX + schluessel, (alt) => { r = f(alt); return r.neu })
+    speicherSetzen(store, PREFIX + schluessel, (alt) => { r = f(alt); return r.neu })
     return r || { erlaubt: false, sekunden: 1, uebrig: 0 }
   }
-  const freigeben = (schluessel) => { store.setFunc(PREFIX + schluessel, (alt) => pwFreigeben(alt)) }
+  const freigeben = (schluessel) => { speicherSetzen(store, PREFIX + schluessel, (alt) => pwFreigeben(alt)) }
   const sperreSek = Math.ceil(g.pw_kt.sperreMs / 1000)
   let kleinste = 0
   const merke = (s) => { kleinste = kleinste ? Math.min(kleinste, s) : s }
@@ -2054,7 +2054,7 @@ function proxyKoepfe(app) {
 function einmalJe(app, schluessel, abstandMs, jetzt) {
   let ja = false
   const t = ms(jetzt)
-  app.store().setFunc(PREFIX + "log:" + schluessel, (alt) => {
+  speicherSetzen(app.store(), PREFIX + "log:" + schluessel, (alt) => {
     if (alt && (abstandMs === 0 || Number(alt.ende) > t)) return alt
     ja = true
     return { ende: abstandMs === 0 ? 8640000000000000 : t + abstandMs }
@@ -2392,6 +2392,16 @@ function unterschriftEintrag(rec, formular, absender) {
     zus = rec.getString("device_name") + ": " + rec.getString("description")
   }
   return { formular: formular, id: rec.id, titel: titel, zusammenfassung: kurz(zus), angelegt: rec.getString("created"), absender_name: String((absender && absender.name) || "") }
+}
+
+/**
+ * store.setFunc gibt es erst in neueren PocketBase-Versionen; auf dem Server des Owners fehlte es
+ * (16.11.2026). Ohne setFunc: lesen, rechnen, schreiben (nicht atomar; die Sperre nach
+ * Passwortversuchen kann bei gleichzeitigen Anfragen einen Versuch mehr zulassen).
+ */
+function speicherSetzen(store, schluessel, fn) {
+  if (store && typeof store.setFunc === "function") { store.setFunc(schluessel, fn); return }
+  store.set(schluessel, fn(store.get(schluessel)))
 }
 
 module.exports = {

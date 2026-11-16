@@ -158,6 +158,21 @@ onRecordAfterUpdateSuccess((e) => {
   }
 }, "users")
 
+// Konto gelöscht über die API oder die Admin-Oberfläche: gleich nach dem Löschen aufräumen. In
+// PocketBase 0.23.x geht das nur hier; in onRecordAfterDeleteSuccess unten scheitert dort jeder
+// Datenbankzugriff („transaction has already been committed“). Was anders gelöscht wird, räumt der
+// Takt ab (verwaisteEntfernen). Doppelt aufräumen schadet nicht.
+onRecordDeleteRequest((e) => {
+  e.next()
+  try {
+    const R = require(`${__hooks}/push-regeln.js`)
+    const V = require(`${__hooks}/push-versand.js`)
+    V.ausloesen(V.umgebung({ app: $app, http: $http, security: $security, os: $os, Record: Record }), R, "loeschen", e.record, null)
+  } catch (err) {
+    try { $app.logger().error("[push] Aufräumen nach dem Löschen gescheitert", "fehler", String(err).slice(0, 200)) } catch (err2) { /* ohne Log */ }
+  }
+}, "users")
+
 onRecordAfterDeleteSuccess((e) => {
   e.next()
   try {

@@ -28,6 +28,17 @@ const GRUND_TEXT = { stk: "STK nicht bestanden", mtk: "MTK nicht bestanden", pru
 const STATUSFELD = { patients: "absender_status", product_outputs: "absender_status", form_submissions: "absender_status", mpg_defect_reports: "reporter_status" }
 const LISTE_MAX = 10
 
+/**
+ * store.setFunc gibt es erst in neueren PocketBase-Versionen; auf dem Server des Owners fehlte es
+ * (16.11.2026, „Object has no member 'setFunc'“). Ohne setFunc: lesen, rechnen, schreiben. Das ist
+ * nicht atomar: Drossel und Zähler können bei gleichzeitigen Anfragen um eins danebenliegen. Den
+ * Doppelschutz der Nachrichten halten ohnehin Datenbank (eindeutige Indizes) und Dienst.
+ */
+function speicherSetzen(store, schluessel, fn) {
+  if (store && typeof store.setFunc === "function") { store.setFunc(schluessel, fn); return }
+  store.set(schluessel, fn(store.get(schluessel)))
+}
+
 /** Abbruch mitten im Morgenlauf (nur Prüfbetrieb, abbrechenNach). */
 const ABBRUCH = "push:abbruch"
 
@@ -91,7 +102,7 @@ function pbZeit(ms) {
 function einmalJe(U, schluessel, abstandMs) {
   let ja = false
   const t = U.jetztMs
-  U.store.setFunc("push:log:" + schluessel, (alt) => {
+  speicherSetzen(U.store, "push:log:" + schluessel, (alt) => {
     if (alt && (abstandMs === 0 || Number(alt.ende) > t)) return alt
     ja = true
     return { ende: abstandMs === 0 ? 8640000000000000 : t + abstandMs }
@@ -312,7 +323,7 @@ function loeschenNachId(U, sammlung, ids) {
 
 function schutzschalter(U, R, ereignis) {
   let wert = null
-  if (ereignis) U.store.setFunc("push:dienst", (alt) => { wert = R.schutzschalterNeu(alt, ereignis, U.jetztMs); return wert })
+  if (ereignis) speicherSetzen(U.store, "push:dienst", (alt) => { wert = R.schutzschalterNeu(alt, ereignis, U.jetztMs); return wert })
   else wert = U.store.get("push:dienst") || null
   return { offen: R.schutzschalterOffen(wert, U.jetztMs), wert: wert }
 }
@@ -707,7 +718,7 @@ function zustellen(U, R, auftrag, F) {
     }
     if (auftrag.anlass !== "mitteilung") {
       let d = null
-      U.store.setFunc("push:drossel:" + p.id, (alt) => { d = R.drossel(alt, U.jetztMs, R.GRENZEN.drosselMax, R.GRENZEN.drosselFensterMs); return d.neu })
+      speicherSetzen(U.store, "push:drossel:" + p.id, (alt) => { d = R.drossel(alt, U.jetztMs, R.GRENZEN.drosselMax, R.GRENZEN.drosselFensterMs); return d.neu })
       if (d && !d.erlaubt) {
         einreihen(U, R, Object.assign({}, eintrag, { grund: "drossel", faelligMs: d.faellig }))
         z.spaeter++
@@ -885,7 +896,7 @@ function rueckmeldungenAbholen(U, R) {
 /** Organisation als geändert merken (Buchungen, Bestand, Artikel). */
 function lagerGeaendert(U, orgId) {
   if (!orgId) return
-  U.store.setFunc("push:lager:geaendert", (alt) => {
+  speicherSetzen(U.store, "push:lager:geaendert", (alt) => {
     let o = {}
     try { o = alt ? JSON.parse(String(alt)) : {} } catch (err) { o = {} }
     o[orgId] = U.jetztMs
@@ -937,7 +948,7 @@ function lagerGeaenderteOrgs(U, R, L, erneuern) {
     const zuletzt = Number(U.store.get("push:lager:zuletzt:" + orgId)) || 0
     if (zuletzt && U.jetztMs - zuletzt < R.GRENZEN.lagerAbstandMs) continue
     U.store.set("push:lager:zuletzt:" + orgId, U.jetztMs)
-    U.store.setFunc("push:lager:geaendert", (alt) => {
+    speicherSetzen(U.store, "push:lager:geaendert", (alt) => {
       let o = {}
       try { o = alt ? JSON.parse(String(alt)) : {} } catch (err) { o = {} }
       if (Number(o[orgId]) <= Number(geaendert[orgId])) delete o[orgId]
@@ -1129,7 +1140,7 @@ function wochenlauf(U, R, F, L, tag, erneuern) {
 
 function taktSperre(U, R, token, art) {
   let erg = { erfolg: false }
-  U.store.setFunc("push:takt", (alt) => { erg = R.taktSperreNeu(alt, token, U.jetztMs, art); return erg.wert })
+  speicherSetzen(U.store, "push:takt", (alt) => { erg = R.taktSperreNeu(alt, token, U.jetztMs, art); return erg.wert })
   return erg.erfolg
 }
 
@@ -1137,6 +1148,20 @@ function taktSperre(U, R, token, art) {
  * Minutentakt: Sperre mit Erneuerung; Rückmeldungen, Warteschlange, Lager (geänderte Orgs),
  * Morgenlauf (ab 06:00 Berlin), Wochenlauf (Montag ab 07:00). Gibt Zahlen zurück.
  */
+/**
+ * Geräte und wartende Einträge von Konten, die es nicht mehr gibt. Sicherheitsnetz für PocketBase
+ * 0.23.x: Dort geht nach dem Löschen (onRecordAfterDeleteSuccess) kein Zugriff auf die Datenbank
+ * („transaction has already been committed“), das Aufräumen dort scheitert also. push.pb.js räumt
+ * deshalb schon in onRecordDeleteRequest auf; was anders gelöscht wurde, räumt hier der Takt ab.
+ */
+function verwaisteEntfernen(U) {
+  let n = 0
+  if (sammlungDa(U, "push_geraete")) n += ausfuehren(U, "DELETE FROM push_geraete WHERE user_id NOT IN (SELECT id FROM users)", {})
+  if (sammlungDa(U, "push_warteschlange")) n += ausfuehren(U, "DELETE FROM push_warteschlange WHERE user_id NOT IN (SELECT id FROM users)", {})
+  if (n) U.log("info", "Einträge gelöschter Konten entfernt", { anzahl: n })
+  return n
+}
+
 function takt(U, R, F, L) {
   const token = zufall(U, 20)
   if (!taktSperre(U, R, token, "nehmen")) return { gesperrt: true }
@@ -1144,6 +1169,7 @@ function takt(U, R, F, L) {
   const erneuern = () => { taktSperre(U, R, token, "erneuern") }
   try {
     if (!bereit(U)) return { eingerichtet: false }
+    z.verwaist = verwaisteEntfernen(U)
     z.rueckmeldungen = rueckmeldungenAbholen(U, R)
     erneuern()
     z.warteschlange = warteschlangeAbarbeiten(U, R, F)
@@ -1177,7 +1203,7 @@ function absenderId(rec) {
 /** Gerät gesperrt: Ereignis und Rückfall desselben Geräts ergeben eine Nachricht (Store 120 s, atomar). */
 function mpgSperreBeanspruchen(U, R, deviceId) {
   let frei = false
-  U.store.setFunc("push:mpg:" + deviceId, (alt) => {
+  speicherSetzen(U.store, "push:mpg:" + deviceId, (alt) => {
     if (alt && Number(alt.bis) > U.jetztMs) return alt
     frei = true
     return { bis: U.jetztMs + R.GRENZEN.mpgFensterMs }
@@ -1354,7 +1380,7 @@ function mitteilungDrosselPruefen(U, R, orgId) {
     }
   } catch (err) { /* ohne Datenbank-Zählung */ }
   let erg = { erlaubt: true, sekunden: 0 }
-  U.store.setFunc("push:mitteilung:" + orgId, (alt) => {
+  speicherSetzen(U.store, "push:mitteilung:" + orgId, (alt) => {
     let l = []
     try { l = alt ? JSON.parse(String(alt)) : [] } catch (err) { l = [] }
     erg = R.mitteilungDrossel(l, dbZeiten, U.jetztMs, R.GRENZEN.mitteilungLeitungMax, fenster)
@@ -1366,7 +1392,7 @@ function mitteilungDrosselPruefen(U, R, orgId) {
 /** Vormerkung zurücknehmen, wenn das Speichern danach scheiterte (zählt dann nicht). */
 function mitteilungDrosselFreigeben(U, orgId, ms) {
   if (!orgId || !Number.isFinite(ms)) return
-  U.store.setFunc("push:mitteilung:" + orgId, (alt) => {
+  speicherSetzen(U.store, "push:mitteilung:" + orgId, (alt) => {
     let l = []
     try { l = alt ? JSON.parse(String(alt)) : [] } catch (err) { l = [] }
     const i = l.map(Number).indexOf(ms)
@@ -1454,7 +1480,7 @@ function angemeldet(U, R, e) {
 
 function routeZaehlen(U, R, art, uid, cfg) {
   let erg = { erlaubt: true, sekunden: 0 }
-  U.store.setFunc("push:route:" + art + ":" + uid, (alt) => { erg = R.zaehlen(alt, U.jetztMs, cfg.fensterMs, cfg.max); return erg.neu })
+  speicherSetzen(U.store, "push:route:" + art + ":" + uid, (alt) => { erg = R.zaehlen(alt, U.jetztMs, cfg.fensterMs, cfg.max); return erg.neu })
   return erg
 }
 

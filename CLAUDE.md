@@ -267,6 +267,19 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   das Abo); nie einen Service Worker ohne `sw-push.js` ausliefern, solange der Server sendet.
 - Rücknahme genau so: erst `push.pb.js` entfernen, dann den Dienst stoppen, erst danach die App.
 
+## PocketBase in Produktion: v0.23.4
+
+Der Server (`api.responda.systems`, systemd-Einheit `pocketbase`, Hooks in `/opt/pb_hooks`)
+läuft mit **PocketBase 0.23.4** (Owner, 16.11.2026). Alle Hooks müssen dort laufen; die CI startet
+sie mit 0.23.4, 0.28.4 und 0.40.5. Was 0.23.4 nicht kann:
+- `$app.store().setFunc` gibt es erst ab 0.26: nur über `speicherSetzen` (in `push-versand.js` und
+  `formular-regeln.js`), das ohne `setFunc` liest, rechnet und schreibt.
+- `POST /api/crons/{id}` gibt es erst ab 0.24: Läufe von Hand über eigene Routen anstoßen
+  (z. B. `POST /api/responda/push/takt`).
+- In `onRecordAfterDeleteSuccess` scheitert jeder Datenbankzugriff („transaction has already been
+  committed“): Aufräumen nach dem Löschen in `onRecordDeleteRequest` nach `e.next()`, dazu ein
+  Sicherheitsnetz im Takt.
+
 ## Was NICHT zum Stil passt
 - iOS-Pill-Indikatoren in der Tab Bar
 - Farbige Gradient-Header
