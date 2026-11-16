@@ -16,7 +16,11 @@
 //   4. GET /api/responda/formular/diagnose als Superuser nennt die Felder der eigenen Formulare
 //      (form_templates.version, form_submissions.status): formular.pb.js ist der Stand mit den
 //      eigenen Formularen. eigene-formulare.pb.js und cirs.pb.js startet PocketBase mit allen
-//      anderen *.pb.js; ein Syntaxfehler darin fiele schon bei 1. auf.
+//      anderen *.pb.js; ein Syntaxfehler darin fiele schon bei 1. auf,
+//   5. GET /api/responda/push/stand ohne Anmeldung liefert 401 MIT grund "nicht_angemeldet"
+//      (Routen aus push.pb.js geladen),
+//   6. POST /api/crons/responda_push_takt als Superuser liefert 204 (Takt der Push-Hooks läuft,
+//      auch ohne Sammlungen und Dienst).
 // Nie gegen den echten Server: das Verzeichnis ist neu und wird danach gelöscht.
 
 import { spawn, execFileSync } from 'node:child_process'
@@ -94,7 +98,16 @@ else {
       const felder = d && d.felder ? Object.keys(d.felder) : []
       if (diag.status !== 200 || !felder.includes('form_templates.version') || !felder.includes('form_submissions.status')) {
         ende(1, `GET /api/responda/formular/diagnose: ${diag.status} ${JSON.stringify(d).slice(0, 300)} (formular.pb.js ohne die eigenen Formulare?)`)
-      } else ende(0, `Rauchprobe bestanden: ${bin} startet mit ${hooks}, Formular-Routen (mit eigenen Formularen) und Frist-Lauf sind geladen.`)
+      } else {
+        const push = await fetch(`${B}/api/responda/push/stand`)
+        const pb = await push.json().catch(() => null)
+        if (push.status !== 401 || !pb || pb.grund !== 'nicht_angemeldet') ende(1, `GET /api/responda/push/stand: ${push.status} ${JSON.stringify(pb)} (push.pb.js nicht geladen?)`)
+        else {
+          const takt = await fetch(`${B}/api/crons/responda_push_takt`, { method: 'POST', headers: { Authorization: token || '' } })
+          if (takt.status !== 204) ende(1, `POST /api/crons/responda_push_takt: ${takt.status} ${await takt.text()}`)
+          else ende(0, `Rauchprobe bestanden: ${bin} startet mit ${hooks}, Formular-Routen (mit eigenen Formularen), Frist-Lauf, Push-Routen und Push-Takt sind geladen.`)
+        }
+      }
     }
   }
 }

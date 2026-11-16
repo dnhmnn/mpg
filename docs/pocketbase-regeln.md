@@ -1574,3 +1574,309 @@ neueste, einmal (auch nach Ab- und Anmelden), neue Konten ohne Blatt, HTML bleib
 am Konto (Gerät), ohne Sammlung und ohne Netz kein Blatt und kein Fehler; Supervisor-Gerät mit
 einen Tag vorgehender Uhr (Datum nach der Serverzeit, Satz zur Uhr), Konto ohne Namen
 (`erstellt_von` = „Supervisor“), das Blatt fragt nur seine Felder ab.
+
+## hub_notifications: Mitteilungen
+
+Die Mitteilung der Organisation steht oben im Blatt hinter der Glocke im Hub und geht seit dem
+Push-Paket auch als Push-Benachrichtigung an alle aktiven Konten der Organisation, auch an
+Teilnehmende (Owner, 15.11.2026). Sie ist Pflicht (lässt sich nicht abschalten), kommt in der
+Voreinstellung auch in der Ruhezeit und ist von der Drossel ausgenommen. Wer anlegen darf, könnte
+also einer ganzen Organisation nachts eigenen Text schicken. Deshalb gilt (Owner 12.3):
+
+- **Supervisor**: jede Organisation (wie bisher in `supervisor-dashboard.html`).
+- **Leitung** (Rolle `admin` in `role`, aktives Konto): nur die **eigene** Organisation, in der App
+  unter Benachrichtigungen → Für die Organisation festlegen → „Mitteilung an die Organisation“.
+  Höchstens **3 neue Mitteilungen je Organisation in 24 Stunden** (der Supervisor ist ausgenommen).
+- Titel höchstens **120**, Text höchstens **1000** Zeichen, nur Text, kein HTML.
+
+Die Sammlung gibt es schon (Felder `title`, `message`, `type`, `organization_id`, `active`,
+`created_by`); ihre Regeln standen bisher nirgends im Repo. Neu einzutragen (*Collections →
+hub_notifications → Zahnrad → API Rules*; die alten Regeln vorher notieren):
+
+**List/Search**
+```
+@request.auth.id != "" && (@request.auth.supervisor = true || organization_id = @request.auth.organization_id)
+```
+
+**View**
+```
+@request.auth.id != "" && (@request.auth.supervisor = true || organization_id = @request.auth.organization_id)
+```
+
+**Create**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (@request.auth.role = "admin" && @request.body.organization_id = @request.auth.organization_id))
+```
+
+**Update**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (@request.auth.role = "admin" && organization_id = @request.auth.organization_id && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)))
+```
+
+**Delete**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && (@request.auth.supervisor = true || (@request.auth.role = "admin" && organization_id = @request.auth.organization_id))
+```
+
+(setzt `disabled` und `expires_at` an `users` voraus, wie die MPG-Regeln)
+
+**Der Hook schützt auch ohne diese Regeln.** `pb_hooks/push.pb.js` prüft Anlegen, Ändern und
+Löschen vor dem Speichern selbst (`onRecord…Request`, unabhängig von den Regeln): nur Superuser,
+Supervisor oder Leitung der eigenen Organisation mit aktivem Konto; sonst 403 „Mitteilungen der
+Organisation schicken nur der Supervisor und die Leitung der eigenen Organisation.“ Nur der Hook
+hält die Drossel der Leitung (darüber 429 „Höchstens drei Mitteilungen je Organisation in 24
+Stunden. Die nächste geht in … wieder.“), die Längen und „nur Text“ (400) und prüft, dass die
+Organisation existiert (400). `created_by` setzt der Hook beim Anlegen auf das angemeldete Konto
+und hält es beim Ändern fest (`supervisor-dashboard.html` setzt es weiter selbst; der Hook
+überschreibt es mit derselben Kennung, das ist unschädlich). Wieder aktivieren (`active` von
+false auf true) schickt erneut Push und zählt bei der Leitung in die Drossel; Zurückziehen ist
+`active: false` (die App) oder Löschen (Supervisor-Seite). Die Regeln oben verhindern zusätzlich,
+dass Mitglieder überhaupt etwas schreiben, falls `push.pb.js` einmal fehlt.
+
+Die Diagnose (`GET /api/responda/push/diagnose`, Abschnitt „Push-Benachrichtigungen“) zeigt die
+tatsächlichen Regeln und warnt, wenn die Create- oder Update-Regel offen (leer) ist.
+
+### Geprüft
+
+Gegen **PocketBase 0.28.4 und 0.40.5** mit den fünf Regeln oben (gelesen aus dieser Datei), je
+Version einmal **nur mit den Regeln** (ohne `push.pb.js`) und einmal mit Regeln und Push-Hooks:
+**184 Prüfungen, alle bestanden** (44 bzw. 48 je Lauf). Geprüft: Liste und Ansicht ohne Anmeldung,
+als Mitglied, Teilnehmerin, Leitung der eigenen und einer anderen Organisation und als Supervisor
+(nur eigene Organisation, Supervisor alle; Entwürfe der eigenen Organisation sichtbar); Anlegen,
+Ändern (Titel, Zurückziehen, Aktivieren, in eine andere Organisation verschieben) und Löschen für
+Mitglied, Teilnehmerin, Lager-Rolle, Leitung (eigene und fremde Organisation, ohne
+`organization_id`, gesperrt mit noch gültigem Token, abgelaufen) und Supervisor (auch aus einer
+anderen Organisation); Anlegen per Batch als Mitglied und als Leitung für eine fremde
+Organisation. Mit Hook zusätzlich: `created_by` gefälscht wird überschrieben, Titel 121 Zeichen und
+HTML 400. Drossel, Längen und Push an die Organisation prüft die Hook-Prüfung des Push-Pakets
+(Abschnitt „Push-Benachrichtigungen“, Geprüft).
+
+## Push-Benachrichtigungen
+
+Responda schickt auf Wunsch Push-Benachrichtigungen auf Telefon, Tablet und Rechner (Web Push).
+Wer was bekommt, entscheidet PocketBase (Hooks `push*.js`); verschlüsselt und gesendet wird in
+einem eigenen kleinen Dienst auf demselben Server (`dienste/push`, nur `127.0.0.1:8095`), weil
+die JavaScript-Umgebung von PocketBase die nötige Kryptographie nicht kann. **Push ist keine
+Alarmierung.** Schritte in der richtigen Reihenfolge: `docs/push-einfuehrung.md`; der Dienst
+selbst: `dienste/push/README.md`.
+
+### Sammlungen
+
+Drei neue Sammlungen, Typ **Base**. **Alle fünf API-Regeln gesperrt lassen** (Schloss, null):
+Gelesen und geschrieben wird nur über die Hooks und Routen. So kann niemand ein Gerät für eine
+fremde Person anmelden, fremde Einstellungen lesen oder Merker fälschen. `created` und `updated`
+(Autodate) jeweils stehen lassen.
+
+**`push_geraete`** (ein Datensatz je angemeldetem Gerät)
+
+| Feld | Typ | Einstellung |
+|---|---|---|
+| `user_id` | Plain text | Nonempty, Max length 30 |
+| `organization_id` | Plain text | Max length 30 |
+| `endpoint` | Plain text | Nonempty, Max length 1000 |
+| `endpoint_hash` | Plain text | Nonempty, Max length 64 |
+| `p256dh` | Plain text | Nonempty, Max length 200 |
+| `auth` | Plain text | Nonempty, Max length 100 |
+| `geraet` | Plain text | Max length 80 |
+| `gemeldet_am` | Date | |
+
+```sql
+CREATE UNIQUE INDEX idx_push_geraete_hash ON push_geraete (endpoint_hash)
+CREATE INDEX idx_push_geraete_user ON push_geraete (user_id)
+```
+
+**`push_warteschlange`** (zurückgehaltene Benachrichtigungen: Ruhezeit, Drossel, Wiederholung).
+Speichert nur Anlass und Kennungen, **nie Text**; der Text entsteht erst beim Zustellen.
+
+| Feld | Typ | Einstellung |
+|---|---|---|
+| `user_id` | Plain text | Nonempty, Max length 30 |
+| `organization_id` | Plain text | Max length 30 |
+| `anlass` | Plain text | Nonempty, Max length 40 |
+| `kontext` | JSON | Max size 1000 |
+| `schluessel` | Plain text | Nonempty, Max length 64 |
+| `grund` | Plain text | Max length 20 |
+| `faellig_am` | Date | Nonempty |
+| `versuche` | Number | |
+| `lauf` | Plain text | Max length 20 |
+| `buendel` | Plain text | Max length 40 |
+
+```sql
+CREATE INDEX idx_push_ws_faellig ON push_warteschlange (faellig_am)
+CREATE INDEX idx_push_ws_user ON push_warteschlange (user_id)
+CREATE INDEX idx_push_ws_lauf ON push_warteschlange (lauf)
+```
+
+**`push_merker`** (was schon gemeldet ist, Läufe, Grabsteine abgemeldeter Geräte)
+
+| Feld | Typ | Einstellung |
+|---|---|---|
+| `schluessel` | Plain text | Nonempty, Max length 200 |
+| `art` | Plain text | Nonempty, Max length 40 |
+| `organization_id` | Plain text | Max length 30 |
+| `wert` | JSON | Max size 2000 |
+| `bis` | Date | |
+
+```sql
+CREATE UNIQUE INDEX idx_push_merker_schluessel ON push_merker (schluessel)
+CREATE INDEX idx_push_merker_org_art ON push_merker (organization_id, art)
+CREATE INDEX idx_push_merker_bis ON push_merker (bis)
+```
+
+Die eindeutigen Indizes sind Teil der Logik (jede Nachricht genau einmal, ein Gerät nur einmal):
+ohne sie keine Push.
+
+### Neue Felder an users und organizations
+
+| Sammlung | Feld | Typ | Einstellung |
+|---|---|---|---|
+| `users` | `push_einstellungen` | JSON | **Hidden** an, nicht Pflicht, Max size 2000 |
+| `organizations` | `push_anlaesse` | JSON | **Hidden** an, nicht Pflicht, Max size 1000 |
+
+**Keine Regeländerung an `users` oder `organizations`.** Versteckte Felder liefert PocketBase nicht
+aus und verwirft sie beim Schreiben über die API still (geprüft mit 0.28.4 und 0.40.5). Schreiben
+geht nur über die Routen unten, und die schreiben nur diese eine Spalte (nie den ganzen
+Datensatz, damit eine gleichzeitige Sperre durch die Leitung nicht verloren geht). Vergisst man
+„Hidden“, setzt `push.pb.js` beide Felder bei jeder Änderung über die API (nicht Superuser) auf
+den gespeicherten Wert zurück; die Diagnose warnt dann, weil Ruhezeiten lesbar wären
+(`organizations` ist öffentlich lesbar).
+
+Fehlt der Eintrag, gilt die Voreinstellung: alle Anlässe an, Ruhezeit 22:00 bis 06:00 Uhr,
+Mitteilungen auch in der Ruhezeit.
+
+### Wer was bekommt
+
+Nur aktive Konten (nicht gesperrt, nicht abgelaufen) der Organisation, Organisation aktiv, Modul
+freigeschaltet, Anlass weder von der Organisation noch von der Person abgeschaltet (die Mitteilung
+ist Pflicht), mindestens ein Gerät. Die Rechte bildet `darfAnlass` (`pb_hooks/push-regeln.js`)
+genau nach den Regeln dieser Datei nach, damit niemand von etwas erfährt, das er über die API
+nicht öffnen kann:
+
+| Anlass | Wer (zusätzlich) |
+|---|---|
+| Mitteilung der Organisation | alle, auch Teilnehmende |
+| Wartet auf deine Unterschrift | nur die Person, die unterschreiben soll |
+| Neues Patientenprotokoll | Leitung, `patienten` (auch befristet im neuen Format), Supervisor; nicht Teilnehmende, nicht der Absender |
+| MPG: Gerät gesperrt, Defekt, Prüfungen bald fällig | Zugang MPG und „MPG verwalten“ wie „MPG: API-Regeln“; nicht, wer gesperrt hat |
+| Lager: unter Mindestbestand, abgelaufen, läuft bald ab, Produktausgabe | `lager` wie „Lager: API-Regeln“ oder Supervisor |
+| Neue Einsendung | Supervisor, Leitung oder `dokumente` (wie `form_submissions`) |
+| Neue CIRS-Meldung, CIRS überfällig | Supervisor oder **dauerhaftes** `dokumente` (die `cirs_reports`-Regel kennt keine befristeten Rechte); mit dauerhaftem `dokumente` auch Teilnehmende |
+| Ausbildung: Zu- und Absagen | Supervisor oder dauerhaftes `ausbildungen_manage` |
+
+Die Prüffälle `src/lib/__tests__/pushGleichlauf.test.ts` lesen die Regeln aus dieser Datei: Ändert
+sich eine Regel, schlägt der Test an, und `darfAnlass` ist anzupassen. Für `patients` (List) und
+`ausbildungen_termine_user` stehen die Regeln nicht im Repo; die Diagnose zeigt die echten.
+
+Inhalt: Namen von Geräten, Formularen, Artikeln und Lagern nur aus den Stammdaten derselben
+Organisation, nie aus Feldern, die der Client setzt. **Nie** Patientennamen oder anderes aus
+Protokollen, nie der Text einer CIRS-Meldung oder eines Defekts, nie E-Mail-Adressen.
+
+Was in der Ruhezeit oder hinter der Drossel wartet, prüft der Takt beim Zustellen neu (Konto,
+Recht, Modul, Schalter der Organisation und der Person, Gegenstand); beim Wochenüberblick jede
+Zeile für sich (`wocheZeilen`), es bleiben nur erlaubte Zahlen.
+
+**Neues Passwort** (selbst gesetzt, über den Link oder vom Supervisor): PocketBase erneuert dabei
+`tokenKey`, alle Anmeldungen der Person werden ungültig. `push.pb.js` löscht dann alle Geräte und
+wartenden Einträge der Person, wie beim Löschen des Kontos; sonst bekäme ein verlorenes Telefon mit
+der alten Anmeldung weiter Einzelheiten. Nach der nächsten Anmeldung meldet die App das Gerät still
+wieder an. Meldet ein Gerät ein Abo mit einem alten Schlüssel (`409 schluessel_neu`), löscht die
+Route den eigenen Eintrag dieses Abos.
+
+### Hook-Dateien
+
+Fünf Dateien nach `/opt/pb_hooks`:
+
+| Datei | Inhalt |
+|---|---|
+| `push.pb.js` | nur Registrierung: Schutz der Mitteilungen, Schutz der versteckten Felder, Auslöser, Routen, Minutentakt `responda_push_takt` |
+| `push-regeln.js` | reine Regeln (Rechte, Einstellungen, Zeit nach Europe/Berlin, Texte, Abo-Prüfung); Zwilling `src/lib/push/regeln.ts` |
+| `push-fristen.js` | STK/MTK- und CIRS-Fristen für Morgen- und Wochenlauf (Port von `src/lib/mpg/fristen.ts` und `src/lib/cirs.ts`) |
+| `push-versand.js` | Datenbank, Warteschlange, Dienst, Routen, Takt |
+| `lager-regeln.js` | neue Fassung mit `lagerWarnungenDaten` (die Mail an die Leitung bleibt wörtlich gleich) |
+
+Fehlt eine Sammlung, ein Feld oder die Umgebung, antworten die Routen 503 mit `fehlt` und die
+Auslöser tun nichts (eine Warnung je Start); alles andere geht weiter wie vorher. Jeder Auslöser
+ruft zuerst `e.next()` und fängt jeden eigenen Fehler.
+
+Umgebung von PocketBase (Datei `/etc/responda/pocketbase-push.env`, root, 0600, erzeugt von
+`dienste/push/schluessel-erzeugen.mjs`, eingebunden mit `systemctl edit`):
+
+| Variable | Inhalt |
+|---|---|
+| `RESPONDA_PUSH_URL` | `http://127.0.0.1:8095` |
+| `RESPONDA_PUSH_GEHEIMNIS` | gemeinsames Geheimnis mit dem Dienst (64 Hex-Zeichen, mindestens 32) |
+| `RESPONDA_PUSH_SCHLUESSEL` | öffentlicher VAPID-Schlüssel (87 Zeichen); die Geräte abonnieren damit |
+
+`RESPONDA_PUSH_TEST_HOSTS` und `RESPONDA_PUSH_TESTZEIT` nur in Prüfungen; im Betrieb warnt die
+Diagnose, wenn eine davon gesetzt ist.
+
+### Routen
+
+Alle unter `/api/responda/push/`, Antworten JSON, Fehler als `{status, message, grund, …}`:
+
+| Route | Wer | Was |
+|---|---|---|
+| `GET stand` | angemeldet, aktiv | eingerichtet, Dienst erreichbar, öffentlicher Schlüssel, eigene Geräte (ohne Endpoint und Schlüssel), Anlässe, die die Person bekommen kann, eigene Einstellungen, `darf_organisation`, `darf_mitteilung` |
+| `POST geraet` | angemeldet, aktiv | Gerät anmelden (höchstens 10 je Person, 30 je Stunde) |
+| `POST geraet/abmelden` | angemeldet | eigenes Gerät abmelden; ein anderes Gerät aus der Liste bekommt einen Grabstein (30 Tage), damit es sich nicht still wieder anmeldet |
+| `POST einstellungen` | angemeldet, aktiv | eigene Anlässe und Ruhezeit (120 je Stunde) |
+| `GET`/`POST organisation` | Leitung der eigenen Organisation (`admin`, `unitarii`, auch befristet im neuen Format) oder Supervisor für die eigene Organisation | Anlässe der Organisation |
+| `POST probe` | angemeldet, aktiv | „Responda: Probe“ an alle eigenen Geräte (5 je 10 Minuten) |
+| `GET diagnose` | nur Superuser | Sammlungen, Felder (versteckt?), Regeln von `hub_notifications` und der Quellen, Dienst (erreichbar, Schlüssel gleich), Warnungen als Sätze |
+| `POST takt` | nur Superuser | den Minutentakt sofort ausführen |
+
+Der Takt läuft jede Minute (`cronAdd`, auch `POST /api/crons/responda_push_takt`): Rückmeldungen
+des Dienstes (abgemeldete Geräte löschen, nur bei 404 und 410), Warteschlange zustellen, Lager
+prüfen, Morgenlauf ab 06:00 Uhr (STK/MTK überfällig, Lager abgelaufen, Aufräumen: Geräte, die sich
+180 Tage nicht gemeldet haben, Einträge über 72 Stunden, Geräte gesperrter und gelöschter Konten),
+Wochenüberblick montags ab 07:00 Uhr (deutsche Zeit).
+
+### Rücknahme
+
+Genau in dieser Reihenfolge, sonst entzieht iOS die Abos:
+
+1. `push.pb.js` aus `/opt/pb_hooks` entfernen, PocketBase neu starten. Ab jetzt sendet niemand
+   mehr; die übrigen `push-*.js` sind passive Module. `lager-regeln.js` in der neuen Fassung kann
+   bleiben (die Mail ist gleich).
+2. Dienst stoppen: `systemctl disable --now responda-push`.
+3. Erst danach, wenn überhaupt, eine App ohne `sw-push.js` veröffentlichen. Nie einen Service
+   Worker ohne Push-Teil ausliefern, solange der Server noch sendet (Prüffall in
+   `src/lib/__tests__/pushSw.test.ts`).
+
+Sammlungen und Felder können bleiben. Die Regeln von `hub_notifications` bleiben auch ohne Push
+richtig (die Leitung kann dann Mitteilungen anlegen, bekommt aber keine Drossel: wer das nicht
+will, Create und Update wieder auf den Supervisor beschränken).
+
+### Geprüft
+
+Stand 16.11.2026, alles nur mit erfundenen Testdaten auf Wegwerf-Servern:
+
+- **Hook-Prüfung** gegen **PocketBase 0.28.4 und 0.40.5** mit allen Hooks und einem falschen Dienst:
+  **771 von 771 je Version**. Darin: ohne Sammlungen, Felder und Geheimnis gehen Formulare, MPG,
+  Lager und CIRS wie vorher; Gleichlauf von `push-regeln.js` in der JSVM gegen Node (418 Werte);
+  Geräte (FCM, Apple, Mozilla, WNS, ungültige Endpoints, Testhost nur im Prüfbetrieb, höchstens 10,
+  Grabstein, Schlüsselwechsel); jeder Anlass mit den erwarteten Empfängern, und jeder Empfänger
+  liest den Gegenstand mit seinem eigenen Token über die API; MPG-Sperren mit den echten Plänen
+  der App; Mitteilungen mit Leitung, Drossel und Längen; Datenschutz (in 232 Nachrichten kein
+  Patientenname, kein CIRS- oder Freitext, kein „@“); Dienst hängt oder fehlt, Takt-Überlappung,
+  Ruhezeit, Drossel, Obergrenze, Morgen- und Wochenlauf, Rückmeldungen mit 403. Gegenprobe ohne
+  `push.pb.js`: 5 von 5 Schutzfällen schlagen an. Gemessen: Formular-Route bei hängendem Dienst
+  rund 1020 ms, Batch mit drei Anlässen rund 1070 ms, danach unter 300 ms (Schutzschalter);
+  `lagerWarnungenDaten` mit 20000 Buchungen 470 bis 750 ms.
+- **Rauchprobe** (`scripts/hooks-rauchprobe.mjs`, auch in der CI): beide Versionen starten mit
+  allen Hooks, Push-Routen und Push-Takt sind geladen.
+- **Regeln von `hub_notifications`**: siehe dort, 184 Prüfungen.
+- **Push-Dienst** (`dienste/push`, `npm test`): 66 Prüffälle.
+- **vitest**: 2808 Prüffälle unter Node 22 und Node 20 (wie die CI), darunter
+  `pushDreiwege.test.ts` (`urlSicher` in Server, App und Service Worker auf 500 Eingaben gleich,
+  `HOSTS` in PocketBase und Dienst gleich, Endpoint-Fälle gegen beide).
+- **Browserprobe** (gebaute App gegen 0.40.5 mit allen Hooks, echter Dienst, falscher
+  HTTPS-Endpunkt, Abschnitte 40 bis 46): **105 Prüfungen, alle bestanden**. Einschalten, Probe,
+  iPhone in Safari, abgelehnt; Anlässe, Ruhezeit, Geräteliste mit Grabstein, Organisation und
+  Mitteilung der Leitung; Mitteilung, Patientenprotokoll, Einsendung, CIRS, Produktausgabe,
+  MPG-Sperre über die App und Lager über den echten Dienst, entschlüsselt (TTL und Dringlichkeit
+  immer gleich, immer 2048 Bytes, Topic nur bei Zuständen, keine Inhalte im Klartext); Anzeige im
+  Service Worker, neutral für andere Personen, Tippen führt zum Ziel; Abmelden, Wechsel der Person,
+  abgelaufene Sitzung (nur neutraler Text, nach erneuter Anmeldung wieder Einzelheiten); Dienst weg
+  und wieder da, Doppelte im echten Dienst. Die übrigen Abschnitte (16, 30 bis 39) laufen mit den
+  Push-Hooks: 833 Prüfungen, alle bestanden.

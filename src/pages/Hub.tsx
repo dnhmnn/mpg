@@ -218,6 +218,7 @@ export default function Hub() {
       {blatt === 'profil' && user && !seiteApps && (
         <ProfilBlatt user={user} onClose={schliessenBlatt}
           onApps={appsOeffnen}
+          onBenachrichtigungen={(pushMeldung) => { setBlatt(null); navigate('/benachrichtigungen', pushMeldung ? { state: { pushMeldung } } : undefined) }}
           onEinstellungen={() => { setBlatt(null); navigate('/settings') }}
           onSupervisor={() => { setBlatt(null); navigate('/supervisor?tab=hinweise') }}
           onEinfuehrung={() => { setBlatt(null); setEinfuehrungTeile(istVerantwortlich(user) ? ['basis', 'organisation'] : ['basis']) }}

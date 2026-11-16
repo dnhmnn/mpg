@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { einmalNeuLaden, istLadefehler, neueFassungAbfangen, wirdNeuGeladen } from './lib/neueFassung'
 import { pb } from './lib/pocketbase'
+import { pushAbgleichEinrichten } from './lib/push/abgleich'
 import { entwuerfeAufraeumen, fensterEinrichten, tresorBereit, tresorOeffnen } from './lib/tresor'
 import { ohneAnmeldungLeeren, veralteteLoeschen, wechselBeobachten } from './lib/zwischenspeicher'
 
@@ -135,6 +136,9 @@ if (!root) {
   try {
     const kennung = () => { try { return String((pb.authStore.model as { id?: unknown } | null)?.id ?? '') } catch { return '' } }
     wechselBeobachten(kennung(), (f) => pb.authStore.onChange(() => f(kennung())))
+    // Push-Benachrichtigungen: Abo dieses Geräts mit der angemeldeten Person abgleichen (beim Start und
+    // bei jedem Wechsel der Anmeldung), das App-Abzeichen beim Öffnen löschen (src/lib/push/abgleich.ts)
+    try { pushAbgleichEinrichten() } catch { /* ohne Push */ }
     // Ohne gültige Anmeldung (abgemeldet, auf /login umgeleitet): leeren, kurz darauf noch einmal
     ohneAnmeldungLeeren(() => { try { return !!kennung() && pb.authStore.isValid } catch { return false } })
     // Antworten älter als 24 Stunden bei jedem Start löschen (Workbox täte es erst bei der nächsten Anfrage)

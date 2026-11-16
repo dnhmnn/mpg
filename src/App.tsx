@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
 import Login from './pages/Login'
 import Index from './pages/Index'
+import { urlSicher } from './lib/push/geraet'
 
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
@@ -20,6 +21,7 @@ import { applyTheme, getTheme } from './lib/theme'
 const Hub = lazy(() => import('./pages/Hub'))
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
+const Benachrichtigungen = lazy(() => import('./pages/Benachrichtigungen'))
 const Ausbildungen = lazy(() => import('./pages/ausbildungen/Ausbildungen'))
 const Einladung = lazy(() => import('./pages/ausbildungen/Einladung'))
 const Files = lazy(() => import('./pages/Files'))
@@ -87,9 +89,32 @@ if (isMarketingDomain) {
   document.body.style.background = '#faf9f7'
 }
 
+/**
+ * Tippen auf eine Push-Benachrichtigung bei offenem Fenster: Der Service Worker (public/sw-push.js)
+ * holt das Fenster nach vorn und schickt { art: 'push-oeffnen', url }. Die App führt dorthin, nur
+ * für Pfade der App (urlSicher, Zwilling der Prüfung im Service Worker).
+ */
+function PushNavigation() {
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return
+    const sw = navigator.serviceWorker
+    const beiNachricht = (e: MessageEvent) => {
+      const d = e.data as { art?: unknown; url?: unknown } | null
+      if (!d || d.art !== 'push-oeffnen' || typeof d.url !== 'string') return
+      if (urlSicher(d.url) !== d.url) return
+      navigate(d.url)
+    }
+    sw.addEventListener('message', beiNachricht)
+    return () => sw.removeEventListener('message', beiNachricht)
+  }, [navigate])
+  return null
+}
+
 function App() {
   return (
     <BrowserRouter>
+      <PushNavigation />
       <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--warm-bg)' }} />}>
       <Routes>
         <Route path="/" element={<Index />} />
@@ -102,6 +127,7 @@ function App() {
         <Route path="/app" element={<Installieren />} />
         <Route path="/hub" element={<Hub />} />
         <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/benachrichtigungen" element={<Benachrichtigungen />} />
         <Route path="/ausbildungen" element={<Ausbildungen />} />
         <Route path="/lager" element={<Lager />} />
         <Route path="/files" element={<Files />} />

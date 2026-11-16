@@ -56,3 +56,16 @@ jobs:
             unzip -q -o "$RUNNER_TEMP/pb-$v.zip" -d "$RUNNER_TEMP/pb-$v"
             node scripts/hooks-rauchprobe.mjs --bin "$RUNNER_TEMP/pb-$v/pocketbase" || exit 1
           done
+
+      # Push-Dienst (dienste/push): eigenes Paket, geprüft auf der Node-Version des Servers
+      # (24 LTS). Steht am Ende, damit die Schritte davor auf der Node-Version der App bleiben.
+      # openssl (für das Prüfzertifikat des falschen Push-Endpunkts) ist auf ubuntu-latest vorhanden.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Push-Dienst prüfen
+        working-directory: dienste/push
+        run: |
+          npm ci
+          npm test

@@ -10,6 +10,7 @@ import { useAuth } from '../hooks/useAuth'
 import Einfuehrung, { useEinfuehrungStand } from '../components/Einfuehrung'
 import OrgCheckliste from '../components/OrgCheckliste'
 import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
+import { PUSH_TEXTE } from '../lib/push/texte'
 
 interface SettingsPageProps {
   user?: User | null
@@ -692,7 +693,22 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
 
   const notificationsPanel = (
     <div style={S.detailPanel}>
-      <div style={S.sectionHeader}>HINWEISE</div>
+      {/* Push-Benachrichtigungen haben eine eigene Seite im Dunkelrot-Rahmen (Bauplan Push 6.1) */}
+      <div style={S.card}>
+        <button type="button" data-probe="settings-push-karte" style={{ ...S.item, ...S.itemLast, minHeight: 56 }} onClick={() => navigate('/benachrichtigungen')}>
+          <div style={S.itemIcon}><IconBell /></div>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ ...S.itemLabel, display: 'block', fontWeight: 700 }}>{PUSH_TEXTE.settingsKarte}</span>
+            <span style={{ display: 'block', fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 2 }}>{PUSH_TEXTE.settingsKarteUnter}</span>
+          </span>
+          <IconChevron />
+        </button>
+      </div>
+
+      <div style={S.sectionHeader}>{PUSH_TEXTE.settingsGlocke}</div>
+      <div style={{ fontSize: '12px', fontStyle: 'italic', color: 'var(--warm-gray)', marginBottom: '8px', paddingLeft: '4px' }}>
+        {PUSH_TEXTE.settingsGlockeSatz}
+      </div>
       <div style={S.card}>
         {notifItems.map((item, idx) => {
           const isLast = idx === notifItems.length - 1

@@ -1,0 +1,55 @@
+# Responda Push-Dienst (Web Push), nur auf 127.0.0.1.
+# Einrichtung: dienste/push/README.md. Kopieren nach /etc/systemd/system/responda-push.service,
+# dann: systemctl daemon-reload && systemctl enable --now responda-push
+#
+# Die Umgebungsdatei gehört root:root mit 0600. systemd liest sie als root, bevor es zum Benutzer
+# responda-push wechselt; der Dienst selbst kann sie weder lesen noch ändern.
+# PUSH_BETRIEB=1 steht hier fest (nicht in der Datei): Damit verweigert der Dienst den Start, wenn
+# jemand Prüf-Einstellungen (PUSH_TEST_HOSTS, PUSH_TEST_CA) in die Umgebung schreibt.
+
+[Unit]
+Description=Responda Push-Dienst (Web Push, nur 127.0.0.1)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=responda-push
+Group=responda-push
+WorkingDirectory=/opt/responda-push
+EnvironmentFile=/etc/responda/push-dienst.env
+Environment=PUSH_BETRIEB=1
+ExecStart=/usr/bin/node /opt/responda-push/dienst.mjs
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RemoveIPC=yes
+ProtectProc=invisible
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+UMask=0077
+MemoryMax=256M
+TasksMax=64
+
+# MemoryDenyWriteExecute bleibt aus: V8 (Node) braucht ausführbaren Speicher für den JIT.
+# IPAddressDeny geht nicht: Der Dienst muss Apple, Google, Mozilla und Microsoft erreichen. Den
+# Eingang schützt die Bindung an 127.0.0.1 (der Dienst startet mit keiner anderen Adresse).
+
+[Install]
+WantedBy=multi-user.target

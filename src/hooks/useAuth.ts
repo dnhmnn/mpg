@@ -5,6 +5,7 @@ import { verknuepfungen, vorlageMitVerknuepfungen } from '../lib/verknuepfung'
 import { istEigeneRolleId, vorlageBereinigen } from '../lib/rollen'
 import { leerenOhneWarteschlange, tresorEntwuerfe, tresorEntwuerfeLoeschen, tresorWartend, tresorZustand, verlassenErlauben } from '../lib/tresor'
 import { apiZwischenspeicherLeeren } from '../lib/zwischenspeicher'
+import { pushBeimAbmelden } from '../lib/push/abgleich'
 import type { User } from '../types'
 
 /**
@@ -187,6 +188,9 @@ export function useAuth() {
       : lagerHinweis ? `${lagerHinweis.trim()}\n\nWirklich abmelden?` : 'Wirklich abmelden?'
     if (confirm(frage)) {
       const lager = localStorage.getItem('lager_pending_count')
+      // Push: dieses Gerät beim Server abmelden (noch mit Anmeldung, höchstens 3 s), dann immer Abo
+      // beenden, Merker löschen und angezeigte Benachrichtigungen schließen (src/lib/push/abgleich.ts)
+      try { await pushBeimAbmelden({ timeoutMs: 3000 }) } catch { /* Abmelden geht immer weiter */ }
       pb.authStore.clear()
       // Entwürfe weg (auch im Tresor), Warteschlange bleibt; localStorage wie bisher leeren
       try { await tresorEntwuerfeLoeschen() } catch { /* was nicht gelöscht werden kann, war nicht gespeichert */ }

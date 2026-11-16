@@ -1,8 +1,10 @@
-// Profil im Hub: Name, Adresse, Rolle, Ausweis, Wege zu Apps anpassen, Einstellungen,
-// Supervisor, Homebildschirm, Einführung, und Abmelden.
+// Profil im Hub: Name, Adresse, Rolle, Ausweis, Wege zu Apps anpassen, Benachrichtigungen,
+// Einstellungen, Supervisor, Homebildschirm, Einführung, und Abmelden.
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { hatRecht, sichtbareEmail } from '../../lib/apps'
+import { pushEinschalten, pushNeuEinschaltenNoetig } from '../../lib/push/abgleich'
+import { PUSH_TEXTE } from '../../lib/push/texte'
 import { rollenText } from '../../lib/rollen'
 import { Icon } from '../benutzer/bausteine'
 import type { User } from '../../types'
@@ -19,10 +21,12 @@ export function anzeigeName(user: User | null): string {
   return user?.name?.trim() || sichtbareEmail(user?.email).split('@')[0] || ''
 }
 
-export default function ProfilBlatt({ user, onClose, onApps, onEinstellungen, onSupervisor, onEinfuehrung, onInstallieren, onAbmelden }: {
+export default function ProfilBlatt({ user, onClose, onApps, onBenachrichtigungen, onEinstellungen, onSupervisor, onEinfuehrung, onInstallieren, onAbmelden }: {
   user: User
   onClose: () => void
   onApps: () => void
+  /** Seite „Benachrichtigungen“; meldung: Ergebnis von „Push neu einschalten“ für die Seite */
+  onBenachrichtigungen: (meldung?: { text: string; fehler?: boolean }) => void
   onEinstellungen: () => void
   onSupervisor: () => void
   onEinfuehrung: () => void
@@ -31,6 +35,24 @@ export default function ProfilBlatt({ user, onClose, onApps, onEinstellungen, on
   onAbmelden: () => void
 }) {
   const [installHilfe, setInstallHilfe] = useState(false)
+  // Schlüssel des Servers gewechselt und still nicht heilbar (Safari): „Push neu einschalten“ (Bauplan Push 6.2)
+  const [pushNeu, setPushNeu] = useState<{ schluessel: string } | null>(null)
+  const [pushLaeuft, setPushLaeuft] = useState(false)
+  useEffect(() => {
+    let aktiv = true
+    pushNeuEinschaltenNoetig(user.id).then((x) => { if (aktiv) setPushNeu(x) }, () => { /* ohne Hinweis */ })
+    return () => { aktiv = false }
+  }, [user.id])
+  function pushNeuEinschalten() {
+    if (!pushNeu || pushLaeuft) return
+    // Als Erstes, ohne await davor: die Erlaubnis (Safari verlangt die direkte Geste)
+    const p = pushEinschalten({ id: user.id }, pushNeu)
+    setPushLaeuft(true)
+    void p.then((r) => {
+      setPushLaeuft(false)
+      onBenachrichtigungen(r.ok ? { text: PUSH_TEXTE.eingeschaltet } : { text: r.text, fehler: true })
+    })
+  }
   const name = anzeigeName(user)
   const mail = sichtbareEmail(user.email)
   // Vorgegebene und eigene Rollen der Organisation (src/lib/rollen.ts)
@@ -57,6 +79,15 @@ export default function ProfilBlatt({ user, onClose, onApps, onEinstellungen, on
       <div className="bv-flaeche">
         <button type="button" className="bv-z" onClick={onApps}>
           <span className="bv-tx"><b>Apps anpassen</b><small>Welche Apps im Hub stehen und in welcher Reihenfolge</small></span>
+          <Icon n="weiter" className="bv-pfeil" />
+        </button>
+        {pushNeu && (
+          <button type="button" className="bv-z akzent" data-probe="hub-profil-push-neu" disabled={pushLaeuft} onClick={pushNeuEinschalten}>
+            <span className="bv-tx"><b>{pushLaeuft ? PUSH_TEXTE.wirdEingeschaltet : PUSH_TEXTE.profilNeuEinschalten}</b><small>{PUSH_TEXTE.neu_einschalten}</small></span>
+          </button>
+        )}
+        <button type="button" className="bv-z" data-probe="hub-profil-benachrichtigungen" onClick={() => onBenachrichtigungen()}>
+          <span className="bv-tx"><b>{PUSH_TEXTE.profilZeile}</b><small>{PUSH_TEXTE.profilZeileUnter}</small></span>
           <Icon n="weiter" className="bv-pfeil" />
         </button>
         {hatRecht(user, 'dashboard') && (

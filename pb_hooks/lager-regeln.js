@@ -6,7 +6,7 @@
 //   Lagerartikel mit Standard-Soll auf jedem Fahrzeug als fehlend.
 // - MHD in Kalendertagen (deutsche Zeit): MHD heute ist noch verwendbar.
 //
-// Kein *.pb.js — wird von lager-alerts.pb.js per require() geladen.
+// Kein *.pb.js — wird von lager-alerts.pb.js und push-versand.js per require() geladen.
 
 /** Mitternacht (als UTC-Zeitstempel) des heutigen Kalendertags in Deutschland. */
 function heuteBerlin(jetztMs) {
@@ -54,10 +54,14 @@ function ohneArchiv(records) {
 }
 
 /**
- * Warnungen einer Organisation als Textzeilen: { low, expired, expiring }.
- * leadDays: ab wie vielen Tagen vor dem MHD „läuft bald ab“.
+ * Warnungen einer Organisation als Daten (für Push, pb_hooks/push-versand.js):
+ *   low:      [{ item_id, item, location_id, ort, ist, soll }]   (ort leer bei nur einem Standort)
+ *   expired:  [{ item_id, item, datum, tage }]                    (MHD vor heute)
+ *   expiring: [{ item_id, item, datum, tage }]                    (MHD in weniger als leadDays Tagen)
+ * leadDays: ab wie vielen Tagen vor dem MHD „läuft bald ab“. Dieselbe Rechnung wie bisher
+ * (lagerWarnungen baut daraus die Textzeilen der Mail).
  */
-function lagerWarnungen(app, orgId, leadDays, jetztMs) {
+function lagerWarnungenDaten(app, orgId, leadDays, jetztMs) {
   // Archivierte Artikel und Standorte warnen nicht mehr (Feld „archiviert“, Paket 4)
   const items = ohneArchiv(app.findRecordsByFilter("inventory_items", "organization_id = {:o}", "name", 5000, 0, { o: orgId }))
   const stock = app.findRecordsByFilter("inventory_stock", "organization_id = {:o}", "", 20000, 0, { o: orgId })
@@ -108,16 +112,29 @@ function lagerWarnungen(app, orgId, leadDays, jetztMs) {
       const have = menge[k] || 0
       const wirdGefuehrt = locs.length <= 1 || hatEigenes || have > 0 || gefuehrt[k] === true
       if (have < soll && wirdGefuehrt) {
-        low.push(it.get("name") + (locs.length > 1 ? " — " + name[l.id] : "") + " (" + have + "/" + soll + ")")
+        low.push({ item_id: it.id, item: it.get("name"), location_id: l.id, ort: locs.length > 1 ? name[l.id] : "", ist: have, soll: soll })
       }
     }
     const f = frueh[it.id]
     if (f) {
-      if (f.tage < 0) expired.push(it.get("name") + " (" + f.datum + ")")
-      else if (f.tage < leadDays) expiring.push(it.get("name") + " (" + f.datum + ")")
+      if (f.tage < 0) expired.push({ item_id: it.id, item: it.get("name"), datum: f.datum, tage: f.tage })
+      else if (f.tage < leadDays) expiring.push({ item_id: it.id, item: it.get("name"), datum: f.datum, tage: f.tage })
     }
   }
   return { low: low, expired: expired, expiring: expiring }
 }
 
-module.exports = { lagerWarnungen, jsonFeld, tageBisMhd, heuteBerlin, ohneArchiv }
+/**
+ * Warnungen einer Organisation als Textzeilen: { low, expired, expiring } (Mail, unverändert).
+ * leadDays: ab wie vielen Tagen vor dem MHD „läuft bald ab“.
+ */
+function lagerWarnungen(app, orgId, leadDays, jetztMs) {
+  const d = lagerWarnungenDaten(app, orgId, leadDays, jetztMs)
+  return {
+    low: d.low.map((w) => w.item + (w.ort ? " — " + w.ort : "") + " (" + w.ist + "/" + w.soll + ")"),
+    expired: d.expired.map((w) => w.item + " (" + w.datum + ")"),
+    expiring: d.expiring.map((w) => w.item + " (" + w.datum + ")"),
+  }
+}
+
+module.exports = { lagerWarnungen, lagerWarnungenDaten, jsonFeld, tageBisMhd, heuteBerlin, ohneArchiv }

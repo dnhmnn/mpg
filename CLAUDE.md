@@ -221,6 +221,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
 | MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Fristen (STK/MTK), Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/` (STK/MTK: `fristen.ts`, `kontrollen.ts`; eine überfällige oder nicht bestandene STK oder MTK sperrt), Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
 | Hub | `src/pages/Hub.tsx`, `src/pages/hub/` | Startseite nach dem Login im Dunkelrot-Design, statisch (rollt nicht): Gruß, Organisation voll ausgeschrieben, Glocke mit Neuigkeiten und Mitteilung der Organisation (Blatt), Apps auf Seiten zum Wischen mit Pfeilen (`src/lib/hubSeiten.ts`; Auswahl und Reihenfolge je Benutzer: `src/lib/hubApps.ts`, Feld `users.hub_apps`), Kurzbefehle, Profil. Symbole: `src/lib/hubIcons.ts`, erzeugt mit `npm run hub-icons` aus `docs/entwuerfe/hub-icons/bau.mjs` |
+| Benachrichtigungen | `src/pages/Benachrichtigungen.tsx`, `src/pages/benachrichtigungen/` | Push-Benachrichtigungen im Dunkelrot-Design, rollend (`/benachrichtigungen`, aus Profil im Hub und Einstellungen): Push je Gerät mit Probe, Anlässe, Ruhezeit, angemeldete Geräte, Hinweis „Keine Alarmierung“; für die Leitung `?seite=organisation` (Anlässe der Organisation, „Mitteilung an die Organisation“). App-Teil in `src/lib/push/` (Abgleich, Einschalten, API, Texte; Service Worker `public/sw-push.js`), siehe Abschnitt „Push-Benachrichtigungen“ |
 | Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |
 
 ## PocketBase Collections (wichtigste)
@@ -238,9 +239,33 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | `inventory_items`, `inventory_locations` | Lager-Stammdaten; benutzt → `archiviert` statt löschen |
 | `mpg_ereignisse` | MPG-Gerätebuch (**unveränderlich**, Hook `pb_hooks/mpg.pb.js`): Sperren, Freigaben, Stammdatenänderungen, Außerbetriebnahme, STK/MTK (mit `angaben`), Vermerke. Geschrieben nur über die Pläne in `src/lib/mpg/aktionen.ts` und `src/lib/mpg/kontrollen.ts`; Korrektur = Vermerk mit `bezug` |
 | `responda_hinweise` | „Neu in Responda“: kurze Info des Supervisors nach Updates; jeder sieht den neuesten veröffentlichten einmal (`users.hinweis_gesehen_am`). Logik `src/lib/hinweise.ts`; Regeln `docs/pocketbase-regeln.md`, „Hub und Hinweise“ |
+| `hub_notifications` | Mitteilung der Organisation (Glocke im Hub und Push an alle aktiven Konten der Organisation). Anlegen, ändern, zurückziehen: Supervisor (jede Organisation) oder Leitung (`admin`, nur die eigene, höchstens 3 in 24 h); `push.pb.js` prüft das selbst vor dem Speichern, dazu die Regeln aus `docs/pocketbase-regeln.md`, „hub_notifications: Mitteilungen“ |
+| `push_geraete`, `push_warteschlange`, `push_merker` | Push: angemeldete Geräte, zurückgehaltene Benachrichtigungen (nur Anlass und Kennungen, nie Text), Merker. **Alle API-Regeln gesperrt**, nur Hooks und Routen `/api/responda/push/*`. Einstellungen in den versteckten Feldern `users.push_einstellungen` und `organizations.push_anlaesse` (nur über die Routen) — `docs/pocketbase-regeln.md`, „Push-Benachrichtigungen“ |
 | `mpg_devices`, `mpg_inspections`, `mpg_defects` | MPG; Prüfprotokolle unveränderlich, Defekte nicht löschbar, Gerät mit Nachweisen → `ausser_betrieb` statt löschen. Regeln: `docs/pocketbase-regeln.md`, „MPG: API-Regeln“ |
 
 ---
+
+## Push-Benachrichtigungen
+
+- **Push ist keine Alarmierung.** Jede Stelle, an der man Push einstellt, sagt das (Hinweis
+  „Keine Alarmierung“). Nie etwas bauen, das sich auf Push als Alarm verlässt.
+- Aufbau: PocketBase entscheidet, wer was bekommt (`pb_hooks/push.pb.js` nur Registrierung,
+  `push-regeln.js` rein mit Zwilling `src/lib/push/regeln.ts`, `push-fristen.js`, `push-versand.js`).
+  Verschlüsselt (RFC 8291) und gesendet wird im eigenen Dienst `dienste/push/` (Node, nur
+  `127.0.0.1:8095`, eigene Prüffälle: `cd dienste/push && npm ci && npm test`, die CI prüft mit
+  Node 24). Owner-Schritte: `docs/push-einfuehrung.md`.
+- Inhalt: nie Patientendaten (bei `patients` nie `title` oder `payload` außer `absender.id`), nie
+  Text einer CIRS-Meldung oder eines Defekts, nie E-Mail-Adressen, nie Endpoint oder Schlüssel in
+  Logs. Namen nur aus Stammdaten derselben Organisation über die Kennung, nie aus Feldern, die der
+  Client setzt. Die Warteschlange speichert keinen Text.
+- Empfänger genau wie die API-Regel des Gegenstands (`darfAnlass`); `pushGleichlauf.test.ts` liest
+  die Regeln aus `docs/pocketbase-regeln.md` und schlägt an, wenn sie sich ändern.
+- `urlSicher` steht dreimal (Server, App, Service Worker) und `HOSTS` zweimal (Server, Dienst);
+  `pushDreiwege.test.ts` hält sie gleich.
+- Abgelaufene Anmeldung oder andere Person auf dem Gerät: der Service Worker zeigt nur „Es gibt
+  Neues in Responda.“ (Owner 12.4). Jede Push zeigt immer eine Benachrichtigung (iOS entzieht sonst
+  das Abo); nie einen Service Worker ohne `sw-push.js` ausliefern, solange der Server sendet.
+- Rücknahme genau so: erst `push.pb.js` entfernen, dann den Dienst stoppen, erst danach die App.
 
 ## Was NICHT zum Stil passt
 - iOS-Pill-Indikatoren in der Tab Bar
@@ -272,6 +297,8 @@ npm run test:watch # beim Entwickeln
   `src/lib/mpg/` (Prüffristen, Gerätezustand, Prüfergebnis — ob ein Medizinprodukt
   als einsatzbereit gilt). Die Prüffälle stehen in `*selbsttest.ts` und sind auch in der App aufrufbar;
   `src/lib/__tests__/` bindet sie an vitest an.
+- Der Push-Dienst (`dienste/push/`) hat eigene Prüffälle (`npm test` dort, Node 22 oder neuer),
+  die CI läuft sie mit Node 24. Sie heißen `*.pruefung.mjs`, damit vitest sie nicht aufgreift.
 - **Neue Rechenlogik bekommt Prüffälle** — besonders alles, woran im Einsatz eine
   Entscheidung hängt.
 - `.github/workflows/pruefung.yml` prüft jeden Pull Request und jeden Push auf

@@ -48,6 +48,7 @@ E-Mail: daniel@responda.systems
 - Einsatzdaten: Einsatzort, Einsatzstichwort, Einsatzzeitraum
 - Ausbildungsdaten: Teilnahmenachweise, Qualifikationen
 - Zugangsdaten: Benutzername, gehashtes Passwort
+- Gerätedaten für Benachrichtigungen (Push-Adresse, technische Schlüssel, Bezeichnung des Geräts, Einstellungen), nur wenn Benachrichtigungen eingeschaltet sind
 
 ---
 
@@ -89,6 +90,8 @@ Der Auftragnehmer trifft geeignete technische und organisatorische Maßnahmen ge
 - Keine Weitergabe von Daten an Dritte ohne Weisung des Auftraggebers
 - Was ohne Netz auf einem Gerät abgelegt wird (Formulare, begonnene Protokolle), liegt dort verschlüsselt im Browser (AES-GCM), bis es gesendet oder verworfen ist; lässt ein Browser die Verschlüsselung nicht zu, liegt es unverschlüsselt im Browser, und die App zeigt das an. Der Schlüssel liegt im selben Browserprofil; gegen das Auslesen der Gerätedateien schützen Gerätesperre und Geräteverschlüsselung, für die der Auftraggeber auf seinen Geräten sorgt
 - Patientendaten (Protokolle, Nacherfassungen, Zugriffs- und Änderungsprotokolle), Einsätze, Benutzerkonten, Chat und Notizen legt die App nicht im Zwischenspeicher des Browsers ab. Der übrige Zwischenspeicher kann Namen von Mitgliedern enthalten; die App verwendet ihn höchstens 24 Stunden und löscht ihn beim Abmelden, beim Wechsel der angemeldeten Person und beim Start ohne Anmeldung
+- Benachrichtigungen auf Geräte (Web Push) verschlüsselt der Server Ende zu Ende (RFC 8291) und übergibt sie dem Push-Dienst des Geräteherstellers; dieser kann den Inhalt nicht lesen. Sie enthalten keine Patientendaten und keinen Text von CIRS-Meldungen. Der Schlüssel zum Signieren (VAPID) liegt nur in einem eigenen Dienst auf demselben Server, der nur lokal erreichbar ist
+- Gerätedaten für Benachrichtigungen löscht der Auftragnehmer beim Ausschalten oder Abmelden, ohne Verbindung spätestens beim nächsten Versand, und bei Geräten, die sich 180 Tage nicht gemeldet haben. Zurückgehaltene Benachrichtigungen (Ruhezeit) enthalten keinen Text und werden nach höchstens drei Tagen gelöscht
 
 **Eingabekontrolle:**
 - Protokollierung relevanter Zugriffe und Änderungen im System
@@ -106,11 +109,15 @@ Der Auftragnehmer ist berechtigt, die TOMs dem Stand der Technik entsprechend we
 
 ## § 6 — Unterauftragsverarbeiter
 
-(1) Der Auftragnehmer setzt zum Zeitpunkt des Vertragsschlusses für die Inhalte, die in Responda eingegeben werden, **keine** Unterauftragsverarbeiter ein. Diese Daten werden ausschließlich auf dem eigenen Server des Auftragnehmers in Deutschland verarbeitet.
+(1) Der Auftragnehmer setzt zum Zeitpunkt des Vertragsschlusses für die Inhalte, die in Responda eingegeben werden, **keine** Unterauftragsverarbeiter ein, die diese Inhalte lesen können. Diese Daten werden ausschließlich auf dem eigenen Server des Auftragnehmers in Deutschland verarbeitet. Benachrichtigungen auf Geräte verlassen den Server nur Ende zu Ende verschlüsselt (siehe unten, Push-Dienste).
 
 Die Dateien der App (Programmcode, Bilder, Schriften) liefert **Netlify, Inc.** (San Francisco, USA) aus. Dabei verarbeitet Netlify nur die technisch nötigen Verbindungsdaten der aufrufenden Geräte (IP-Adresse, Zeitpunkt, aufgerufene Datei, Browser), keine Inhalte. Eine Übermittlung dieser Verbindungsdaten in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.
 
 > Hinweis für den Betreiber (Plan Vorgänge 5.9): Ob Netlify wegen der Verbindungsdaten als Unterauftragsverarbeiter aufzuführen ist und welche Übermittlungsgrundlage gilt, ist rechtlich zu prüfen, bevor der Vertrag verwendet wird.
+
+**Push-Dienste der Gerätehersteller (Unterauftragsverarbeiter):** Schaltet eine Person Benachrichtigungen ein, stellt der Push-Dienst des Herstellers ihres Geräts sie zu: Apple Inc. (USA, Apple Push Notification Service), Google LLC (USA, Firebase Cloud Messaging), Mozilla Corporation (USA, Mozilla Push Service) oder Microsoft Corporation (USA, Windows Push Notification Services). Er erhält nur verschlüsselte, auf eine einheitliche Größe aufgefüllte Nachrichten sowie die technisch nötigen Verbindungsdaten (Push-Adresse, Zeitpunkt, Größe, Lebensdauer und Dringlichkeit, für alle Nachrichten gleich, gegebenenfalls eine nicht rückführbare Kennung zum Ersetzen, IP-Adressen), keine lesbaren Inhalte. Eine Übermittlung dieser Daten in die USA stützt sich auf das EU-US Data Privacy Framework bzw. die Standardvertragsklauseln der EU-Kommission.
+
+> Hinweis für den Betreiber (Plan Push 7.2 und 12.6): Die vier Push-Dienste sind hier als Unterauftragsverarbeiter aufgeführt. Ob das so zutrifft, welche Übermittlungsgrundlage gilt und ob Auftraggeber, die den Vertrag schon unterschrieben haben, nach Abs. 2 vorher informiert werden müssen, ist rechtlich zu prüfen, bevor Push eingeschaltet und der Vertrag verwendet wird.
 
 (2) Beabsichtigt der Auftragnehmer, künftig Unterauftragsverarbeiter einzusetzen oder auszuwechseln, informiert er den Auftraggeber rechtzeitig (mindestens 4 Wochen vor Beginn). Der Auftraggeber kann gegen den Einsatz eines bestimmten Unterauftragsverarbeiters schriftlich Einspruch erheben.
 

@@ -25,7 +25,11 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Hintergrundversand der Formulare (Background Sync, public/sw-formulare.js):
         // hängt nur einen sync-Handler an, die Regeln unten bleiben, wie sie sind.
-        importScripts: ['sw-formulare.js'],
+        // Push-Benachrichtigungen (public/sw-push.js): push, notificationclick,
+        // pushsubscriptionchange. NIE herausnehmen, solange der Server Push sendet: iOS
+        // entzieht nach Push-Nachrichten ohne Anzeige das Abo (Rücknahme-Reihenfolge in
+        // docs/push-einfuehrung.md; Prüffall in src/lib/__tests__/pushSw.test.ts).
+        importScripts: ['sw-formulare.js', 'sw-push.js'],
         runtimeCaching: [
           // Reihenfolge zählt: Workbox nimmt die erste passende Regel.
           // Realtime ist ein endloser SSE-Stream — der darf NIE in einen Cache-Handler.
