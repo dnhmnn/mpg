@@ -9,7 +9,7 @@ import { schemaLesen } from '../../lib/formular/felder'
 import type { FormTemplate } from './formSchema'
 import Warteschlange from './absender/Warteschlange'
 import { Icon } from '../benutzer/bausteine'
-import { ZugangRahmen, Zeichen } from '../zugang/Rahmen'
+import { OrgLogo, ZugangRahmen, Zeichen } from '../zugang/Rahmen'
 
 const STATIC_ITEMS = [
   {
@@ -115,7 +115,7 @@ export default function OrgLanding() {
 
   return (
     <ZugangRahmen
-      zeichen={<Zeichen src={logoUrl} />}
+      zeichen={logoUrl ? <OrgLogo src={logoUrl} /> : <Zeichen />}
       titel={org.org_name}
       zeile={hasAnyForm ? 'Wähle ein Formular' : 'Zurzeit sind keine Formulare verfügbar.'}
     >

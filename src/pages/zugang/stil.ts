@@ -28,13 +28,20 @@ export const ZG_CSS = `
   padding: 10px; box-shadow: 0 8px 30px rgba(0,0,0,0.32); overflow: hidden; }
 .zg-logo img{ display: block; width: 100%; height: 100%; object-fit: contain; }
 .zg-logo.klein{ width: 152px; height: 152px; padding: 9px; }
+/* Logo einer Organisation: nie in den Kreis gezwängt (Wappen und breite Schriftzüge wurden abgeschnitten,
+   Owner 19.11.2026), sondern ganz, auf einer weißen Karte in seiner eigenen Form, wie früher auf Hell */
+.zg-orglogo{ display: inline-flex; align-items: center; justify-content: center; max-width: 100%; background: #fff;
+  border-radius: 22px; padding: 14px 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.32); }
+/* Feste Höhe, Breite nach dem Seitenverhältnis (auch bei SVG ohne eigene Größe), höchstens 280 px breit */
+.zg-orglogo img{ display: block; height: 150px; width: auto; max-width: min(280px, 100%); object-fit: contain; }
 @media (max-height: 700px){
+  .zg-orglogo img{ height: 112px; }
   .zg-logo{ width: 136px; height: 136px; padding: 8px; }
   .zg-logo.klein{ width: 112px; height: 112px; padding: 7px; }
 }
-.zg-name{ margin: 20px 0 0; font-size: 28px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; color: var(--lbf-kopf-text); overflow-wrap: break-word; }
+.zg-name{ width: 100%; -webkit-hyphens: auto; hyphens: auto; margin: 20px 0 0; font-size: 28px; font-weight: 800; line-height: 1.15; letter-spacing: -0.01em; color: var(--lbf-kopf-text); overflow-wrap: break-word; }
 .zg-name em{ font-style: italic; }
-.zg-zeile{ margin: 8px 0 0; font-size: 15px; font-style: italic; line-height: 1.4; color: var(--lbf-kopf-text-2); min-height: 21px; }
+.zg-zeile{ width: 100%; margin: 8px 0 0; font-size: 15px; font-style: italic; line-height: 1.4; color: var(--lbf-kopf-text-2); min-height: 21px; }
 .zg-zeile b{ font-style: normal; color: var(--lbf-kopf-text); }
 /* Der wechselnde Leitsatz hat immer Platz für zwei Zeilen: nichts darunter springt beim Wechsel */
 .zg-zeile.wechsel{ animation: zgEin 0.6s ease both; min-height: calc(2 * 1.4em); }

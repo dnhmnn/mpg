@@ -218,10 +218,12 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 #### Zugangsseiten ganz in Dunkelrot, festgelegt vom Owner am 19.11.2026
 - Startseite (`/`), Anmeldung (`/login`) und die öffentliche Seite einer Organisation (`/<org-code>`) samt
   ihren Hinweisen (Laden, nicht gefunden, keine Verbindung, Formular aus): volle dunkelrote Fläche wie die
-  Begrüßung, großes Zeichen bzw. Logo der Organisation in der Mitte (176 px, unter 700 px Höhe 136 px),
-  darunter helle Karten. Der Owner wollte für den Eingang ausdrücklich keinen Kopf mit Blatt („wirkt wie
+  Begrüßung, groß in der Mitte das Responda-Zeichen im hellen Kreis (176 px, unter 700 px Höhe 136 px) bzw.
+  das Logo der Organisation ganz und in seiner eigenen Form auf einer weißen Karte (150 px hoch, höchstens
+  280 px breit; im Kreis wurden Wappen und breite Schriftzüge abgeschnitten, Owner 19.11.2026), darunter
+  helle Karten. Der Owner wollte für den Eingang ausdrücklich keinen Kopf mit Blatt („wirkt wie
   Verwaltung“), sondern „Ganz in Dunkelrot“ mit großem Logo.
-- Gebaut mit `ZugangRahmen` und `Zeichen` (`src/pages/zugang/Rahmen.tsx`, Stile `ZG_CSS` in
+- Gebaut mit `ZugangRahmen`, `Zeichen` und `OrgLogo` (`src/pages/zugang/Rahmen.tsx`, Stile `ZG_CSS` in
   `src/pages/zugang/stil.ts`); Felder, Zeilen und Knöpfe aus `BV_CSS`, der Streifen `.bv-statusleiste` wie in
   `Seite`. Keine weitere eigene Lösung bauen.
 - Ausnahme von „Unten nie Rot“: html und body sind hier die ganze Zeit dunkelrot (`useStatusleiste('--lbf-kopf')`

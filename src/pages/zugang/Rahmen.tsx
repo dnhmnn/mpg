@@ -8,7 +8,12 @@ import { Icon } from '../benutzer/bausteine'
 import { BV_CSS } from '../benutzer/stil'
 import { ZG_CSS } from './stil'
 
-/** Das Responda-Zeichen oder das Logo einer Organisation im hellen Kreis. */
+/** Logo einer Organisation: ganz und in seiner eigenen Form auf einer weißen Karte (nie im Kreis abgeschnitten). */
+export function OrgLogo({ src }: { src: string }) {
+  return <span className="zg-orglogo" aria-hidden="true"><img src={src} alt="" /></span>
+}
+
+/** Das Responda-Zeichen im hellen Kreis. */
 export function Zeichen({ src, klein }: { src?: string | null; klein?: boolean }) {
   return <span className={`zg-logo${klein ? ' klein' : ''}`} aria-hidden="true"><img src={src || '/logo.svg'} alt="" /></span>
 }
