@@ -183,7 +183,10 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   Farbe von html/body über den Rand, rund 38 px unter die Uhr-Zeile, und fragt den roten Streifen
   nicht. Mit hellem html/body lag ein milchiger Verlauf über Logo und Knöpfen. Deshalb sind html und
   body dort dunkelrot (`statusleistenFarben` in `useStatusleiste`), und Zeichen und Knöpfe beginnen
-  14 px tiefer (nur hochkant). Unten gibt es als App keine Safari-Leiste. Am iPhone noch zu bestätigen. Die Ablehnung „Farbgeber oben“
+  14 px tiefer (nur hochkant). Unten gibt es als App keine Safari-Leiste. Am iPhone bestätigt (19.11.2026).
+  Als App endet `100dvh` am iPhone um die Höhe der Statusleiste vor dem unteren Rand (50 px); darunter
+  stand das Rot von html/body als Balken (Bild des Owners, 19.11.2026). Eine helle feste Fläche direkt
+  unter dem Ende der Seite (`.bv.statisch::after`, nur als App) füllt die Lücke. Die Ablehnung „Farbgeber oben“
   galt rollenden Seiten (der Balken schnitt beim Scrollen Titel und Knöpfe ab); eine Seite, die
   nicht rollt, hat das Problem nicht.
 - Nur solange die statische Seite zu sehen ist, haben html und body `height: 100%`,

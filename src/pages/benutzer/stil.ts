@@ -86,6 +86,15 @@ export const BV_CSS = `
    App vom Homebildschirm dunkelrot), der feste rote Streifen oben liegt vorn und gibt Safari das Rot
    für die Statusleiste. Unten ist nichts fest. */
 .bv.statisch{ height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+/* Als App vom Homebildschirm endet 100dvh am iPhone (iOS 26) um die Höhe der Statusleiste vor dem
+   unteren Rand (Bild des Owners, 19.11.2026: 50 px). Darunter stand der Hintergrund von html/body,
+   als App auf der statischen Seite dunkelrot: ein roter Balken unten. Eine helle Fläche direkt
+   unter dem Ende der Seite füllt die Lücke; wo die Seite den Bildschirm ganz füllt, liegt sie
+   unsichtbar unterhalb. Fest, also nie Teil des Rollens und nie von .bv abgeschnitten. */
+@media (display-mode: standalone){
+  .bv.statisch::after{ content: ''; position: fixed; left: 0; right: 0; top: 100vh; top: 100dvh; height: 50vh;
+    background: var(--warm-bg); pointer-events: none; }
+}
 .bv.statisch > .bv-statusleiste{ z-index: 60; height: max(env(safe-area-inset-top), 12px); }
 /* Der Inhalt des Kopfs beginnt unter dem Streifen (auch ohne Statusleiste mindestens 12 px) */
 .bv.statisch > .bv-kopf{ flex: none; padding-top: calc(14px + env(safe-area-inset-top)); }
