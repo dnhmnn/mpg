@@ -215,6 +215,22 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - Rollende Seiten (Benutzer, Vorgänge, „Apps anpassen“ und alle weiteren) bleiben beim Standard
   oben, ohne Ausnahme.
 
+#### Zugangsseiten ganz in Dunkelrot, festgelegt vom Owner am 19.11.2026
+- Startseite (`/`), Anmeldung (`/login`) und die öffentliche Seite einer Organisation (`/<org-code>`) samt
+  ihren Hinweisen (Laden, nicht gefunden, keine Verbindung, Formular aus): volle dunkelrote Fläche wie die
+  Begrüßung, großes Zeichen bzw. Logo der Organisation in der Mitte (176 px, unter 700 px Höhe 136 px),
+  darunter helle Karten. Der Owner wollte für den Eingang ausdrücklich keinen Kopf mit Blatt („wirkt wie
+  Verwaltung“), sondern „Ganz in Dunkelrot“ mit großem Logo.
+- Gebaut mit `ZugangRahmen` und `Zeichen` (`src/pages/zugang/Rahmen.tsx`, Stile `ZG_CSS` in
+  `src/pages/zugang/stil.ts`); Felder, Zeilen und Knöpfe aus `BV_CSS`, der Streifen `.bv-statusleiste` wie in
+  `Seite`. Keine weitere eigene Lösung bauen.
+- Ausnahme von „Unten nie Rot“: html und body sind hier die ganze Zeit dunkelrot (`useStatusleiste('--lbf-kopf')`
+  ohne Kopf), also auch Safaris Leiste unten und der untere Rand als App. Gewollt, die ganze Seite ist rot.
+  Am iPhone noch anzusehen.
+- Die Karte „Wartet auf das Senden“ steht auf diesen Seiten eingebettet in der roten Seite, auf den Formularen
+  oben (`OrgPublicLayout`, Zusammenhang `rahmen`). Die öffentlichen Formulare selbst (`/<org-code>/patienten`
+  usw.) bleiben, wie sie sind.
+
 ## Keyframes (in globals.css oder inline `<style>`)
 ```css
 @keyframes greetNameIn {

@@ -1,11 +1,12 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import { useParams, Outlet } from 'react-router-dom'
+import { createContext, useContext, useEffect, useLayoutEffect, useState } from 'react'
+import { useParams, Outlet, useMatch } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
 import { formularFrei } from '../../lib/freigabe'
 import { formConfigLesen } from '../../lib/formular/einstellung'
 import { angemeldetTrotzAusgeschaltet } from '../../lib/formular/absender'
 import type { User } from '../../types'
 import Warteschlange from './absender/Warteschlange'
+import { ZugangRahmen, Zeichen } from '../zugang/Rahmen'
 
 export interface Organization {
   id: string
@@ -18,7 +19,13 @@ export interface Organization {
   freigeschaltet?: unknown
 }
 
-interface OrgCtx { org: Organization; orgCode: string }
+interface OrgCtx {
+  org: Organization
+  orgCode: string
+  /** Eine Seite im roten Zugangsrahmen (Hinweis „Formular aus“) meldet sich an: Das Layout zeigt dann weder
+   *  eigenen Hintergrund noch die Warteschlange oben, die Seite bettet sie selbst ein. */
+  rahmen?: (an: boolean) => void
+}
 const OrgContext = createContext<OrgCtx | null>(null)
 
 /**
@@ -63,37 +70,64 @@ export function angemeldetWegText(formular: string): string {
 }
 
 export function FormularFrei({ formular, children }: { formular: string; children: React.ReactNode }) {
-  const { org, orgCode } = useOrg()
+  const { org, orgCode, rahmen } = useOrg()
   // form_config kann als Objekt, als Text oder doppelt kodiert ankommen
   const aus = formConfigLesen(org.form_config).hidden_forms
   const ausgeschaltet = Array.isArray(aus) && aus.includes(formular)
   const frei = formularFrei(org, formular)
-  if (frei && !ausgeschaltet) return <>{children}</>
   // Ausgeschaltet heißt nur „öffentlicher Link aus“: angemeldete Mitglieder der Organisation senden weiter
-  if (frei && angemeldetTrotzAusgeschaltet(angemeldeteSitzung(), org.id, formular)) return <>{children}</>
+  const offen = frei && (!ausgeschaltet || angemeldetTrotzAusgeschaltet(angemeldeteSitzung(), org.id, formular))
+  // Der Hinweis steht im roten Rahmen: dem Layout vor dem Zeichnen Bescheid geben
+  useLayoutEffect(() => {
+    if (offen || !rahmen) return
+    rahmen(true)
+    return () => rahmen(false)
+  }, [offen, rahmen])
+  if (offen) return <>{children}</>
   // Öffentlicher Link aus, aber Mitglieder senden angemeldet weiter (PO-Entscheidung 3): den Weg nennen
   const mitAnmeldung = frei && ausgeschaltet && ['patienten', 'produktausgabe', 'defektmeldung'].includes(formular)
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
-      <div style={{ background: 'var(--lbf-card)', borderRadius: 16, boxShadow: 'var(--lbf-shadow)', padding: '28px 24px', maxWidth: 420, width: '100%', textAlign: 'center' }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>{org.org_name}</div>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 19, color: 'var(--lbf-text)', marginBottom: 8 }}>{mitAnmeldung ? 'Nur mit Anmeldung' : ausgeschaltet ? 'Ausgeschaltet' : 'Nicht freigeschaltet'}</div>
-        {mitAnmeldung ? (
-          <>
-            <div style={{ fontSize: 14, color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 18 }}>{angemeldetWegText(formular)}</div>
-            <a href="/login" style={{ display: 'inline-block', padding: '10px 18px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>Anmelden</a>
-            <div style={{ marginTop: 14 }}>
-              <a href={`/${orgCode}`} style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)', textDecoration: 'none' }}>Zur Seite der Organisation</a>
-            </div>
-          </>
-        ) : (
-          <>
-            <div style={{ fontSize: 14, color: 'var(--warm-gray)', lineHeight: 1.5, marginBottom: 18 }}>{ausgeschaltet ? 'Eure Organisation hat dieses Formular ausgeschaltet.' : 'Dieses Formular ist für eure Organisation nicht freigeschaltet.'} Bei Fragen wende dich an die Verantwortlichen deiner Organisation.</div>
-            <a href={`/${orgCode}`} style={{ display: 'inline-block', padding: '10px 18px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', color: '#fff', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}>Zur Seite der Organisation</a>
-          </>
+    <OrgHinweisSeite
+      titel={org.org_name}
+      gruss={mitAnmeldung ? 'Nur mit Anmeldung' : ausgeschaltet ? 'Ausgeschaltet' : 'Nicht freigeschaltet'}
+      text={mitAnmeldung
+        ? angemeldetWegText(formular)
+        : `${ausgeschaltet ? 'Eure Organisation hat dieses Formular ausgeschaltet.' : 'Dieses Formular ist für eure Organisation nicht freigeschaltet.'} Bei Fragen wende dich an die Verantwortlichen deiner Organisation.`}
+      orgCode={orgCode}
+      anmelden={mitAnmeldung}
+      warteschlange={rahmen ? <Warteschlange orgCode={orgCode} org={org} eingebettet /> : undefined}
+    />
+  )
+}
+
+/** Hinweisseite ganz in Dunkelrot (Formular aus, Organisation nicht gefunden, keine Verbindung, Laden). */
+function OrgHinweisSeite({ titel, gruss, text, orgCode, anmelden, laedt, erneut, warteschlange }: {
+  titel: string; gruss: string; text?: string; orgCode?: string; anmelden?: boolean; laedt?: boolean
+  /** Ohne Verbindung: „Erneut versuchen“ lädt neu. */
+  erneut?: boolean
+  /** Die Warteschlange, eingebettet über dem Hinweis (nur Hinweise innerhalb einer Organisation). */
+  warteschlange?: React.ReactNode
+}) {
+  return (
+    <ZugangRahmen zeichen={<Zeichen klein />} titel={gruss} zeile={titel}>
+      {warteschlange}
+      {laedt
+        ? <p className="zg-fuss" role="status">Einen Moment …</p>
+        : (
+          <div className="zg-karte">
+            {text && <p className="zg-text">{text}</p>}
+            {anmelden && <div className="zg-abstand"><a href="/login" className="zg-haupt">Anmelden</a></div>}
+            {erneut && <div className="zg-abstand"><button type="button" className="zg-haupt" onClick={() => window.location.reload()}>Erneut versuchen</button></div>}
+            {orgCode
+              ? (anmelden
+                ? <a href={`/${orgCode}`} className="zg-link">Zur Seite der Organisation</a>
+                : <div className="zg-abstand"><a href={`/${orgCode}`} className="zg-haupt">Zur Seite der Organisation</a></div>)
+              : erneut
+                ? <a href="/" className="zg-link">Zur Startseite</a>
+                : <div className="zg-abstand"><a href="/" className="zg-haupt">Zur Startseite</a></div>}
+          </div>
         )}
-      </div>
-    </div>
+    </ZugangRahmen>
   )
 }
 
@@ -105,9 +139,16 @@ export function useOrg() {
 
 export default function OrgPublicLayout() {
   const { orgCode } = useParams<{ orgCode: string }>()
+  const startseite = !!useMatch({ path: '/:orgCode', end: true })
+  // Hinweis „Formular aus“ im roten Rahmen (FormularFrei meldet sich über den Zusammenhang)
+  const [imRahmen, setImRahmen] = useState(false)
+  const rot = startseite || imRahmen
   const [org, setOrg] = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  // Die Startseite der Organisation schon holen, während die Organisation lädt (kein Aufblitzen danach)
+  useEffect(() => { void import('./OrgLanding').catch(() => {}) }, [])
 
   useEffect(() => {
     if (!orgCode) { setError('Kein Organisationscode.'); setLoading(false); return }
@@ -121,41 +162,35 @@ export default function OrgPublicLayout() {
           setError('Organisation nicht aktiv.')
         }
       })
-      .catch(() => {
+      .catch((err: { status?: number }) => {
         const cached = localStorage.getItem(cacheKey)
         if (cached) {
           setOrg(JSON.parse(cached))
         } else {
-          setError('Organisation nicht gefunden.')
+          // Nur „gibt es nicht“, wenn der Server das sagt; sonst fehlt die Verbindung
+          setError(err?.status === 404 ? 'Organisation nicht gefunden.' : 'Keine Verbindung.')
         }
       })
       .finally(() => setLoading(false))
   }, [orgCode])
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ width: 44, height: 44, border: '3px solid var(--border)', borderTopColor: 'var(--accent)', borderRadius: '50%', animation: 'spin .8s linear infinite', margin: '0 auto 1rem' }} />
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 15 }}>Lade Organisation…</p>
-      </div>
-    </div>
-  )
+  if (loading) return <OrgHinweisSeite titel={orgCode || 'Organisation'} gruss="Wird geladen" laedt />
 
-  if (error || !org) return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-      <div style={{ background: 'var(--bg-card)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '2rem', maxWidth: 400, width: '100%', textAlign: 'center', boxShadow: 'var(--shadow-md)' }}>
-        <h2 style={{ color: 'var(--accent)', margin: '0 0 .5rem', fontSize: '1.2rem' }}>Fehler</h2>
-        <p style={{ color: 'var(--text-secondary)', margin: 0, fontSize: 15 }}>{error}</p>
-      </div>
-    </div>
-  )
+  if (error === 'Keine Verbindung.') return <OrgHinweisSeite titel={orgCode || 'Organisation'} gruss="Keine Verbindung" erneut
+    text="Die Organisation ließ sich gerade nicht laden. Prüfe die Verbindung und versuche es erneut." />
+
+  if (error || !org) return <OrgHinweisSeite titel={orgCode || 'Organisation'} gruss={error === 'Organisation nicht aktiv.' ? 'Nicht aktiv' : 'Nicht gefunden'}
+    text={error === 'Organisation nicht aktiv.' ? 'Diese Organisation ist zurzeit nicht aktiv.' : 'Zu diesem Code gibt es keine Organisation. Prüfe den Code oder frag die Verantwortlichen deiner Organisation.'} />
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <OrgContext.Provider value={{ org, orgCode: orgCode! }}>
-        {/* Was auf diesem Gerät auf das Senden wartet (Bauplan v2, 4.3); leer: nichts */}
-        <Warteschlange orgCode={orgCode!} org={org} />
+    // Rote Zugangsseiten (Startseite der Organisation, Hinweis „Formular aus“): ohne eigene Fläche, sonst
+    // läge unter der roten Seite ein heller Streifen. Dasselbe Element, nur der Stil wechselt (kein Neuaufbau).
+    <div style={rot ? undefined : { minHeight: '100vh', background: 'var(--bg)' }}>
+      <OrgContext.Provider value={{ org, orgCode: orgCode!, rahmen: setImRahmen }}>
+        {/* Was auf diesem Gerät auf das Senden wartet (Bauplan v2, 4.3); leer: nichts. Auf den roten Seiten
+            steht die Karte eingebettet in der Seite (OrgLanding, Hinweis „Formular aus“), sonst hier oben.
+            Beim Wechsel wird sie neu aufgebaut; doppeltes Senden fängt der Server über die Kennung ab. */}
+        {!rot && <Warteschlange orgCode={orgCode!} org={org} />}
         <Outlet />
       </OrgContext.Provider>
     </div>

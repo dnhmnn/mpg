@@ -117,7 +117,9 @@ function App() {
     <BrowserRouter>
       <PushNavigation />
       <NeueFassungHinweis />
-      <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--warm-bg)' }} />}>
+      {/* Ersatzfläche beim Nachladen ohne eigene Farbe: es scheint html/body durch, also rot zwischen den
+          dunkelroten Zugangsseiten (src/pages/zugang) und hell sonst, kein Aufblitzen */}
+      <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />

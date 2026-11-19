@@ -489,7 +489,7 @@ export default function Warteschlange({ orgCode, org, eingebettet = false }: {
 /** Der volle Sendeknopf der Karte (Akzent, Versalien); blass, solange er nicht geht. */
 function sendeKnopf(aus: boolean): React.CSSProperties {
   return {
-    width: '100%', marginTop: 10, padding: '11px 12px', border: 'none', borderRadius: 12,
+    width: '100%', marginTop: 10, padding: '11px 12px', border: 'none', borderRadius: 12, textAlign: 'center',
     background: aus ? 'rgba(var(--lbf-rot-rgb),0.2)' : ROT_GRUND, color: '#fff',
     fontFamily: 'inherit', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
     cursor: aus ? 'default' : 'pointer',

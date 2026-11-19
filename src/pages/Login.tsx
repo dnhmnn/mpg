@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, Link, Navigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { zielMitSitzung, zielNachAnmeldung, type AnmeldeKonto } from '../lib/anmeldung'
 import { NEU_SEKUNDEN, anforderFehler, codeFehler, istEmail, maskiereEmail, restZeit } from '../lib/zweiFaktor'
+import { Feld } from './benutzer/bausteine'
+import { ZugangRahmen, Zeichen } from './zugang/Rahmen'
 
 /**
  * Anmeldung. Mit einer gültigen, gespeicherten Sitzung geht der einfache Aufruf von /login gleich weiter
@@ -18,6 +20,8 @@ export default function Login() {
 
 function LoginMaske() {
   const navigate = useNavigate()
+  // Den Hub schon holen: nach der Anmeldung kein Aufblitzen zwischen Rot und Hub
+  useEffect(() => { void import('./Hub').catch(() => {}) }, [])
   const [searchParams] = useSearchParams()
   const disabledHint = searchParams.get('reason') === 'disabled'
   const betaHint = searchParams.get('reason') === 'beta'
@@ -204,216 +208,116 @@ function LoginMaske() {
 
   const resetSuccess = resetMsg.startsWith('E-Mail gesendet')
 
+  // Kopf je Schritt: zurück zur Startseite oder zum vorigen Schritt
+  const zurueck = step === 'login'
+    ? () => navigate('/')
+    : step === 'mfa'
+      ? () => { setStep('login'); setError(''); setInfo(''); setMfaCode('') }
+      : () => { setStep('login'); setResetMsg('') }
+  const gruss = step === 'login' ? <>Willkommen <em>zurück</em></>
+    : step === 'mfa' ? <>Code <em>eingeben</em></>
+    : neuesPasswort ? <>Passwort <em>festlegen</em></> : <>Passwort <em>zurücksetzen</em></>
+  const zeile = step === 'login' ? 'Melde dich an, um fortzufahren.'
+    : step === 'mfa'
+      ? (otpId ? <>Wir haben einen Code an <b>{maskiereEmail(otpEmail)}</b> gesendet.</> : 'Den Code gibt es per E-Mail. An welche Adresse gehört dein Zugang?')
+      : neuesPasswort ? 'Wir senden dir einen Link, mit dem du dein Passwort festlegst.' : 'Wir senden dir einen Link per E-Mail.'
+
   return (
-    <div style={{
-      minHeight: '100dvh',
-      background: 'var(--warm-bg)',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '32px 20px calc(48px + env(safe-area-inset-bottom))',
-    }}>
-      <style>{`
-        .l-input {
-          width: 100%;
-          padding: 13px 14px;
-          border-radius: 10px;
-          border: 1.5px solid rgba(var(--lbf-rot-rgb),0.15);
-          background: var(--lbf-card);
-          color: var(--lbf-text);
-          font-size: 15px;
-          font-family: inherit;
-          box-sizing: border-box;
-          transition: border-color 0.2s;
-          -webkit-appearance: none;
-        }
-        .l-input:focus { outline: none; border-color: var(--lbf-akzent); }
-        .l-input::placeholder { color: var(--warm-gray); opacity: 0.7; }
-        .l-input:disabled { opacity: 0.5; }
-        .l-btn { transition: opacity 0.15s, transform 0.12s; }
-        .l-btn:active { transform: scale(0.97); }
-      `}</style>
-
-      {/* Logo */}
-      <Link to="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, marginBottom: 36 }}>
-        <img src="/logo.svg" alt="Responda" width="120" height="120" />
-        <span style={{ fontWeight: 700, fontSize: '1.4rem', letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Responda</span>
-      </Link>
-
-      {/* Card */}
-      <div style={{ width: '100%', maxWidth: 360, background: 'var(--lbf-card)', borderRadius: 16, boxShadow: '0 2px 16px rgba(96,8,18,0.07)', padding: '28px 24px 24px', border: '0.5px solid var(--lbf-border-light)' }}>
-
+    <ZugangRahmen
+      zeichen={<Zeichen klein />}
+      titel={gruss}
+      zeile={zeile}
+      zurueck={zurueck}
+      zurueckLabel={step === 'login' ? 'Zur Startseite' : 'Zurück zur Anmeldung'}
+    >
+      <div className="zg-karte">
         {step === 'login' && (
-          <>
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Anmeldung</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Willkommen zurück</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>Melde dich an um fortzufahren</div>
+          <form onSubmit={handleLogin}>
+            <Feld label="E-Mail oder Benutzername" erst>
+              <input className="bv-eingabe" type="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
+                value={identifier} onChange={e => setIdentifier(e.target.value)}
+                placeholder="name@beispiel.de" required disabled={loading} />
+            </Feld>
+            <Feld label="Passwort">
+              <input className="bv-eingabe" type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••" required disabled={loading} />
+            </Feld>
+            {!error && disabledHint && <Meldung art="fehler">Dein Zugang wurde deaktiviert oder ist abgelaufen. Bitte Admin kontaktieren.</Meldung>}
+            {!error && betaHint && <Meldung art="fehler">Diese Beta-Umgebung ist nur für Supervisoren zugänglich.</Meldung>}
+            {error && <Meldung art="fehler">{error}</Meldung>}
+            <div className="zg-abstand">
+              <button type="submit" disabled={loading} className="zg-haupt">{loading ? 'Anmeldung läuft …' : 'Anmelden'}</button>
             </div>
-
-            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>E-Mail oder Benutzername</label>
-                <input className="l-input" type="text" autoComplete="username" value={identifier} onChange={e => setIdentifier(e.target.value)}
-                  placeholder="email@beispiel.de oder benutzername" required disabled={loading} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Passwort</label>
-                <input className="l-input" type="password" value={password} onChange={e => setPassword(e.target.value)}
-                  placeholder="••••••••" required disabled={loading} />
-              </div>
-
-              {!error && disabledHint && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
-                  Dein Zugang wurde deaktiviert oder ist abgelaufen. Bitte Admin kontaktieren.
-                </div>
-              )}
-              {!error && betaHint && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
-                  Diese Beta-Umgebung ist nur für Supervisoren zugänglich.
-                </div>
-              )}
-              {error && (
-                <div style={{ padding: '10px 14px', background: 'rgba(192,57,43,0.06)', border: '1px solid rgba(192,57,43,0.2)', borderRadius: 8, fontSize: 13, color: 'var(--lbf-fehler-text-2)', fontStyle: 'italic' }}>
-                  {error}
-                </div>
-              )}
-
-              <button type="submit" disabled={loading} className="l-btn"
-                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: loading ? 0.7 : 1, letterSpacing: '0.02em' }}>
-                {loading ? 'Anmeldung läuft…' : 'Anmelden'}
-              </button>
-            </form>
-
-            <button onClick={() => { setStep('reset'); setResetEmail(identifier.includes('@') ? identifier : '') }}
-              style={{ display: 'block', margin: '18px auto 0', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontStyle: 'italic', color: 'var(--warm-gray)', fontFamily: 'inherit' }}>
+            <button type="button" className="zg-link" onClick={() => { setStep('reset'); setResetEmail(identifier.includes('@') ? identifier : '') }}>
               Passwort vergessen?
             </button>
-          </>
+          </form>
         )}
 
-        {step === 'mfa' && (
-          <>
-            <button onClick={() => { setStep('login'); setError(''); setInfo(''); setMfaCode('') }}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--lbf-akzent)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-              Zurück
-            </button>
-
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Sicherheit</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>Code eingeben</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>
-                {otpId
-                  ? <>Wir haben einen Code an <span style={{ fontWeight: 700 }}>{maskiereEmail(otpEmail)}</span> gesendet</>
-                  : 'Den Code gibt es per E-Mail. An welche Adresse gehört dein Zugang?'}
-              </div>
+        {step === 'mfa' && (!otpId ? (
+          <form onSubmit={adresseSenden}>
+            <Feld label="E-Mail" erst>
+              <input className="bv-eingabe" type="email" autoComplete="email" value={otpEmail} onChange={e => setOtpEmail(e.target.value)}
+                placeholder="deine@email.de" required disabled={loading} autoFocus />
+            </Feld>
+            {error && <Meldung art="fehler">{error}</Meldung>}
+            <div className="zg-abstand">
+              <button type="submit" disabled={loading || gesperrt} className="zg-haupt">
+                {gesperrt ? `Gesperrt — noch ${restZeit(sperreBis, jetzt)}` : loading ? 'Wird gesendet …' : 'Code senden'}
+              </button>
             </div>
-
-            {!otpId ? (
-              <form onSubmit={adresseSenden} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>E-Mail</label>
-                  <input className="l-input" type="email" autoComplete="email" value={otpEmail} onChange={e => setOtpEmail(e.target.value)}
-                    placeholder="deine@email.de" required disabled={loading} autoFocus />
-                </div>
-                {error && <Meldung art="fehler">{error}</Meldung>}
-                <button type="submit" disabled={loading || gesperrt} className="l-btn" style={knopf(loading || gesperrt)}>
-                  {gesperrt ? `Gesperrt — noch ${restZeit(sperreBis, jetzt)}` : loading ? 'Wird gesendet…' : 'Code senden'}
-                </button>
-              </form>
-            ) : (
-              <form onSubmit={handleMfa} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Code</label>
-                  <input
-                    className="l-input"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={mfaCode}
-                    onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
-                    placeholder="000000"
-                    required
-                    disabled={loading}
-                    autoComplete="one-time-code"
-                    autoFocus
-                    style={{ letterSpacing: '0.25em', fontSize: 20, textAlign: 'center' }}
-                  />
-                  <div style={{ fontSize: 12, fontStyle: 'italic', color: 'var(--warm-gray)', marginTop: 6, lineHeight: 1.45 }}>
-                    Es gilt nur der Code aus der neuesten E-Mail, und nur wenige Minuten.
-                  </div>
-                </div>
-
-                {info && <Meldung art="ok">{info}</Meldung>}
-                {error && <Meldung art="fehler">{error}</Meldung>}
-
-                <button type="submit" disabled={loading || mfaCode.length < 4 || gesperrt} className="l-btn" style={knopf(loading || mfaCode.length < 4 || gesperrt)}>
-                  {gesperrt ? `Gesperrt — noch ${restZeit(sperreBis, jetzt)}` : loading ? 'Wird geprüft…' : 'Bestätigen'}
-                </button>
-                <button type="button" onClick={neuerCode} disabled={loading || gesperrt || jetzt < neuAb}
-                  style={{ background: 'none', border: 'none', padding: '4px 0', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: (loading || gesperrt || jetzt < neuAb) ? 'default' : 'pointer', opacity: (loading || gesperrt || jetzt < neuAb) ? 0.5 : 1 }}>
-                  {gesperrt ? `Neuer Code in ${restZeit(sperreBis, jetzt)}` : jetzt < neuAb ? `Neuen Code senden (in ${Math.ceil((neuAb - jetzt) / 1000)} s)` : 'Neuen Code senden'}
-                </button>
-              </form>
-            )}
-          </>
-        )}
+          </form>
+        ) : (
+          <form onSubmit={handleMfa}>
+            <Feld label="Code" erst hinweis="Es gilt nur der Code aus der neuesten E-Mail, und nur wenige Minuten.">
+              <input
+                className="bv-eingabe zg-code"
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={mfaCode}
+                onChange={e => setMfaCode(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="000000"
+                required
+                disabled={loading}
+                autoComplete="one-time-code"
+                autoFocus
+              />
+            </Feld>
+            {info && <Meldung art="ok">{info}</Meldung>}
+            {error && <Meldung art="fehler">{error}</Meldung>}
+            <div className="zg-abstand">
+              <button type="submit" disabled={loading || mfaCode.length < 4 || gesperrt} className="zg-haupt">
+                {gesperrt ? `Gesperrt — noch ${restZeit(sperreBis, jetzt)}` : loading ? 'Wird geprüft …' : 'Bestätigen'}
+              </button>
+            </div>
+            <button type="button" className="zg-link" onClick={neuerCode} disabled={loading || gesperrt || jetzt < neuAb}>
+              {gesperrt ? `Neuer Code in ${restZeit(sperreBis, jetzt)}` : jetzt < neuAb ? `Neuen Code senden (in ${Math.ceil((neuAb - jetzt) / 1000)} s)` : 'Neuen Code senden'}
+            </button>
+          </form>
+        ))}
 
         {step === 'reset' && (
-          <>
-            <button onClick={() => { setStep('login'); setResetMsg('') }}
-              style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--lbf-akzent)', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, marginBottom: 20, padding: 0 }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-              Zurück
-            </button>
-
-            <div style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.14em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Passwort</div>
-              <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 22, color: 'var(--lbf-text)', lineHeight: 1.2 }}>{neuesPasswort ? 'Festlegen' : 'Zurücksetzen'}</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 4 }}>{neuesPasswort ? 'Wir senden dir einen Link, mit dem du dein Passwort festlegst' : 'Wir senden dir einen Reset-Link per E-Mail'}</div>
-            </div>
-
-            <form onSubmit={handleReset} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div>
-                <label style={{ display: 'block', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>E-Mail</label>
-                <input className="l-input" type="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)}
-                  placeholder="deine@email.de" required disabled={resetLoading} />
-              </div>
-
-              {resetMsg && (
-                <div style={{ padding: '10px 14px', background: resetSuccess ? 'rgba(22,163,74,0.06)' : 'rgba(192,57,43,0.06)', border: `1px solid ${resetSuccess ? 'rgba(22,163,74,0.2)' : 'rgba(192,57,43,0.2)'}`, borderRadius: 8, fontSize: 13, fontStyle: 'italic', color: resetSuccess ? 'var(--lbf-ok-text-2)' : 'var(--lbf-fehler-text-2)' }}>
-                  {resetMsg}
-                </div>
-              )}
-
-              <button type="submit" disabled={resetLoading || resetSuccess} className="l-btn"
-                style={{ marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: resetLoading ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: (resetLoading || resetSuccess) ? 0.7 : 1, letterSpacing: '0.02em' }}>
-                {resetLoading ? 'Wird gesendet…' : neuesPasswort ? 'Link senden' : 'Reset-Link senden'}
+          <form onSubmit={handleReset}>
+            <Feld label="E-Mail" erst>
+              <input className="bv-eingabe" type="email" autoComplete="email" value={resetEmail} onChange={e => setResetEmail(e.target.value)}
+                placeholder="deine@email.de" required disabled={resetLoading} />
+            </Feld>
+            {resetMsg && <Meldung art={resetSuccess ? 'ok' : 'fehler'}>{resetMsg}</Meldung>}
+            <div className="zg-abstand">
+              <button type="submit" disabled={resetLoading || resetSuccess} className="zg-haupt">
+                {resetLoading ? 'Wird gesendet …' : neuesPasswort ? 'Link senden' : 'Reset-Link senden'}
               </button>
-            </form>
-          </>
+            </div>
+          </form>
         )}
-      </div>
 
-      <p style={{ marginTop: 24, fontSize: 11, fontStyle: 'italic', color: 'var(--warm-gray)', opacity: 0.6 }}>
-        © 2025 Responda Systems
-      </p>
-    </div>
+      </div>
+    </ZugangRahmen>
   )
 }
 
 // Rückmeldung in der Anmeldung (Fehler rot, Erfolg grün)
 function Meldung({ art, children }: { art: 'ok' | 'fehler'; children: React.ReactNode }) {
-  const ok = art === 'ok'
-  return (
-    <div role={ok ? 'status' : 'alert'} style={{ padding: '10px 14px', background: ok ? 'rgba(22,163,74,0.06)' : 'rgba(192,57,43,0.06)', border: `1px solid ${ok ? 'rgba(22,163,74,0.2)' : 'rgba(192,57,43,0.2)'}`, borderRadius: 8, fontSize: 13, fontStyle: 'italic', lineHeight: 1.45, color: ok ? 'var(--lbf-ok-text-2)' : 'var(--lbf-fehler-text-2)' }}>
-      {children}
-    </div>
-  )
-}
-
-function knopf(aus: boolean): React.CSSProperties {
-  return { marginTop: 4, padding: '14px', borderRadius: 10, background: 'var(--lbf-akzent-grund)', border: 'none', cursor: aus ? 'not-allowed' : 'pointer', fontSize: 15, fontWeight: 700, color: '#fff', fontFamily: 'inherit', opacity: aus ? 0.7 : 1, letterSpacing: '0.02em' }
+  return <div role={art === 'ok' ? 'status' : 'alert'} className={`zg-meldung ${art}`}>{children}</div>
 }
