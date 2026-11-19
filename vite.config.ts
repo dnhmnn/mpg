@@ -20,8 +20,16 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Neue Fassung erst nach Bestätigung (Owner, 19.11.2026): Sie wird installiert und wartet,
+      // bis jemand im Hinweis „Aktualisieren“ tippt (src/lib/fassungPruefen.ts, src/lib/swAnmelden.ts,
+      // src/components/NeueFassungHinweis.tsx). Mit 'autoUpdate' übernahm sie still, die geöffnete
+      // App lief aber mit der alten weiter. Angemeldet wird in src/main.tsx (swAnmelden), deshalb
+      // kein eingefügtes Skript. clientsClaim: Beim ersten Besuch und nach „Aktualisieren“
+      // übernimmt der Service Worker die Seite gleich (Push, Hintergrundversand).
+      registerType: 'prompt',
+      injectRegister: false,
       workbox: {
+        clientsClaim: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         // Hintergrundversand der Formulare (Background Sync, public/sw-formulare.js):
         // hängt nur einen sync-Handler an, die Regeln unten bleiben, wie sie sind.

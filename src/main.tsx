@@ -4,11 +4,14 @@ import App from './App'
 import { einmalNeuLaden, istLadefehler, neueFassungAbfangen, wirdNeuGeladen } from './lib/neueFassung'
 import { pb } from './lib/pocketbase'
 import { pushAbgleichEinrichten } from './lib/push/abgleich'
+import { swAnmelden } from './lib/swAnmelden'
 import { entwuerfeAufraeumen, fensterEinrichten, tresorBereit, tresorOeffnen } from './lib/tresor'
 import { ohneAnmeldungLeeren, veralteteLoeschen, wechselBeobachten } from './lib/zwischenspeicher'
 
 // Nach einer Veröffentlichung fehlen der alten Fassung im Gerät Teile — dann einmal neu laden
 neueFassungAbfangen()
+// Service Worker anmelden; eine neue Fassung wartet auf „Aktualisieren“ (src/lib/fassungPruefen.ts)
+try { swAnmelden() } catch { /* ohne Service Worker läuft die App wie eine Webseite */ }
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<

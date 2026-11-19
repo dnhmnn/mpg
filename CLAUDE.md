@@ -257,6 +257,19 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 
 ---
 
+## Neue Version der App (Owner, 19.11.2026)
+
+- Eine neue Fassung übernimmt nicht still: Der Service Worker wartet (`registerType: 'prompt'` in
+  `vite.config.ts`), bis jemand im Hinweis „Neue Version von Responda“ auf „Aktualisieren“ tippt;
+  dann lädt die App neu. „Später“ blendet den Hinweis eine Stunde aus; wird die App ganz geschlossen,
+  gilt die neue Fassung beim nächsten Start.
+- Die App fragt beim Start, alle 30 Minuten und beim Zurückkommen aus dem Hintergrund (höchstens alle
+  5 Minuten) nach einer neuen Fassung. Rechnung und Speicher: `src/lib/fassungPruefen.ts` (Prüffälle),
+  Anmeldung: `src/lib/swAnmelden.ts`, Hinweis: `src/components/NeueFassungHinweis.tsx`.
+- Nie in der Einsatzführung eines laufenden Einsatzes (`/eks/:id`): Der Hinweis läge über Knöpfen,
+  die im Einsatz gebraucht werden.
+- Kein `skipWaiting` in `sw-push.js` oder `sw-formulare.js`; ein Prüffall achtet darauf.
+
 ## Push-Benachrichtigungen
 
 - **Push ist keine Alarmierung.** Jede Stelle, an der man Push einstellt, sagt das (Hinweis

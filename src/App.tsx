@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import NeueFassungHinweis from './components/NeueFassungHinweis'
 import Login from './pages/Login'
 import Index from './pages/Index'
 import { urlSicher } from './lib/push/geraet'
@@ -115,6 +116,7 @@ function App() {
   return (
     <BrowserRouter>
       <PushNavigation />
+      <NeueFassungHinweis />
       <Suspense fallback={<div style={{ minHeight: '100vh', background: 'var(--warm-bg)' }} />}>
       <Routes>
         <Route path="/" element={<Index />} />
