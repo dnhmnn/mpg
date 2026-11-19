@@ -30,10 +30,22 @@ export const BV_CSS = `
 .bv-statusleiste{ position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 2px); background: var(--lbf-kopf); z-index: -1; pointer-events: none; }
 /* Als App vom Homebildschirm liegt die Seite unter Uhr und Akku: dort vorn und genau so hoch */
 @media (display-mode: standalone){ .bv-statusleiste{ z-index: 70; height: env(safe-area-inset-top); } }
+/* Ab iOS 26 (Safari 26 kann anchor-name) legt iOS als App oben einen eigenen Schleier in der Farbe von
+   html/body über den Rand. Ein Streifen vorn läge darunter: Nach dem Wegrollen des Kopfs war oben ein
+   rosa-grauer Balken (heller Schleier über Rot). Dort also wie im Browser: Streifen hinten, die Farbe
+   kommt allein von html/body (useStatusleiste), rot solange der Kopf zu sehen ist, danach hell. */
+@supports (-webkit-touch-callout: none) and (anchor-name: --a){
+  @media (display-mode: standalone){ .bv-statusleiste{ z-index: -1; } }
+}
 
 /* Kopf */
 .bv-kopf{ background: var(--lbf-kopf); color: var(--lbf-kopf-text);
   padding: calc(10px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 38px max(16px, env(safe-area-inset-left)); }
+/* Als App vom Homebildschirm reicht der Schleier von iOS 26 rund 38 px unter die Uhr-Zeile: Knöpfe und
+   Titel beginnen dort 14 px tiefer, damit ihr oberer Rand nicht darin liegt. Nur hochkant. */
+@media (display-mode: standalone) and (min-height: 560px){
+  .bv-kopf{ padding-top: calc(24px + env(safe-area-inset-top)); }
+}
 .bv-kopf-innen{ max-width: 760px; margin: 0 auto; }
 .bv-zeile1{ display: flex; align-items: center; gap: 12px; min-height: 48px; }
 .bv .bv-rund{ width: 44px; height: 44px; border-radius: 50%; background: var(--lbf-kopf-feld); color: var(--lbf-kopf-text); display: grid; place-items: center; flex-shrink: 0; }
@@ -70,12 +82,20 @@ export const BV_CSS = `
 .bv-titel-unten span{ margin-top: 3px; }
 
 /* Statische Seite (Seite statisch, der Hub; CLAUDE.md, „Statische Seiten“): genau so hoch wie der
-   Bildschirm, rollt nicht. html und body bleiben hell (useStatusleiste mit statisch), der feste
-   rote Streifen oben liegt vorn und gibt Safari das Rot für die Statusleiste. Unten ist nichts fest. */
+   Bildschirm, rollt nicht. html und body bleiben im Browser hell (useStatusleiste mit statisch; als
+   App vom Homebildschirm dunkelrot), der feste rote Streifen oben liegt vorn und gibt Safari das Rot
+   für die Statusleiste. Unten ist nichts fest. */
 .bv.statisch{ height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
 .bv.statisch > .bv-statusleiste{ z-index: 60; height: max(env(safe-area-inset-top), 12px); }
 /* Der Inhalt des Kopfs beginnt unter dem Streifen (auch ohne Statusleiste mindestens 12 px) */
 .bv.statisch > .bv-kopf{ flex: none; padding-top: calc(14px + env(safe-area-inset-top)); }
+/* Als App vom Homebildschirm legt iOS 26 einen Schleier über den oberen Rand, der rund 38 px unter
+   die Uhr-Zeile reicht (Bildschirmfoto des Owners, 15.11.2026). Er hat die Farbe von html/body
+   (useStatusleiste: dort dunkelrot); Zeichen und Knöpfe beginnen trotzdem 14 px tiefer, damit ihr
+   oberer Rand nicht im Schleier liegt. Nur hochkant, quer zählt jede Zeile. */
+@media (display-mode: standalone) and (min-height: 560px){
+  .bv.statisch > .bv-kopf{ padding-top: calc(28px + env(safe-area-inset-top)); }
+}
 .bv.statisch > .bv-blatt{ flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden;
   padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
 .bv.statisch > .bv-blatt > .bv-innen{ flex: 1 1 0; min-height: 0; width: 100%; display: flex; flex-direction: column; }

@@ -143,7 +143,14 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - So ist es gebaut (`useStatusleiste`, `BV_CSS`): html und body sind dunkelrot, solange der rote
   Kopf zu sehen ist, sonst hell. `.bv-blatt` hat eine Mindesthöhe über den Bildschirm hinaus
   (`100lvh` plus 144 px plus Home-Leiste). Im Browser liegt der Streifen `.bv-statusleiste`
-  hinter der Seite; nur als App vom Homebildschirm liegt er vorn.
+  hinter der Seite; als App vom Homebildschirm liegt er nur bis iOS 18 vorn.
+- Als App vom Homebildschirm ab iOS 26 (Bilder des Owners, 15. und 19.11.2026): iOS legt oben einen
+  Schleier in der Farbe von html/body über den Rand, rund 38 px unter die Uhr-Zeile. Ein roter
+  Streifen vorn lag nach dem Wegrollen des Kopfs unter dem hellen Schleier (rosa-grauer Balken).
+  Deshalb dort wie im Browser: Streifen hinten (`@supports (-webkit-touch-callout: none) and
+  (anchor-name: --a)`, das kann erst Safari 26), rot solange der Kopf zu sehen ist, danach hell.
+  Knöpfe und Titel im Kopf beginnen als App 14 px tiefer (hochkant). Seiten mit weißem Kopf
+  (Unitas, MPG, Lager …) brauchen nichts: Der Schleier ist dort weiß auf Weiß.
 - Warum es keine perfekte Lösung gibt (WebKit, `LocalFrameView::fixedContainerEdges`,
   `Page::updateFixedContainerEdges`): Safari färbt oben und unten mit derselben Farbe, dem
   Hintergrund von `body`; sie steht auch überall, wo die Seite den Bildschirm nicht bedeckt.
@@ -170,8 +177,13 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   für den voll ausgeschriebenen Titel), `useStatusleiste('--lbf-kopf', { statisch: true })`, die
   Regeln `.bv.statisch` in `BV_CSS`.
 - Oben liegt der feste rote Streifen `.bv-statusleiste` vorn (`z-index` 60, mindestens 12 px hoch)
-  und gibt Safari das Rot. html und body bleiben die ganze Zeit hell; unten ist nichts fest, die
-  Safari-Leiste bleibt also hell. theme-color ist das Dunkelrot. Die Ablehnung „Farbgeber oben“
+  und gibt Safari das Rot. Im Browser bleiben html und body die ganze Zeit hell; unten ist nichts fest,
+  die Safari-Leiste bleibt also hell. theme-color ist das Dunkelrot.
+- Als App vom Homebildschirm (Bild des Owners, 15.11.2026): iOS 26 legt oben einen Schleier in der
+  Farbe von html/body über den Rand, rund 38 px unter die Uhr-Zeile, und fragt den roten Streifen
+  nicht. Mit hellem html/body lag ein milchiger Verlauf über Logo und Knöpfen. Deshalb sind html und
+  body dort dunkelrot (`statusleistenFarben` in `useStatusleiste`), und Zeichen und Knöpfe beginnen
+  14 px tiefer (nur hochkant). Unten gibt es als App keine Safari-Leiste. Am iPhone noch zu bestätigen. Die Ablehnung „Farbgeber oben“
   galt rollenden Seiten (der Balken schnitt beim Scrollen Titel und Knöpfe ab); eine Seite, die
   nicht rollt, hat das Problem nicht.
 - Nur solange die statische Seite zu sehen ist, haben html und body `height: 100%`,

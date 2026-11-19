@@ -13,11 +13,17 @@
 //   solange der Kopf noch zu sehen ist (die Statusleiste wird dann hell), oder einen festen
 //   Streifen an den unteren Rand legen (die Safari-Leiste wird dann deckend).
 // - Als App vom Homebildschirm (black-translucent) liegt die Seite unter der
-//   Leiste; ein fester roter Streifen der Seite hält die Farbe auch beim Scrollen.
+//   Leiste; bis iOS 18 hält ein fester roter Streifen der Seite die Farbe auch beim
+//   Scrollen. Ab iOS 26 legt iOS selbst einen Schleier in der Farbe von html/body über
+//   den Rand; dort liegt der Streifen hinten (BV_CSS), und es gilt dasselbe wie im Browser.
 //
 // Statische Seiten (statisch: true, der Hub; CLAUDE.md, „Statische Seiten“): Die Seite rollt
-// nicht. html und body bleiben die ganze Zeit hell (blatt), oben färbt der feste rote Streifen
-// .bv-statusleiste (vorn, siehe BV_CSS) Safaris Leiste, theme-color ist das Dunkelrot. Solange
+// nicht. Im Browser bleiben html und body die ganze Zeit hell (blatt), oben färbt der feste rote
+// Streifen .bv-statusleiste (vorn, siehe BV_CSS) Safaris Leiste, theme-color ist das Dunkelrot.
+// Als App vom Homebildschirm sind html und body dunkelrot: iOS 26 legt dort über den oberen Rand
+// einen Schleier in der Farbe von html/body und fragt den roten Streifen nicht. Mit hellem
+// Hintergrund lag ein milchiger Verlauf über Logo und Knöpfen (Owner, 15.11.2026). Unten gibt es
+// als App keine Safari-Leiste, und die statische Seite bedeckt den ganzen Bildschirm. Solange
 // die Seite zu sehen ist, bekommen html und body height 100 %, overflow hidden und
 // overscroll-behavior none (kein Scrollen, kein Nachfedern). Beim Verlassen und beim Wechsel
 // auf eine rollende Seite stellt das Aufräumen genau die vorherigen Werte wieder her.
@@ -51,6 +57,29 @@ function feststellen(): () => void {
   }
 }
 
+/** Läuft die Seite als App vom Homebildschirm (iOS: navigator.standalone, sonst display-mode)? */
+export function istHomebildschirm(): boolean {
+  try {
+    if ((navigator as Navigator & { standalone?: boolean }).standalone === true) return true
+    return !!window.matchMedia?.('(display-mode: standalone)').matches
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Welche Farbe oben gilt: leiste für theme-color, grund für html und body.
+ * kopf = das Dunkelrot (token), blatt = der helle Hintergrund.
+ */
+export function statusleistenFarben(o: { statisch: boolean; oben: boolean; homebildschirm: boolean }): {
+  leiste: 'kopf' | 'blatt'
+  grund: 'kopf' | 'blatt'
+} {
+  if (o.statisch) return { leiste: 'kopf', grund: o.homebildschirm ? 'kopf' : 'blatt' }
+  const farbe = o.oben ? 'kopf' : 'blatt'
+  return { leiste: farbe, grund: farbe }
+}
+
 export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string; statisch?: boolean } = {}): void {
   const { kopf, blatt = '--warm-bg', statisch = false } = opt
   useEffect(() => {
@@ -66,11 +95,13 @@ export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blat
     const html = document.documentElement.style.backgroundColor
     const body = document.body.style.backgroundColor
     const loesen = statisch ? feststellen() : null
+    const homebildschirm = istHomebildschirm()
     let oben = true
     const setzen = () => {
-      // Statisch: theme-color immer das Dunkelrot, html und body immer hell
-      const leiste = statisch || oben ? token : blatt
-      const grund = statisch ? blatt : leiste
+      // Statisch: theme-color immer das Dunkelrot, html und body hell (als App dunkelrot)
+      const f = statusleistenFarben({ statisch, oben, homebildschirm })
+      const leiste = f.leiste === 'kopf' ? token : blatt
+      const grund = f.grund === 'kopf' ? token : blatt
       const farbe = getComputedStyle(document.documentElement).getPropertyValue(leiste).trim()
       if (farbe) m.content = farbe
       // Als CSS-Variable, folgt also der Darstellung
