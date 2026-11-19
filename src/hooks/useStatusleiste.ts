@@ -40,15 +40,23 @@ const FEST: [string, string][] = [
 ]
 
 /** html und body festsetzen; gibt zurück, was das Aufräumen wiederherstellt. */
-function feststellen(): () => void {
+export function feststellen(): () => void {
   const elemente = [document.documentElement, document.body]
   const vorher = elemente.map((el) => FEST.map(([k]) => [el.style.getPropertyValue(k), el.style.getPropertyPriority(k)] as const))
   for (const el of elemente) for (const [k, v] of FEST) el.style.setProperty(k, v)
   // War die vorige Seite weiter unten, steht die feste Seite sonst verschoben da
-  window.scrollTo(0, 0)
-  document.body.scrollTop = 0
-  document.documentElement.scrollTop = 0
+  const obenHalten = () => {
+    if (window.scrollY !== 0) window.scrollTo(0, 0)
+    if (document.body.scrollTop) document.body.scrollTop = 0
+    if (document.documentElement.scrollTop) document.documentElement.scrollTop = 0
+  }
+  obenHalten()
+  // Als App reicht unter dem Fenster eine helle Fläche über das Dokument hinaus (BV_CSS,
+  // .bv.statisch::after). Schiebt der Browser das Dokument trotz overflow hidden (Fokus,
+  // scrollIntoView), sofort zurück: Die statische Seite rollt nie.
+  window.addEventListener('scroll', obenHalten, { passive: true })
   return () => {
+    window.removeEventListener('scroll', obenHalten)
     elemente.forEach((el, i) => FEST.forEach(([k], j) => {
       const [wert, prio] = vorher[i][j]
       if (wert) el.style.setProperty(k, wert, prio)
