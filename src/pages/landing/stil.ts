@@ -34,7 +34,9 @@ export const RS_CSS = `
 @supports (-webkit-touch-callout: none) and (anchor-name: --a){ @media (display-mode: standalone){ .rs-statusleiste{ z-index: -1; } } }
 
 /* Leiste oben */
-.rs-nav{ position: sticky; top: 0; z-index: 50; background: rgba(61,4,8,0.88); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+/* Voll deckend: Safari 26 färbt den Bereich unter der Uhr nach der Leiste oben; eine durchscheinende Leiste
+   (Rot mit Weichzeichner) konnte es nicht lesen und nahm Hell (Bild des Owners, 20.11.2026) */
+.rs-nav{ position: sticky; top: 0; z-index: 50; background: var(--rs-kopf);
   border-bottom: 1px solid transparent; padding-top: env(safe-area-inset-top); transition: border-color 0.2s; }
 .rs-nav.unter{ border-bottom-color: var(--rs-linie); }
 .rs-nav .rs-innen{ display: flex; align-items: center; gap: 8px; height: 64px; }
