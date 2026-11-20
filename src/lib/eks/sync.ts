@@ -95,7 +95,10 @@ export async function pull(einsatzId: string): Promise<number> {
       filter, sort: 'created', requestKey: `eks-pull-${Date.now()}`,
     })
     for (const r of list) await ingest(r)
-    await incidentPut({ ...(inc || { id: einsatzId, header: {} }), id: einsatzId, last_pull_iso: new Date().toISOString() })
+    // Frisch lesen: Während des Holens kann der Einsatzkopf (Stichwort, Nummer) gespeichert worden sein
+    // (useEks.einsatzCachen). Der Stand vom Anfang hätte ihn mit dem alten, leeren Kopf überschrieben.
+    const aktuell = await incidentGet(einsatzId)
+    await incidentPut({ ...(aktuell || inc || { id: einsatzId, header: {} }), id: einsatzId, last_pull_iso: new Date().toISOString() })
     return list.length
   } catch (e: any) {
     letzterFehler = e?.message || 'Pull fehlgeschlagen'
