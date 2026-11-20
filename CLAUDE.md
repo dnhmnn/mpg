@@ -233,6 +233,17 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   oben (`OrgPublicLayout`, Zusammenhang `rahmen`). Die öffentlichen Formulare selbst (`/<org-code>/patienten`
   usw.) bleiben, wie sie sind.
 
+#### Website responda.systems, festgelegt vom Owner am 19./20.11.2026
+- Ganz in Dunkelrot wie die Zugangsseiten: großes Logo, große helle Schrift (`src/pages/landing/Startseite.tsx`,
+  Stile `RS_CSS` in `src/pages/landing/stil.ts`), html und body die ganze Zeit rot (`useStatusleiste('--rs-kopf')`).
+- Statt Bereiche zu erklären, läuft ein erfundener Einsatz der „Feuerwehr Musterstadt“ ab (Wohnungsbrand,
+  Patientin, Gerät gesperrt, Material, Nachbereitung); auf dem Rechner steht das Telefon und wechselt beim Scrollen
+  den Bildschirm, am Telefon steht nach jedem Schritt ein eigenes. Wenig Text („statt es ewig zu erklären“).
+- Nicht auf die Website: Einsatzführung (EKS), Einsätze, Ausbildung und Fortbildung (Owner, 20.11.2026).
+- Die Bilder der App (`public/website/*.webp`) entstehen aus der gebauten App mit erfundenen Testdaten:
+  `node docs/entwuerfe/website/aufnahme.mjs` (Daten in `docs/entwuerfe/website/daten.mjs` und `daten/`), dann
+  `node docs/entwuerfe/website/webp.mjs <ordner-mit-png>`. Nie echte Personen, Organisationen oder Patientendaten.
+
 ## Keyframes (in globals.css oder inline `<style>`)
 ```css
 @keyframes greetNameIn {

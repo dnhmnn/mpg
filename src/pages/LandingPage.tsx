@@ -7,7 +7,7 @@ import {
   type GlobalSettings, type PageRec,
 } from '../lib/landingSchema'
 
-const BESCHREIBUNG = 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Derzeit in Entwicklung.'
+const BESCHREIBUNG = 'Responda verbindet Patientendokumentation, Medizinprodukte und Lager für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Derzeit in Entwicklung.'
 
 const JSON_LD = JSON.stringify({
   '@context': 'https://schema.org',
@@ -17,7 +17,7 @@ const JSON_LD = JSON.stringify({
   operatingSystem: 'Web, iOS, Android',
   url: 'https://responda.systems',
   // In Entwicklung: keine Preise (kein "offers"), bis Pakete feststehen
-  description: 'Responda verbindet Einsatzführung, Patientendokumentation, Medizinprodukte, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. In Entwicklung.',
+  description: 'Responda verbindet Patientendokumentation, Medizinprodukte und Lager für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. In Entwicklung.',
   provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: KONTAKT_EMAIL },
   inLanguage: 'de',
   keywords: 'Einsatzverwaltung, Hilfsorganisation, Sanitätsdienst, Feuerwehr, Patientendokumentation, Medizinprodukte, Lagerverwaltung, Ausbildung',
