@@ -1429,6 +1429,9 @@ Prüfung, `status` `neu`, Server-Felder leer), Vorlagen und Eingang bleiben durc
 
 ### Geprüft
 
+Nachgeprüft am 20.11.2026 auch gegen **0.23.4** (Produktion): 180 Abläufe der Formular-Hooks wie auf 0.40.5;
+`$os.stat` fehlt dort, der Merker „Erster Start“ wird deshalb mit `$os.readFile` geprüft.
+
 Gegen **PocketBase 0.28.4 und 0.40.5** mit den Regeln dieses Abschnitts (Hook-Prüfung
 `scratchpad/pb/formular-test/pruefen.mjs`, zusätzlich zu den Fällen des Absender-Pakets): **1235
 Prüfungen je Version, alle bestanden**, davon 454 für dieses Paket. Geprüft: Vorlagen anlegen und

@@ -50,7 +50,15 @@ onBootstrap((e) => {
   e.app.store().set("responda:formular_aktiv", true)
   let R = null
   try { R = require(`${__hooks}/formular-regeln.js`) } catch (err) { return }
-  const da = (pfad) => { try { $os.stat(pfad); return true } catch (err) { return false } }
+  // $os.stat gibt es erst nach PocketBase 0.23 (auf 0.23.4, Produktion, fehlt es: der Merker galt
+  // dort nie als da, und jeder Neustart leerte alle Statusfelder). $os.readFile gibt es überall.
+  const da = (pfad) => {
+    try {
+      if (typeof $os.stat === "function") $os.stat(pfad)
+      else $os.readFile(pfad)
+      return true
+    } catch (err) { return false }
+  }
   const pfad = e.app.dataDir() + "/" + R.START_MERKER
   if (!da(pfad)) {
     try {

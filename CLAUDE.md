@@ -339,6 +339,10 @@ sie mit 0.23.4, 0.28.4 und 0.40.5. Was 0.23.4 nicht kann:
 - In `onRecordAfterDeleteSuccess` scheitert jeder Datenbankzugriff („transaction has already been
   committed“): Aufräumen nach dem Löschen in `onRecordDeleteRequest` nach `e.next()`, dazu ein
   Sicherheitsnetz im Takt.
+- `$os.stat` gibt es nicht (ein Aufruf wirft „Object has no member 'stat'“): ob eine Datei da ist, mit
+  `$os.readFile` prüfen (so der Merker „Erster Start“ in `formular.pb.js`; ohne das leerte jeder Neustart
+  alle Absender-Status). Die Formular-Hooks sind gegen 0.23.4 und 0.40.5 praktisch geprüft (20.11.2026,
+  180 bzw. 183 Fälle).
 
 ## Was NICHT zum Stil passt
 - iOS-Pill-Indikatoren in der Tab Bar
