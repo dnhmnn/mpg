@@ -150,7 +150,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   Deshalb dort wie im Browser: Streifen hinten (`@supports (-webkit-touch-callout: none) and
   (anchor-name: --a)`, das kann erst Safari 26), rot solange der Kopf zu sehen ist, danach hell.
   Knöpfe und Titel im Kopf beginnen als App 14 px tiefer (hochkant). Seiten mit weißem Kopf
-  (Unitas, MPG, Lager …) brauchen nichts: Der Schleier ist dort weiß auf Weiß.
+  (Unitas, MPG …) brauchen nichts: Der Schleier ist dort weiß auf Weiß.
 - Warum es keine perfekte Lösung gibt (WebKit, `LocalFrameView::fixedContainerEdges`,
   `Page::updateFixedContainerEdges`): Safari färbt oben und unten mit derselben Farbe, dem
   Hintergrund von `body`; sie steht auch überall, wo die Seite den Bildschirm nicht bedeckt.
@@ -267,6 +267,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Ausbildungen | `src/pages/ausbildungen/Ausbildungen.tsx` | Admin-Verwaltung Ausbildungen |
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
 | MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Fristen (STK/MTK), Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/` (STK/MTK: `fristen.ts`, `kontrollen.ts`; eine überfällige oder nicht bestandene STK oder MTK sperrt), Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
+| Lager | `src/pages/Lager.tsx`, `src/pages/lager/` | Dunkelrot-Design (Owner, 20.11.2026: „Startseite mit Kacheln“ statt der Leiste mit 16 Knöpfen): Startseite mit Standort im roten Kopf, Zahlen (in Ordnung, bald fällig, abgelaufen), sechs Kacheln (Bestand, Scannen, Ausgaben, Bestellen, Inventur, Checks), darunter die übrigen Wege in Gruppen (`src/pages/lager/Start.tsx`, Stile `LG_CSS`); Bestand unter `/lager?seite=bestand`. Die übrigen Wege öffnen vorerst noch die alten Fenster und werden nacheinander zu eigenen Seiten |
 | Hub | `src/pages/Hub.tsx`, `src/pages/hub/` | Startseite nach dem Login im Dunkelrot-Design, statisch (rollt nicht): Gruß, Organisation voll ausgeschrieben, Glocke mit Neuigkeiten und Mitteilung der Organisation (Blatt), Apps auf Seiten zum Wischen mit Pfeilen (`src/lib/hubSeiten.ts`; Auswahl und Reihenfolge je Benutzer: `src/lib/hubApps.ts`, Feld `users.hub_apps`), Kurzbefehle, Profil. Symbole: `src/lib/hubIcons.ts`, erzeugt mit `npm run hub-icons` aus `docs/entwuerfe/hub-icons/bau.mjs` |
 | Benachrichtigungen | `src/pages/Benachrichtigungen.tsx`, `src/pages/benachrichtigungen/` | Push-Benachrichtigungen im Dunkelrot-Design, rollend (`/benachrichtigungen`, aus Profil im Hub und Einstellungen): Push je Gerät mit Probe, Anlässe, Ruhezeit, angemeldete Geräte, Hinweis „Keine Alarmierung“; für die Leitung `?seite=organisation` (Anlässe der Organisation, „Mitteilung an die Organisation“). App-Teil in `src/lib/push/` (Abgleich, Einschalten, API, Texte; Service Worker `public/sw-push.js`), siehe Abschnitt „Push-Benachrichtigungen“ |
 | Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |

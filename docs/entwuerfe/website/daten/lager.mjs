@@ -94,7 +94,7 @@ import('../daten.mjs').then(aufbauen)
 
 export const bild = {
   name: 'lager',
-  pfad: '/lager',
+  pfad: '/lager?seite=bestand',
   warte: 900,
   sammlungen: {
     inventory_locations: STANDORTE,
@@ -113,8 +113,9 @@ export const bild = {
     return { body: { page: 1, perPage, totalItems: items.length, totalPages: 1, items } }
   },
   // Wie am Gerät: den Standort des Fahrzeugs wählen, von dem das Material genommen wurde
+  // (seit 20.11.2026 die Auswahl im roten Kopf; das Bild auf der Website zeigt noch das Lager davor)
   vorher: async (page) => {
-    await page.getByRole('button', { name: 'HLF 20/1', exact: true }).click()
+    await page.selectOption('select[aria-label="Standort wählen"]', { label: 'HLF 20/1' })
     await page.waitForTimeout(800)
   },
 }

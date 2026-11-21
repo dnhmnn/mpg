@@ -16,6 +16,14 @@ import FormularEinstellungLink from '../components/FormularEinstellungLink'
 import { ABSENDER_ABZEICHEN, absenderLesen, absenderZeile, einstellungsLinkZeigen } from '../lib/formular/absender'
 import { angabenLesen } from '../lib/formular/felder'
 import AngabenAnsicht from '../components/AngabenAnsicht'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { useStatusleiste } from '../hooks/useStatusleiste'
+import { Icon, Seite } from './benutzer/bausteine'
+import { BV_CSS } from './benutzer/stil'
+import { LG_CSS } from './lager/stil'
+import { LagerStart, LgIcon, StandortWahl, type LagerAktion } from './lager/Start'
+
+const LG_STIL = BV_CSS + LG_CSS
 
 // Recharts erst beim Öffnen der Statistik laden (eigener Chunk)
 const LagerStats = lazy(() => import('../components/LagerStats'))
@@ -337,6 +345,13 @@ function BarcodeScanner({ onDetect, onError }: { onDetect: (code: string) => voi
 
 export default function Lager() {
   const { user, loading: authLoading, logout } = useAuth()
+  // Dunkelrot-Design (Owner, 20.11.2026): Startseite mit Kacheln, Unterseite ?seite=bestand
+  useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
+  const navigate = useNavigate()
+  const ort = useLocation()
+  const [adresse] = useSearchParams()
+  const seite: 'bestand' | null = adresse.get('seite') === 'bestand' ? 'bestand' : null
+  useEffect(() => { window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0 }, [seite])
 
   const [locations, setLocations] = useState<Location[]>([])
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null)
@@ -2787,110 +2802,138 @@ export default function Lager() {
     )
   }
   const verwalten = darfLagerVerwalten(user)
+  const orgName = user?.organization_name || 'Responda'
+  const standorte = locations.map(l => ({ id: l.id, name: l.name }))
+  const unterSoll = displayItems.filter(i => fehltAmStandort(i.qty, i.min_stock, i.gefuehrt !== false)).length
+
+  function seiteOeffnen() { navigate({ search: '?seite=bestand' }, { state: { lgUnter: true } }) }
+  function zumStart() {
+    // Selbst geöffnet: einen Schritt zurück, damit die Seite nicht im Verlauf hängen bleibt
+    if ((ort.state as { lgUnter?: boolean } | null)?.lgUnter) navigate(-1)
+    else navigate({ search: '' }, { replace: true })
+  }
+  function filterSetzen(f: 'warning' | 'expired' | 'ok') {
+    setStatusFilter(f === 'ok' ? 'all' : f); setShowLowOnly(false); setShowZeroOnly(false); setSearchQuery('')
+    seiteOeffnen()
+  }
+  function buchungOeffnen(typ: 'ein' | 'aus') {
+    setBuchungType(typ); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setBuchungScanCharge(null); setBuchungFehler(null); setShowBuchungModal(true)
+  }
+  /** Was eine Kachel oder Zeile tut: dieselben Wege wie früher die Knöpfe der Leiste. */
+  function aktion(a: LagerAktion) {
+    switch (a) {
+      case 'bestand': seiteOeffnen(); break
+      case 'scannen': openScanner('lookup'); break
+      case 'ausgaben': loadProductOutputs(); setShowAusgabenModal(true); break
+      case 'bestellen': loadOpenOrders(); setBedarfSearch(''); setShowExcluded(false); setShowOrderModal(true); break
+      case 'inventur': loadAuditHistory(); loadOpenAudits(); setShowInventoryModal(true); break
+      case 'checks': loadKits(); setShowKitsModal(true); break
+      case 'einbuchen': buchungOeffnen('ein'); break
+      case 'ausbuchen': buchungOeffnen('aus'); break
+      case 'mehrfach': setMultiBuchungType('ein'); setShowMultiBuchungModal(true); break
+      case 'umlagern': setTransferItemId(''); setTransferSearch(''); setTransferQty(1); setTransferTargetId(''); setShowTransferModal(true); break
+      case 'assistent': setShowAssist(true); break
+      case 'logbuch': setLogVorgabe(undefined); setShowLogModal(true); break
+      case 'rueckruf': setRecallQuery(''); setRecallResults(null); setShowRecallModal(true); break
+      case 'statistik': setShowStatsModal(true); break
+      case 'artikel': setShowItemsModal(true); break
+      case 'import': importFileRef.current?.click(); break
+      case 'pdf': exportPDF(); break
+      case 'einstellungen': setShowSettingsModal(true); break
+    }
+  }
+  const offline = (!istOnline || offlineOffen > 0) ? {
+    text: (istOnline
+      ? `${offlineOffen} ${offlineOffen === 1 ? 'Buchung' : 'Buchungen'} noch nicht übertragen`
+      : `Offline${offlineOffen ? `, ${offlineOffen} vorgemerkt` : ''}${offlineStand !== null ? ` · Stand ${new Date(offlineStand).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` : ''}`),
+    onClick: () => { ladeWarteschlange(); setShowWarteschlange(true) },
+  } : null
+  const filterKnopf = (titel: string, an: boolean, onClick: () => void) => (
+    <button type="button" aria-pressed={an} onClick={onClick}>{titel}</button>
+  )
+
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+    <div style={{ fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
+      <style>{LG_STIL}</style>
+      <input ref={importFileRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleImportFile} />
 
-      {/* MASTHEAD HEADER */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
-        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </a>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              Lager
-              {(!istOnline || offlineOffen > 0) && (
-                <span role="button" tabIndex={0} onClick={() => { ladeWarteschlange(); setShowWarteschlange(true) }}
-                  onKeyDown={e => { if (e.key === 'Enter') { ladeWarteschlange(); setShowWarteschlange(true) } }}
-                  title="Vorgemerkte Buchungen anzeigen"
-                  // Tippfläche 44 px hoch (auch mit Handschuhen), sichtbar bleibt das kleine Abzeichen
-                  style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, margin: '-12px 0', padding: '0 4px', cursor: 'pointer' }}>
-                  <span style={{ border: '1px solid #d97706', background: 'rgba(217,119,6,0.12)', color: '#d97706', borderRadius: 6, padding: '2px 8px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                  {istOnline ? `${offlineOffen} zu übertragen` : `Offline${offlineOffen ? ` · ${offlineOffen}` : ''}`}
-                  </span>
-                </span>
-              )}
-            </div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>
-              {user?.organization_name || 'Responda'}
-              {!istOnline && offlineStand !== null && ` · Stand ${new Date(offlineStand).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`}
-            </div>
+      {seite === 'bestand' ? (
+        <Seite titel="Bestand" unter={orgName} zurueck={zumStart} zurueckLabel="Zurück zum Lager"
+          reiter={<StandortWahl standorte={standorte} id={currentLocationId} onChange={setCurrentLocationId} />}>
+          {offline && <button type="button" className="lg-offline" onClick={offline.onClick}>{offline.text}</button>}
+          <div className="lg-knoepfe">
+            <button type="button" onClick={() => aktion('scannen')}><LgIcon n="scannen" />Scannen</button>
+            <button type="button" onClick={() => aktion('einbuchen')}><LgIcon n="einbuchen" />Einbuchen</button>
+            <button type="button" onClick={() => aktion('ausbuchen')}><LgIcon n="ausbuchen" />Ausbuchen</button>
           </div>
-          <button onClick={() => setShowSettingsModal(true)} style={{ width: 34, height: 34, border: 'none', borderRadius: 8, background: 'rgba(var(--lbf-rot-rgb),0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--lbf-akzent)' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          </button>
-        </div>
-      </div>
+          <div className="bv-suche">
+            <Icon n="suche" />
+            <input type="search" placeholder="Artikel suchen" aria-label="Artikel suchen" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+            {searchQuery && <button type="button" aria-label="Suche leeren" onClick={() => setSearchQuery('')}><Icon n="kreuz" /></button>}
+          </div>
+          <div className="lg-filter" role="group" aria-label="Filter">
+            {filterKnopf('Alle', statusFilter === 'all' && !showLowOnly && !showZeroOnly, () => { setStatusFilter('all'); setShowLowOnly(false); setShowZeroOnly(false) })}
+            {filterKnopf(`Bald fällig${stats.warn ? ` ${stats.warn}` : ''}`, statusFilter === 'warning', () => setStatusFilter(statusFilter === 'warning' ? 'all' : 'warning'))}
+            {filterKnopf(`Abgelaufen${stats.exp ? ` ${stats.exp}` : ''}`, statusFilter === 'expired', () => setStatusFilter(statusFilter === 'expired' ? 'all' : 'expired'))}
+            {filterKnopf(`Unter Soll${unterSoll ? ` ${unterSoll}` : ''}`, showLowOnly, () => setShowLowOnly(!showLowOnly))}
+            {filterKnopf('Leer', showZeroOnly, () => setShowZeroOnly(!showZeroOnly))}
+          </div>
 
-      {/* ACTION TOOLBAR */}
-      <div className="lager-actionbar">
-        <button className="lager-action-btn" onClick={() => openScanner('lookup')} title="Artikel scannen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7V5a2 2 0 012-2h2"/><path d="M17 3h2a2 2 0 012 2v2"/><path d="M21 17v2a2 2 0 01-2 2h-2"/><path d="M7 21H5a2 2 0 01-2-2v-2"/><line x1="7" y1="12" x2="17" y2="12"/></svg>
-          <span className="lager-action-label">Scannen</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { loadOpenOrders(); setBedarfSearch(''); setShowExcluded(false); setShowOrderModal(true) }} title="Bestellliste">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-          <span className="lager-action-label">Bestellen</span>
-        </button>
-        <button className="lager-action-btn" style={{ position: 'relative' }} onClick={() => { loadProductOutputs(); setShowAusgabenModal(true) }} title="Produktausgaben">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8"/><path d="M10 12l2 2 4-4"/></svg>
-          {ausgabenCount > 0 && <span className="lager-badge">{ausgabenCount}</span>}
-          <span className="lager-action-label">Ausgaben</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { setLogVorgabe(undefined); setShowLogModal(true) }} title="Logbuch">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span className="lager-action-label">Logbuch</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => setShowItemsModal(true)} title="Artikel-Datenbank">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-          <span className="lager-action-label">Artikel</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { setBuchungType('ein'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setBuchungScanCharge(null); setBuchungFehler(null); setShowBuchungModal(true) }} title="Einbuchen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span className="lager-action-label">Einbuchen</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { setBuchungType('aus'); setBuchungSearch(''); setSelectedBuchungItem(''); setBuchungQty(1); setEinChargen([{ menge: 1, mhd: '', charge: '' }]); setBuchungScanCharge(null); setBuchungFehler(null); setShowBuchungModal(true) }} title="Ausbuchen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          <span className="lager-action-label">Ausbuchen</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { setMultiBuchungType('ein'); setShowMultiBuchungModal(true) }} title="Mehrfachbuchung">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="5" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="3" y="13" width="7" height="5" rx="1"/><rect x="14" y="13" width="7" height="5" rx="1"/><line x1="17.5" y1="19" x2="17.5" y2="23"/><line x1="15.5" y1="21" x2="19.5" y2="21"/></svg>
-          <span className="lager-action-label">Mehrfach</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => importFileRef.current?.click()} title="Liste importieren (CSV)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span className="lager-action-label">Import</span>
-        </button>
-        <input ref={importFileRef} type="file" accept=".csv,.txt" style={{ display: 'none' }} onChange={handleImportFile} />
-        <button className="lager-action-btn" onClick={exportPDF} title="PDF Export">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
-          <span className="lager-action-label">PDF</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { loadAuditHistory(); loadOpenAudits(); setShowInventoryModal(true) }} title="Inventur">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/><path d="M9 12h6m-6 4h6"/></svg>
-          <span className="lager-action-label">Inventur</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { loadKits(); setShowKitsModal(true) }} title="Fahrzeug- & Rucksack-Checks">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-          <span className="lager-action-label">Checks</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { setTransferItemId(''); setTransferSearch(''); setTransferQty(1); setTransferTargetId(''); setShowTransferModal(true) }} title="Umlagerung zwischen Standorten">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 014-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 01-4 4H3"/></svg>
-          <span className="lager-action-label">Umlagern</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => { setRecallQuery(''); setRecallResults(null); setShowRecallModal(true) }} title="Rückruf: Charge suchen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-          <span className="lager-action-label">Rückruf</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => setShowStatsModal(true)} title="Statistik & Auswertungen">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="4" y1="20" x2="20" y2="20"/><rect x="6" y="10" width="3" height="7" rx="0.5"/><rect x="11" y="5" width="3" height="12" rx="0.5"/><rect x="16" y="13" width="3" height="4" rx="0.5"/></svg>
-          <span className="lager-action-label">Statistik</span>
-        </button>
-        <button className="lager-action-btn" onClick={() => setShowAssist(true)} title="Lager-Assistent (KI)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z"/><path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8L19 14z"/></svg>
-          <span className="lager-action-label">Assistent</span>
-        </button>
-      </div>
+          {error && (
+            <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 16, borderRadius: 14, marginBottom: 14, fontWeight: 600 }}>
+              {error}
+              <button type="button" onClick={loadStock} style={{ marginLeft: 12, border: '1px solid #fecaca', borderRadius: 8, padding: '6px 10px' }}>Erneut versuchen</button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="bv-flaeche lg-leer">Lade Lagerdaten …</div>
+          ) : filteredItems.length === 0 ? (
+            <div className="bv-flaeche lg-leer"><b>Keine Artikel gefunden</b>Filter anpassen oder Artikel anlegen</div>
+          ) : (
+            <div className="bv-flaeche">
+              {filteredItems.map(item => {
+                const isLow = fehltAmStandort(item.qty, item.min_stock, item.gefuehrt !== false)
+                const isZero = item.qty === 0
+                // Ablauf vor Soll: abgelaufen rot, bald ablaufend oder unter Soll gelb.
+                // Das leere Fach mit Soll ist der dringendste Fall — gelb und nicht abgeblendet.
+                const strich = isZero && !isLow ? 'rgba(var(--lbf-grau-rgb),0.4)' : item.status === 'exp' ? 'var(--lbf-akzent)' : (item.status === 'warn' || isLow) ? '#d97706' : '#16a34a'
+                const ablaufFarbe = item.status === 'exp' ? 'var(--lbf-akzent)' : item.status === 'warn' ? '#d97706' : undefined
+                return (
+                  <div key={item.id} className="lg-artikel" role="button" tabIndex={0}
+                    style={{ ['--lg-strich' as string]: strich, opacity: isZero && !isLow ? 0.65 : 1 } as React.CSSProperties}
+                    onClick={() => openItemDetail(item)} onKeyDown={(e) => { if (e.key === 'Enter') openItemDetail(item) }}>
+                    <div className="lg-name">
+                      <b>{item.name}</b>
+                      {item.notes && <small>{item.notes}</small>}
+                      {item.expiry && (
+                        <small style={ablaufFarbe ? { color: ablaufFarbe } : undefined}>
+                          Ablauf {new Date(item.expiry.replace(' ', 'T')).toLocaleDateString('de-DE')}
+                          {!!item.ohneMhd && <span style={{ color: '#d97706' }}> · {item.ohneMhd} ohne MHD</span>}
+                        </small>
+                      )}
+                    </div>
+                    <div className="lg-menge">
+                      <b style={isLow ? { color: '#d97706' } : undefined}>{item.qty}</b>
+                      <small>{item.unit}</small>
+                      {item.min_stock > 0 && <small style={isLow ? { color: '#d97706', fontWeight: 700 } : undefined}>Soll {item.min_stock}</small>}
+                    </div>
+                    <button type="button" className="lg-pm minus" aria-label={`${item.name}: eins ausbuchen`} onClick={(e) => { e.stopPropagation(); adjustQty(item.id, -1) }}>−</button>
+                    <button type="button" className="lg-pm plus" aria-label={`${item.name}: eins einbuchen`} onClick={(e) => { e.stopPropagation(); adjustQty(item.id, 1, '') }}>+</button>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </Seite>
+      ) : (
+        <LagerStart
+          orgName={orgName} zurueck={() => navigate('/hub')}
+          standorte={standorte} standortId={currentLocationId} onStandort={setCurrentLocationId}
+          zahlen={{ ok: stats.ok, bald: stats.warn, abgelaufen: stats.exp, artikel: stats.total, unterSoll, ausgaben: ausgabenCount }}
+          offline={offline} onAktion={aktion} onFilter={filterSetzen}
+        />
+      )}
 
       {/* TOAST */}
       {message && (
@@ -2904,152 +2947,6 @@ export default function Lager() {
           </button>
         </div>
       )}
-
-      {/* MAIN CONTENT */}
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '16px 16px 120px', boxSizing: 'border-box' as const }}>
-
-        {/* STATS GRID */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
-          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>OK</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: '#16a34a', lineHeight: 1 }}>{stats.ok}</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>In Ordnung</div>
-          </div>
-          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#d97706', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Bald</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: '#d97706', lineHeight: 1 }}>{stats.warn}</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Bald fällig</div>
-          </div>
-          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Abgel.</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--lbf-akzent)', lineHeight: 1 }}>{stats.exp}</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Abgelaufen</div>
-          </div>
-          <div style={{ background: 'var(--lbf-card)', borderRadius: 12, padding: '14px 12px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-text)', textTransform: 'uppercase' as const, letterSpacing: '0.14em', marginBottom: 4 }}>Gesamt</div>
-            <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--lbf-text)', lineHeight: 1 }}>{stats.total}</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 3 }}>Artikel</div>
-          </div>
-        </div>
-
-        {/* SEARCH */}
-        <div style={{ marginBottom: 10 }}>
-          <input
-            className="lager-search"
-            type="text"
-            placeholder="Artikel suchen..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
-        {/* FILTER CHIPS */}
-        <div className="lager-chips" style={{ marginBottom: 14 }}>
-          <button className={`lager-chip${statusFilter === 'all' ? ' active' : ''}`} onClick={() => setStatusFilter('all')}>Alle</button>
-          <button className={`lager-chip${statusFilter === 'warning' ? ' active' : ''}`} onClick={() => setStatusFilter('warning')}>Bald fällig</button>
-          <button className={`lager-chip${statusFilter === 'expired' ? ' active' : ''}`} onClick={() => setStatusFilter('expired')}>Abgelaufen</button>
-          <button className={`lager-chip${showLowOnly ? ' active' : ''}`} onClick={() => setShowLowOnly(!showLowOnly)}>Einbestellen</button>
-          <button className={`lager-chip${showZeroOnly ? ' active' : ''}`} onClick={() => setShowZeroOnly(!showZeroOnly)}>Leer</button>
-        </div>
-
-        {/* ERROR */}
-        {error && (
-          <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: 'var(--lbf-fehler-text-2)', padding: 16, borderRadius: 12, marginBottom: 16, fontWeight: 600 }}>
-            {error}
-            <button onClick={loadStock} style={{ marginLeft: 16, background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: 'var(--lbf-fehler-text-2)', fontFamily: 'inherit' }}>Erneut versuchen</button>
-          </div>
-        )}
-
-        {/* ITEM LIST */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12, fontStyle: 'italic' }}>Lade Lagerdaten...</div>
-          ) : filteredItems.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12 }}>
-              <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--lbf-text)' }}>Keine Artikel gefunden</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13 }}>Filter anpassen oder Artikel hinzufügen</div>
-            </div>
-          ) : (
-            filteredItems.map(item => {
-              const isLow = fehltAmStandort(item.qty, item.min_stock, item.gefuehrt !== false)
-              const isZero = item.qty === 0
-              // Ablauf vor Soll: abgelaufen rot, bald ablaufend oder unter Soll gelb.
-              // Das leere Fach mit Soll ist der dringendste Fall — gelb und nicht abgeblendet.
-              const borderColor = isZero && !isLow ? 'rgba(var(--lbf-grau-rgb),0.4)' : item.status === 'exp' ? 'var(--lbf-akzent)' : (item.status === 'warn' || isLow) ? '#d97706' : '#16a34a'
-              const expiryColor = item.status === 'exp' ? 'var(--lbf-akzent)' : item.status === 'warn' ? '#d97706' : 'var(--warm-gray)'
-
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => openItemDetail(item)}
-                  style={{
-                    background: 'var(--lbf-card)',
-                    borderRadius: 12,
-                    boxShadow: 'var(--lbf-shadow)',
-                    borderLeft: `3px solid ${borderColor}`,
-                    padding: '12px 14px',
-                    cursor: 'pointer',
-                    opacity: isZero && !isLow ? 0.65 : 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--lbf-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.name}</div>
-                    {item.notes && <div style={{ fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)', marginTop: 2 }}>{item.notes}</div>}
-                    {item.expiry && (
-                      <div style={{ fontStyle: 'italic', fontSize: 11, color: expiryColor, marginTop: 2 }}>
-                        Ablauf: {new Date(item.expiry.replace(' ', 'T')).toLocaleDateString('de-DE')}
-                        {!!item.ohneMhd && <span style={{ color: '#d97706' }}> · {item.ohneMhd} ohne MHD</span>}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 800, fontSize: 16, color: isLow ? '#d97706' : 'var(--lbf-text)' }}>{item.qty}</div>
-                      <div style={{ fontSize: 10, color: 'var(--warm-gray)', textTransform: 'uppercase' as const }}>{item.unit}</div>
-                      {item.min_stock > 0 && <div style={{ fontSize: 10, color: isLow ? '#d97706' : 'var(--warm-gray)', fontWeight: 600 }}>Soll: {item.min_stock}</div>}
-                    </div>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); adjustQty(item.id, -1) }}
-                      style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'rgba(220,38,38,0.08)', color: '#dc2626', fontSize: 18, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                    >−</button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); adjustQty(item.id, 1, '') }}
-                      style={{ width: 30, height: 30, borderRadius: '50%', border: 'none', background: 'rgba(22,163,74,0.08)', color: '#16a34a', fontSize: 18, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}
-                    >+</button>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      </div>
-
-      {/* LOCATION TABS */}
-      <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'var(--lbf-card)', borderTop: '0.5px solid var(--lbf-border)', padding: '10px 12px', paddingBottom: 'calc(10px + env(safe-area-inset-bottom))', display: 'flex', gap: 8, justifyContent: 'center', zIndex: 100, overflowX: 'auto' }}>
-        {locations.map(loc => (
-          <button
-            key={loc.id}
-            onClick={() => setCurrentLocationId(loc.id)}
-            style={{
-              padding: '8px 18px',
-              borderRadius: 20,
-              border: 'none',
-              fontWeight: 700,
-              fontSize: 13,
-              fontFamily: 'inherit',
-              cursor: 'pointer',
-              flexShrink: 0,
-              background: currentLocationId === loc.id ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.07)',
-              color: currentLocationId === loc.id ? '#fff' : 'var(--lbf-akzent)',
-            }}
-          >
-            {loc.name}
-          </button>
-        ))}
-      </div>
 
       {/* LOGBUCH MODAL */}
       {showLogModal && (
