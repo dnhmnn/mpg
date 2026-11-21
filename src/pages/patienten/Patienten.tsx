@@ -22,6 +22,10 @@ import {
 } from '../../lib/formular/verwaltung'
 import { namenLesen } from '../public/doku/besatzung'
 import UnterschreibenDialog from '../../components/UnterschreibenDialog'
+import { useNavigate } from 'react-router-dom'
+import { useStatusleiste } from '../../hooks/useStatusleiste'
+import { Abschnitt, Seite } from '../benutzer/bausteine'
+import { BV_CSS } from '../benutzer/stil'
 import OhneUnterschriftDialog from '../../components/OhneUnterschriftDialog'
 
 type Tab = 'patienten' | 'nach' | 'archiv' | 'audit' | 'qrcodes'
@@ -84,6 +88,9 @@ function AbsenderZeile({ absender }: { absender: AbsenderEintrag | null }) {
 
 export default function Patienten() {
   const { user, loading, logout } = useAuth()
+  // Dunkelrot-Design wie Benutzer, Vorgänge und Lager: roter Kopf mit Reitern, darunter das Blatt
+  useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
+  const navigate = useNavigate()
 
   const [patients, setPatients] = useState<Patient[]>([])
   const [freigegebenPatients, setFreigegebenPatients] = useState<Patient[]>([])
@@ -532,63 +539,12 @@ export default function Patienten() {
         .pat-toast.success { background: var(--lbf-ok-grund); border: 1px solid #bbf7d0; color: var(--lbf-ok-text); }
         .pat-toast.error   { background: var(--lbf-fehler-grund); border: 1px solid #fecaca; color: var(--lbf-fehler-text-2); }
 
-        .pat-toolbar {
-          background: var(--lbf-card);
-          border-bottom: 0.5px solid rgba(var(--lbf-rot-rgb),0.1);
-          position: sticky;
-          top: calc(env(safe-area-inset-top) + 60px);
-          z-index: 99;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-        }
-        .pat-toolbar::-webkit-scrollbar { display: none; }
-        .pat-toolbar-inner {
-          display: flex;
-          min-width: max-content;
-          padding-left: max(8px, env(safe-area-inset-left));
-          padding-right: max(8px, env(safe-area-inset-right));
-        }
 
-        .pat-tab-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          flex-shrink: 0;
-          padding: 6px 12px 0;
-          height: 50px;
-          border: none;
-          border-bottom: 2px solid transparent;
-          background: none;
-          color: var(--warm-gray);
-          cursor: pointer;
-          font-family: inherit;
-          white-space: nowrap;
-          position: relative;
-          transition: color 0.15s, border-color 0.15s;
-        }
-        .pat-tab-btn:hover { color: var(--lbf-text); }
-        .pat-tab-btn.active {
-          color: var(--lbf-akzent);
-          border-bottom-color: var(--lbf-akzent);
-        }
-        .pat-tab-btn .pat-tab-label {
-          font-size: 9px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-        }
 
-        .pat-content {
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 1.25rem 1.25rem;
-          padding-top: 24px;
-          padding-bottom: 100px;
-          background: var(--warm-bg);
-          min-height: 100vh;
-        }
+
+        /* Reiter Archiv: Zahl der Datensätze über der Aufbewahrungsfrist */
+        .pat-alt { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-left: 5px; padding: 0 5px;
+          border-radius: 9px; background: #d97706; color: #fff; font-size: 10px; font-weight: 700; font-style: normal; }
 
         .pat-grid {
           display: grid;
@@ -691,10 +647,12 @@ export default function Patienten() {
         .pat-badge.archiviert    { background: rgba(var(--lbf-grau-rgb),0.1); color: var(--warm-gray); }
         .pat-badge.old-warn      { background: rgba(217,119,6,0.1); color: #d97706; }
 
-        .pat-btn {
-          font-size: 12px;
+        /* Die Knöpfe der Karten liegen im Rahmen, und BV_CSS setzt dort jeden Knopf zurück: doppelte Klasse */
+        .pat-btn.pat-btn {
+          font-size: 13px;
           font-weight: 700;
-          padding: 6px 12px;
+          min-height: 40px;
+          padding: 6px 14px;
           border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
           border-radius: 8px;
           cursor: pointer;
@@ -705,18 +663,18 @@ export default function Patienten() {
           font-family: inherit;
           letter-spacing: 0.02em;
         }
-        .pat-btn:hover { background: rgba(var(--lbf-rot-rgb),0.06); }
+        .pat-btn.pat-btn:hover { background: rgba(var(--lbf-rot-rgb),0.06); }
         /* Die eine Handlung, auf die eine Karte hinauslaeuft. */
-        .pat-btn.haupt { background: var(--lbf-akzent-grund); border-color: var(--lbf-akzent-grund); color: #fff; }
-        .pat-btn.haupt:hover { background: #4a0610; }
-        .pat-btn:disabled, .pat-btn.haupt:disabled {
+        .pat-btn.pat-btn.haupt { background: var(--lbf-akzent-grund); border-color: var(--lbf-akzent-grund); color: #fff; }
+        .pat-btn.pat-btn.haupt:hover { background: #4a0610; }
+        .pat-btn.pat-btn:disabled, .pat-btn.pat-btn.haupt:disabled {
           background: rgba(var(--lbf-rot-rgb),0.04);
           border-color: var(--lbf-border-light);
           color: var(--warm-gray);
           cursor: not-allowed;
         }
-        .pat-btn.danger { background: var(--lbf-fehler-grund-3); border-color: rgba(220,38,38,0.3); color: #dc2626; }
-        .pat-btn.danger:hover { background: var(--lbf-fehler-grund-4); }
+        .pat-btn.pat-btn.danger { background: var(--lbf-fehler-grund-3); border-color: rgba(220,38,38,0.3); color: #dc2626; }
+        .pat-btn.pat-btn.danger:hover { background: var(--lbf-fehler-grund-4); }
 
         .pat-empty {
           text-align: center;
@@ -726,16 +684,6 @@ export default function Patienten() {
           font-style: italic;
         }
 
-        .pat-year-header {
-          font-size: 10px;
-          font-weight: 700;
-          color: var(--lbf-akzent);
-          text-transform: uppercase;
-          letter-spacing: 0.14em;
-          padding: 10px 0 8px;
-          border-bottom: 0.5px solid var(--lbf-border);
-          margin-bottom: 12px;
-        }
 
         .pat-warn-banner {
           background: var(--lbf-warn-grund-3);
@@ -801,96 +749,32 @@ export default function Patienten() {
 
       `}</style>
 
-      {/* ── MASTHEAD ── */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
-        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </a>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Patienten</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
-          </div>
-          {(activeTab === 'patienten' || activeTab === 'nach') && (
-            <button
-              onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}
-              style={{ width: 32, height: 32, borderRadius: 8, border: 'none', background: 'rgba(var(--lbf-rot-rgb),0.07)', color: 'var(--lbf-akzent)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-              title="Neue Nacherfassung"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {msg && (
-        <div className={`pat-toast ${msg.type}`}>{msg.text}</div>
-      )}
-
-      {/* TOOLBAR */}
-      <div className="pat-toolbar">
-        <div className="pat-toolbar-inner">
-        <button
-          className={`pat-tab-btn${activeTab === 'patienten' ? ' active' : ''}`}
-          onClick={() => setActiveTab('patienten')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-          </svg>
-          <span className="pat-tab-label">Dokus{(patients.length + freigegebenPatients.length) > 0 ? ` (${patients.length + freigegebenPatients.length})` : ''}</span>
-        </button>
-        <button
-          className={`pat-tab-btn${activeTab === 'nach' ? ' active' : ''}`}
-          onClick={() => setActiveTab('nach')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          <span className="pat-tab-label">Nacherfassungen{nacherfassungen.length > 0 ? ` (${nacherfassungen.length})` : ''}</span>
-        </button>
-        <button
-          className={`pat-tab-btn${activeTab === 'archiv' ? ' active' : ''}`}
-          onClick={() => setActiveTab('archiv')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>
-            <line x1="10" y1="12" x2="14" y2="12"/>
-          </svg>
-          <span className="pat-tab-label">Archiv{totalArchiv > 0 ? ` (${totalArchiv})` : ''}</span>
-          {oldCount > 0 && (
-            <span style={{ position: 'absolute', top: 4, right: 6, background: '#d97706', color: '#fff', borderRadius: 8, padding: '1px 4px', fontSize: 9, fontWeight: 700 }}>
-              {oldCount > 9 ? '9+' : oldCount}
-            </span>
-          )}
-        </button>
-        <button
-          className={`pat-tab-btn${activeTab === 'audit' ? ' active' : ''}`}
-          onClick={() => setActiveTab('audit')}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-          </svg>
-          <span className="pat-tab-label">Audit</span>
-        </button>
-        {user?.supervisor && (
-          <button
-            className={`pat-tab-btn${activeTab === 'qrcodes' ? ' active' : ''}`}
-            onClick={() => setActiveTab('qrcodes')}
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-              <path d="M14 14h3v3h-3zM17 17h3M17 20h3M20 17v3"/>
-            </svg>
-            <span className="pat-tab-label">QR-Codes</span>
+      <style>{BV_CSS}</style>
+      <Seite
+        titel="Patienten" unter={user?.organization_name || 'Responda'} zurueck={() => navigate('/hub')} zurueckLabel="Zurück zur Übersicht"
+        rechts={(activeTab === 'patienten' || activeTab === 'nach') ? (
+          <button type="button" className="bv-rund hell" aria-label="Neue Nacherfassung" title="Neue Nacherfassung" onClick={() => { setNachForm({ ...EMPTY_NACH }); setShowNach(true) }}>
+            <svg className="bv-i" viewBox="0 0 24 24" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
           </button>
+        ) : undefined}
+        reiter={(
+          <nav className="bv-reiter" role="tablist" aria-label="Bereiche">
+            {([
+              ['patienten', 'Dokus', patients.length + freigegebenPatients.length],
+              ['nach', 'Nacherfassung', nacherfassungen.length],
+              ['archiv', 'Archiv', totalArchiv],
+              ['audit', 'Audit', 0],
+              ...(user?.supervisor ? [['qrcodes', 'QR-Codes', 0] as [Tab, string, number]] : []),
+            ] as [Tab, string, number][]).map(([key, label, n]) => (
+              <button key={key} type="button" role="tab" aria-selected={activeTab === key} onClick={() => setActiveTab(key)}>
+                {label}{n > 0 ? <em>{n}</em> : null}
+                {key === 'archiv' && oldCount > 0 ? <span className="pat-alt" title={`${oldCount} alte im Archiv`}>{oldCount > 9 ? '9+' : oldCount}</span> : null}
+              </button>
+            ))}
+          </nav>
         )}
-        </div>
-      </div>
-
-      <div className="pat-content">
+      >
+      <div className="pat-inhalt">
 
         {/* PATIENTENDOKUS */}
         {activeTab === 'patienten' && (
@@ -919,10 +803,8 @@ export default function Patienten() {
               {/* Freigegeben — ready for admin action */}
               {freigegebenPatients.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
-                    Freigegeben – Gegenzeichnung möglich ({freigegebenPatients.length})
-                  </div>
-                  <div className="pat-grid" style={{ marginBottom: 28 }}>
+                  <Abschnitt titel="Zum Gegenzeichnen" rechts={freigegebenPatients.length} erst />
+                  <div className="pat-grid">
                     {freigegebenPatients.map(pat => {
                       const p = parsePayload(pat.payload)
                       const patName = [p.name, p.vorname].filter(Boolean).join(' ')
@@ -1002,9 +884,7 @@ export default function Patienten() {
               {/* Offen — not yet released by TF */}
               {patients.length > 0 && (
                 <>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
-                    Noch nicht freigegeben ({patients.length})
-                  </div>
+                  <Abschnitt titel="Noch nicht freigegeben" rechts={patients.length} erst={freigegebenPatients.length === 0} />
                   <div className="pat-grid">
                     {patients.map(pat => {
                       const p = parsePayload(pat.payload)
@@ -1125,9 +1005,9 @@ export default function Patienten() {
             ) : (
               Object.entries(archiveByYear)
                 .sort(([a], [b]) => Number(b) - Number(a))
-                .map(([year, items]) => (
+                .map(([year, items], i) => (
                   <div key={year} style={{ marginBottom: '24px' }}>
-                    <div className="pat-year-header">{year} · {items.length} Einträge</div>
+                    <Abschnitt titel={year} rechts={`${items.length} ${items.length === 1 ? 'Eintrag' : 'Einträge'}`} erst={i === 0} />
                     <div className="pat-grid">
                       {items.map(item => {
                         const archSns: any[] = item.type === 'patient' ? (Array.isArray((item.orig as any).payload?.stellungnahmen) ? (item.orig as any).payload.stellungnahmen : []) : []
@@ -1214,9 +1094,7 @@ export default function Patienten() {
             {/* QR Zugriffslog */}
             {accessLogs.length > 0 && (
               <>
-                <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', margin: '20px 0 10px', paddingTop: '16px', borderTop: '0.5px solid var(--lbf-border)' }}>
-                  QR-Code Zugriffe
-                </div>
+                <Abschnitt titel="Zugriffe über QR-Code" rechts={accessLogs.length} />
                 {accessLogs.map(entry => {
                   const eventColor: Record<string, string> = {
                     granted: '#16a34a',
@@ -1259,6 +1137,12 @@ export default function Patienten() {
         )}
 
       </div>
+      </Seite>
+
+      {msg && (
+        <div className={`pat-toast ${msg.type}`}>{msg.text}</div>
+      )}
+
 
       {showEdit && currentPatient && (
         <PatientEditModal

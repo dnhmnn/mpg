@@ -27,7 +27,7 @@ export default function SignModal({ adminName, setAdminName, onClose, onArchive 
         <h3 style={{ margin: '0 0 16px', fontSize: '17px' }}>Gegenzeichnen & Archivieren</h3>
 
         <div style={{ marginBottom: '12px' }}>
-          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, opacity: 0.6, marginBottom: '4px' }}>MPG-Beauftragter Name</label>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, opacity: 0.6, marginBottom: '4px' }}>Gegengezeichnet von</label>
           <input
             value={adminName}
             onChange={e => setAdminName(e.target.value)}
