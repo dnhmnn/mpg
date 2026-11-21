@@ -38,6 +38,7 @@ import GlockeBlatt from './hub/GlockeBlatt'
 import KurzbefehleBlatt from './hub/KurzbefehleBlatt'
 import ProfilBlatt, { anzeigeName, initialen } from './hub/ProfilBlatt'
 import AppsSeite from './hub/AppsSeite'
+import BenutzernameSeite from './hub/BenutzernameSeite'
 
 // „Apps anpassen“ rollt je nach Darstellung im Fenster oder im body (wie in Unitarii.tsx)
 function nachOben() {
@@ -53,10 +54,13 @@ export default function Hub() {
   const location = useLocation()
   const [sp] = useSearchParams()
   const seiteApps = sp.get('seite') === 'apps'
+  const seiteName = sp.get('seite') === 'benutzername'
+  // Unterseiten des Hubs („Apps anpassen“, „Benutzername“) rollen; der Hub selbst steht still
+  const unterseite = seiteApps || seiteName
   // Hub statisch: oben der feste rote Streifen, html und body hell und fest (kein Scrollen).
   // „Apps anpassen“ rollt wie die Benutzerverwaltung: rot nur, solange der Kopf zu sehen ist.
   // Der Wechsel räumt das eine auf, bevor das andere gilt (CLAUDE.md, Safari 26).
-  useStatusleiste('--lbf-kopf', seiteApps ? { kopf: '.bv-kopf' } : { statisch: true })
+  useStatusleiste('--lbf-kopf', unterseite ? { kopf: '.bv-kopf' } : { statisch: true })
   const { user, loading, logout, refresh } = useAuth()
   const apps = useHubApps(user)
   const { currentNotification, dismissNotification, remindLater } = useNotifications(user)
@@ -92,7 +96,7 @@ export default function Hub() {
   useMitteilungAutomatisch({
     nutzerId: user?.id,
     mitteilungId: currentNotification?.id,
-    bereit: !!user && begruessungVorbei && !einfuehrungOffen && !hinweisOffen && !seiteApps && blatt === null,
+    bereit: !!user && begruessungVorbei && !einfuehrungOffen && !hinweisOffen && !unterseite && blatt === null,
     oeffnen: () => setBlatt('glocke'),
   })
 
@@ -127,7 +131,7 @@ export default function Hub() {
   // Luft im Kopf (zwischen Datum und Gruß, unter dem Gruß): nur aus dem Platz, der unter den Apps übrig ist
   const [luft, setLuft] = useState({ oben: 0, unten: 0 })
   const luftMelden = useCallback((l: { oben: number; unten: number }) => setLuft((v) => (v.oben === l.oben && v.unten === l.unten ? v : l)), [])
-  useEffect(() => { if (seiteApps) nachOben() }, [seiteApps])
+  useEffect(() => { if (unterseite) nachOben() }, [unterseite])
 
   function appsOeffnen() {
     setBlatt(null)
@@ -153,7 +157,8 @@ export default function Hub() {
   return (
     <>
       {stil}
-      {seiteApps ? <AppsSeite user={user} orgName={orgName} apps={apps} schliessen={appsSchliessen} /> : (
+      {seiteApps ? <AppsSeite user={user} orgName={orgName} apps={apps} schliessen={appsSchliessen} />
+        : seiteName ? <BenutzernameSeite user={user} orgName={orgName} schliessen={appsSchliessen} aktualisieren={refresh} /> : (
         <Seite titel={orgName} unter={datum} statisch rolltInnen={rolltInnen} titelUnten
           links={<span className="bv-rund hell hub-zeichen" aria-hidden="true"><img src="/logoklein.svg" alt="" /></span>}
           rechts={<>
@@ -192,7 +197,7 @@ export default function Hub() {
       )}
 
       {/* Begrüßung nach dem Login, danach aus dem DOM */}
-      {begruessung && !begruessungVorbei && user && !seiteApps && (
+      {begruessung && !begruessungVorbei && user && !unterseite && (
         <div className="hub-begruessung" data-probe="hub-begruessung" aria-hidden="true">
           <span>Servus,</span>
           <b>{vorname}</b>
@@ -207,17 +212,18 @@ export default function Hub() {
       )}
 
       {user && (
-        <NeuInResponda user={user} bereit={begruessungVorbei && !einfuehrungOffen && !seiteApps && blatt === null} onOffen={setHinweisOffen} />
+        <NeuInResponda user={user} bereit={begruessungVorbei && !einfuehrungOffen && !unterseite && blatt === null} onOffen={setHinweisOffen} />
       )}
 
-      {blatt === 'glocke' && !seiteApps && (
+      {blatt === 'glocke' && !unterseite && (
         <GlockeBlatt user={user} neuigkeiten={neuigkeiten} mitteilung={currentNotification} organisation={user?.organization_name}
           onMitteilungVerstanden={dismissNotification} onMitteilungSpaeter={remindLater} onClose={schliessenBlatt} />
       )}
-      {blatt === 'kurz' && !seiteApps && <KurzbefehleBlatt appErlaubt={appErlaubt} onClose={schliessenBlatt} />}
-      {blatt === 'profil' && user && !seiteApps && (
+      {blatt === 'kurz' && !unterseite && <KurzbefehleBlatt appErlaubt={appErlaubt} onClose={schliessenBlatt} />}
+      {blatt === 'profil' && user && !unterseite && (
         <ProfilBlatt user={user} onClose={schliessenBlatt}
           onApps={appsOeffnen}
+          onBenutzername={() => { setBlatt(null); navigate({ search: '?seite=benutzername' }, { state: { hubUnter: true } }) }}
           onBenachrichtigungen={(pushMeldung) => { setBlatt(null); navigate('/benachrichtigungen', pushMeldung ? { state: { pushMeldung } } : undefined) }}
           onEinstellungen={() => { setBlatt(null); navigate('/settings') }}
           onSupervisor={() => { setBlatt(null); navigate('/supervisor?tab=hinweise') }}

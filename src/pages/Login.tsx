@@ -3,6 +3,7 @@ import { useNavigate, Navigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { zielMitSitzung, zielNachAnmeldung, type AnmeldeKonto } from '../lib/anmeldung'
 import { NEU_SEKUNDEN, anforderFehler, codeFehler, istEmail, maskiereEmail, restZeit } from '../lib/zweiFaktor'
+import { anmeldeKennung } from '../lib/benutzername'
 import { Feld } from './benutzer/bausteine'
 import { ZugangRahmen, Zeichen } from './zugang/Rahmen'
 
@@ -85,8 +86,8 @@ function LoginMaske() {
       setLoading(false)
       setError('Zeitüberschreitung - Bitte versuche es erneut')
     }, 10000)
-    // Leerzeichen aus dem Autofill stören die Anmeldung
-    const id = identifier.trim()
+    // Leerzeichen aus dem Autofill stören die Anmeldung; ein Benutzername ist immer klein gespeichert
+    const id = anmeldeKennung(identifier)
     try {
       const authData = await pb.collection('users').authWithPassword(id, password)
       clearTimeout(timeoutId)

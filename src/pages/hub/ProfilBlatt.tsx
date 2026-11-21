@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react'
 import { hatRecht, sichtbareEmail } from '../../lib/apps'
+import { automatisch } from '../../lib/benutzername'
 import { pushEinschalten, pushNeuEinschaltenNoetig } from '../../lib/push/abgleich'
 import { PUSH_TEXTE } from '../../lib/push/texte'
 import { rollenText } from '../../lib/rollen'
@@ -21,10 +22,12 @@ export function anzeigeName(user: User | null): string {
   return user?.name?.trim() || sichtbareEmail(user?.email).split('@')[0] || ''
 }
 
-export default function ProfilBlatt({ user, onClose, onApps, onBenachrichtigungen, onEinstellungen, onSupervisor, onEinfuehrung, onInstallieren, onAbmelden }: {
+export default function ProfilBlatt({ user, onClose, onApps, onBenutzername, onBenachrichtigungen, onEinstellungen, onSupervisor, onEinfuehrung, onInstallieren, onAbmelden }: {
   user: User
   onClose: () => void
   onApps: () => void
+  /** Seite „Benutzername“: zum Anmelden statt der E-Mail-Adresse */
+  onBenutzername: () => void
   /** Seite „Benachrichtigungen“; meldung: Ergebnis von „Push neu einschalten“ für die Seite */
   onBenachrichtigungen: (meldung?: { text: string; fehler?: boolean }) => void
   onEinstellungen: () => void
@@ -79,6 +82,10 @@ export default function ProfilBlatt({ user, onClose, onApps, onBenachrichtigunge
       <div className="bv-flaeche">
         <button type="button" className="bv-z" onClick={onApps}>
           <span className="bv-tx"><b>Apps anpassen</b><small>Welche Apps im Hub stehen und in welcher Reihenfolge</small></span>
+          <Icon n="weiter" className="bv-pfeil" />
+        </button>
+        <button type="button" className="bv-z" data-probe="hub-profil-benutzername" onClick={onBenutzername}>
+          <span className="bv-tx"><b>Benutzername</b><small>{user.username && !automatisch(user.username) ? `Anmelden mit „${user.username}“ oder der E-Mail-Adresse` : 'Zum Anmelden statt der E-Mail-Adresse'}</small></span>
           <Icon n="weiter" className="bv-pfeil" />
         </button>
         {pushNeu && (

@@ -60,15 +60,23 @@ export const HUB_CSS = `
 .bv.rollt-innen .hub-apps, .bv.rollt-innen .hub-seiten-rahmen, .bv.rollt-innen .hub-seiten{ flex: none; }
 .hub-sr{ position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
+/* Benutzername: Rückmeldung nach dem Speichern */
+.bv-notiz.fehler{ border: 1px solid rgba(var(--lbf-defekt-rgb), 0.3); }
+.bv-notiz.fehler p{ color: var(--lbf-fehler-text-2); }
+.bv [data-probe="hub-benutzername"] .bv-notiz{ margin-top: 14px; }
+
 /* Kachel: das Symbol ist die Fläche, keine Karte dahinter */
 .bv .hub-kachel{ display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; min-height: 44px; padding: 4px 2px 2px; border-radius: 14px; text-align: center; }
-.hub-kachel .hub-icon{ width: 60px !important; height: 60px !important; filter: drop-shadow(0 1px 2px rgba(26,14,8,0.18)); transition: transform 120ms ease-out; }
+/* Schatten als box-shadow an der gerundeten Kachel (Radius wie im Symbol, 22,37 %), nicht als filter:
+   Safari rechnet einen filter über dem Bild in geringerer Auflösung, die Symbole wirkten am iPhone unscharf
+   (Owner, 21.11.2026). */
+.hub-kachel .hub-icon{ width: 60px !important; height: 60px !important; border-radius: 22.37%; box-shadow: 0 1px 2px rgba(26,14,8,0.18); transition: transform 120ms ease-out; }
 @media (min-width: 600px){ .hub-kachel .hub-icon{ width: 64px !important; height: 64px !important; } }
 .bv .hub-kachel:active .hub-icon{ transform: scale(0.96); }
 .hub-kachel-name{ display: block; max-width: 100%; font-size: 12.5px; font-weight: 700; line-height: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .hub-kachel-bis{ display: block; font-size: 11px; line-height: 14px; color: var(--bv-text-2); margin-top: -5px; }
-[data-theme="dark"] .hub-kachel .hub-icon{ filter: none; }
-@media (prefers-color-scheme: dark){ :root:not([data-theme]) .hub-kachel .hub-icon{ filter: none; } }
+[data-theme="dark"] .hub-kachel .hub-icon{ box-shadow: none; }
+@media (prefers-color-scheme: dark){ :root:not([data-theme]) .hub-kachel .hub-icon{ box-shadow: none; } }
 
 /* Glocke im roten Kopf (Glocke.tsx): Abzeichen hell mit dunkelroter Zahl, ohne Bewegung */
 .bv .hub-glocke{ position: relative; }

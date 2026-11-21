@@ -804,6 +804,35 @@ Supervisor; Nachtragen bei Personen ohne E-Mail geht weiter. Die App meldet die
 Ablehnung verständlich. Geprüft gegen beide Versionen; Stand Oktober 2026 nicht
 eingetragen (Entscheidung des Betreibers).
 
+### users: Benutzername
+
+Jede Person kann einen Benutzernamen festlegen und sich damit statt mit der E-Mail-Adresse anmelden
+(Owner, 21.11.2026). In der App: Hub → Profil → Benutzername (`/hub?seite=benutzername`,
+`src/pages/hub/BenutzernameSeite.tsx`, Prüfen in `src/lib/benutzername.ts`); die Anmeldung schickt einen
+Benutzernamen klein (`anmeldeKennung`).
+
+Auf dem Server (einmal, zweimal schadet nicht):
+```bash
+cd /opt/responda-quelle && git pull && python3 scripts/benutzername-einrichten.py
+```
+Das Skript legt an, was fehlt, und ändert sonst nichts:
+- Feld `username` an `users` (Plain text, nicht Pflicht, höchstens 32 Zeichen, Muster `^[a-z0-9_.-]{3,32}$`).
+  Gibt es das Feld schon (Server aus PocketBase 0.22: Pflicht, Namen wie `users482913`), bleibt es, wie es ist;
+  die App zeigt solche Namen als „vom System vergeben“.
+- eindeutiger Index `CREATE UNIQUE INDEX idx_users_username ON users (username) WHERE username != ''`
+  (fehlt nur, wenn noch keiner auf `username` liegt; auch `COLLATE NOCASE` zählt).
+- `username` als Anmeldefeld (`passwordAuth.identityFields`: `email`, `username`).
+
+Die Update-Regel oben („users: Rechte vergeben nur Verantwortliche“) lässt `username` am eigenen Konto
+zu. Doppelte Namen lehnt der Index ab (`validation_not_unique`, die App sagt „schon vergeben“). Die Drossel
+für falsche Passwörter zählt je Konto und Herkunft, gleich ob mit E-Mail oder Benutzername angemeldet.
+Benutzernamen sind wie Namen sichtbar, solange `users` ohne Anmeldung lesbar ist („users: List und View
+schließen“).
+
+Geprüft gegen **PocketBase 0.23.4** (21.11.2026), ohne Feld und mit Feld wie nach 0.22: anlegen, zweiter
+Lauf ohne Änderung, festlegen, anmelden mit Benutzername und mit E-Mail, falsches Passwort, schon vergeben,
+Großbuchstaben, entfernen.
+
 ## Eigene Rollen der Organisationen
 
 Neben den vorgegebenen Rollen (Admin, Benutzer, MPG-Beauftragter, Lagerwart,
