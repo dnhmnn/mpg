@@ -2,7 +2,7 @@
 // Einstellungen, Supervisor, Homebildschirm, Einführung, und Abmelden.
 
 import { useEffect, useState } from 'react'
-import { hatRecht, sichtbareEmail } from '../../lib/apps'
+import { hatRecht, isPlaceholderEmail, sichtbareEmail } from '../../lib/apps'
 import { automatisch } from '../../lib/benutzername'
 import { pushEinschalten, pushNeuEinschaltenNoetig } from '../../lib/push/abgleich'
 import { PUSH_TEXTE } from '../../lib/push/texte'
@@ -85,7 +85,7 @@ export default function ProfilBlatt({ user, onClose, onApps, onBenutzername, onB
           <Icon n="weiter" className="bv-pfeil" />
         </button>
         <button type="button" className="bv-z" data-probe="hub-profil-benutzername" onClick={onBenutzername}>
-          <span className="bv-tx"><b>Benutzername</b><small>{user.username && !automatisch(user.username) ? `Anmelden mit „${user.username}“ oder der E-Mail-Adresse` : 'Zum Anmelden statt der E-Mail-Adresse'}</small></span>
+          <span className="bv-tx"><b>Benutzername</b><small>{user.username && !automatisch(user.username) ? `Anmelden mit „${user.username}“${isPlaceholderEmail(user.email) ? '' : ' oder der E-Mail-Adresse'}` : 'Zum Anmelden statt der E-Mail-Adresse'}</small></span>
           <Icon n="weiter" className="bv-pfeil" />
         </button>
         {pushNeu && (

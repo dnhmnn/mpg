@@ -28,8 +28,10 @@ export function pruefen(roh: string): Pruefung {
 }
 
 /**
- * Was die Anmeldung an den Server schickt: eine E-Mail-Adresse unverändert (nur ohne Leerzeichen am Rand),
- * einen Benutzernamen klein geschrieben, denn gespeichert ist er immer klein („Lena.Berger“ findet „lena.berger“).
+ * Zweiter Versuch der Anmeldung: eine E-Mail-Adresse unverändert (nur ohne Leerzeichen am Rand), einen
+ * Benutzernamen klein, denn Responda speichert ihn klein („Lena.Berger“ findet „lena.berger“). Der erste
+ * Versuch geht wie getippt: Server aus PocketBase 0.22 können Namen mit Großbuchstaben kennen, und
+ * PocketBase sucht den Namen genau (Login.tsx).
  */
 export function anmeldeKennung(eingabe: string): string {
   const s = eingabe.trim()

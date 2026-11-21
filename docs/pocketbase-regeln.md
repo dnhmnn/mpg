@@ -826,8 +826,13 @@ Das Skript legt an, was fehlt, und ändert sonst nichts:
 Die Update-Regel oben („users: Rechte vergeben nur Verantwortliche“) lässt `username` am eigenen Konto
 zu. Doppelte Namen lehnt der Index ab (`validation_not_unique`, die App sagt „schon vergeben“). Die Drossel
 für falsche Passwörter zählt je Konto und Herkunft, gleich ob mit E-Mail oder Benutzername angemeldet.
-Benutzernamen sind wie Namen sichtbar, solange `users` ohne Anmeldung lesbar ist („users: List und View
-schließen“).
+
+Achtung, anders als ein Name taugt ein Benutzername zum Anmelden: Solange `users` ohne Anmeldung lesbar ist
+(„users: List und View schließen“ noch offen), liest ihn jeder, nach dem Schließen jedes Mitglied der
+Organisation, während die E-Mail-Adresse dann verborgen ist (`emailVisibility`). Offen: `username` für
+andere als die Person selbst, die Leitung und den Supervisor ausblenden (Hook `onRecordEnrich`).
+Benutzernamen mit Großbuchstaben (Server aus 0.22) findet PocketBase nur genau so; die App versucht deshalb
+erst die Eingabe wie getippt und nur nach einer Ablehnung klein (`src/pages/Login.tsx`).
 
 Geprüft gegen **PocketBase 0.23.4** (21.11.2026), ohne Feld und mit Feld wie nach 0.22: anlegen, zweiter
 Lauf ohne Änderung, festlegen, anmelden mit Benutzername und mit E-Mail, falsches Passwort, schon vergeben,

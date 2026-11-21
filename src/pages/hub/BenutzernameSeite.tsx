@@ -3,6 +3,7 @@
 // in src/lib/benutzername.ts; auf dem Server Feld users.username, siehe docs/pocketbase-regeln.md.
 import { useEffect, useState } from 'react'
 import { pb } from '../../lib/pocketbase'
+import { isPlaceholderEmail } from '../../lib/apps'
 import { automatisch, pruefen, speicherFehler, uebernommen, MAX } from '../../lib/benutzername'
 import { Feld, Hinweis, Leiste, Seite } from '../benutzer/bausteine'
 import type { User } from '../../types'
@@ -21,13 +22,21 @@ export default function BenutzernameSeite({ user, orgName, schliessen, aktualisi
   const [gespeichert, setGespeichert] = useState(bisher)
   const [laeuft, setLaeuft] = useState(false)
   const [stand, setStand] = useState<Stand>(null)
-  useEffect(() => { setEingabe(bisher); setGespeichert(bisher) }, [bisher])
+  // Neu gelesenes Konto: übernehmen, ohne eine angefangene Eingabe zu überschreiben
+  useEffect(() => {
+    setEingabe((e) => (e === gespeichert ? bisher : e))
+    setGespeichert(bisher)
+  }, [bisher]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Ohne echte E-Mail-Adresse ist der Benutzername der einzige Weg zur Anmeldung: nicht entfernen
+  const ohneEmail = isPlaceholderEmail(user?.email)
 
   const p = pruefen(eingabe)
-  const geaendert = p.wert !== gespeichert
+  // Ein alter Name mit Großbuchstaben („MaxMuster“) gilt erst als geändert, wenn die Person etwas tippt
+  const geaendert = p.wert !== gespeichert && eingabe.trim() !== gespeichert
+  const entfernenGesperrt = ohneEmail && !p.wert && !!gespeichert
 
   async function speichern() {
-    if (!user || laeuft || p.fehler || !geaendert) return
+    if (!user || laeuft || p.fehler || !geaendert || entfernenGesperrt) return
     setLaeuft(true)
     setStand(null)
     try {
@@ -50,18 +59,21 @@ export default function BenutzernameSeite({ user, orgName, schliessen, aktualisi
   }
 
   const unten = p.fehler ? 'Bitte zuerst den Namen anpassen'
+    : entfernenGesperrt ? 'Ohne E-Mail-Adresse brauchst du ihn zum Anmelden'
     : !geaendert ? (gespeichert ? `Angemeldet werden kann mit „${gespeichert}“` : 'Noch kein Benutzername')
     : p.wert ? `Neu: ${p.wert}` : 'Benutzername entfernen'
 
   return (
     <Seite titel="Benutzername" unter={orgName} zurueck={schliessen} zurueckLabel="Zurück zum Hub"
-      leiste={<Leiste titel={unten} knopf={p.wert || !gespeichert ? 'Speichern' : 'Entfernen'} onClick={speichern} laeuft={laeuft} disabled={!!p.fehler || !geaendert} />}>
+      leiste={<Leiste titel={unten} knopf={p.wert || !gespeichert ? 'Speichern' : 'Entfernen'} onClick={speichern} laeuft={laeuft} disabled={!!p.fehler || !geaendert || entfernenGesperrt} />}>
       <div data-probe="hub-benutzername">
-        <Hinweis oben>Mit einem Benutzernamen meldest du dich statt mit der E-Mail-Adresse an. Das Passwort bleibt dasselbe, die E-Mail-Adresse auch.</Hinweis>
+        <Hinweis oben>{ohneEmail
+          ? 'Mit dem Benutzernamen und deinem Passwort meldest du dich an. Eine E-Mail-Adresse hat dein Zugang nicht.'
+          : 'Mit einem Benutzernamen meldest du dich statt mit der E-Mail-Adresse an. Das Passwort bleibt dasselbe, die E-Mail-Adresse auch.'}</Hinweis>
         <Feld label="Benutzername" zusatz={`3 bis ${MAX} Zeichen`} fehler={eingabe.trim() ? p.fehler : undefined}
           hinweis="Kleinbuchstaben a bis z, Ziffern und . _ - zum Beispiel lena.berger">
           <input className="bv-eingabe" type="text" inputMode="text" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
-            maxLength={MAX + 8} value={eingabe} placeholder="z. B. lena.berger"
+            maxLength={MAX + 8} value={eingabe} placeholder="z. B. lena.berger" readOnly={laeuft}
             onChange={(e) => { setEingabe(e.target.value); setStand(null) }}
             onKeyDown={(e) => { if (e.key === 'Enter') void speichern() }} />
         </Feld>

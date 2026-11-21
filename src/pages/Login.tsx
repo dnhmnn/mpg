@@ -86,10 +86,19 @@ function LoginMaske() {
       setLoading(false)
       setError('Zeitüberschreitung - Bitte versuche es erneut')
     }, 10000)
-    // Leerzeichen aus dem Autofill stören die Anmeldung; ein Benutzername ist immer klein gespeichert
-    const id = anmeldeKennung(identifier)
+    // Leerzeichen aus dem Autofill stören die Anmeldung
+    const id = identifier.trim()
     try {
-      const authData = await pb.collection('users').authWithPassword(id, password)
+      let authData
+      try {
+        authData = await pb.collection('users').authWithPassword(id, password)
+      } catch (err: any) {
+        // Benutzernamen speichert Responda klein; ältere Server (aus PocketBase 0.22) können auch
+        // „MaxMuster“ kennen, und PocketBase sucht genau. Darum erst wie getippt, dann klein.
+        const klein = anmeldeKennung(id)
+        if (err?.status !== 400 || klein === id) throw err
+        authData = await pb.collection('users').authWithPassword(klein, password)
+      }
       clearTimeout(timeoutId)
       await finishLogin(authData.record)
     } catch (err: any) {

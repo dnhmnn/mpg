@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { speicherFehler } from '../lib/benutzername'
 import { useNavigate } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
@@ -432,7 +433,7 @@ export default function SettingsPage({ user: vorgegeben }: SettingsPageProps) {
       setProfileMsg('✅ Profil gespeichert!')
       setTimeout(() => setProfileMsg(''), 3000)
     } catch (e: any) {
-      if (e?.data?.username) setProfileMsg('❌ Benutzername bereits vergeben')
+      if (e?.response?.data?.username) setProfileMsg('❌ ' + speicherFehler(e))
       else setProfileMsg('❌ Fehler: ' + e.message)
     }
   }
