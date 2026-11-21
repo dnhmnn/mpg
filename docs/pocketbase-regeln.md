@@ -838,6 +838,35 @@ Geprüft gegen **PocketBase 0.23.4** (21.11.2026), ohne Feld und mit Feld wie na
 Lauf ohne Änderung, festlegen, anmelden mit Benutzername und mit E-Mail, falsches Passwort, schon vergeben,
 Großbuchstaben, entfernen.
 
+## Alamos-Eingang (einsaetze)
+
+Bei einem Alarm ruft aPager PRO („Allgemeine Webhooks“, Smart-Home-Paket; der Aufruf geht vom Telefon aus)
+`https://api.responda.systems/alamos/<organization_id>` auf, per POST (JSON `{"unit","keyword"}`) oder per GET
+mit `?unit=…&keyword=…`; `pb_hooks/alamos.pb.js` legt daraus einen Einsatz an (Regeln und Anlegen in
+`pb_hooks/alamos-regeln.js`, Prüffälle `src/lib/__tests__/alamosRegeln.test.ts`). Laut Alamos-Handbuch löst der
+Webhook nur bei echten Alarmen aus und nur für Einheiten, bei denen er eingeschaltet ist (Klingeltöne →
+Einheitenkonfiguration → Einheit → „Webhooks aktivieren“); seit aPager PRO 6.7.1 muss die FE2-Organisation
+Webhooks erlauben. „Webhook testen“ in der App schickt immer `unit1`/`B3` und läuft an diesen Bedingungen vorbei.
+Ab 21.11.2026 (Owner: Test kam an, echte Alarme nicht):
+
+- Der Hook liest den Body selbst, gleich welcher Content-Type: JSON (auch als `text/plain` oder ohne
+  Angabe), Formular-Daten, eine Ebene verschachtelt (`data`, `einsatz`, `alarm`, `parameters` …).
+  Vorher lehnte PocketBase `text/plain` mit 400 ab, bevor der Hook lief.
+- Doppelt ist ein Alarm nur mit gleicher Nummer, gleichem Stichwort und gleichem Ort in 6 Stunden, ohne
+  Nummer mit gleichem Stichwort und Ort in 10 Minuten (dann kommt die Einheit dazu). Vorher verwarf eine
+  immer gleiche `id` jeden weiteren Alarm still.
+- Je Aufruf eine Zeile im Log (`[alamos] neu|doppelt|nicht angelegt|unbekannte Organisation`) mit
+  Content-Type und Feldnamen, nie Werten (keine Adressen, keine Stichworte).
+- Zeitstempel: ISO, `YYYY-MM-DD HH:MM:SS`, Sekunden, Millisekunden oder `21.11.2026 14:03`; sonst jetzt.
+- GET wird angenommen (aPager PRO ohne „HTTP POST statt GET“, iOS vor 1.22.0, AMweb), legt aber nur mit
+  `unit` oder `keyword` einen Einsatz an (kein Einsatz beim Öffnen im Browser).
+
+Einspielen: `pb_hooks/alamos.pb.js` und `pb_hooks/alamos-regeln.js` nach `/opt/pb_hooks`, PocketBase neu
+starten. Geprüft gegen PocketBase 0.23.4 und 0.40.5 (21.11.2026).
+
+Offen: Der Eingang braucht keinen Schlüssel; wer die Adresse samt Kennung der Organisation kennt, kann
+Einsätze anlegen.
+
 ## Eigene Rollen der Organisationen
 
 Neben den vorgegebenen Rollen (Admin, Benutzer, MPG-Beauftragter, Lagerwart,

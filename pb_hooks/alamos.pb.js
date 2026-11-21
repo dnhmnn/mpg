@@ -1,95 +1,30 @@
-// PocketBase hook: Alamos FE2 Webhook-Empfang  (PocketBase v0.23+ API)
+// PocketBase hook: Alamos-Eingang (läuft ab PocketBase 0.23.4)
 //
-// Alamos (FE2) sendet bei Alarmierung einen HTTP-POST an:
+// aPager PRO („Allgemeine Webhooks“ in der App, Smart-Home-Paket) oder FE2 rufen bei einem Alarm auf:
 //   https://api.responda.systems/alamos/<organization_id>
+// per POST (JSON {"unit","keyword"}, auch als text/plain oder Formular) oder per GET mit ?unit=…&keyword=…
+// (aPager PRO ohne „HTTP POST statt GET“, iOS vor 1.22.0, AMweb).
 //
-// Dieser Hook legt daraus automatisch einen Einsatz in der Collection
-// "einsaetze" an. Die organization_id steckt im URL-Pfad, sodass jede
-// Organisation ihre eigene, fertig vorbereitete Webhook-URL kopieren kann.
-//
-// Felder der Collection "einsaetze" (müssen existieren):
-//   unit (text), keyword (text), adresse (text), datum (date),
-//   status (select: aktiv/abgeschlossen/abgebrochen), organization_id (text/relation),
-//   alamos_id (text)
-//
-// Der Body von Alamos ist frei konfigurierbar — daher akzeptieren wir mehrere
-// gängige Feldnamen (deutsch/englisch). Mindestens "unit" und "keyword" sollten
-// in Alamos aktiviert sein.
+// Daraus entsteht ein Einsatz in "einsaetze" (Felder: unit, keyword, adresse, datum,
+// status aktiv/abgeschlossen/abgebrochen, organization_id, alamos_id). Lesen, Zuordnen, Doppelte und
+// Anlegen: pb_hooks/alamos-regeln.js (Prüffälle in src/lib/__tests__/alamosRegeln.test.ts).
+// Je Aufruf eine Zeile im Log von PocketBase („[alamos] …“): nur Feldnamen und Ergebnis, nie Werte.
+// Hintergrund (Owner 21.11.2026, Test kam an, echte Alarme nicht): docs/pocketbase-regeln.md, „Alamos-Eingang“.
 
 routerAdd("POST", "/alamos/{orgId}", (e) => {
-  const orgId = e.request.pathValue("orgId")
-  if (!orgId) {
-    return e.json(400, { success: false, error: "organization_id fehlt in der URL" })
-  }
+  const R = require(`${__hooks}/alamos-regeln.js`)
+  let roh = ""
+  try { roh = toString(e.request.body, R.MAX_BODY) } catch (err) { roh = "" }
+  let ct = ""
+  try { ct = String(e.request.header.get("Content-Type") || "") } catch (err) { ct = "" }
+  const r = R.eingang($app, e.request.pathValue("orgId"), R.bodyLesen(roh), ct, Date.now(), (c) => new Record(c), "POST")
+  return e.json(r.status, r.json)
+})
 
-  // Organisation prüfen, damit falsch eingetragene URLs sofort auffallen
-  try {
-    $app.findRecordById("organizations", orgId)
-  } catch (err) {
-    return e.json(404, { success: false, error: "Unbekannte organization_id: " + orgId })
-  }
-
-  const body = e.requestInfo().body || {}
-
-  // Feld-Mapping mit Aliassen (Alamos-Platzhalter sind frei benannt)
-  const pick = (...keys) => {
-    for (let i = 0; i < keys.length; i++) {
-      const v = body[keys[i]]
-      if (v !== undefined && v !== null && String(v).trim() !== "") return String(v).trim()
-    }
-    return ""
-  }
-
-  const unit     = pick("unit", "einheit", "einheiten", "einheitenkennung", "unit_id")
-  const keyword  = pick("keyword", "stichwort", "schlagwort", "einsatzstichwort", "alarm")
-  let   adresse  = pick("adresse", "address", "ort", "einsatzort", "location")
-  if (!adresse) {
-    const strasse = pick("strasse", "street")
-    const ort     = pick("stadt", "city", "ortsteil")
-    adresse = [strasse, ort].filter(Boolean).join(", ")
-  }
-  const alamosId = pick("alamos_id", "id", "einsatznummer", "einsatz_id", "externeNummer", "number")
-  const datumRaw = pick("datum", "alarmzeit", "timestamp", "time", "alarmierung", "created")
-
-  // Datum parsen, sonst aktuelle Serverzeit
-  let datumIso
-  if (datumRaw) {
-    const d = new Date(datumRaw)
-    datumIso = isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString()
-  } else {
-    datumIso = new Date().toISOString()
-  }
-
-  // Doppelte Alarme vermeiden: existiert dieser alamos_id für die Org schon?
-  if (alamosId) {
-    try {
-      const existing = $app.findFirstRecordByFilter(
-        "einsaetze",
-        "organization_id = {:org} && alamos_id = {:aid}",
-        { org: orgId, aid: alamosId }
-      )
-      if (existing) {
-        return e.json(200, { success: true, duplicate: true, id: existing.id })
-      }
-    } catch (err) {
-      // kein Treffer -> normal weiter
-    }
-  }
-
-  try {
-    const collection = $app.findCollectionByNameOrId("einsaetze")
-    const record = new Record(collection)
-    record.set("unit", unit || "Unbekannt")
-    record.set("keyword", keyword)
-    record.set("adresse", adresse)
-    record.set("datum", datumIso)
-    record.set("status", "aktiv")
-    record.set("organization_id", orgId)
-    record.set("alamos_id", alamosId)
-    $app.save(record)
-    return e.json(200, { success: true, id: record.id })
-  } catch (err) {
-    console.log("alamos webhook error:", err.message)
-    return e.json(500, { success: false, error: err.message })
-  }
+routerAdd("GET", "/alamos/{orgId}", (e) => {
+  const R = require(`${__hooks}/alamos-regeln.js`)
+  let q = {}
+  try { q = e.requestInfo().query || {} } catch (err) { q = {} }
+  const r = R.eingang($app, e.request.pathValue("orgId"), { body: R.queryLesen(q), art: "query" }, "", Date.now(), (c) => new Record(c), "GET")
+  return e.json(r.status, r.json)
 })

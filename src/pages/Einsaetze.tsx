@@ -489,16 +489,6 @@ export default function Einsaetze() {
           <div style={{ position: 'fixed', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', zIndex: 501, background: 'var(--lbf-card)', borderRadius: 20, padding: '28px 24px', width: 'min(480px, calc(100vw - 40px))', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90dvh', overflowY: 'auto' }}>
             <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)', marginBottom: 20 }}>Neuer Einsatz</div>
 
-            {/* Alamos Webhook Info */}
-            <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', border: '1px solid var(--lbf-border)', borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
-              <div style={{ ...LABEL, marginBottom: 6 }}>Alamos Webhook</div>
-              <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', lineHeight: 1.7, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-                POST https://api.responda.systems/api/collections/einsaetze/records<br />
-                Authorization: Bearer &lt;Admin-Token&gt;<br />
-                {"{ \"organization_id\": \""}{user?.organization_id || '…'}{"\" }"}
-              </div>
-            </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <div style={LABEL}>Stichwort *</div>
@@ -823,7 +813,7 @@ export default function Einsaetze() {
               <div style={{ padding: '4px 20px 14px', borderBottom: '0.5px solid rgba(var(--lbf-rot-rgb),0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>Alamos-Konfiguration</div>
-                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Diese URL in Alamos eintragen</div>
+                  <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>Damit Alarme als Einsatz in Responda ankommen</div>
                 </div>
                 <button onClick={() => setSetupOpen(false)} style={{ background: 'rgba(var(--lbf-rot-rgb),0.06)', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--warm-gray)' }}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -834,20 +824,20 @@ export default function Einsaetze() {
 
                 {/* Alamos settings checklist */}
                 <div style={{ background: 'rgba(var(--lbf-rot-rgb),0.04)', borderRadius: 12, padding: '14px 16px', fontSize: 13, color: 'var(--lbf-text)', lineHeight: 1.8 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6 }}>In Alamos einstellen:</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 3, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                    <span>✓ Einheitenkennung übertragen: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
-                    <span>✓ Stichwort übertragen: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
-                    <span>✓ HTTP POST statt GET: <strong style={{ fontStyle: 'normal', color: 'var(--lbf-text)' }}>Ein</strong></span>
-                    <span>✓ Kein Authorization-Header nötig</span>
-                  </div>
+                  <div style={{ fontWeight: 700, marginBottom: 6 }}>In aPager PRO einstellen (Allgemeine Webhooks):</div>
+                  <ol style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4, color: 'var(--warm-gray)' }}>
+                    <li>Die URL unten als Webhook eintragen. Einheitenkennung und Stichwort übertragen: <strong style={{ color: 'var(--lbf-text)' }}>Ein</strong>. „HTTP POST statt GET“ am besten ein (GET geht auch).</li>
+                    <li><strong style={{ color: 'var(--lbf-text)' }}>Für jede Einheit</strong> den Webhook einschalten: Klingeltöne → Einheitenkonfiguration → Einheit → „Webhooks aktivieren“ → diesen Webhook wählen. Ohne das löst ein echter Alarm nichts aus.</li>
+                    <li>Die Organisation in FE2 muss Webhooks erlauben (fragt euren FE2-Admin).</li>
+                    <li>Nur echte Alarme lösen aus, keine Info- oder Statusalarme. „Webhook testen“ in der App schickt immer „unit1“ und „B3“ und zeigt nur, dass die URL stimmt. Zum Prüfen einen Probealarm aus FE2 an die eingerichtete Einheit schicken.</li>
+                  </ol>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <div>
                     <div style={LABEL}>Webhook-URL</div>
                     <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginBottom: 6 }}>
-                      Enthält bereits deine Organisations-ID — einfach kopieren und in Alamos einfügen.
+                      Enthält bereits deine Organisations-ID — einfach kopieren und in aPager PRO einfügen.
                     </div>
                     <WebhookBox text={WEBHOOK_URL} label="Webhook-URL" onCopy={copyText} />
                   </div>
