@@ -6,6 +6,7 @@ import { istEigeneRolleId, vorlageBereinigen } from '../lib/rollen'
 import { leerenOhneWarteschlange, tresorEntwuerfe, tresorEntwuerfeLoeschen, tresorWartend, tresorZustand, verlassenErlauben } from '../lib/tresor'
 import { apiZwischenspeicherLeeren } from '../lib/zwischenspeicher'
 import { pushBeimAbmelden } from '../lib/push/abgleich'
+import { geraeteMerkerBleibt } from '../lib/hinweise'
 import type { User } from '../types'
 
 /**
@@ -242,6 +243,16 @@ export function useAuth() {
     if (confirm(frage)) {
       zuletztMerken(null)
       const lager = localStorage.getItem('lager_pending_count')
+      // Bestätigte Hinweise und App-Auswahl bleiben auf dem Gerät (nur Zeitpunkte und App-Kennungen):
+      // Sonst kam „Neu in Responda“ nach jedem Anmelden wieder, wenn das Konto das Feld nicht hat
+      const merker: [string, string][] = []
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i)
+          const v = k && geraeteMerkerBleibt(k) ? localStorage.getItem(k) : null
+          if (k && v !== null) merker.push([k, v])
+        }
+      } catch { /* unlesbar */ }
       // Push: dieses Gerät beim Server abmelden (noch mit Anmeldung, höchstens 3 s), dann immer Abo
       // beenden, Merker löschen und angezeigte Benachrichtigungen schließen (src/lib/push/abgleich.ts)
       try { await pushBeimAbmelden({ timeoutMs: 3000 }) } catch { /* Abmelden geht immer weiter */ }
@@ -251,6 +262,7 @@ export function useAuth() {
       leerenOhneWarteschlange(() => localStorage.clear())
       // Der Zähler gehört zur Warteschlange, nicht zur Anmeldung — wieder hinschreiben
       if (lager && lager !== '0') { try { localStorage.setItem('lager_pending_count', lager) } catch { /* egal */ } }
+      for (const [k, v] of merker) { try { localStorage.setItem(k, v) } catch { /* voll */ } }
       // Zwischengespeicherten Lagerbestand löschen (die Warteschlange selbst bleibt)
       try { await lagerModul?.snapshotLeeren() } catch { /* egal */ }
       // Antworten der API im Zwischenspeicher des Service Workers (vor dem Seitenwechsel abwarten;

@@ -1605,7 +1605,12 @@ eigenen Hub bzw. sieht einen Hinweis nicht. Steht noch die Übergangsregel, gilt
 eigener Zweig).
 
 Ohne die Felder verwirft PocketBase die Werte still; die App merkt sich Auswahl und Bestätigung
-dann nur auf dem Gerät (`hub_wahl_<id>`, `hinweis_gesehen_<id>`). Mit Feld steht eine Änderung der
+dann nur auf dem Gerät (`hub_wahl_<id>`, `hinweis_gesehen_<id>`). Diese Merker überstehen das Abmelden
+(Owner, 22.11.2026: der bestätigte Hinweis kam nach jedem Anmelden wieder; `geraeteMerkerBleibt` in
+`src/lib/hinweise.ts`), und eine Bestätigung, die nur auf dem Gerät steht, trägt die App beim nächsten
+Öffnen ins Konto nach, sobald das Feld da ist (`kontoNachtragen`). Felder anlegen und prüfen (auch, dass
+sie nicht versteckt sind, sonst liest die App sie nie): `python3 scripts/hinweise-einrichten.py`. Fehlt
+`hinweis_gesehen_am`, sagt es der Reiter „Hinweise“ auf der Supervisor-Seite. Mit Feld steht eine Änderung der
 App-Auswahl, die noch nicht im Konto ist (ohne Netz), gekennzeichnet auf dem Gerät
 (`hub_wahl_<id>` und `hub_wahl_offen_<id>`): Sie gilt dort vor dem Kontowert und wird beim
 nächsten Öffnen des Hubs, wenn das Netz wiederkommt oder die App wieder in den Vordergrund kommt,

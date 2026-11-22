@@ -46,7 +46,8 @@ Die App läuft auch ohne die neuen Felder und ohne die neue Sammlung. Nichts geh
 1. **Feld `hub_apps` an `users`.** PocketBase → Collections → `users` → Fields → New field:
    Typ **JSON**, Name `hub_apps`, nicht Pflicht (Nonempty aus), **Max size 4000**. Speichern.
 2. **Feld `hinweis_gesehen_am` an `users`.** Typ **Date**, Name `hinweis_gesehen_am`, nicht
-   Pflicht. Speichern. **Vor dem ersten Hinweis** (Schritt 6): Ohne das Feld merkt sich nur das
+   Pflicht. Speichern. Einfacher (Schritte 1 und 2 zusammen, prüft auch, dass die Felder nicht
+   versteckt sind): `cd /opt/responda-quelle && git pull && python3 scripts/hinweise-einrichten.py`. **Vor dem ersten Hinweis** (Schritt 6): Ohne das Feld merkt sich nur das
    Gerät, dass jemand den Hinweis gesehen hat, und nach dem Abmelden kommt er noch einmal.
 3. **Neue Sammlung `responda_hinweise`.** New collection → Typ **Base**, Name
    `responda_hinweise`. Felder:

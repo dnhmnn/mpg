@@ -242,6 +242,15 @@ export default function HinweiseVerwaltung({ user }: { user: User }) {
         </button>
       </div>
 
+      {!fehlt && !('hinweis_gesehen_am' in (user as object)) && (
+        <div style={{ ...karte, padding: '16px 20px' }} data-probe="hinweise-feld-fehlt">
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--lbf-text)' }}>Das Feld hinweis_gesehen_am fehlt am Benutzerkonto.</div>
+          <div style={{ fontSize: 13, color: 'var(--warm-gray)', lineHeight: 1.5, marginTop: 6 }}>
+            „Verstanden“ merkt sich dann nur das Gerät: Auf einem anderen Gerät kommt der Hinweis noch einmal. Auf dem Server einmal
+            ausführen: python3 scripts/hinweise-einrichten.py (legt das Feld an, Bestätigungen vom Gerät trägt die App danach selbst nach).
+          </div>
+        </div>
+      )}
       {fehlt && (
         <div style={{ ...karte, padding: '16px 20px' }} data-probe="hinweise-fehlt">
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--lbf-text)' }}>Die Sammlung responda_hinweise fehlt noch.</div>

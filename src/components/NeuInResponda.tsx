@@ -14,7 +14,7 @@ import { createPortal } from 'react-dom'
 import { pb } from '../lib/pocketbase'
 import type { User } from '../types'
 import {
-  HINWEISE_SAMMLUNG, datumText, gesehenStand, hinweisSchluessel, hinweisZuZeigen, textBloecke, type Hinweis,
+  HINWEISE_SAMMLUNG, datumText, gesehenStand, hinweisSchluessel, hinweisZuZeigen, kontoNachtragen, textBloecke, type Hinweis,
 } from '../lib/hinweise'
 
 /** Eigene Klassen (nr-): sieht im Hub (innerhalb von .bv), in der Lernbar und in der Vorschau des Supervisors gleich aus. */
@@ -113,7 +113,11 @@ export default function NeuInResponda({ user, bereit, onOffen }: { user: User | 
         if (vorbei) return
         const k = nutzerRef.current ?? u
         const roh = k as unknown as { hinweis_gesehen_am?: unknown; created?: unknown }
-        const h = hinweisZuZeigen(r.items, { gesehenAm: roh.hinweis_gesehen_am, lokal: lokalLesen(hinweisSchluessel(k.id)), kontoAngelegt: roh.created })
+        const lokal = lokalLesen(hinweisSchluessel(k.id))
+        const h = hinweisZuZeigen(r.items, { gesehenAm: roh.hinweis_gesehen_am, lokal, kontoAngelegt: roh.created })
+        // Auf dem Gerät bestätigt, im Konto noch nicht (ohne Netz, oder bevor das Feld da war): nachtragen
+        const nachtragen = kontoNachtragen('hinweis_gesehen_am' in (k as object), roh.hinweis_gesehen_am, lokal)
+        if (nachtragen) pb.collection('users').update(k.id, { hinweis_gesehen_am: nachtragen }, { requestKey: null }).catch(() => { /* beim nächsten Mal */ })
         if (h && !BESTAETIGT.has(h.id)) setHinweis(h)
       })
       .catch(() => { /* Sammlung fehlt (404), ohne Netz oder abgewiesen: nichts zeigen */ })
@@ -153,7 +157,8 @@ export default function NeuInResponda({ user, bereit, onOffen }: { user: User | 
     if (!u?.id || !h.veroeffentlicht_am) return
     const schluessel = hinweisSchluessel(u.id)
     try { localStorage.setItem(schluessel, gesehenStand(h.veroeffentlicht_am, lokalLesen(schluessel))) } catch { /* Speicher voll oder gesperrt */ }
-    // Ins Konto (fehlt das Feld noch, verwirft PocketBase es still; dann hält das Gerät die Bestätigung)
+    // Ins Konto (fehlt das Feld noch, verwirft PocketBase es still; dann hält das Gerät die Bestätigung,
+    // auch über das Abmelden hinweg: geraeteMerkerBleibt). Ohne Netz trägt das nächste Öffnen es nach.
     pb.collection('users').update(u.id, { hinweis_gesehen_am: h.veroeffentlicht_am }, { requestKey: null }).catch(() => { /* still */ })
   }
   const verstandenRef = useRef(verstanden)

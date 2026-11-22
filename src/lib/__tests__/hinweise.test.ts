@@ -232,3 +232,25 @@ describe('Hinweise: Datum und Stand als Text (Europe/Berlin)', () => {
     for (const t of texte) expect(t).not.toMatch(/[–—]/)
   })
 })
+
+describe('Bestätigung bleibt (Owner, 22.11.2026: kam nach jedem Anmelden wieder)', async () => {
+  const { geraeteMerkerBleibt, kontoNachtragen } = await import('../hinweise')
+  it('Merker für Hinweise und App-Auswahl überstehen das Abmelden, sonst nichts', () => {
+    expect(geraeteMerkerBleibt('hinweis_gesehen_lenaberger00001')).toBe(true)
+    expect(geraeteMerkerBleibt('hub_wahl_lenaberger00001')).toBe(true)
+    expect(geraeteMerkerBleibt('hub_wahl_offen_lenaberger00001')).toBe(true)
+    expect(geraeteMerkerBleibt('hub_apps_lenaberger00001')).toBe(true)
+    expect(geraeteMerkerBleibt('pocketbase_auth')).toBe(false)
+    expect(geraeteMerkerBleibt('office_recent')).toBe(false)
+    expect(geraeteMerkerBleibt('hinweis_gesehen_')).toBe(false)
+    expect(geraeteMerkerBleibt('hinweis_gesehen_x/../y')).toBe(false)
+  })
+  it('auf dem Gerät später bestätigt als im Konto: nachtragen, nur mit Feld', () => {
+    expect(kontoNachtragen(true, '', '2026-11-20 08:00:00.000Z')).toBe('2026-11-20 08:00:00.000Z')
+    expect(kontoNachtragen(true, '2026-11-19 08:00:00.000Z', '2026-11-20 08:00:00.000Z')).toBe('2026-11-20 08:00:00.000Z')
+    expect(kontoNachtragen(true, '2026-11-20 08:00:00.000Z', '2026-11-20 08:00:00.000Z')).toBeNull()
+    expect(kontoNachtragen(true, '2026-11-21 08:00:00.000Z', '2026-11-20 08:00:00.000Z')).toBeNull()
+    expect(kontoNachtragen(true, '2026-11-19 08:00:00.000Z', '')).toBeNull()
+    expect(kontoNachtragen(false, '', '2026-11-20 08:00:00.000Z')).toBeNull()
+  })
+})

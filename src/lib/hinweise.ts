@@ -30,6 +30,26 @@ export const HINWEISE_SAMMLUNG = 'responda_hinweise'
 /** Rückhalt auf dem Gerät für users.hinweis_gesehen_am. */
 export const hinweisSchluessel = (userId: string) => `hinweis_gesehen_${userId}`
 
+/**
+ * Merker auf dem Gerät, die das Abmelden überstehen (Owner, 22.11.2026: Der bestätigte Hinweis kam nach
+ * jedem Anmelden wieder). Nur Zeitpunkte bestätigter Hinweise und die App-Auswahl im Hub, nichts
+ * Persönliches; gilt, falls das Konto die Felder (noch) nicht hat oder ohne Netz bestätigt wurde.
+ */
+export function geraeteMerkerBleibt(schluessel: string): boolean {
+  return /^(hinweis_gesehen_|hub_wahl_|hub_wahl_offen_|hub_apps_)[A-Za-z0-9]+$/.test(schluessel)
+}
+
+/**
+ * Steht auf dem Gerät eine spätere Bestätigung als im Konto (ohne Netz bestätigt, oder bevor das
+ * Feld da war), wird sie ins Konto nachgetragen: Rückgabe der Wert dafür, sonst null. Ohne Feld am
+ * Konto (feldDa false) nie, PocketBase würde ihn still verwerfen.
+ */
+export function kontoNachtragen(feldDa: boolean, konto: unknown, lokal: unknown): string | null {
+  if (!feldDa) return null
+  const l = zeitpunkt(lokal)
+  return l > zeitpunkt(konto) ? pbZeit(l) : null
+}
+
 const ZEIT_MUSTER = /^(\d{4}-\d{2}-\d{2})(?:[ T](\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?))?\s*(Z|[+-]\d{2}:?\d{2})?$/i
 
 /**
