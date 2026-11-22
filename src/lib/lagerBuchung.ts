@@ -12,14 +12,14 @@
 //   alles oder nichts.
 // - Die erste Journalzeile trägt eine im Gerät vergebene ID (Client-ID). Wird
 //   nach einem Abbruch erneut gesendet, lehnt der Server die doppelte ID ab —
-//   die Buchung kommt genau einmal an. Dasselbe Muster wie bei EKS.
+//   die Buchung kommt genau einmal an.
 // - Buchungen eines Geräts laufen nacheinander, nie gleichzeitig.
 //
 // Die Planung ist reine Rechnung (planeBuchung, planeRueckgaengig) und hat
 // Prüffälle in src/lib/__tests__/lagerBuchung.test.ts.
 
 import { NOTIZ, entnahmeReihenfolge, summe } from './lagerRechnung'
-import { newId } from './eks/ids'
+import { newId } from './ids'
 import { pbFehlerText } from './pbFehler'
 
 /** 15 Zeichen [a-z0-9] — als PocketBase-ID verwendbar. */

@@ -30,7 +30,7 @@ export function useAuth() {
 
   // Netzwerkfehler von echter Ablehnung unterscheiden. Offline darf die Sitzung
   // NICHT verworfen werden — sonst ist die App an der Einsatzstelle ausgeloggt
-  // und der Token unwiederbringlich weg (siehe EKS-Offlinebetrieb).
+  // und der Token unwiederbringlich weg (Offlinebetrieb).
   function isNetworkError(e: any): boolean {
     if (!navigator.onLine) return true
     const s = e?.status ?? e?.originalError?.status
@@ -139,8 +139,6 @@ export function useAuth() {
   }
 
   async function logout() {
-    // EKS hält Einsatzdaten lokal. localStorage.clear() darf sie nicht stillschweigend vernichten.
-    const pending = Number(localStorage.getItem('eks_pending_count') || '0')
     // Ohne Netz abgeschickte Formulare warten verschlüsselt im Tresor (IndexedDB, src/lib/tresor.ts)
     // oder, wo der Browser das nicht zulässt, in localStorage. Sie bleiben beim Abmelden (F13);
     // begonnene Protokolle (Entwürfe) werden gelöscht, damit sie nicht für den Nächsten liegen bleiben.
@@ -169,7 +167,6 @@ export function useAuth() {
       mpg = offeneMpgDaten(ich?.id, ich?.organization_id)
     } catch { /* nicht zählen */ }
     const warnungen: string[] = []
-    if (pending > 0) warnungen.push(`${pending} EKS-Eintrag/Einträge sind noch nicht übertragen.`)
     if (mpg.unklar > 0) warnungen.push(`Im MPG ${mpg.unklar === 1 ? 'ist eine Speicherung' : `sind ${mpg.unklar} Speicherungen`} (Prüfung, Defektmeldung, Sperre, Freigabe oder Ähnliches) nicht sicher angekommen — bitte vorher im MPG erneut senden.`)
     if (mpg.entwurf) warnungen.push('Eine begonnene MPG-Prüfung ist noch nicht gespeichert.')
     const formularTeile: string[] = []

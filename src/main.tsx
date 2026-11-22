@@ -12,6 +12,9 @@ import { ohneAnmeldungLeeren, veralteteLoeschen, wechselBeobachten } from './lib
 neueFassungAbfangen()
 // Service Worker anmelden; eine neue Fassung wartet auf „Aktualisieren“ (src/lib/fassungPruefen.ts)
 try { swAnmelden() } catch { /* ohne Service Worker läuft die App wie eine Webseite */ }
+// EKS ist entfernt (Owner, 22.11.2026, Daten auch auf dem Server gelöscht): die lokale Datenbank und der Zähler
+// auf den Geräten räumen sich beim Start weg.
+try { indexedDB.deleteDatabase('responda-eks'); localStorage.removeItem('eks_pending_count') } catch { /* nichts zu tun */ }
 
 // Error Boundary Component
 class ErrorBoundary extends React.Component<

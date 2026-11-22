@@ -8,7 +8,7 @@
 // gespeichert, nie geloggt und nie in eine URL geschrieben.
 
 import { pb } from '../pocketbase'
-import { newId } from '../eks/ids'
+import { newId } from '../ids'
 import { tresorWeiche } from '../tresor'
 import { ABSENDER_VOREINSTELLUNG, absenderAusObjekt, minutenText, type AbsenderEintrag, type AbsenderModus, type FormularArt, type FormularId, type Sammlung } from './absender'
 
@@ -158,7 +158,7 @@ export function geraeteSpeicher(): Speicher | null {
   return tresorWeiche()
 }
 
-/** Neue Kennung eines Satzes: 15 × [a-z0-9], vom Client vergeben (wie in EKS). */
+/** Neue Kennung eines Satzes: 15 × [a-z0-9], vom Client vergeben (src/lib/ids.ts). */
 export function neueKennung(): string {
   return newId()
 }

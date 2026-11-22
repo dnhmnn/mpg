@@ -45,10 +45,10 @@ export default defineConfig({
             urlPattern: /^https:\/\/api\.responda\.systems\/api\/realtime/i,
             handler: 'NetworkOnly',
           },
-          // EKS synchronisiert selbst über IndexedDB. Eine gecachte Antwort würde
-          // offline als Erfolg gewertet und den Sync-Stand verfälschen.
+          // Batch (Lager-Buchungen) nie aus dem Zwischenspeicher: eine gecachte Antwort
+          // würde offline als Erfolg gewertet.
           {
-            urlPattern: /^https:\/\/api\.responda\.systems\/api\/(batch|collections\/eks_)/i,
+            urlPattern: /^https:\/\/api\.responda\.systems\/api\/batch/i,
             handler: 'NetworkOnly',
           },
           // Die Formular-Routen antworten je Person (wer angemeldet ist, was

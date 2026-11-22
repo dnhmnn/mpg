@@ -38,8 +38,7 @@ export interface Modul {
 export const MODULE: Modul[] = [
   // "dashboard" öffnet die Einstellungen (und MPG, wenn das Modul frei ist) — darf nie wegfallen
   { id: 'benutzer', name: 'Benutzerverwaltung', beschreibung: 'Benutzer anlegen, Rechte vergeben, Einstellungen', apps: ['unitarii', 'settings'], rechte: ['unitarii', 'dashboard'], formulare: [], immer: true },
-  { id: 'einsaetze', name: 'Einsätze', beschreibung: 'Einsätze anlegen, Personal zuordnen, Alarmierung', apps: ['einsaetze'], rechte: ['einsaetze'], formulare: [] },
-  { id: 'eks', name: 'EKS Einsatzführung', beschreibung: 'Atemschutzüberwachung, Einsatztagebuch, Kräfte', apps: ['eks'], rechte: ['eks'], formulare: [] },
+  { id: 'einsaetze', name: 'Einsätze', beschreibung: 'Einsätze aus Protokoll und Produktausgabe, Personen, Organisationen und Dokumente zuordnen', apps: ['einsaetze'], rechte: ['einsaetze'], formulare: [] },
   { id: 'patienten', name: 'Patientendokumentation', beschreibung: 'Protokolle erfassen, prüfen, gegenzeichnen', apps: ['patienten'], rechte: ['patienten'], formulare: ['patienten'] },
   { id: 'dokumente', name: 'Vorgänge und CIRS', beschreibung: 'Formulare der Seite, eigene Vorlagen, CIRS-Meldungen', apps: ['dokumente'], rechte: ['dokumente'], formulare: ['cirs'] },
   { id: 'lager', name: 'Lager', beschreibung: 'Bestände, Ablaufdaten, Bestellungen, Produktausgabe', apps: ['lager'], rechte: ['lager', 'lager_verwalten', 'produktausgabe'], formulare: ['produktausgabe'], enthaelt: ['dateien', 'mpg', 'dokumente'] },

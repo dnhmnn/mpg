@@ -9,7 +9,7 @@ const USER_ID = 'lenaberger00001'
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url')
 const TOKEN = `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ id: USER_ID, type: 'auth', collectionId: '_pb_users_auth_', exp: 4102444800 })}.probe`
 
-const ALLE_RECHTE = Object.fromEntries(['dashboard', 'lernbar', 'chat', 'notizen', 'mpg_verwalten', 'einsaetze', 'eks', 'lager', 'lager_verwalten',
+const ALLE_RECHTE = Object.fromEntries(['dashboard', 'lernbar', 'chat', 'notizen', 'mpg_verwalten', 'einsaetze', 'lager', 'lager_verwalten',
   'produktausgabe', 'ausbildungen_manage', 'dokumente', 'patienten', 'dateien', 'qr', 'unitarii'].map((k) => [k, true]))
 
 export const ORG = {
@@ -21,8 +21,8 @@ export const USER = {
   id: USER_ID, collectionId: '_pb_users_auth_', collectionName: 'users', email: 'lena.berger@example.org', emailVisibility: false, verified: true,
   name: 'Lena Berger', organization_id: ORG_ID, organization_name: ORG.org_name, role: 'admin', zusatzrollen: [], supervisor: false,
   permissions: ALLE_RECHTE, permissions_migrated: true, disabled: false, expires_at: '', created: '2025-03-01 10:00:00.000Z', updated: JETZT,
-  // Im Hub ausgeblendet (wie es jede Person selbst kann): Einsätze, EKS und Ausbildungen zeigt die Website nicht
-  hub_apps: { ausgeblendet: ['einsaetze', 'eks', 'ausbildungen'], reihenfolge: [] }, hinweis_gesehen_am: JETZT,
+  // Im Hub ausgeblendet (wie es jede Person selbst kann): Einsätze und Ausbildungen zeigt die Website nicht
+  hub_apps: { ausgeblendet: ['einsaetze', 'ausbildungen'], reihenfolge: [] }, hinweis_gesehen_am: JETZT,
 }
 
 export const ANMELDUNG = { token: TOKEN, record: USER }

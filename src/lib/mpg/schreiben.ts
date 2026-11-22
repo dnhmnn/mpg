@@ -10,7 +10,7 @@
 // Ist der Batch in PocketBase ausgeschaltet, wird einzeln geschrieben; ein erneuter
 // Versuch überspringt dann, was schon angelegt ist, und setzt den Rest.
 
-import { newId } from '../eks/ids'
+import { newId } from '../ids'
 import { innererFehler } from '../lagerBuchung'
 import { pbFehlerText } from '../pbFehler'
 

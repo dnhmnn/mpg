@@ -12,6 +12,12 @@
 const DOPPELT_MIT_NUMMER_MS = 6 * 60 * 60 * 1000
 /** Ohne Nummer: gleiches Stichwort und gleicher Ort kurz hintereinander (ein Aufruf je alarmierter Einheit). */
 const DOPPELT_OHNE_NUMMER_MS = 10 * 60 * 1000
+/**
+ * Ohne Nummer und ohne Ort (so schickt aPager PRO: nur Einheit und Stichwort): nur innerhalb von 30 Sekunden,
+ * so lange braucht aPager PRO für einen Aufruf je alarmierter Einheit desselben Alarms. Danach ist ein gleiches
+ * Stichwort ein neuer Alarm (Probealarme hintereinander, Unwetter mit vielen „THL 1“). Owner 21.11.2026.
+ */
+const DOPPELT_OHNE_ORT_MS = 30 * 1000
 /** Größter Body, den der Eingang liest. */
 const MAX_BODY = 512 * 1024
 
@@ -140,7 +146,8 @@ const gleich = (a, b) => String(a || "").trim().toLowerCase() === String(b || ""
 /**
  * Ist dieser Alarm schon angelegt? kandidaten: Einsätze derselben Organisation der letzten Stunden
  * ({ id, alamos_id, keyword, adresse, created }). Mit Nummer: gleiche Nummer, gleiches Stichwort und
- * gleicher Ort in 6 Stunden. Ohne: gleiches Stichwort und gleicher Ort in 10 Minuten. Eine gleiche
+ * gleicher Ort in 6 Stunden. Ohne Nummer: gleiches Stichwort und gleicher Ort in 10 Minuten, ohne Ort (aPager PRO)
+ * nur in 30 Sekunden. Eine gleiche
  * Nummer allein reicht nie (manche Alamos-Einstellungen schicken immer dieselbe).
  */
 function doppelt(kandidaten, alarm, jetzt) {
@@ -150,7 +157,7 @@ function doppelt(kandidaten, alarm, jetzt) {
     if (!gleich(k.keyword, alarm.keyword) || !gleich(k.adresse, alarm.adresse)) continue
     if (alarm.nummer) {
       if (gleich(k.alamos_id, alarm.nummer) && alter <= DOPPELT_MIT_NUMMER_MS) return k
-    } else if (alter <= DOPPELT_OHNE_NUMMER_MS) {
+    } else if (alter <= (alarm.adresse ? DOPPELT_OHNE_NUMMER_MS : DOPPELT_OHNE_ORT_MS)) {
       return k
     }
   }
@@ -188,7 +195,11 @@ function getTaugt(alarm) {
 function eingang(app, orgId, gelesen, ct, jetzt, neuerRecord, methode) {
   const kurz = String(orgId || "").slice(0, 6)
   if (!orgId) return { status: 400, json: { success: false, error: "organization_id fehlt in der URL" } }
-  try { app.findRecordById("organizations", orgId) } catch (err) {
+  let orgName = ""
+  try {
+    const o = app.findRecordById("organizations", orgId)
+    orgName = o && typeof o.getString === "function" ? (o.getString("org_name") || o.getString("name")) : ""
+  } catch (err) {
     app.logger().warn("[alamos] unbekannte Organisation", "org", kurz, "methode", methode)
     return { status: 404, json: { success: false, error: "Unbekannte organization_id: " + orgId } }
   }
@@ -219,7 +230,7 @@ function eingang(app, orgId, gelesen, ct, jetzt, neuerRecord, methode) {
         app.save(rec)
       }
     } catch (err) { /* Einheit nicht ergänzt, der Einsatz steht trotzdem */ }
-    app.logger().info("[alamos] doppelt", "org", kurz, "methode", methode, "art", gelesen.art, "contentType", String(ct).slice(0, 60), "felder", felder)
+    app.logger().info("[alamos] doppelt", "org", kurz, "organisation", orgName, "methode", methode, "art", gelesen.art, "contentType", String(ct).slice(0, 60), "felder", felder)
     return { status: 200, json: { success: true, duplicate: true, id: schon.id } }
   }
   try {
@@ -232,16 +243,16 @@ function eingang(app, orgId, gelesen, ct, jetzt, neuerRecord, methode) {
     record.set("organization_id", orgId)
     record.set("alamos_id", alarm.nummer)
     app.save(record)
-    app.logger().info("[alamos] neu", "org", kurz, "methode", methode, "art", gelesen.art, "contentType", String(ct).slice(0, 60), "felder", felder,
+    app.logger().info("[alamos] neu", "org", kurz, "organisation", orgName, "methode", methode, "art", gelesen.art, "contentType", String(ct).slice(0, 60), "felder", felder,
       "stichwort", alarm.keyword ? "ja" : "fehlt", "ort", alarm.adresse ? "ja" : "fehlt")
     return { status: 200, json: { success: true, id: record.id } }
   } catch (err) {
-    app.logger().error("[alamos] nicht angelegt", "org", kurz, "methode", methode, "art", gelesen.art, "felder", felder, "fehler", String(err).slice(0, 300))
+    app.logger().error("[alamos] nicht angelegt", "org", kurz, "organisation", orgName, "methode", methode, "art", gelesen.art, "felder", felder, "fehler", String(err).slice(0, 300))
     return { status: 500, json: { success: false, error: String(err && err.message || err) } }
   }
 }
 
 module.exports = {
-  DOPPELT_MIT_NUMMER_MS, DOPPELT_OHNE_NUMMER_MS, MAX_BODY, ALIAS,
+  DOPPELT_MIT_NUMMER_MS, DOPPELT_OHNE_NUMMER_MS, DOPPELT_OHNE_ORT_MS, MAX_BODY, ALIAS,
   bodyLesen, flach, alarmLesen, datumLesen, feldNamen, doppelt, einheitenDazu, queryLesen, getTaugt, eingang,
 }

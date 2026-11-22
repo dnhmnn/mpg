@@ -32,8 +32,6 @@ export default function OrgCheckliste({ user, kompakt = false, onGehe }: { user:
           setBefunde((x) => ({
             ...x,
             benutzer: mitglieder.length > 1,
-            // EKS steckt in keiner Rollen-Vorlage: erledigt, sobald jemand das Recht hat
-            eks: mitglieder.some((u) => u.permissions?.eks === true),
             // CIRS: außer dir darf noch jemand Meldungen bearbeiten
             cirs: mitglieder.some((u) => u.id !== user.id && u.permissions?.dokumente === true),
           }))

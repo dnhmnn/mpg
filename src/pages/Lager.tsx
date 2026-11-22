@@ -2789,7 +2789,7 @@ export default function Lager() {
   if (authLoading) {
     return null
   }
-  // Wie EKS: Das Lager öffnet nur, wer das Recht „Lager“ hat (die API-Regeln setzen es durch)
+  // Das Lager öffnet nur, wer das Recht „Lager“ hat (die API-Regeln setzen es durch)
   if (user && !darfLager(user)) {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>

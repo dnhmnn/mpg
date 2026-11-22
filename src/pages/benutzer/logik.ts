@@ -38,7 +38,7 @@ export type Recht = { key: string; label: string }
 
 /** Bereiche der Rechte, in der Reihenfolge, in der sie auf der Seite stehen */
 export const RECHTE_GRUPPEN: { name: string; rechte: string[] }[] = [
-  { name: 'Einsatz', rechte: ['einsaetze', 'eks', 'patienten'] },
+  { name: 'Einsatz', rechte: ['einsaetze', 'patienten'] },
   { name: 'Material', rechte: ['lager', 'lager_verwalten', 'dashboard', 'mpg_verwalten'] },
   { name: 'Ausbildung', rechte: ['lernbar', 'ausbildungen_manage'] },
   { name: 'Verwaltung', rechte: ['dokumente', 'dateien', 'unitarii', 'qr'] },
@@ -47,7 +47,6 @@ export const RECHTE_GRUPPEN: { name: string; rechte: string[] }[] = [
 
 /** Eine Zeile unter dem Namen, wo der Name allein nicht sagt, was das Recht erlaubt */
 export const RECHT_BESCHREIBUNG: Record<string, string> = {
-  eks: 'Atemschutz, Tagebuch und Kräfte im ELW',
   lager_verwalten: 'Artikel anlegen, Bestand buchen',
   mpg_verwalten: 'Geräte anlegen, sperren, freigeben',
   ausbildungen_manage: 'Termine und Module pflegen',

@@ -82,6 +82,12 @@ describe('doppelt', () => {
     expect(R.doppelt([k({ created: vor(5) })], { nummer: '', keyword: 'B3', adresse: 'Musterweg 1' }, JETZT)).not.toBeNull()
     expect(R.doppelt([k({ created: vor(15) })], { nummer: '', keyword: 'B3', adresse: 'Musterweg 1' }, JETZT)).toBeNull()
   })
+  it('ohne Nummer und ohne Ort (aPager PRO): nur in 30 Sekunden', () => {
+    const ohneOrt = (x: Record<string, string>) => k({ adresse: '', ...x })
+    const vorSek = (s: number) => new Date(JETZT - s * 1000).toISOString().replace('T', ' ')
+    expect(R.doppelt([ohneOrt({ created: vorSek(13) })], { nummer: '', keyword: 'B3', adresse: '' }, JETZT)).not.toBeNull()
+    expect(R.doppelt([ohneOrt({ created: vorSek(150) })], { nummer: '', keyword: 'B3', adresse: '' }, JETZT)).toBeNull()
+  })
   it('Zeitpunkt in der Zukunft oder unlesbar zählt nicht', () => {
     expect(R.doppelt([k({ created: vor(-5) })], { nummer: '', keyword: 'B3', adresse: 'Musterweg 1' }, JETZT)).toBeNull()
     expect(R.doppelt([k({ created: 'kaputt' })], { nummer: '', keyword: 'B3', adresse: 'Musterweg 1' }, JETZT)).toBeNull()

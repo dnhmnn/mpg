@@ -172,8 +172,7 @@ export interface EinfSchritt {
  */
 export const MODULE: { id: string; recht: string; name: string; satz: string }[] = [
   // Reihenfolge wie die Kacheln im Hub (lib/apps.ts)
-  { id: 'einsaetze', recht: 'einsaetze', name: 'Einsätze', satz: 'Aktive und vergangene Einsätze deiner Organisation: anlegen, Personal zuordnen, abschließen.' },
-  { id: 'eks', recht: 'eks', name: 'EKS', satz: 'Einsatzführung: Atemschutz überwachen, Einsatztagebuch führen, Kräfte und Abschnitte im Blick — auch ohne Netz.' },
+  { id: 'einsaetze', recht: 'einsaetze', name: 'Einsätze', satz: 'Die Einsätze deiner Organisation: entstehen aus Protokoll und Produktausgabe, dazu Personen, Organisationen und Dokumente.' },
   { id: 'patienten', recht: 'patienten', name: 'Patienten', satz: 'Eingereichte Protokolle prüfen, Rückfragen stellen, gegenzeichnen und archivieren.' },
   { id: 'dokumente', recht: 'dokumente', name: 'Vorgänge', satz: 'Festlegen, welche Formulare auf der Seite deiner Organisation stehen, und CIRS-Meldungen bearbeiten.' },
   { id: 'lager', recht: 'lager', name: 'Lager', satz: 'Bestände je Standort ein- und ausbuchen, Ablaufdaten im Blick behalten und nachbestellen.' },
@@ -348,24 +347,15 @@ export function schritte(user: User, teile: Teil[]): EinfSchritt[] {
   return [...reihe, fertig(user, teile.includes('organisation') ? 'organisation' : 'basis')]
 }
 
-/**
- * EKS lässt nur mit dem dauerhaften Recht hinein (EksAuswahl.tsx) — ein befristetes
- * zeigt zwar die Kachel, öffnet die Seite aber nicht. Der Überblick verspricht deshalb
- * nur, was auch aufgeht. Die Benutzerverwaltung öffnet auch befristet (Unitarii.tsx,
- * hatRecht), wie die users-Regeln auf dem Server.
- */
-const NUR_DAUERHAFT = new Set(['eks'])
-
+/** Die Module, die jemand öffnen kann: frei für die Organisation und das Recht, auch befristet (hatRecht). */
 export function meineModule(user: User) {
-  return MODULE.filter((m) => appFrei(user.organization, m.id) && (NUR_DAUERHAFT.has(m.recht)
-    ? user.supervisor === true || user.permissions?.[m.recht] === true
-    : hatRecht(user, m.recht)))
+  return MODULE.filter((m) => appFrei(user.organization, m.id) && hatRecht(user, m.recht))
 }
 
 // ── Checkliste "Organisation einrichten" ────────────────────────────────────
 
 /** Was sich automatisch feststellen lässt. Fehlt ein Befund, bleibt der Punkt zum Abhaken. */
-export type Befund = 'benutzer' | 'rechte' | 'eks' | 'formulare' | 'cirs'
+export type Befund = 'benutzer' | 'rechte' | 'formulare' | 'cirs'
 export type Befunde = Partial<Record<Befund, boolean>>
 
 export interface Punkt {
@@ -389,10 +379,6 @@ export const CHECKLISTE: Punkt[] = [
   {
     id: 'vorlagen', titel: 'Rollen-Vorlagen anpassen', befund: 'rechte', recht: 'unitarii', pfad: '/unitarii?tab=rollen',
     text: 'Lege unter Benutzer → Rollen fest, welche Rechte jede Rolle beim Anlegen vorschlägt. Passt keine, legst du dort eine eigene Rolle an. Das spart Häkchen und hält die Rechte einheitlich.',
-  },
-  {
-    id: 'eks', titel: 'Einsatzführung (EKS) freigeben', befund: 'eks', recht: 'unitarii', pfad: '/unitarii', modul: 'eks',
-    text: 'Das Recht für die Einsatzführung steckt in keiner der vorgegebenen Rollen-Vorlagen. Wenn ihr EKS nutzt, vergib es einzeln an die, die Einsätze führen.',
   },
   {
     id: 'formulare', titel: 'Formulare der Seite festlegen', befund: 'formulare', recht: 'dokumente', pfad: '/vorgaenge', modul: 'dokumente',

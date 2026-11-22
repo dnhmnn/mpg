@@ -1,6 +1,6 @@
 // Offline-Betrieb für das Lager.
 //
-// Anders als bei EKS sind Lagerbuchungen keine anhängenden Ereignisse, sondern
+// Lagerbuchungen sind keine anhängenden Ereignisse, sondern
 // lesen-rechnen-schreiben auf absoluten Mengen. Zwei Geräte, die offline dieselbe
 // Bestandszeile fortschreiben, würden sich gegenseitig überschreiben.
 //

@@ -239,7 +239,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - Statt Bereiche zu erklären, läuft ein erfundener Einsatz der „Feuerwehr Musterstadt“ ab (Wohnungsbrand,
   Patientin, Gerät gesperrt, Material, Nachbereitung); auf dem Rechner steht das Telefon und wechselt beim Scrollen
   den Bildschirm, am Telefon steht nach jedem Schritt ein eigenes. Wenig Text („statt es ewig zu erklären“).
-- Nicht auf die Website: Einsatzführung (EKS), Einsätze, Ausbildung und Fortbildung (Owner, 20.11.2026).
+- Nicht auf die Website: Einsätze, Ausbildung und Fortbildung (Owner, 20.11.2026; EKS gibt es seit 22.11.2026 nicht mehr).
 - Die Bilder der App (`public/website/*.webp`) entstehen aus der gebauten App mit erfundenen Testdaten:
   `node docs/entwuerfe/website/aufnahme.mjs` (Daten in `docs/entwuerfe/website/daten.mjs` und `daten/`), dann
   `node docs/entwuerfe/website/webp.mjs <ordner-mit-png>`. Nie echte Personen, Organisationen oder Patientendaten.
@@ -268,9 +268,9 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | Patienten | `src/pages/patienten/Patienten.tsx` | Admin-Protokollverwaltung |
 | MPG | `src/pages/mpg/` | Medizinprodukte: Heute (Arbeitsliste, Prüfrunden je Standort), Geräte mit Gerätebuch, Prüfung, Meldungen/Defekte, Fristen (STK/MTK), Vorlagen, Logbuch — eine Adresse je Ansicht unter `/mpg/*`. Rechenkern und Schreibwege in `src/lib/mpg/` (STK/MTK: `fristen.ts`, `kontrollen.ts`; eine überfällige oder nicht bestandene STK oder MTK sperrt), Rechte („MPG verwalten“) in `src/lib/mpg/rechte.ts` |
 | Lager | `src/pages/Lager.tsx`, `src/pages/lager/` | Dunkelrot-Design (Owner, 20.11.2026: „Startseite mit Kacheln“ statt der Leiste mit 16 Knöpfen): Startseite mit Standort im roten Kopf, Zahlen (in Ordnung, bald fällig, abgelaufen), sechs Kacheln (Bestand, Scannen, Ausgaben, Bestellen, Inventur, Checks), darunter die übrigen Wege in Gruppen (`src/pages/lager/Start.tsx`, Stile `LG_CSS`); Bestand unter `/lager?seite=bestand`. Die übrigen Wege öffnen vorerst noch die alten Fenster und werden nacheinander zu eigenen Seiten |
+| Einsätze | `src/pages/Einsaetze.tsx`, `src/pages/einsaetze/` | Dunkelrot-Design (Owner, 22.11.2026): Liste (laufend, je Monat, Suche), Einsatz mit Personen, Organisationen (freier Text), Protokollen und Produktausgaben (über die Einsatznummer oder von Hand), CIRS-Meldungen nur für CIRS-Berechtigte, Karte, Löschen (Leitung, Recht Einsätze); Rechnung in `src/pages/einsaetze/logik.ts`. Seiten `?seite=einsatz&id=`, `neu`, `bearbeiten`. EKS ist entfernt (`/eks` führt hierher) |
 | Hub | `src/pages/Hub.tsx`, `src/pages/hub/` | Startseite nach dem Login im Dunkelrot-Design, statisch (rollt nicht): Gruß, Organisation voll ausgeschrieben, Glocke mit Neuigkeiten und Mitteilung der Organisation (Blatt), Apps auf Seiten zum Wischen mit Pfeilen (`src/lib/hubSeiten.ts`; Auswahl und Reihenfolge je Benutzer: `src/lib/hubApps.ts`, Feld `users.hub_apps`), Kurzbefehle, Profil. Symbole: `src/lib/hubIcons.ts`, erzeugt mit `npm run hub-icons` aus `docs/entwuerfe/hub-icons/bau.mjs` |
 | Benachrichtigungen | `src/pages/Benachrichtigungen.tsx`, `src/pages/benachrichtigungen/` | Push-Benachrichtigungen im Dunkelrot-Design, rollend (`/benachrichtigungen`, aus Profil im Hub und Einstellungen): Push je Gerät mit Probe, Anlässe, Ruhezeit, angemeldete Geräte, Hinweis „Keine Alarmierung“; für die Leitung `?seite=organisation` (Anlässe der Organisation, „Mitteilung an die Organisation“). App-Teil in `src/lib/push/` (Abgleich, Einschalten, API, Texte; Service Worker `public/sw-push.js`), siehe Abschnitt „Push-Benachrichtigungen“ |
-| Responda EKS | `src/pages/eks/EKS.tsx` | Einsatzführung aus dem ELW: Atemschutzüberwachung, Einsatztagebuch, Kräfte/FMS, Abschnitte — **voll offline-fähig** (IndexedDB-Ereignislog, siehe `src/lib/eks/`) |
 
 ## PocketBase Collections (wichtigste)
 
@@ -282,7 +282,7 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 | `ausbildungen_module` | Lernmodule |
 | `organizations` | Organisationen mit Logo, Rollen-Vorlagen (`role_permissions`), eigene Rollen (`eigene_rollen`, nur über `src/lib/rollen.ts` lesen) und verknüpfte Rechte. Update-Regel: Lizenz und Module nur Supervisor, Rollen und Vorlagen Admin/Benutzerverwaltung, Formulare Vorgänge — `docs/pocketbase-regeln.md`, „Eigene Rollen der Organisationen“ |
 | `users` | User mit `organization_id`, `organization_name`, `organization_logo`; Rollen: erste in `role`, weitere in `zusatzrollen` (JSON). Was jemand darf, kommt nur aus den Rollen (`src/lib/rollen.ts`, `rechteAusRollen`), gespeichert als Kopie in `permissions`; je Person weicht nur `temp_permissions` ab. Leitung (`admin`) und Teilnehmende sind fest. Passwörter legt jeder selbst fest (Link), nur der Supervisor setzt fremde. Ohne E-Mail: Platzhalter `…@kein-email.intern` (`isPlaceholderEmail`, nie anzeigen: `sichtbareEmail`) — `docs/pocketbase-regeln.md`, „users: Passwörter legt jeder selbst fest“. App-Auswahl im Hub in `hub_apps` (JSON), zuletzt bestätigter Hinweis in `hinweis_gesehen_am`. Benutzername zum Anmelden in `username` (selbst festgelegt im Hub unter Profil, `src/lib/benutzername.ts`; Server: `scripts/benutzername-einrichten.py`, `docs/pocketbase-regeln.md`, „users: Benutzername“). |
-| `eks_events` | EKS-Ereignislog (anhängend, **unveränderlich** — Update/Delete gesperrt). ID wird vom Client vergeben (15× `[a-z0-9]`) |
+| `einsaetze` | Einsätze: entstehen automatisch, sobald ein Protokoll oder eine Produktausgabe mit Einsatznummer abgeschickt wird (Hook `pb_hooks/einsaetze.pb.js`, Owner 22.11.2026; nie Namen oder Adressen), oder von Hand. Dazu `organisationen`, `verknuepfungen`, `einsatz_personen`; CIRS-Verknüpfung nur an der Meldung (`cirs_reports.einsatz_id`). Löschen räumt Personen und CIRS-Verweise auf. Alamos nicht mehr in der App. Verknüpfung über die Nummer (`src/lib/einsatzNummer.ts`) — `docs/pocketbase-regeln.md`, „Einsätze aus der Dokumentation“ |
 | `inventory_transactions` | Lager-Journal (**unveränderlich**, Hook `pb_hooks/lager.pb.js`). Buchungen nur über `src/lib/lagerBuchung.ts` (Batch, Client-ID, genau einmal); Korrektur = Gegenbuchung (`storno_von`) |
 | `inventory_items`, `inventory_locations` | Lager-Stammdaten; benutzt → `archiviert` statt löschen |
 | `mpg_ereignisse` | MPG-Gerätebuch (**unveränderlich**, Hook `pb_hooks/mpg.pb.js`): Sperren, Freigaben, Stammdatenänderungen, Außerbetriebnahme, STK/MTK (mit `angaben`), Vermerke. Geschrieben nur über die Pläne in `src/lib/mpg/aktionen.ts` und `src/lib/mpg/kontrollen.ts`; Korrektur = Vermerk mit `bezug` |
@@ -302,8 +302,6 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
 - Die App fragt beim Start, alle 30 Minuten und beim Zurückkommen aus dem Hintergrund (höchstens alle
   5 Minuten) nach einer neuen Fassung. Rechnung und Speicher: `src/lib/fassungPruefen.ts` (Prüffälle),
   Anmeldung: `src/lib/swAnmelden.ts`, Hinweis: `src/components/NeueFassungHinweis.tsx`.
-- Nie in der Einsatzführung eines laufenden Einsatzes (`/eks/:id`): Der Hinweis läge über Knöpfen,
-  die im Einsatz gebraucht werden.
 - Kein `skipWaiting` in `sw-push.js` oder `sw-formulare.js`; ein Prüffall achtet darauf.
 
 ## Push-Benachrichtigungen
@@ -371,7 +369,7 @@ npm run test:watch # beim Entwickeln
 - `npm run build` prüft die Typen mit. Der Bestand ist **fehlerfrei** — neue
   Typfehler blockieren ab sofort den Build und damit die Veröffentlichung.
 - Sicherheitskritische Rechenteile haben Prüffälle, die in der CI laufen:
-  `src/lib/eks/atemschutz.ts` (FwDV 7), `src/lib/gs1.ts` (DataMatrix) und
+  `src/lib/gs1.ts` (DataMatrix) und
   `src/lib/mpg/` (Prüffristen, Gerätezustand, Prüfergebnis — ob ein Medizinprodukt
   als einsatzbereit gilt). Die Prüffälle stehen in `*selbsttest.ts` und sind auch in der App aufrufbar;
   `src/lib/__tests__/` bindet sie an vitest an.

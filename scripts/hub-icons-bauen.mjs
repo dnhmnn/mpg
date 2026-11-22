@@ -23,7 +23,7 @@ const ENTWURF = `${R}/docs/entwuerfe/hub-icons`
 const ZIEL = `${R}/src/lib/hubIcons.ts`
 
 // Die Apps aus ALL_APPS (src/lib/apps.ts); dieselbe Liste wie in vorschau.mjs
-const APPS = ['einsaetze', 'eks', 'patienten', 'dokumente', 'lager', 'mpg', 'lernbar', 'ausbildungen',
+const APPS = ['einsaetze', 'patienten', 'dokumente', 'lager', 'mpg', 'lernbar', 'ausbildungen',
   'dateien', 'office', 'chat', 'notizen', 'unitarii', 'settings']
 
 // Abgleich mit apps.ts: kommt eine App dazu, soll das hier auffallen

@@ -838,9 +838,57 @@ Geprüft gegen **PocketBase 0.23.4** (21.11.2026), ohne Feld und mit Feld wie na
 Lauf ohne Änderung, festlegen, anmelden mit Benutzername und mit E-Mail, falsches Passwort, schon vergeben,
 Großbuchstaben, entfernen.
 
+## Einsätze aus der Dokumentation (einsaetze)
+
+Owner, 22.11.2026: Einsätze entstehen nicht mehr über Alamos, sondern sobald ein Patientenprotokoll
+(`patients`, `payload.einsatz_nr`) oder eine Produktausgabe (`product_outputs`, `payload.einsatz`) mit einer
+Einsatznummer abgeschickt wird. Hook `pb_hooks/einsaetze.pb.js` (nach dem Speichern, auch aus der
+Formular-Route, Transaktionen und dem Batch), Regeln `pb_hooks/einsatz-regeln.js`, Prüffälle
+`src/lib/__tests__/einsatzRegeln.test.ts`.
+
+- Gibt es in der Organisation in den letzten 60 Tagen schon einen Einsatz mit derselben Nummer (Feld `unit`,
+  ohne Rücksicht auf Leerzeichen und Groß/Klein), bleibt es bei diesem; sonst entsteht einer mit Nummer,
+  Datum (`einsatz_datum` bzw. `datum`, sonst Zeitpunkt des Anlegens), Einsatzart (`einsatz_art`, nur aus dem
+  Protokoll) und Status **abgeschlossen** (`STATUS_NEU`; die Dokumentation kommt nach dem Einsatz, die
+  Einsatzführung bleibt frei für laufende Einsätze; Owner hat den Status noch offen gelassen).
+- Nie Namen, Adressen oder andere Angaben aus dem Protokoll im Einsatz.
+- Ohne Nummer kein Einsatz. Scheitert das Anlegen, bleibt das Protokoll trotzdem gespeichert (`[einsatz] nicht
+  angelegt` im Log); sonst `[einsatz] angelegt` bzw. `[einsatz] vorhanden`.
+- Die Seite Einsätze verknüpft Protokolle (`einsatz_nr`, alte: `unit`) und Produktausgaben (`einsatz`) über
+  dieselbe Nummer (`src/lib/einsatzNummer.ts`, Zwilling, Gleichlauf im Prüffall).
+
+Einspielen: `pb_hooks/einsaetze.pb.js` und `pb_hooks/einsatz-regeln.js` nach `/opt/pb_hooks`, PocketBase
+neu starten. Geprüft gegen PocketBase 0.23.4 und 0.40.5 (22.11.2026). Schon abgeschickte Protokolle erzeugen
+nachträglich keinen Einsatz.
+
+Dazu (Owner, 22.11.2026), eingerichtet mit `python3 scripts/einsaetze-einrichten.py`:
+- `einsaetze.organisationen` (JSON, beteiligte Organisationen als freier Text, höchstens 20) und
+  `einsaetze.verknuepfungen` (JSON `[{ art: "protokoll"|"produktausgabe", id }]`, von Hand verknüpft).
+- CIRS: Feld `cirs_reports.einsatz_id` an der Meldung, nicht am Einsatz. So sehen nur CIRS-Berechtigte
+  (Regel von `cirs_reports`), dass es zu einem Einsatz eine Meldung gibt; Meldende bleiben für alle anderen
+  unerkennbar.
+- `einsatz_personen` (Personen der Organisation mit Funktion): legt das Skript an, wenn es sie nicht gibt
+  (`einsatz_id` als Verweis mit Löschen, Regeln über `einsatz_id.organization_id`).
+- Löschen (deleteRule `einsaetze`): Leitung, Recht Einsätze (auch befristet), Supervisor, nur die eigene
+  Organisation, nie Teilnehmende:
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && organization_id = @request.auth.organization_id && (@request.auth.supervisor = true || @request.auth.role = "admin" || @request.auth.permissions.einsaetze = true || (@request.auth.temp_permissions.einsaetze.until ~ " " && @request.auth.temp_permissions.einsaetze.until > @now))
+```
+  Beim Löschen räumt `einsaetze.pb.js` (nach `e.next()`) die Personen weg und löst `cirs_reports.einsatz_id`;
+  Protokolle, Produktausgaben und CIRS-Meldungen bleiben.
+
+## EKS entfernt
+
+Owner, 22.11.2026: Die Einsatzführung (EKS) ist aus App, Rechten, Modulen und Hooks entfernt; `/eks` führt zu
+den Einsätzen, die App löscht beim Start die lokale Datenbank `responda-eks`. Auf dem Server: `eks.pb.js` aus
+`/opt/pb_hooks` nehmen; die Daten (`eks_events`) löscht `python3 scripts/einsaetze-einrichten.py eks-loeschen`
+nach einer Sicherung (PocketBase-Backup `vor-eks-loeschen-…zip`) und der Eingabe `LÖSCHEN`. Gespeicherte Rechte
+`eks` an Konten und in Rollen-Vorlagen wirken nicht mehr (unbekannte Rechte fallen beim nächsten Speichern weg).
+
 ## Alamos-Eingang (einsaetze)
 
-Bei einem Alarm ruft aPager PRO („Allgemeine Webhooks“, Smart-Home-Paket; der Aufruf geht vom Telefon aus)
+Seit 22.11.2026 nicht mehr in der App (Einsätze entstehen aus der Dokumentation, siehe oben); die Route bleibt
+erreichbar. Bei einem Alarm ruft aPager PRO („Allgemeine Webhooks“, Smart-Home-Paket; der Aufruf geht vom Telefon aus)
 `https://api.responda.systems/alamos/<organization_id>` auf, per POST (JSON `{"unit","keyword"}`) oder per GET
 mit `?unit=…&keyword=…`; `pb_hooks/alamos.pb.js` legt daraus einen Einsatz an (Regeln und Anlegen in
 `pb_hooks/alamos-regeln.js`, Prüffälle `src/lib/__tests__/alamosRegeln.test.ts`). Laut Alamos-Handbuch löst der
@@ -853,10 +901,11 @@ Ab 21.11.2026 (Owner: Test kam an, echte Alarme nicht):
   Angabe), Formular-Daten, eine Ebene verschachtelt (`data`, `einsatz`, `alarm`, `parameters` …).
   Vorher lehnte PocketBase `text/plain` mit 400 ab, bevor der Hook lief.
 - Doppelt ist ein Alarm nur mit gleicher Nummer, gleichem Stichwort und gleichem Ort in 6 Stunden, ohne
-  Nummer mit gleichem Stichwort und Ort in 10 Minuten (dann kommt die Einheit dazu). Vorher verwarf eine
+  Nummer mit gleichem Stichwort und Ort in 10 Minuten, ohne Nummer und ohne Ort (aPager PRO schickt nur
+  Einheit und Stichwort) nur in 30 Sekunden; dann kommt die Einheit dazu. Vorher verwarf eine
   immer gleiche `id` jeden weiteren Alarm still.
 - Je Aufruf eine Zeile im Log (`[alamos] neu|doppelt|nicht angelegt|unbekannte Organisation`) mit
-  Content-Type und Feldnamen, nie Werten (keine Adressen, keine Stichworte).
+  Content-Type, Feldnamen und dem Namen der Organisation, nie Werten (keine Adressen, keine Stichworte).
 - Zeitstempel: ISO, `YYYY-MM-DD HH:MM:SS`, Sekunden, Millisekunden oder `21.11.2026 14:03`; sonst jetzt.
 - GET wird angenommen (aPager PRO ohne „HTTP POST statt GET“, iOS vor 1.22.0, AMweb), legt aber nur mit
   `unit` oder `keyword` einen Einsatz an (kein Einsatz beim Öffnen im Browser).

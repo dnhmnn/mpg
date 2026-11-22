@@ -106,15 +106,15 @@ describe('Einführung: Checkliste', () => {
   const punkte: Punkt[] = [
     { id: 'benutzer', titel: 'Benutzer', text: '', befund: 'benutzer' },
     { id: 'cirs', titel: 'CIRS', text: '' },
-    { id: 'eks', titel: 'EKS', text: '', befund: 'eks' },
+    { id: 'formulare', titel: 'Formulare', text: '', befund: 'formulare' },
   ]
 
   it('erkannt geht vor abgehakt, Offenes bleibt offen', () => {
-    const st = checklistenStand(punkte, { benutzer: true, eks: false }, { v: 1, abgehakt: { cirs: 'x', eks: 'y' } })
+    const st = checklistenStand(punkte, { benutzer: true, formulare: false }, { v: 1, abgehakt: { cirs: 'x', formulare: 'y' } })
     expect(st.map((p) => [p.id, p.erledigt, p.quelle])).toEqual([
       ['benutzer', true, 'erkannt'],
       ['cirs', true, 'abgehakt'],
-      ['eks', true, 'abgehakt'],
+      ['formulare', true, 'abgehakt'],
     ])
     expect(checklistenStand(punkte, {}, { v: 1 }).every((p) => !p.erledigt)).toBe(true)
   })
@@ -134,10 +134,10 @@ describe('Einführung: welche Schritte jemand sieht', () => {
     expect(ids).not.toContain('einstellungen')
   })
 
-  it('befristetes EKS-Recht verspricht im Überblick nichts, was die Seite nicht öffnet', () => {
+  it('ein befristetes Recht zählt im Überblick wie ein dauerhaftes (die Seiten öffnen auch befristet)', () => {
     const bis = new Date(Date.now() + 864e5).toISOString()
-    const u = nutzer({ permissions: { patienten: true }, temp_permissions: { eks: { until: bis }, patienten: { until: bis } } })
-    expect(schritte(u, ['basis']).find((s) => s.id === 'module')?.module).toEqual(['patienten'])
+    const u = nutzer({ permissions: {}, temp_permissions: { einsaetze: { until: bis }, patienten: { until: bis } } })
+    expect(schritte(u, ['basis']).find((s) => s.id === 'module')?.module).toEqual(['einsaetze', 'patienten'])
   })
 
   it('nur, was zu den eigenen Rechten passt — wer nur die Lernbar hat, bekommt kein Hub erklärt', () => {

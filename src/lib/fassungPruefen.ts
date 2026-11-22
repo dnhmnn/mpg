@@ -25,18 +25,9 @@ export function sollPruefen(o: { jetzt: number; zuletzt: number | null; online: 
   return o.jetzt - o.zuletzt >= PRUEFEN_FRUEHESTENS_MS
 }
 
-/**
- * Einsatzführung (EKS) eines laufenden Einsatzes: dort kein Hinweis, er läge über Knöpfen, die im
- * Einsatz gebraucht werden. Die neue Fassung gilt dort beim nächsten Start der App.
- */
-export function istEinsatzfuehrung(pfad: string): boolean {
-  return /^\/eks\/[^/]+/.test(pfad)
-}
-
-/** Den Hinweis jetzt zeigen? */
+/** Den Hinweis jetzt zeigen? Auf jeder Seite (die Einsatzführung EKS, wo er fehlte, ist entfernt). */
 export function hinweisZeigen(o: { neu: boolean; pfad: string; spaeterBis: number | null; jetzt: number }): boolean {
   if (!o.neu) return false
-  if (istEinsatzfuehrung(o.pfad)) return false
   return o.spaeterBis === null || o.jetzt >= o.spaeterBis
 }
 

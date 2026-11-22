@@ -2,7 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import {
-  aktualisieren, fassungAbonnieren, fassungStand, fassungZuruecksetzen, hinweisZeigen, istEinsatzfuehrung,
+  aktualisieren, fassungAbonnieren, fassungStand, fassungZuruecksetzen, hinweisZeigen,
   neueFassungMelden, PRUEFEN_FRUEHESTENS_MS, sollPruefen, spaeter, SPAETER_MS,
 } from '../fassungPruefen'
 
@@ -31,12 +31,8 @@ describe('hinweisZeigen', () => {
     expect(hinweisZeigen({ neu: true, pfad: '/hub', spaeterBis: t + 1, jetzt: t })).toBe(false)
     expect(hinweisZeigen({ neu: true, pfad: '/hub', spaeterBis: t, jetzt: t })).toBe(true)
   })
-  it('nie in der Einsatzführung eines laufenden Einsatzes, sonst überall', () => {
-    expect(istEinsatzfuehrung('/eks/abc123')).toBe(true)
-    expect(istEinsatzfuehrung('/eks')).toBe(false)
-    expect(istEinsatzfuehrung('/eks/')).toBe(false)
-    expect(hinweisZeigen({ neu: true, pfad: '/eks/abc123', spaeterBis: null, jetzt: t })).toBe(false)
-    for (const pfad of ['/', '/hub', '/eks', '/unitas', '/mpg/geraete', '/wache1/doku']) {
+  it('auf jeder Seite', () => {
+    for (const pfad of ['/', '/hub', '/einsaetze', '/unitas', '/mpg/geraete', '/wache1/doku']) {
       expect(hinweisZeigen({ neu: true, pfad, spaeterBis: null, jetzt: t })).toBe(true)
     }
   })

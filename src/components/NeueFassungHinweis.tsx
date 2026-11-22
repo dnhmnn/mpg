@@ -1,6 +1,6 @@
 // Hinweis „Neue Version von Responda“ (src/lib/fassungPruefen.ts): unten über allen Seiten, im
 // Kopf-Dunkelrot. „Aktualisieren“ übernimmt die neue Fassung und lädt neu, „Später“ blendet den
-// Hinweis eine Stunde aus. In der Einsatzführung eines laufenden Einsatzes nie (istEinsatzfuehrung).
+// Hinweis eine Stunde aus.
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { useLocation } from 'react-router-dom'
 import { aktualisieren, fassungAbonnieren, fassungStand, hinweisZeigen, spaeter } from '../lib/fassungPruefen'

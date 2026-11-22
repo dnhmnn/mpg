@@ -3,7 +3,6 @@ import { appFrei, rechtFrei } from './freigabe'
 
 export const ALL_APPS: Record<string, App> = {
   einsaetze:    { id: 'einsaetze',    name: 'Einsätze',      icon: 'siren',      url: '/einsaetze',                permission: 'einsaetze',           color: '#600812', isInternal: true },
-  eks:          { id: 'eks',          name: 'EKS',           icon: 'eks',        url: '/eks',                       permission: 'eks',                 color: '#3d0408', isInternal: true },
   patienten:    { id: 'patienten',    name: 'Patienten',     icon: 'clipboard',  url: '/patienten',                 permission: 'patienten',           color: '#600812', isInternal: true },
   dokumente:    { id: 'dokumente',    name: 'Vorgänge',      icon: 'file',       url: '/vorgaenge',                 permission: 'dokumente',           color: '#7a1020', isInternal: true },
   lager:        { id: 'lager',        name: 'Lager',         icon: 'package',    url: '/lager',                     permission: 'lager',               color: '#5c3800', isInternal: true },
@@ -67,9 +66,9 @@ export function zeitpunktBefristung(bis: string): number {
 const GRUND = { dashboard: true, lernbar: true, chat: true, notizen: true }
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
   // Leitung: alle Rechte samt Benutzerverwaltung, fest. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
-  admin:     { permissions: { ...GRUND, mpg_verwalten: true, einsaetze: true, eks: true, lager: true, lager_verwalten: true, produktausgabe: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, unitarii: true } },
+  admin:     { permissions: { ...GRUND, mpg_verwalten: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, unitarii: true } },
   benutzer:  { permissions: { ...GRUND } },
-  fuehrung:  { permissions: { ...GRUND, einsaetze: true, eks: true, dateien: true } },
+  fuehrung:  { permissions: { ...GRUND, einsaetze: true, dateien: true } },
   medizin:   { permissions: { ...GRUND, patienten: true } },
   mpg:       { permissions: { ...GRUND, mpg_verwalten: true, lager: true, dateien: true } },
   lager:     { permissions: { ...GRUND, lager: true, lager_verwalten: true, produktausgabe: true, dateien: true, dokumente: true } },
@@ -87,7 +86,7 @@ export const FESTE_ROLLEN = ['admin', 'teilnehmer']
 export const ROLLEN: { id: string; name: string; hinweis: string }[] = [
   { id: 'admin',      name: 'Leitung (Admin)',      hinweis: 'Alle Rechte, immer mit Benutzerverwaltung.' },
   { id: 'benutzer',   name: 'Einsatzkraft',         hinweis: 'Grundrolle: Unitas, Geräte prüfen und Defekte melden, Einstellungen, Chat und Notizen.' },
-  { id: 'fuehrung',   name: 'Führung',              hinweis: 'Einsätze, Einsatzführung (EKS) und Dateien. Für Gruppen-, Zug- und Bereitschaftsführung.' },
+  { id: 'fuehrung',   name: 'Führung',              hinweis: 'Einsätze und Dateien. Für Gruppen-, Zug- und Bereitschaftsführung.' },
   { id: 'medizin',    name: 'Medizinische Leitung', hinweis: 'Patientenprotokolle einsehen, prüfen und freigeben.' },
   { id: 'mpg',        name: 'Medizinprodukte',      hinweis: 'Geräte verwalten, sperren und freigeben, dazu Lager und Dateien.' },
   { id: 'lager',      name: 'Material & Lager',     hinweis: 'Lager und Bestand verwalten, Dateien und Vorgänge.' },
@@ -108,7 +107,6 @@ export const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'lernbar',            label: 'Unitas' },
   { key: 'patienten',          label: 'Patienten' },
   { key: 'einsaetze',          label: 'Einsätze' },
-  { key: 'eks',                label: 'Einsatzführung (EKS)' },
   { key: 'dokumente',          label: 'Vorgänge' },
   { key: 'lager',              label: 'Lager' },
   { key: 'lager_verwalten',    label: 'Lager verwalten' },

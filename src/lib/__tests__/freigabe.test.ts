@@ -7,13 +7,15 @@ describe('Freischaltung: was gilt', () => {
     expect(freigeschaltet({})).toBeNull()
     expect(freigeschaltet({ freigeschaltet: null })).toBeNull()
     expect(freigeschaltet(null)).toBeNull()
-    expect(modulFrei({}, 'eks')).toBe(true)
+    expect(modulFrei({}, 'einsaetze')).toBe(true)
     expect(freigabeText({})).toBe('alle Module')
   })
 
   it('liest die Liste auch als JSON-Text und verwirft Unbekanntes', () => {
-    expect(freigeschaltet({ freigeschaltet: '["eks","patienten","quatsch"]' })).toEqual(['benutzer', 'eks', 'patienten'])
-    expect(gebucht({ freigeschaltet: '["eks","patienten","quatsch"]' })).toEqual(['eks', 'patienten'])
+    expect(freigeschaltet({ freigeschaltet: '["einsaetze","patienten","quatsch"]' })).toEqual(['benutzer', 'einsaetze', 'patienten'])
+    expect(gebucht({ freigeschaltet: '["einsaetze","patienten","quatsch"]' })).toEqual(['einsaetze', 'patienten'])
+    // EKS ist entfernt (22.11.2026): ein gespeichertes "eks" zählt nicht mehr
+    expect(gebucht({ freigeschaltet: ['eks', 'patienten'] })).toEqual(['patienten'])
     expect(freigeschaltet({ freigeschaltet: 'kaputt' })).toBeNull()
   })
 
@@ -39,7 +41,7 @@ describe('Freischaltung: Kacheln, Rechte, Formulare', () => {
 
   it('Kacheln folgen ihrem Modul; Benutzer und Einstellungen sind immer da', () => {
     expect(appFrei(org, 'patienten')).toBe(true)
-    expect(appFrei(org, 'eks')).toBe(false)
+    expect(appFrei(org, 'einsaetze')).toBe(false)
     expect(appFrei(org, 'office')).toBe(false)
     expect(appFrei(org, 'unitarii')).toBe(true)
     expect(appFrei(org, 'settings')).toBe(true)
@@ -53,7 +55,7 @@ describe('Freischaltung: Kacheln, Rechte, Formulare', () => {
 
   it('vergeben lassen sich nur Rechte freigeschalteter Module — Benutzerverwaltung und Dashboard immer', () => {
     expect(rechtFrei(org, 'patienten')).toBe(true)
-    expect(rechtFrei(org, 'eks')).toBe(false)
+    expect(rechtFrei(org, 'einsaetze')).toBe(false)
     expect(rechtFrei(org, 'produktausgabe')).toBe(false)
     expect(rechtFrei(org, 'unitarii')).toBe(true)
     // "dashboard" schaltet auch die Einstellungen frei — darf nie wegfallen
@@ -76,7 +78,7 @@ describe('Freischaltung: Lager schließt Dateien, MPG und Vorgänge fest ein', (
     for (const m of ['lager', 'dateien', 'mpg', 'dokumente']) expect(modulFrei(nurLager, m), m).toBe(true)
     for (const a of ['lager', 'dateien', 'office', 'mpg', 'dokumente', 'unitarii', 'settings']) expect(appFrei(nurLager, a), a).toBe(true)
     expect(modulFrei(nurLager, 'patienten')).toBe(false)
-    expect(appFrei(nurLager, 'eks')).toBe(false)
+    expect(appFrei(nurLager, 'einsaetze')).toBe(false)
     expect(rechtFrei(nurLager, 'dateien')).toBe(true)
     expect(rechtFrei(nurLager, 'dokumente')).toBe(true)
     expect(formularFrei(nurLager, 'cirs')).toBe(true)

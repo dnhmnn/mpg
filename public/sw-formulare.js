@@ -20,7 +20,7 @@
  *   - sonst bleibt der Eintrag liegen, bis die Seite wieder offen ist.
  * Offene Fenster (Review F3, Nachprüfung): Ein Fenster der App meldet die Organisationen
  * seiner Karten „Wartet auf dem Gerät“ und ob es sichtbar ist. Nur Fenster MIT der Karte
- * einer Organisation halten deren Einträge zurück; ein Fenster ohne Karte (EKS, Hub) hält
+ * einer Organisation halten deren Einträge zurück; ein Fenster ohne Karte (etwa der Hub) hält
  * nichts auf.
  *   - Sichtbares Fenster mit Karte: dort ist jemand, die Karte arbeitet ab; hier nichts.
  *   - Verdecktes Fenster mit Karte, oder ein Fenster antwortet nicht (eingefroren): Einträge

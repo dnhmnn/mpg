@@ -48,7 +48,7 @@ const PLATZHALTER_ENDUNG = "@kein-email.intern"
 
 // Module wie in src/lib/freigabe.ts (MODULE). Kommt dort ein Modul dazu, hier ergänzen;
 // der Prüffall formularAn gegen formularFrei schlägt sonst an.
-const MODUL_IDS = ["benutzer", "einsaetze", "eks", "patienten", "dokumente", "lager", "mpg", "dateien", "lernbar", "ausbildungen", "chat", "notizen"]
+const MODUL_IDS = ["benutzer", "einsaetze", "patienten", "dokumente", "lager", "mpg", "dateien", "lernbar", "ausbildungen", "chat", "notizen"]
 const ENTHAELT = { lager: ["dateien", "mpg", "dokumente"] }
 const IMMER = ["benutzer"]
 const FORMULAR_MODULE = { patienten: "patienten", produktausgabe: "lager", defektmeldung: "mpg", cirs: "dokumente" }

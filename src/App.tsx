@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
 import NeueFassungHinweis from './components/NeueFassungHinweis'
 import Login from './pages/Login'
 import Index from './pages/Index'
@@ -45,8 +45,6 @@ const Office = lazy(() => import('./pages/Office'))
 const Notizen = lazy(() => import('./pages/Notizen'))
 const Wissen = lazy(() => import('./pages/Wissen'))
 const WebsiteEditor = lazy(() => import('./pages/WebsiteEditor'))
-const EKS = lazy(() => import('./pages/eks/EKS'))
-const EksAuswahl = lazy(() => import('./pages/eks/EksAuswahl'))
 const OrgPublicLayout = lazy(() => import('./pages/public/OrgPublicLayout'))
 // Aus demselben Baustein wie das Layout — ist beim Aufruf eines Formulars schon geladen
 const FormularFrei = lazy(() => import('./pages/public/OrgPublicLayout').then(m => ({ default: m.FormularFrei })))
@@ -162,8 +160,8 @@ function App() {
         <Route path="/notizen" element={<Notizen />} />
         <Route path="/wissen" element={<Wissen />} />
         <Route path="/website" element={<WebsiteEditor />} />
-        <Route path="/eks" element={<EksAuswahl />} />
-        <Route path="/eks/:einsatzId" element={<EKS />} />
+        {/* EKS ist entfernt (Owner, 22.11.2026): alte Lesezeichen und Verknüpfungen führen zu den Einsätzen */}
+        <Route path="/eks/*" element={<Navigate to="/einsaetze" replace />} />
         {isMarketingDomain ? (
           // Auf responda.systems sind einteilige Pfade Website-Unterseiten
           <Route path="/:slug" element={<Index />} />

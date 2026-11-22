@@ -65,7 +65,7 @@ describe('Rollen speichern: erste Rolle zählt in den Server-Regeln', () => {
 describe('Was die Rollen zusammen geben', () => {
   it('Rechte addieren sich; jedes bekannte Recht steht ausdrücklich da', () => {
     const r = rechteAusRollen(['fuehrung', 'ausbildung'], {}, {})
-    expect(an(r)).toEqual(['ausbildungen_manage', 'chat', 'dashboard', 'dateien', 'einsaetze', 'eks', 'lernbar', 'notizen'])
+    expect(an(r)).toEqual(['ausbildungen_manage', 'chat', 'dashboard', 'dateien', 'einsaetze', 'lernbar', 'notizen'])
     expect(r.patienten).toBe(false)
     expect(r.unitarii).toBe(false)
   })
@@ -123,7 +123,7 @@ describe('Abweichung von den Rollen', () => {
     expect(abweichung({ role: 'teilnehmer', permissions: { lernbar: true } }, {}, {}, ORG)).toBeNull()
     expect(abweichung({ role: 'teilnehmer', permissions: {} }, {}, {}, ORG)).toBeNull()
     // Als Teilnehmende verknüpft, aber mit Rechten aus früherer Rolle
-    expect(abweichung({ role: 'teilnehmer', permissions: { lernbar: true, patienten: true, eks: true } }, {}, {}, ORG)?.weg.sort()).toEqual(['eks', 'patienten'])
+    expect(abweichung({ role: 'teilnehmer', permissions: { lernbar: true, patienten: true, einsaetze: true } }, {}, {}, ORG)?.weg.sort()).toEqual(['einsaetze', 'patienten'])
     const t = rechteTeilnehmende({ lernbar: true, unitarii: true })
     expect(Object.keys(t).filter(x => t[x])).toEqual(['lernbar'])
   })

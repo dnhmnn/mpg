@@ -17,9 +17,9 @@ describe('Rechte nach Bereichen', () => {
   })
 
   it('zeigt nur die vergebbaren Rechte, leere Bereiche entfallen, Unbekanntes kommt unter „Weitere“', () => {
-    const g = rechteGruppiert([{ key: 'chat', label: 'Chat' }, { key: 'eks', label: 'EKS' }, { key: 'neu_x', label: 'Neu' }])
+    const g = rechteGruppiert([{ key: 'chat', label: 'Chat' }, { key: 'einsaetze', label: 'Einsätze' }, { key: 'neu_x', label: 'Neu' }])
     expect(g.map(x => x.name)).toEqual(['Einsatz', 'Kommunikation', 'Weitere'])
-    expect(g[0].rechte.map(r => r.key)).toEqual(['eks'])
+    expect(g[0].rechte.map(r => r.key)).toEqual(['einsaetze'])
   })
 
   it('zählt nur sichtbare Rechte, die wirklich angehakt sind', () => {
