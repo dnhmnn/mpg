@@ -1,791 +1,291 @@
-import { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+// Dateien (/files) im Dunkelrot-Design, Owner 22.11.2026: die gemeinsame Ablage der Organisation.
+// Ordner in der Adresse (?ordner=<id>), damit „Zurück“ im Browser und am Telefon wirkt; Pfad im roten Kopf.
+// Hochladen (auch Hineinziehen am Rechner), neuer Ordner, Umbenennen, Löschen (Ordner mit allem darin),
+// Suche über alle Dateien der Organisation, Öffnen in der Schreibstube. Rechnung in src/pages/dateien/logik.ts.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { useStatusleiste } from '../hooks/useStatusleiste'
+import { appFrei } from '../lib/freigabe'
+import { Abschnitt, Hinweis, Icon, Seite, Toast } from './benutzer/bausteine'
+import { BV_CSS } from './benutzer/stil'
+import { HUB_CSS } from './hub/stil'
+import Blatt from './hub/Blatt'
+import { DF_CSS } from './dateien/stil'
+import { art, bearbeitbar, groesse, nachkommen, nameSauber, nameVergeben, passt, pfad, sortieren, umbenennen, type Art, type Eintrag } from './dateien/logik'
 
-const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp', 'pdf']
+const STIL = BV_CSS + HUB_CSS + DF_CSS
 
-interface FileItem {
-  id: string
-  name: string
-  is_folder: boolean
-  parent_folder_id: string
-  organization_id: string
-  file?: string
-  file_size?: number
-  file_type?: string
-  created: string
+const SYMBOL: Record<Art, JSX.Element> = {
+  ordner: <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />,
+  pdf: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><path d="M8 15h1.5a1.5 1.5 0 000-3H8v5" /></>,
+  text: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="8" y1="13" x2="16" y2="13" /><line x1="8" y1="17" x2="14" y2="17" /></>,
+  tabelle: <><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="3" y1="15" x2="21" y2="15" /><line x1="9" y1="3" x2="9" y2="21" /></>,
+  praesentation: <><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></>,
+  bild: <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></>,
+  archiv: <><polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></>,
+  datei: <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /></>,
 }
-
-interface FolderPath {
-  id: string
-  name: string
-}
+const ArtSymbol = ({ a }: { a: Art }) => <span className={`df-art ${a}`} aria-hidden="true"><svg viewBox="0 0 24 24">{SYMBOL[a]}</svg></span>
+const tag = (s: string) => (s ? new Date(s.replace(' ', 'T')).toLocaleDateString('de-DE') : '')
 
 export default function Files() {
+  const { user, loading: authLoading } = useAuth()
+  useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
   const navigate = useNavigate()
-  const { user, loading: authLoading, logout } = useAuth()
-  
-  const [currentFolderId, setCurrentFolderId] = useState<string | null>(null)
-  const [folderPath, setFolderPath] = useState<FolderPath[]>([])
-  const [allFiles, setAllFiles] = useState<FileItem[]>([])
-  const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  
-  const [showNewFolderModal, setShowNewFolderModal] = useState(false)
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [showRenameModal, setShowRenameModal] = useState(false)
-  const [actionFile, setActionFile] = useState<FileItem | null>(null)
-  
-  const [folderName, setFolderName] = useState('')
-  const [renameName, setRenameName] = useState('')
-  const [currentRenameId, setCurrentRenameId] = useState<string | null>(null)
-  
-  const [message, setMessage] = useState<{text: string, type: 'success' | 'error'} | null>(null)
-  const [uploadProgress, setUploadProgress] = useState<{name: string, status: 'uploading' | 'success' | 'error'}[]>([])
-  
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const uploadAreaRef = useRef<HTMLDivElement>(null)
+  const ort = useLocation()
+  const [adr] = useSearchParams()
+  const ordnerId = adr.get('ordner') || ''
+  const org = user?.organization_id || ''
+  const schreibstube = appFrei(user?.organization, 'office')
 
-  useEffect(() => {
-    if (user?.organization_id) {
-      loadFiles()
-    }
-  }, [currentFolderId, user])
+  const [alle, setAlle] = useState<Eintrag[]>([])
+  const [laedt, setLaedt] = useState(true)
+  const [fehler, setFehler] = useState('')
+  const [suche, setSuche] = useState('')
+  const [meldung, setMeldung] = useState<{ text: string; fehler?: boolean } | null>(null)
+  const [hoch, setHoch] = useState<{ name: string; stand: 'laeuft' | 'ok' | 'fehler' }[]>([])
+  const [neuerOrdner, setNeuerOrdner] = useState<string | null>(null)
+  const [blatt, setBlatt] = useState<Eintrag | null>(null)
+  const [umName, setUmName] = useState<string | null>(null)
+  const [ziehen, setZiehen] = useState(false)
+  const [laeuft, setLaeuft] = useState(false)
+  const datei = useRef<HTMLInputElement>(null)
+  const melden = useCallback((text: string, f = false) => { setMeldung({ text, fehler: f }); window.setTimeout(() => setMeldung(null), 3500) }, [])
 
-  useEffect(() => {
-    function closeMenus(e: MouseEvent) {
-      if (!(e.target as HTMLElement).closest('.file-menu-container')) {
-        document.querySelectorAll('.file-menu-dropdown').forEach(menu => {
-          menu.classList.remove('show')
-        })
-      }
-    }
-    document.addEventListener('click', closeMenus)
-    return () => document.removeEventListener('click', closeMenus)
-  }, [])
-
-  async function loadFiles() {
-    if (!user?.organization_id) {
-      setError('Keine Organisation gefunden')
-      setLoading(false)
-      return
-    }
-    
+  const laden = useCallback(async () => {
+    if (!org) return
     try {
-      setLoading(true)
-      setError(null)
-      
-      const filter = `organization_id = "${user.organization_id}" && parent_folder_id ${currentFolderId ? `= "${currentFolderId}"` : '= ""'}`
-      
-      console.log('Loading files with filter:', filter)
-      
-      const files = await pb.collection('files').getFullList<FileItem>({
-        filter,
-        sort: '-is_folder,name'
-      })
-      
-      console.log('Loaded files:', files)
-      
-      setAllFiles(files)
-    } catch(e: any) {
-      console.error('Error loading files:', e)
-      setError('Fehler beim Laden: ' + e.message)
-    } finally {
-      setLoading(false)
-    }
+      const l = await pb.collection('files').getFullList<Eintrag>({ filter: pb.filter('organization_id = {:o}', { o: org }), fields: 'id,name,is_folder,parent_folder_id,organization_id,file,file_size,file_type,created,updated', requestKey: null })
+      setAlle(l)
+      setFehler('')
+    } catch { setFehler('Die Dateien lassen sich gerade nicht laden.') }
+    finally { setLaedt(false) }
+  }, [org])
+  useEffect(() => { void laden() }, [laden])
+  useEffect(() => { window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; setSuche(''); setNeuerOrdner(null) }, [ordnerId])
+
+  const ordner = useMemo(() => alle.filter((e) => e.is_folder), [alle])
+  const weg = pfad(ordnerId, ordner)
+  const aktuell = weg[weg.length - 1]
+  const hier = useMemo(() => sortieren(alle.filter((e) => (e.parent_folder_id || '') === ordnerId)), [alle, ordnerId])
+  const treffer = useMemo(() => (suche.trim() ? sortieren(alle.filter((e) => passt(e, suche))).slice(0, 100) : []), [alle, suche])
+  const ordnerName = (id: string) => (id ? ordner.find((o) => o.id === id)?.name || 'Ordner' : 'Dateien')
+
+  function oeffneOrdner(id: string) { navigate({ search: id ? `?ordner=${id}` : '' }, { state: { dfUnter: true } }) }
+  function zurueck() {
+    if (!ordnerId) { navigate('/hub'); return }
+    // Selbst geöffnet: einen Schritt zurück; sonst (Link, neu geladen) in den Ordner darüber
+    if ((ort.state as { dfUnter?: boolean } | null)?.dfUnter) { navigate(-1); return }
+    const oben = ordner.find((o) => o.id === ordnerId)?.parent_folder_id || ''
+    navigate({ search: oben ? `?ordner=${oben}` : '' }, { replace: true })
   }
 
-  function showMessage(text: string, type: 'success' | 'error' = 'success') {
-    setMessage({ text, type })
-    setTimeout(() => setMessage(null), 4000)
-  }
-
-  function navigateToFolder(folderId: string | null, folderName?: string) {
-    if (folderId === null) {
-      setCurrentFolderId(null)
-      setFolderPath([])
-    } else {
-      const idx = folderPath.findIndex(f => f.id === folderId)
-      if (idx >= 0) {
-        setCurrentFolderId(folderId)
-        setFolderPath(folderPath.slice(0, idx + 1))
-      } else if (folderName) {
-        setCurrentFolderId(folderId)
-        setFolderPath([...folderPath, { id: folderId, name: folderName }])
-      }
-    }
-  }
-
-  async function createFolder() {
-    if (!folderName.trim()) {
-      alert('Bitte Ordnername eingeben')
-      return
-    }
-    
-    try {
-      await pb.collection('files').create({
-        name: folderName,
-        is_folder: true,
-        parent_folder_id: currentFolderId || '',
-        organization_id: user?.organization_id
-      })
-      
-      setShowNewFolderModal(false)
-      setFolderName('')
-      await loadFiles()
-      showMessage('Ordner erstellt!')
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
-    }
-  }
-
-  async function handleFileUpload(files: FileList) {
-    const fileArray = Array.from(files)
-    setUploadProgress(fileArray.map(f => ({ name: f.name, status: 'uploading' })))
-    
-    for (let i = 0; i < fileArray.length; i++) {
-      const file = fileArray[i]
-      
+  async function hochladen(liste: FileList | File[]) {
+    const dateien = Array.from(liste)
+    if (!dateien.length || !org) return
+    setHoch(dateien.map((f) => ({ name: f.name, stand: 'laeuft' })))
+    for (let i = 0; i < dateien.length; i++) {
+      const f = dateien[i]
       try {
-        const formData = new FormData()
-        formData.append('name', file.name)
-        formData.append('is_folder', 'false')
-        formData.append('parent_folder_id', currentFolderId || '')
-        formData.append('file', file)
-        formData.append('file_size', file.size.toString())
-        formData.append('file_type', file.type)
-        formData.append('organization_id', user?.organization_id || '')
-        
-        await pb.collection('files').create(formData)
-        
-        setUploadProgress(prev => {
-          const newProgress = [...prev]
-          newProgress[i] = { ...newProgress[i], status: 'success' }
-          return newProgress
-        })
-      } catch(e) {
-        console.error('Upload error:', e)
-        setUploadProgress(prev => {
-          const newProgress = [...prev]
-          newProgress[i] = { ...newProgress[i], status: 'error' }
-          return newProgress
-        })
+        const fd = new FormData()
+        fd.append('name', nameSauber(f.name) || 'Datei')
+        fd.append('is_folder', 'false')
+        fd.append('parent_folder_id', ordnerId)
+        fd.append('file', f)
+        fd.append('file_size', String(f.size))
+        fd.append('file_type', f.type)
+        fd.append('organization_id', org)
+        await pb.collection('files').create(fd, { requestKey: null })
+        setHoch((h) => h.map((x, j) => (j === i ? { ...x, stand: 'ok' } : x)))
+      } catch {
+        setHoch((h) => h.map((x, j) => (j === i ? { ...x, stand: 'fehler' } : x)))
       }
     }
-    
-    await loadFiles()
-    showMessage('Dateien hochgeladen!')
+    await laden()
+    window.setTimeout(() => setHoch((h) => h.filter((x) => x.stand === 'fehler')), 2500)
   }
 
-  async function downloadFile(fileId: string) {
+  async function ordnerAnlegen() {
+    const n = nameSauber(neuerOrdner || '')
+    if (!n || !org || laeuft) return
+    if (nameVergeben(hier, n)) { melden(`„${n}“ gibt es hier schon.`, true); return }
+    setLaeuft(true)
     try {
-      const file = await pb.collection('files').getOne<FileItem>(fileId)
-      
-      if (!file.file) {
-        alert('Keine Datei vorhanden')
-        return
-      }
-      
-      const baseUrl = pb.baseUrl
-      const token = pb.authStore.token
-      const url = `${baseUrl}/api/files/files/${file.id}/${file.file}?token=${token}`
-      
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-      
-      const blob = await response.blob()
-      const downloadUrl = window.URL.createObjectURL(blob)
-      
+      await pb.collection('files').create({ name: n, is_folder: true, parent_folder_id: ordnerId, organization_id: org })
+      setNeuerOrdner(null)
+      await laden()
+    } catch { melden('Ordner nicht angelegt.', true) }
+    finally { setLaeuft(false) }
+  }
+
+  async function herunterladen(e: Eintrag) {
+    if (!e.file) { melden('Zu diesem Eintrag gibt es keine Datei.', true); return }
+    try {
+      const token = await pb.files.getToken()
+      const url = pb.files.getUrl({ ...e, collectionName: 'files' }, e.file, { token })
+      const r = await fetch(url)
+      if (!r.ok) throw new Error(String(r.status))
+      const b = await r.blob()
+      const u = URL.createObjectURL(b)
       const a = document.createElement('a')
-      a.href = downloadUrl
-      a.download = file.name
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      
-      setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 100)
-    } catch(e: any) {
-      console.error('Download error:', e)
-      alert('Fehler beim Download: ' + e.message)
-    }
+      a.href = u; a.download = e.name
+      document.body.appendChild(a); a.click(); a.remove()
+      window.setTimeout(() => URL.revokeObjectURL(u), 1000)
+    } catch { melden('Herunterladen hat nicht geklappt.', true) }
   }
 
-  async function renameItem() {
-    if (!renameName.trim() || !currentRenameId) {
-      alert('Bitte Name eingeben')
-      return
-    }
-    
+  async function umbenennenSpeichern(e: Eintrag) {
+    const n = umbenennen(e, umName || '')
+    if (!n || laeuft) return
+    const geschwister = alle.filter((x) => (x.parent_folder_id || '') === (e.parent_folder_id || ''))
+    if (nameVergeben(geschwister, n, e.id)) { melden(`„${n}“ gibt es dort schon.`, true); return }
+    setLaeuft(true)
     try {
-      await pb.collection('files').update(currentRenameId, { name: renameName })
-      
-      setShowRenameModal(false)
-      setCurrentRenameId(null)
-      setRenameName('')
-      await loadFiles()
-      showMessage('Umbenannt!')
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
+      await pb.collection('files').update(e.id, { name: n })
+      setUmName(null); setBlatt(null)
+      await laden()
+    } catch { melden('Nicht umbenannt.', true) }
+    finally { setLaeuft(false) }
+  }
+
+  async function loeschen(e: Eintrag) {
+    const darunter = e.is_folder ? nachkommen(e.id, alle) : []
+    const text = e.is_folder
+      ? `Ordner „${e.name}“ löschen?${darunter.length ? `\n\nMit ihm verschwinden ${darunter.length === 1 ? 'ein Eintrag' : `${darunter.length} Einträge`} darin, auch in Unterordnern.` : ''}`
+      : `„${e.name}“ löschen?`
+    if (!confirm(text)) return
+    setLaeuft(true)
+    let fehlt = 0
+    // Erst alles darin (die tiefsten zuerst), dann der Ordner selbst
+    for (const id of [...darunter, e.id]) {
+      try { await pb.collection('files').delete(id, { requestKey: null }) } catch { fehlt++ }
     }
+    setLaeuft(false)
+    setBlatt(null)
+    await laden()
+    melden(fehlt ? `${fehlt === 1 ? 'Ein Eintrag ließ' : `${fehlt} Einträge ließen`} sich nicht löschen.` : 'Gelöscht.', fehlt > 0)
   }
 
-  async function deleteItem(itemId: string, itemName: string, isFolder: boolean) {
-    const type = isFolder ? 'Ordner' : 'Datei'
-    
-    if (!confirm(`${type} "${itemName}" wirklich löschen?${isFolder ? '\n\nAlle Dateien im Ordner gehen verloren!' : ''}`)) {
-      return
-    }
-    
-    try {
-      if (isFolder) {
-        const children = await pb.collection('files').getFullList({
-          filter: `parent_folder_id = "${itemId}"`
-        })
-        
-        for (const child of children) {
-          await pb.collection('files').delete(child.id)
-        }
-      }
-      
-      await pb.collection('files').delete(itemId)
-      
-      await loadFiles()
-      showMessage('Gelöscht!')
-    } catch(e: any) {
-      alert('Fehler: ' + e.message)
-    }
+  function antippen(e: Eintrag) {
+    if (e.is_folder) oeffneOrdner(e.id)
+    else { setBlatt(e); setUmName(null) }
   }
 
-  function getFileIcon(item: FileItem) {
-    if (item.is_folder) return 'Ordner'
-    
-    const ext = item.name.split('.').pop()?.toLowerCase() || ''
-    
-    if (ext === 'pdf') return 'PDF'
-    if (['doc', 'docx'].includes(ext)) return 'Word'
-    if (['xls', 'xlsx'].includes(ext)) return 'Excel'
-    if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'Bild'
-    if (['zip', 'rar', '7z'].includes(ext)) return 'Archiv'
-    
-    return 'Datei'
-  }
+  const zeile = (e: Eintrag, mitOrt = false) => (
+    <div key={e.id} className="bv-z" style={{ paddingRight: 4 }}>
+      <button type="button" className="df-zeile" onClick={() => antippen(e)}>
+        <ArtSymbol a={art(e)} />
+        <span className="bv-tx"><b>{e.name}</b><small>{[mitOrt ? `in ${ordnerName(e.parent_folder_id || '')}` : '', tag(e.updated || e.created), e.is_folder ? '' : groesse(e.file_size)].filter(Boolean).join(' · ')}</small></span>
+      </button>
+      <button type="button" className="df-mehr" aria-label={`Mehr zu ${e.name}`} onClick={() => { setBlatt(e); setUmName(null) }}>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+      </button>
+    </div>
+  )
 
-  function formatFileSize(bytes?: number) {
-    if (!bytes || bytes === 0) return '-'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
-  }
-
-  function formatDate(dateStr: string) {
-    const date = new Date(dateStr)
-    return date.toLocaleDateString('de-DE')
-  }
-
-  function isEditable(item: FileItem) {
-    const ext = item.name.split('.').pop()?.toLowerCase() || ''
-    return EDITABLE_EXTS.includes(ext)
-  }
-
-  function openItem(item: FileItem) {
-    if (item.is_folder) {
-      navigateToFolder(item.id, item.name)
-    } else if (isEditable(item)) {
-      setActionFile(item)
-    } else {
-      downloadFile(item.id)
-    }
-  }
-
-  const filteredFiles = searchQuery 
-    ? allFiles.filter(f => f.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    : allFiles
-
-  if (authLoading) {
-    return null
-  }
-
-  function fileIconSvg(item: FileItem) {
-    if (item.is_folder) return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
-      </svg>
-    )
-    const ext = item.name.split('.').pop()?.toLowerCase() || ''
-    if (ext === 'pdf') return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-      </svg>
-    )
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-      </svg>
-    )
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
-      </svg>
-    )
-  }
-
-  function fileIconColor(item: FileItem) {
-    if (item.is_folder) return { color: '#d97706', bg: 'rgba(217,119,6,0.08)' }
-    const ext = item.name.split('.').pop()?.toLowerCase() || ''
-    if (ext === 'pdf') return { color: 'var(--lbf-akzent)', bg: 'rgba(var(--lbf-rot-rgb),0.07)' }
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return { color: '#7c3aed', bg: 'rgba(124,58,237,0.07)' }
-    return { color: 'var(--warm-gray)', bg: 'rgba(138,122,104,0.08)' }
-  }
-
-  function fileBorderColor(item: FileItem) {
-    if (item.is_folder) return '#d97706'
-    const ext = item.name.split('.').pop()?.toLowerCase() || ''
-    if (ext === 'pdf') return 'var(--lbf-akzent)'
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return '#7c3aed'
-    return 'rgba(138,122,104,0.4)'
-  }
+  if (authLoading) return <style>{STIL}</style>
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>
-
-      {/* MASTHEAD */}
-      <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
-        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', alignItems: 'center', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </a>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Dateien</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>
-          </div>
-          <div style={{ width: 22 }} />
+    <div
+      onDragOver={(e) => { if (e.dataTransfer.types.includes('Files')) { e.preventDefault(); setZiehen(true) } }}
+      onDragLeave={(e) => { if (e.currentTarget === e.target) setZiehen(false) }}
+      onDrop={(e) => { if (e.dataTransfer.files.length) { e.preventDefault(); setZiehen(false); void hochladen(e.dataTransfer.files) } }}>
+      <style>{STIL}</style>
+      <Seite titel={aktuell?.name || 'Dateien'} unter={user?.organization_name || 'Responda'}
+        zurueck={zurueck} zurueckLabel={ordnerId ? 'Zurück' : 'Zurück zur Übersicht'}
+        reiter={weg.length ? (
+          <nav className="df-pfad" aria-label="Ordnerpfad">
+            <button type="button" onClick={() => oeffneOrdner('')}>Dateien</button>
+            {weg.slice(0, -1).map((o) => <span key={o.id} style={{ display: 'contents' }}><span aria-hidden="true">›</span><button type="button" onClick={() => oeffneOrdner(o.id)}>{o.name}</button></span>)}
+          </nav>
+        ) : undefined}>
+        <input ref={datei} type="file" multiple hidden onChange={(e) => { if (e.target.files) void hochladen(e.target.files); e.target.value = '' }} />
+        <div className="df-knoepfe">
+          <button type="button" onClick={() => datei.current?.click()}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>Hochladen
+          </button>
+          <button type="button" aria-expanded={neuerOrdner !== null} onClick={() => setNeuerOrdner(neuerOrdner === null ? '' : null)}>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>Neuer Ordner
+          </button>
         </div>
-      </div>
-
-      {/* ACTION TOOLBAR */}
-      <div className="files-actionbar">
-        <button className="files-action-btn" onClick={() => setShowNewFolderModal(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
-          <span className="files-action-label">Neuer Ordner</span>
-        </button>
-        <button className="files-action-btn" onClick={() => setShowUploadModal(true)}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span className="files-action-label">Hochladen</span>
-        </button>
-      </div>
-
-      {/* TOAST */}
-      {message && (
-        <div className={`files-toast files-toast-${message.type}`}>{message.text}</div>
-      )}
-
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '16px 16px 120px', boxSizing: 'border-box' as const }}>
-
-        {/* BREADCRUMBS */}
-        {folderPath.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginBottom: 12, background: 'var(--lbf-card)', borderRadius: 10, padding: '10px 14px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-            <span onClick={() => navigateToFolder(null)} style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-akzent)', cursor: 'pointer' }}>Dateien</span>
-            {folderPath.map((folder, idx) => (
-              <span key={folder.id} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--warm-gray)" strokeWidth="2.5"><path d="M9 18l6-6-6-6"/></svg>
-                <span
-                  onClick={() => navigateToFolder(folder.id)}
-                  style={{ fontSize: 13, fontWeight: idx === folderPath.length - 1 ? 700 : 600, color: idx === folderPath.length - 1 ? 'var(--lbf-text)' : 'var(--lbf-akzent)', cursor: idx === folderPath.length - 1 ? 'default' : 'pointer' }}
-                >
-                  {folder.name}
-                </span>
-              </span>
+        {neuerOrdner !== null && (
+          <div className="bv-flaeche df-hoch">
+            <div className="df-eingabe">
+              <input className="bv-eingabe" autoFocus placeholder="Name des Ordners" value={neuerOrdner} maxLength={120} aria-label="Name des neuen Ordners"
+                onChange={(e) => setNeuerOrdner(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void ordnerAnlegen() }} />
+              <button type="button" className="df-ok" disabled={!nameSauber(neuerOrdner) || laeuft} onClick={() => void ordnerAnlegen()}>Anlegen</button>
+            </div>
+          </div>
+        )}
+        {!!hoch.length && (
+          <div className="bv-flaeche df-hoch" role="status">
+            {hoch.map((h, i) => (
+              <div key={i} className="bv-z">
+                <span className="bv-tx"><b>{h.name}</b><small className={h.stand === 'fehler' ? 'fehler' : undefined}>{h.stand === 'laeuft' ? 'Wird hochgeladen …' : h.stand === 'ok' ? 'Hochgeladen' : 'Nicht hochgeladen. Zu groß oder keine Verbindung?'}</small></span>
+              </div>
             ))}
           </div>
         )}
-
-        {/* SEARCH */}
-        <div style={{ marginBottom: 12 }}>
-          <input
-            className="files-search"
-            type="text"
-            placeholder="Dateien durchsuchen..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+        <div className="bv-suche">
+          <Icon n="suche" />
+          <input type="search" placeholder="In allen Dateien suchen" aria-label="Dateien suchen" value={suche} onChange={(e) => setSuche(e.target.value)} />
+          {suche && <button type="button" aria-label="Suche leeren" onClick={() => setSuche('')}><Icon n="kreuz" /></button>}
         </div>
 
-        {/* ERROR */}
-        {error && (
-          <div style={{ background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: '#dc2626', padding: 16, borderRadius: 12, marginBottom: 12, fontWeight: 600, fontSize: 13 }}>
-            {error}
-            <button onClick={() => loadFiles()} style={{ marginLeft: 16, background: 'none', border: '1px solid #fecaca', borderRadius: 6, padding: '4px 10px', cursor: 'pointer', color: '#dc2626', fontFamily: 'inherit' }}>Erneut versuchen</button>
-          </div>
+        {fehler && <div className="bv-notiz" style={{ marginTop: 14 }}><b>{fehler}</b><p><button type="button" style={{ color: 'var(--lbf-akzent)', fontWeight: 700, minHeight: 44 }} onClick={() => void laden()}>Erneut versuchen</button></p></div>}
+
+        {suche.trim() ? (
+          <>
+            <Abschnitt titel="Gefunden" rechts={treffer.length} />
+            {treffer.length ? <div className="bv-flaeche">{treffer.map((e) => zeile(e, true))}</div> : <Hinweis>Nichts gefunden.</Hinweis>}
+          </>
+        ) : laedt ? <Hinweis>Wird geladen …</Hinweis> : (
+          <>
+            <Abschnitt titel={ordnerId ? 'In diesem Ordner' : 'Alle Dateien'} rechts={hier.length || undefined} />
+            {hier.length ? <div className="bv-flaeche">{hier.map((e) => zeile(e))}</div> : (
+              <div className="bv-notiz"><b>{ordnerId ? 'Dieser Ordner ist leer.' : 'Noch keine Dateien.'}</b><p>Mit „Hochladen“ kommen Dateien hierher, am Rechner auch durch Hineinziehen.</p></div>
+            )}
+          </>
         )}
+      </Seite>
 
-        {/* FILE LIST */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {loading ? (
-            <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12, fontStyle: 'italic' }}>Lade Dateien...</div>
-          ) : filteredFiles.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12 }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ opacity: 0.25, marginBottom: 12 }} strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
-              <div style={{ fontWeight: 700, marginBottom: 4, color: 'var(--lbf-text)' }}>Keine Dateien</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13 }}>Ordner erstellen oder Dateien hochladen</div>
-            </div>
-          ) : (
-            filteredFiles.map(item => {
-              const ic = fileIconColor(item)
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => openItem(item)}
-                  style={{ background: 'var(--lbf-card)', borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.07)', borderLeft: `3px solid ${fileBorderColor(item)}`, padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}
-                >
-                  <div style={{ width: 36, height: 36, borderRadius: 8, background: ic.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, color: ic.color }}>
-                    {fileIconSvg(item)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, fontStyle: 'italic', fontSize: 14, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
-                    <div style={{ fontSize: 11, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-                      {item.is_folder ? 'Ordner' : formatFileSize(item.file_size)} · {formatDate(item.created)}
-                    </div>
-                  </div>
-                  <div className="file-menu-container" style={{ position: 'relative', flexShrink: 0 }}>
-                    <button
-                      className="menu-dots"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        const menuId = `menu-${item.id}`
-                        const menu = document.getElementById(menuId)
-                        document.querySelectorAll('.file-menu-dropdown').forEach(m => { if (m.id !== menuId) m.classList.remove('show') })
-                        menu?.classList.toggle('show')
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
-                    </button>
-                    <div id={`menu-${item.id}`} className="file-menu-dropdown">
-                      <button className="menu-item" onClick={(e) => { e.stopPropagation(); setCurrentRenameId(item.id); setRenameName(item.name); setShowRenameModal(true) }}>Umbenennen</button>
-                      <button className="menu-item danger" onClick={(e) => { e.stopPropagation(); deleteItem(item.id, item.name, item.is_folder) }}>Löschen</button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })
-          )}
-        </div>
-      </div>
-
-      {/* NEUER ORDNER MODAL */}
-      {showNewFolderModal && (
-        <div className="f-modal-overlay" onClick={() => setShowNewFolderModal(false)}>
-          <div className="f-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Neuer Ordner</h3>
-            <div className="f-field">
-              <label>Ordnername</label>
-              <input type="text" value={folderName} onChange={(e) => setFolderName(e.target.value)} placeholder="z.B. Protokolle" onKeyPress={(e) => e.key === 'Enter' && createFolder()} autoFocus />
-            </div>
-            <div className="f-modal-actions">
-              <button className="f-btn" onClick={() => setShowNewFolderModal(false)}>Abbrechen</button>
-              <button className="f-btn primary" onClick={createFolder}>Erstellen</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* UPLOAD MODAL */}
-      {showUploadModal && (
-        <div className="f-modal-overlay" onClick={() => setShowUploadModal(false)}>
-          <div className="f-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Dateien hochladen</h3>
-            <div
-              ref={uploadAreaRef}
-              className="upload-area"
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over') }}
-              onDragLeave={(e) => { e.currentTarget.classList.remove('drag-over') }}
-              onDrop={(e) => { e.preventDefault(); e.currentTarget.classList.remove('drag-over'); if (e.dataTransfer.files) handleFileUpload(e.dataTransfer.files) }}
-            >
-              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.35, marginBottom: 12, color: 'var(--lbf-akzent)' }}><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <div style={{ fontWeight: 700, color: 'var(--lbf-text)', marginBottom: 4 }}>Dateien hierher ziehen</div>
-              <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)' }}>oder tippen zum Auswählen</div>
-            </div>
-            <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
-            {uploadProgress.length > 0 && (
-              <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {uploadProgress.map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--warm-bg)', borderRadius: 8, fontSize: 13 }}>
-                    <div style={{ fontWeight: 600, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{item.name}</div>
-                    <div style={{ fontStyle: 'italic', color: item.status === 'success' ? '#16a34a' : item.status === 'error' ? '#dc2626' : 'var(--warm-gray)', marginLeft: 12, flexShrink: 0 }}>
-                      {item.status === 'uploading' ? 'Lädt...' : item.status === 'success' ? 'Fertig' : 'Fehler'}
-                    </div>
-                  </div>
-                ))}
+      {blatt && (
+        <Blatt titel={blatt.name} onClose={() => { setBlatt(null); setUmName(null) }}>
+          <div className="bv-flaeche">
+            {blatt.is_folder ? (
+              <button type="button" className="bv-z" onClick={() => { const id = blatt.id; setBlatt(null); oeffneOrdner(id) }}>
+                <span className="bv-tx"><b>Öffnen</b></span><Icon n="weiter" className="bv-pfeil" />
+              </button>
+            ) : (
+              <button type="button" className="bv-z" onClick={() => void herunterladen(blatt)}>
+                <span className="bv-tx"><b>Herunterladen</b>{groesse(blatt.file_size) && <small>{groesse(blatt.file_size)}</small>}</span>
+              </button>
+            )}
+            {schreibstube && bearbeitbar(blatt) && (
+              <button type="button" className="bv-z" onClick={() => { const id = blatt.id; setBlatt(null); navigate(`/office?open=${id}`) }}>
+                <span className="bv-tx"><b>In der Schreibstube öffnen</b><small>Ansehen und bearbeiten</small></span><Icon n="weiter" className="bv-pfeil" />
+              </button>
+            )}
+            {umName === null ? (
+              <button type="button" className="bv-z" onClick={() => setUmName(blatt.is_folder ? blatt.name : blatt.name.replace(/\.[^.]+$/, ''))}>
+                <span className="bv-tx"><b>Umbenennen</b></span>
+              </button>
+            ) : (
+              <div className="df-eingabe">
+                <input className="bv-eingabe" autoFocus value={umName} maxLength={120} aria-label="Neuer Name" onChange={(e) => setUmName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void umbenennenSpeichern(blatt) }} />
+                <button type="button" className="df-ok" disabled={!nameSauber(umName) || laeuft} onClick={() => void umbenennenSpeichern(blatt)}>Speichern</button>
               </div>
             )}
-            <div className="f-modal-actions">
-              <button className="f-btn" onClick={() => { setShowUploadModal(false); setUploadProgress([]) }}>Schließen</button>
-            </div>
           </div>
-        </div>
-      )}
-
-      {/* DOKUMENT ÖFFNEN MODAL */}
-      {actionFile && (
-        <div className="f-modal-overlay" onClick={() => setActionFile(null)}>
-          <div className="f-modal" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ fontStyle: 'italic' }}>{actionFile.name}</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-              <button
-                className="f-btn primary"
-                style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
-                onClick={() => { navigate(`/office?open=${actionFile.id}`); setActionFile(null) }}
-              >
-                In Schreibstube öffnen
-              </button>
-              <button
-                className="f-btn"
-                style={{ width: '100%', boxSizing: 'border-box', textAlign: 'center' }}
-                onClick={() => { downloadFile(actionFile.id); setActionFile(null) }}
-              >
-                Herunterladen
-              </button>
-            </div>
-            <div className="f-modal-actions">
-              <button className="f-btn" onClick={() => setActionFile(null)}>Abbrechen</button>
-            </div>
+          <div className="bv-flaeche" style={{ marginTop: 12 }}>
+            <button type="button" className="bv-z gefahr" disabled={laeuft} onClick={() => void loeschen(blatt)}>{blatt.is_folder ? 'Ordner löschen' : 'Datei löschen'}</button>
           </div>
-        </div>
+        </Blatt>
       )}
-
-      {/* UMBENENNEN MODAL */}
-      {showRenameModal && (
-        <div className="f-modal-overlay" onClick={() => setShowRenameModal(false)}>
-          <div className="f-modal" onClick={(e) => e.stopPropagation()}>
-            <h3>Umbenennen</h3>
-            <div className="f-field">
-              <label>Neuer Name</label>
-              <input type="text" value={renameName} onChange={(e) => setRenameName(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && renameItem()} autoFocus />
-            </div>
-            <div className="f-modal-actions">
-              <button className="f-btn" onClick={() => setShowRenameModal(false)}>Abbrechen</button>
-              <button className="f-btn primary" onClick={renameItem}>Speichern</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        .files-actionbar {
-          background: var(--lbf-card);
-          border-bottom: 0.5px solid var(--lbf-border);
-          position: sticky;
-          top: calc(env(safe-area-inset-top) + 60px);
-          z-index: 99;
-          display: flex;
-          gap: 0;
-          overflow-x: auto;
-          -webkit-overflow-scrolling: touch;
-          padding: 0 4px;
-        }
-        .files-actionbar::-webkit-scrollbar { display: none; }
-
-        .files-action-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 3px;
-          flex-shrink: 0;
-          min-width: 72px;
-          padding: 8px 6px;
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: var(--lbf-akzent);
-          font-family: inherit;
-        }
-        .files-action-btn:hover { background: var(--lbf-akzent-weich); }
-
-        .files-action-label {
-          font-size: 9px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
-          color: var(--lbf-akzent);
-          white-space: nowrap;
-        }
-
-        .files-toast {
-          position: fixed;
-          bottom: calc(70px + env(safe-area-inset-bottom));
-          left: 50%;
-          transform: translateX(-50%);
-          z-index: 9999;
-          padding: 10px 20px;
-          border-radius: 20px;
-          font-weight: 600;
-          font-size: 13px;
-          box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-          white-space: nowrap;
-        }
-        .files-toast-success { background: var(--lbf-ok-grund); border: 1px solid #bbf7d0; color: var(--lbf-ok-text); }
-        .files-toast-error   { background: var(--lbf-fehler-grund); border: 1px solid #fecaca; color: #dc2626; }
-
-        .files-search {
-          width: 100%;
-          box-sizing: border-box;
-          padding: 10px 14px;
-          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
-          border-radius: 10px;
-          background: var(--lbf-input-bg);
-          font-size: 14px;
-          font-family: inherit;
-          color: var(--lbf-text);
-        }
-        .files-search:focus { outline: none; border-color: var(--lbf-akzent); box-shadow: 0 0 0 3px var(--lbf-border-light); }
-
-        .menu-dots {
-          background: var(--lbf-card);
-          border: 1px solid var(--lbf-border);
-          border-radius: 6px;
-          width: 28px;
-          height: 28px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          cursor: pointer;
-          color: var(--warm-gray);
-        }
-        .menu-dots:hover { color: var(--lbf-akzent); }
-
-        .file-menu-dropdown {
-          position: absolute;
-          top: 32px;
-          right: 0;
-          background: var(--lbf-card);
-          border: 1px solid var(--lbf-border);
-          border-radius: 8px;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          min-width: 140px;
-          display: none;
-          flex-direction: column;
-          z-index: 100;
-        }
-        .file-menu-dropdown.show { display: flex; }
-
-        .menu-item {
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 10px 16px;
-          font-size: 14px;
-          font-weight: 600;
-          text-align: left;
-          white-space: nowrap;
-          color: var(--lbf-text);
-          font-family: inherit;
-        }
-        .menu-item:first-child { border-radius: 8px 8px 0 0; }
-        .menu-item:last-child { border-radius: 0 0 8px 8px; }
-        .menu-item:hover { background: var(--lbf-akzent-weich); }
-        .menu-item.danger { color: #dc2626; }
-        .menu-item.danger:hover { background: var(--lbf-fehler-grund-2); }
-
-        .f-modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(26,14,8,0.55);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1000;
-          padding: 20px;
-        }
-
-        .f-modal {
-          background: var(--lbf-card);
-          border-radius: 16px;
-          max-width: 480px;
-          width: 100%;
-          max-height: 88vh;
-          overflow-y: auto;
-          padding: 24px;
-          box-shadow: 0 4px 24px rgba(0,0,0,0.12);
-        }
-
-        .f-modal h3 {
-          margin: 0 0 20px 0;
-          color: var(--lbf-akzent);
-          font-weight: 800;
-          font-size: 18px;
-        }
-
-        .f-field { margin-bottom: 16px; }
-        .f-field label {
-          display: block;
-          font-size: 10px;
-          font-weight: 700;
-          text-transform: uppercase;
-          letter-spacing: 0.12em;
-          color: var(--lbf-akzent);
-          margin-bottom: 6px;
-        }
-        .f-field input {
-          width: 100%;
-          padding: 10px 12px;
-          border: 1.5px solid rgba(var(--lbf-rot-rgb),0.15);
-          border-radius: 10px;
-          background: var(--lbf-input-bg);
-          font-size: 15px;
-          font-family: inherit;
-          color: var(--lbf-text);
-          box-sizing: border-box;
-          -webkit-appearance: none;
-        }
-        .f-field input:focus { outline: none; border-color: var(--lbf-akzent); box-shadow: 0 0 0 3px rgba(96,8,18,0.1); }
-
-        .f-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 24px; }
-
-        .f-btn {
-          background: var(--lbf-card);
-          color: var(--lbf-text);
-          padding: 10px 20px;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 700;
-          font-family: inherit;
-          border: 1px solid rgba(var(--lbf-rot-rgb),0.15);
-          font-size: 14px;
-        }
-        .f-btn:hover { background: var(--lbf-akzent-weich); }
-        .f-btn.primary { background: var(--lbf-akzent-grund); color: #fff; border-color: var(--lbf-akzent); }
-        .f-btn.primary:hover { background: #7a0a16; }
-
-        .upload-area {
-          border: 2px dashed rgba(var(--lbf-rot-rgb),0.2);
-          border-radius: 12px;
-          padding: 32px;
-          text-align: center;
-          cursor: pointer;
-          background: var(--warm-bg);
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-        .upload-area:hover { border-color: var(--lbf-akzent); background: rgba(var(--lbf-rot-rgb),0.03); }
-        .upload-area.drag-over { border-color: var(--lbf-akzent); background: var(--lbf-akzent-weich); }
-
-        @media (max-width: 768px) {
-          .f-modal { border-radius: 20px 20px 0 0; max-height: 80vh; }
-          .f-modal-overlay { align-items: flex-end; padding: 0; }
-        }
-      `}</style>
+      {ziehen && <div className="df-ziehen" aria-hidden="true"><div>Loslassen zum Hochladen{aktuell ? ` in „${aktuell.name}“` : ''}</div></div>}
+      {meldung && <Toast text={meldung.text} fehler={meldung.fehler} onClose={() => setMeldung(null)} />}
     </div>
   )
 }
