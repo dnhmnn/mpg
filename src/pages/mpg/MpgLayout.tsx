@@ -6,6 +6,7 @@ import FormularEinstellungLink from '../../components/FormularEinstellungLink'
 import { Blaetter } from './blaetter'
 import { useMpg } from './MpgDaten'
 import { ICON, SCHRIFT, abschnittKopf, pik, useBreit } from './teile'
+import Zwischenschirm from '../../components/Zwischenschirm'
 
 interface Ziel { pfad: string; name: string; icon: keyof typeof ICON; ende?: boolean; auch?: string[] }
 
@@ -32,7 +33,7 @@ export default function MpgLayout() {
   const m = useMpg()
   const breit = useBreit()
   const { pathname } = useLocation()
-  if (m.authLoading) return null
+  if (m.authLoading) return <Zwischenschirm />
 
   const eingang = m.externalReports.filter(r => r.status === 'pending').length
 

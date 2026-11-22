@@ -5,6 +5,7 @@ import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import WissenArtikelView from '../components/WissenArtikelView'
 import { WISSEN_KATEGORIEN, kategorieOrDefault } from '../lib/wissenKategorien'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 interface Artikel {
   id: string
@@ -348,7 +349,7 @@ export default function Wissen() {
     return artikel.filter(a => a.titel.toLowerCase().includes(q) || a.inhalt.toLowerCase().includes(q) || parseTags(a.tags).some(t => t.toLowerCase().includes(q)))
   }, [artikel, search])
 
-  if (authLoading) return null
+  if (authLoading) return <Zwischenschirm />
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif" }}>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react'
+import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import QRCode from 'qrcode'
 import type { IScannerControls } from '@zxing/browser'
 import { pb } from '../lib/pocketbase'
@@ -16,12 +16,13 @@ import FormularEinstellungLink from '../components/FormularEinstellungLink'
 import { ABSENDER_ABZEICHEN, absenderLesen, absenderZeile, einstellungsLinkZeigen } from '../lib/formular/absender'
 import { angabenLesen } from '../lib/formular/felder'
 import AngabenAnsicht from '../components/AngabenAnsicht'
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useStatusleiste } from '../hooks/useStatusleiste'
 import { Icon, Seite } from './benutzer/bausteine'
 import { BV_CSS } from './benutzer/stil'
 import { LG_CSS } from './lager/stil'
 import { LagerStart, LgIcon, StandortWahl, type LagerAktion } from './lager/Start'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 const LG_STIL = BV_CSS + LG_CSS
 
@@ -351,7 +352,7 @@ export default function Lager() {
   const ort = useLocation()
   const [adresse] = useSearchParams()
   const seite: 'bestand' | null = adresse.get('seite') === 'bestand' ? 'bestand' : null
-  useEffect(() => { window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0 }, [seite])
+  useLayoutEffect(() => { window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0 }, [seite])
 
   const [locations, setLocations] = useState<Location[]>([])
   const [currentLocationId, setCurrentLocationId] = useState<string | null>(null)
@@ -2787,7 +2788,7 @@ export default function Lager() {
   }
 
   if (authLoading) {
-    return null
+    return <Zwischenschirm />
   }
   // Das Lager öffnet nur, wer das Recht „Lager“ hat (die API-Regeln setzen es durch)
   if (user && !darfLager(user)) {
@@ -2796,7 +2797,7 @@ export default function Lager() {
         <div style={{ textAlign: 'center', maxWidth: 360 }}>
           <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--lbf-text)' }}>Kein Zugriff</div>
           <div style={{ fontStyle: 'italic', fontSize: 13, color: 'var(--warm-gray)', marginTop: 6 }}>Für das Lager fehlt dir die Berechtigung. Sie vergibt die Benutzerverwaltung deiner Organisation.</div>
-          <a href="/hub" style={{ display: 'inline-block', marginTop: 16, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '12px 0' }}>Zurück zur Übersicht</a>
+          <Link to="/hub" style={{ display: 'inline-block', marginTop: 16, fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '12px 0' }}>Zurück zur Übersicht</Link>
         </div>
       </div>
     )
@@ -2931,6 +2932,7 @@ export default function Lager() {
           orgName={orgName} zurueck={() => navigate('/hub')}
           standorte={standorte} standortId={currentLocationId} onStandort={setCurrentLocationId}
           zahlen={{ ok: stats.ok, bald: stats.warn, abgelaufen: stats.exp, artikel: stats.total, unterSoll, ausgaben: ausgabenCount }}
+          laedt={loading && !displayItems.length}
           offline={offline} onAktion={aktion} onFilter={filterSetzen}
         />
       )}

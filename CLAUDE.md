@@ -304,6 +304,38 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   Anmeldung: `src/lib/swAnmelden.ts`, Hinweis: `src/components/NeueFassungHinweis.tsx`.
 - Kein `skipWaiting` in `sw-push.js` oder `sw-formulare.js`; ein Prüffall achtet darauf.
 
+## Seitenwechsel (Owner, 22.11.2026: „schaut so unsauber aus“)
+
+- Kein leerer Zwischenschirm beim Wechsel: Die Bausteine der Apps stehen an einer Stelle in
+  `src/lib/seitenLaden.ts` (`seite()`), der Hub lädt die seiner Kacheln im Leerlauf vor, und eine schon
+  geladene Seite erscheint sofort im selben Bild. Lädt sie noch, steht der rote Zwischenbildschirm.
+  Nicht `v7_startTransition` des Routers einschalten (Durchsicht 22.11.2026): Damit laufen auch
+  Adresswechsel aus Suchfeldern als Transition, und in Feldern, deren Wert an der Adresse hängt
+  (Gerätesuche im MPG, Logbuch), springt der Cursor und gehen Zeichen verloren.
+- `useAuth` beginnt mit dem zuletzt bestätigten Benutzer (`zuletztBestaetigt`, nur dieselbe gültige
+  Anmeldung, Abmelden oder andere Person leert ihn) und prüft im Hintergrund wie bisher. Seiten
+  zeichnen ab dem zweiten Wechsel ihren Rahmen also im ersten Bild.
+- `useAuth`: Eigene Änderungen über das SDK (Update des eigenen Datensatzes) kommen über
+  `authStore.onChange` gleich in den letzten Stand; ein älterer Stand (`updated`) überschreibt nie einen neueren.
+- Farben der Statusleiste (`useStatusleiste`), Rücksprung nach oben (`ObenBeginnen` in `App.tsx`
+  beim Wechsel der App, also des ersten Pfadteils; innerhalb einer App regelt sie das selbst, im MPG
+  bleibt die Liste neben dem Gerät stehen) und die App-Auswahl im Hub gelten vor dem ersten Bild
+  (`useLayoutEffect` bzw. im ersten Rendern). Zurück zum Hub nie mit `<a href>` (lädt alles neu),
+  sondern `Link` oder `navigate`.
+- Was beim Laden schon Platz braucht, hält ihn (Standort im Kopf des Lagers, Striche statt Nullen).
+- Roter Zwischenbildschirm (Owner, 22.11.2026: „Kann man einen roten Zwischenbildschirm stattdessen?“):
+  Wo gewartet wird, steht nie eine leere oder helle Fläche, sondern `Zwischenschirm`
+  (`src/components/Zwischenschirm.tsx`): ganz Dunkelrot wie die Begrüßung, das Responda-Zeichen erst nach
+  250 ms; folgen Schirme aufeinander (Start, Laden, Anmeldung prüfen), läuft die Einblendung weiter statt
+  neu zu beginnen. Beim Start der App schon statisch in `index.html` (Klasse `startet` am html, dazu ein
+  rotes theme-color mit `data-zwischen` und die Darstellung aus `localStorage` vor dem ersten Bild), als
+  Ersatzfläche, solange der Baustein einer Seite lädt, in den Ladezweigen der Seiten (Anmeldung wird
+  geprüft) und beim Weiterleiten (`/` mit Sitzung, `/eks`). Ein Ladezustand einer Seite zeigt
+  `<Zwischenschirm />`, nie `null`. html und body färbt die Klasse `zwischen` (mit `!important` in
+  `globals.css`), theme-color ein eigenes meta vorn im head, nicht `useStatusleiste` (es greift nur
+  `meta[name="theme-color"]:not([data-zwischen])`): Die Farben der Seite darunter bleiben so unberührt und
+  gelten danach weiter. Ausnahme von „Unten nie Rot“ wie bei den Zugangsseiten, solange der Schirm steht.
+
 ## Push-Benachrichtigungen
 
 - **Push ist keine Alarmierung.** Jede Stelle, an der man Push einstellt, sagt das (Hinweis

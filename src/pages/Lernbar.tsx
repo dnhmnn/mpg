@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { EinfuehrungAutomatisch } from '../components/Einfuehrung'
 import NeuInResponda from '../components/NeuInResponda'
@@ -7,6 +7,7 @@ import { pb } from '../lib/pocketbase'
 import LernAssistent from '../components/LernAssistent'
 import EkgTrainer from '../components/EkgTrainer'
 import WissenBibliothek from '../components/WissenBibliothek'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 function parseDate(str: string | null | undefined): Date {
   if (!str) return new Date(NaN)
@@ -234,13 +235,7 @@ export default function Lernbar() {
   const upcomingTermine = termine.filter(t => t.status !== 'abgeschlossen' && t.status !== 'abgesagt')
   const pastTermine = termine.filter(t => t.status === 'abgeschlossen')
 
-  if (authLoading || loading) {
-    return (
-      <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "'Atkinson Hyperlegible', Inter, -apple-system, sans-serif" }}>
-        <div style={{ color: 'var(--warm-gray)', fontSize: 15, fontStyle: 'italic' }}>Lade…</div>
-      </div>
-    )
-  }
+  if (authLoading || loading) return <Zwischenschirm />
 
   // ── MODULE PLAYER (full screen) ──────────────────────────────────────────
   if (playerProgress) {
@@ -494,9 +489,9 @@ export default function Lernbar() {
       {/* Header — masthead */}
       <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' } as React.CSSProperties}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+          <Link to="/hub" aria-label="Zurück zur Übersicht" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </a>
+          </Link>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Lernbar</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>

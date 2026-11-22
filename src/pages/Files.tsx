@@ -2,7 +2,7 @@
 // Ordner in der Adresse (?ordner=<id>), damit „Zurück“ im Browser und am Telefon wirkt; Pfad im roten Kopf.
 // Hochladen (auch Hineinziehen am Rechner), neuer Ordner, Umbenennen, Löschen (Ordner mit allem darin),
 // Suche über alle Dateien der Organisation, Öffnen in der Schreibstube. Rechnung in src/pages/dateien/logik.ts.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
@@ -14,6 +14,7 @@ import { HUB_CSS } from './hub/stil'
 import Blatt from './hub/Blatt'
 import { DF_CSS } from './dateien/stil'
 import { art, bearbeitbar, groesse, nachkommen, nameSauber, nameVergeben, passt, pfad, sortieren, umbenennen, type Art, type Eintrag } from './dateien/logik'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 const STIL = BV_CSS + HUB_CSS + DF_CSS
 
@@ -64,7 +65,7 @@ export default function Files() {
     finally { setLaedt(false) }
   }, [org])
   useEffect(() => { void laden() }, [laden])
-  useEffect(() => { window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; setSuche(''); setNeuerOrdner(null) }, [ordnerId])
+  useLayoutEffect(() => { window.scrollTo(0, 0); document.body.scrollTop = 0; document.documentElement.scrollTop = 0; setSuche(''); setNeuerOrdner(null) }, [ordnerId])
 
   const ordner = useMemo(() => alle.filter((e) => e.is_folder), [alle])
   const weg = pfad(ordnerId, ordner)
@@ -185,7 +186,7 @@ export default function Files() {
     </div>
   )
 
-  if (authLoading) return <style>{STIL}</style>
+  if (authLoading) return <><style>{STIL}</style><Zwischenschirm /></>
 
   return (
     <div

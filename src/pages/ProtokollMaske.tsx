@@ -29,6 +29,7 @@ import { UNITAS_TEXTE, zurueckgewiesenZeile } from '../lib/formular/verwaltung'
 import { OrgKontext } from './public/OrgPublicLayout'
 import Warteschlange from './public/absender/Warteschlange'
 import UnterschreibenDialog from '../components/UnterschreibenDialog'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 const Doku = lazy(() => import('./public/doku/Doku'))
 
@@ -111,13 +112,8 @@ export default function ProtokollMaske({ neu = false }: { neu?: boolean }) {
       </div>
     )
   }
-  if (!org) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, background: 'var(--warm-bg)' }}>
-        <p style={{ color: GRAU, fontStyle: 'italic' }}>Lade …</p>
-      </div>
-    )
-  }
+  // Organisation und Maske laden: der rote Zwischenbildschirm (CLAUDE.md, „Seitenwechsel“)
+  if (!org) return <Zwischenschirm />
 
   // Neues Protokoll nur, wenn dieses Konto angemeldet senden kann und das Modul frei ist
   if (neu && !(kannAngemeldetSenden(user ?? null) && formularFrei(org, 'patienten'))) {
@@ -145,7 +141,7 @@ export default function ProtokollMaske({ neu = false }: { neu?: boolean }) {
       {/* Was auf diesem Gerät auf das Senden wartet (Bauplan v2, 4.3); leer: nichts */}
       <Warteschlange orgCode={org.org_code} org={org} />
       {zeigen ? <AbsenderKarte absender={absender} eigene={eigene} onUnterschreiben={() => setDialog(true)} /> : null}
-      <Suspense fallback={null}>
+      <Suspense fallback={<Zwischenschirm />}>
         {neu
           ? <Doku imApp />
           : <Doku key={fassung} protokollId={patientId} nurLesen={nurLesen} />}

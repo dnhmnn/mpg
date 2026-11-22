@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { pbFehlerText } from '../lib/pbFehler'
@@ -12,6 +12,7 @@ import WillkommenKnopf from '../components/WillkommenKnopf'
 import KachelGenerator from './KachelGenerator'
 import HinweiseVerwaltung from './supervisor/HinweiseVerwaltung'
 import { KONTAKT_EMAIL } from '../lib/landingSchema'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 /**
  * Das URL-Kürzel einer Organisation: nur Kleinbuchstaben und Ziffern — so hat
@@ -770,7 +771,8 @@ export default function Supervisor() {
   const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 13px', borderRadius: 10, border: '0.5px solid rgba(var(--lbf-rot-rgb),0.15)', background: 'var(--lbf-card)', fontSize: 14, fontFamily: 'inherit', color: 'var(--lbf-text)', boxSizing: 'border-box', outline: 'none' }
   const labelStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6, display: 'block' }
 
-  if (loading || (!user?.supervisor && !loading)) {
+  if (loading) return <Zwischenschirm />
+  if (!user?.supervisor) {
     return (
       <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ fontSize: 14, color: 'var(--warm-gray)', fontStyle: 'italic' }}>Laden...</div>
@@ -791,14 +793,15 @@ export default function Supervisor() {
         paddingRight: 'max(20px, env(safe-area-inset-right))'
       }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a
-            href="/hub"
+          <Link
+            to="/hub"
+            aria-label="Zurück zur Übersicht"
             style={{ display: 'flex', alignItems: 'center', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}
           >
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-          </a>
+          </Link>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--lbf-text)', letterSpacing: '-0.01em' }}>Supervisor</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>

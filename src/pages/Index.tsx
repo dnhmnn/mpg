@@ -5,6 +5,7 @@ import { pb } from '../lib/pocketbase'
 import { zielMitSitzung, type AnmeldeKonto } from '../lib/anmeldung'
 import { Feld } from './benutzer/bausteine'
 import { ZugangRahmen, Zeichen } from './zugang/Rahmen'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 const TAGLINES = [
   'Digitalisierung, die zuverlässig funktioniert.',
@@ -25,7 +26,8 @@ export default function Index() {
   const website = window.location.hostname === 'responda.systems' || window.location.hostname === 'www.responda.systems'
   if (website) return <LandingPage />
   const ziel = zielMitSitzung(pb.authStore.isValid, pb.authStore.model as AnmeldeKonto | null, Date.now())
-  return ziel ? <Navigate to={ziel} replace /> : <IndexStart />
+  // Weiterleiten mit Sitzung: bis der Hub (bzw. die Lernbar) steht, der rote Zwischenbildschirm, nie eine leere Fläche
+  return ziel ? <><Zwischenschirm /><Navigate to={ziel} replace /></> : <IndexStart />
 }
 
 /** Startseite der App ohne Anmeldung, ganz in Dunkelrot (src/pages/zugang/Rahmen.tsx). */

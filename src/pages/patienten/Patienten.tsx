@@ -7,6 +7,7 @@ import SignModal from './SignModal'
 import NachModal from './NachModal'
 import DetailsModal from './DetailsModal'
 import ProtokollView from '../../components/ProtokollView'
+import Zwischenschirm from '../../components/Zwischenschirm'
 const ProtokollInhalt = lazy(() => import('../../components/ProtokollFenster').then((m) => ({ default: m.ProtokollInhalt })))
 const RueckfrageFenster = lazy(() => import('../../components/RueckfrageFenster'))
 import type { Patient, Nacherfassung, PatientPayload, NachForm } from './types'
@@ -507,7 +508,7 @@ export default function Patienten() {
     'gelöscht (Aufbewahrungsfrist)': '#c0392b',
   }
 
-  if (loading) return null
+  if (loading) return <Zwischenschirm />
 
   const totalArchiv = archivedPatients.length + archivedNach.length
 

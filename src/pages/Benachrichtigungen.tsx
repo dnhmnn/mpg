@@ -8,7 +8,7 @@
 // Einschalten nur auf Tippen: pushEinschalten fragt als Erstes nach der Erlaubnis, ohne await
 // davor (Safari). Der Schlüssel dafür kommt aus /stand, das die Seite beim Öffnen lädt.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useStatusleiste } from '../hooks/useStatusleiste'
@@ -27,6 +27,7 @@ import { pushAusschalten, pushEinschalten } from '../lib/push/abgleich'
 import { aktuellesAbo, endpointKennung, erlaubnisLesen, merkerLesen, umgebungLesen, unterstuetzung, type PushMerker } from '../lib/push/geraet'
 import type { Ruhe } from '../lib/push/regeln'
 import { PUSH_TEXTE as T } from '../lib/push/texte'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 // Die Seite rollt je nach Darstellung im Fenster oder im body (wie in Unitarii.tsx)
 function nachOben() {
@@ -105,7 +106,7 @@ export default function Benachrichtigungen() {
     }
   }, [location.state]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { nachOben() }, [seiteOrg])
+  useLayoutEffect(() => { nachOben() }, [seiteOrg])
 
   const eingerichtet = stand ? stand.eingerichtet : standFehler?.fehler === 'nicht_eingerichtet' ? false : null
   const standKaputt = !!standFehler && standFehler.fehler !== 'nicht_eingerichtet' && !stand
@@ -211,7 +212,7 @@ export default function Benachrichtigungen() {
   const stil = <style>{BV_CSS + PU_CSS}</style>
   const toast = meldung && <Toast text={meldung.text} fehler={meldung.fehler} onClose={() => setMeldung(null)} />
 
-  if (loading || !user) return stil
+  if (loading || !user) return <>{stil}<Zwischenschirm /></>
 
   if (seiteOrg) {
     return (

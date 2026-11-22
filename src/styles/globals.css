@@ -1659,6 +1659,21 @@ body.loaded {
   transition: opacity 0.3s;
 }
 
+/* Roter Zwischenbildschirm (src/components/Zwischenschirm.tsx; beim Start schon in index.html).
+   Solange er steht, sind html und body rot, auch über den Farben, die eine Seite mit useStatusleiste
+   setzt; danach gelten die der Seite unverändert. */
+html.startet, html.startet body, html.zwischen, html.zwischen body { background-color: var(--lbf-kopf, #3d0408) !important; }
+.zs { position: fixed; inset: 0; z-index: 2000; background: var(--lbf-kopf, #3d0408); color: var(--lbf-kopf-text, #fde8d8);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; padding: 24px; }
+.zs-zeichen { width: 176px; height: 176px; border-radius: 50%; background: var(--lbf-kopf-text, #fde8d8); padding: 10px;
+  display: grid; place-items: center; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.32);
+  opacity: 0; animation: zsZeichen 0.3s ease 0.25s forwards; }
+.zs-zeichen img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.zs-text { font-style: italic; font-size: 15px; color: var(--lbf-kopf-text-2, rgba(253,232,216,0.75)); opacity: 0; animation: zsZeichen 0.3s ease 0.25s forwards; }
+@media (max-height: 700px) { .zs-zeichen { width: 136px; height: 136px; padding: 8px; } }
+@media (prefers-reduced-motion: reduce) { .zs-zeichen, .zs-text { animation-duration: 0.01s; } }
+@keyframes zsZeichen { from { opacity: 0; } to { opacity: 1; } }
+
 /* Badge styles */
 .badge {
   display: inline-block;

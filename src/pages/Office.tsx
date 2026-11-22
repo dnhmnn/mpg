@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
 import { getTheme } from '../lib/theme'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 interface OfficeFile {
   id: string
@@ -375,7 +376,7 @@ export default function Office() {
   const recentFiles = recentIds.map(id => files.find(f => f.id === id)).filter(Boolean) as OfficeFile[]
   const allFiles = files
 
-  if (authLoading) return null
+  if (authLoading) return <Zwischenschirm />
 
   const CREATE_OPTIONS: { type: DocCategory; label: string; sub: string }[] = [
     { type: 'word', label: 'Dokument', sub: 'Word' },

@@ -1,10 +1,14 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" class="startet">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <!-- Darstellung vor dem ersten Bild (wie applyTheme in src/lib/theme.ts), damit der rote Start nicht die Farbe wechselt -->
+  <script>try{var t=localStorage.getItem('theme');if(t==='dark'||t==='light'||t==='retro')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+  <!-- Rot, solange der Start steht (src/components/Zwischenschirm.tsx entfernt es); das erste theme-color gilt -->
+  <meta name="theme-color" content="#3d0408" data-zwischen>
   <meta name="theme-color" content="#faf9f7">
   <title>Responda: Digitale Einsatzverwaltung für Hilfsorganisationen</title>
   <meta name="description" content="Responda verbindet Patientendokumentation, Medizinprodukte und Lager für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Derzeit in Entwicklung.">
@@ -32,7 +36,8 @@
   <link rel="manifest" href="/manifest.json">
 </head>
 <body>
-  <div id="root"></div>
+  <!-- Roter Zwischenbildschirm schon vor dem Programm (src/components/Zwischenschirm.tsx); React ersetzt ihn -->
+  <div id="root"><div class="zs" aria-hidden="true"><span class="zs-zeichen"><img src="/logo.svg" alt=""></span></div></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

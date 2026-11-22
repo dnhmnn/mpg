@@ -24,6 +24,7 @@ import ZugangSeite from './benutzer/ZugangSeite'
 import AbgleichSeite from './benutzer/AbgleichSeite'
 import { orgFehler, type Neuigkeit, type UUser } from './benutzer/logik'
 import type { BvKontext } from './benutzer/kontext'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 type Reiter = 'benutzer' | 'rollen' | 'neuigkeiten' | 'temp'
 const REITER: Reiter[] = ['benutzer', 'rollen', 'neuigkeiten', 'temp']
@@ -181,7 +182,7 @@ export default function Unitarii() {
   const stil = <style>{BV_CSS}</style>
   const toast = message && <Toast text={message.text} fehler={message.type === 'error'} hoch={!!seite} onClose={() => setMessage(null)} />
 
-  if (authLoading) return null
+  if (authLoading) return <Zwischenschirm />
 
   // Wie Kachel und Server-Regeln: auch ein befristetes Recht „Benutzerverwaltung“ öffnet die Seite
   if (!hatRecht(user, 'unitarii')) {

@@ -1,9 +1,11 @@
-import { lazy, Suspense, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import NeueFassungHinweis from './components/NeueFassungHinweis'
+import Zwischenschirm, { startVorbei } from './components/Zwischenschirm'
 import Login from './pages/Login'
 import Index from './pages/Index'
 import { urlSicher } from './lib/push/geraet'
+import { appVonPfad, seite } from './lib/seitenLaden'
 
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
@@ -19,31 +21,31 @@ import { applyTheme, getTheme } from './lib/theme'
  * Anmeldung und Startseite bleiben fest: sie sind der erste Schirm, und
  * ein zweiter Rundweg wäre dort zu sehen.
  */
-const Hub = lazy(() => import('./pages/Hub'))
+const Hub = seite('/hub')
 const ResetPassword = lazy(() => import('./pages/ResetPassword'))
-const SettingsPage = lazy(() => import('./pages/SettingsPage'))
-const Benachrichtigungen = lazy(() => import('./pages/Benachrichtigungen'))
-const Ausbildungen = lazy(() => import('./pages/ausbildungen/Ausbildungen'))
+const SettingsPage = seite('/settings')
+const Benachrichtigungen = seite('/benachrichtigungen')
+const Ausbildungen = seite('/ausbildungen')
 const Einladung = lazy(() => import('./pages/ausbildungen/Einladung'))
-const Files = lazy(() => import('./pages/Files'))
-const Lager = lazy(() => import('./pages/Lager'))
-const MPG = lazy(() => import('./pages/mpg'))
-const Lernbar = lazy(() => import('./pages/Lernbar'))
-const Unitas = lazy(() => import('./pages/Unitas'))
-const Unitarii = lazy(() => import('./pages/Unitarii'))
-const Patienten = lazy(() => import('./pages/patienten/Patienten'))
+const Files = seite('/files')
+const Lager = seite('/lager')
+const MPG = seite('/mpg')
+const Lernbar = seite('/lernbar')
+const Unitas = seite('/unitas')
+const Unitarii = seite('/unitarii')
+const Patienten = seite('/patienten')
 const ProtokollBearbeiten = lazy(() => import('./pages/ProtokollBearbeiten'))
 const ProtokollMaske = lazy(() => import('./pages/ProtokollMaske'))
 const Installieren = lazy(() => import('./pages/public/Installieren'))
 const OrgSchnelldoku = lazy(() => import('./pages/public/OrgSchnelldoku'))
-const Chat = lazy(() => import('./pages/Chat'))
-const Supervisor = lazy(() => import('./pages/Supervisor'))
-const Einsaetze = lazy(() => import('./pages/Einsaetze'))
-const Vorgaenge = lazy(() => import('./pages/Vorgaenge'))
+const Chat = seite('/chat')
+const Supervisor = seite('/supervisor')
+const Einsaetze = seite('/einsaetze')
+const Vorgaenge = seite('/vorgaenge')
 const AVV = lazy(() => import('./pages/AVV'))
-const Office = lazy(() => import('./pages/Office'))
-const Notizen = lazy(() => import('./pages/Notizen'))
-const Wissen = lazy(() => import('./pages/Wissen'))
+const Office = seite('/office')
+const Notizen = seite('/notizen')
+const Wissen = seite('/wissen')
 const WebsiteEditor = lazy(() => import('./pages/WebsiteEditor'))
 const OrgPublicLayout = lazy(() => import('./pages/public/OrgPublicLayout'))
 // Aus demselben Baustein wie das Layout — ist beim Aufruf eines Formulars schon geladen
@@ -110,14 +112,35 @@ function PushNavigation() {
   return null
 }
 
+/**
+ * Neue App beginnt oben, und zwar vor ihrem ersten Bild. Sonst stand sie ein Bild lang an der
+ * Rollposition der vorigen (der rote Kopf weggerollt, die Statusleiste hell) und sprang dann.
+ * Nur beim Wechsel der App (erster Teil des Pfads): Innerhalb einer App regelt sie das selbst
+ * (Unterseiten ?seite=, im MPG Liste und Gerät nebeneinander, die Liste bleibt stehen).
+ */
+function ObenBeginnen() {
+  const app = appVonPfad(useLocation().pathname)
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+    document.body.scrollTop = 0
+    document.documentElement.scrollTop = 0
+  }, [app])
+  return null
+}
+
 function App() {
+  // Erstes Bild der App: Der rote Start aus index.html geht, im selben Bild steht schon die Seite
+  // oder der rote Zwischenbildschirm (Ersatzfläche) – kein helles Aufblitzen dazwischen
+  useLayoutEffect(() => { startVorbei() }, [])
   return (
+    // Ohne v7_startTransition (an der Adresse hängende Suchfelder verloren damit Zeichen): Vorgeladene
+    // Seiten erscheinen sofort (src/lib/seitenLaden.ts), sonst steht beim Laden der rote Zwischenbildschirm
     <BrowserRouter>
+      <ObenBeginnen />
       <PushNavigation />
       <NeueFassungHinweis />
-      {/* Ersatzfläche beim Nachladen ohne eigene Farbe: es scheint html/body durch, also rot zwischen den
-          dunkelroten Zugangsseiten (src/pages/zugang) und hell sonst, kein Aufblitzen */}
-      <Suspense fallback={<div style={{ minHeight: '100vh' }} />}>
+      {/* Ersatzfläche, solange der Baustein einer Seite lädt: der rote Zwischenbildschirm */}
+      <Suspense fallback={<Zwischenschirm />}>
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/login" element={<Login />} />
@@ -148,8 +171,8 @@ function App() {
         <Route path="/protokoll/neu" element={<ProtokollMaske neu />} />
         <Route path="/protokoll/:patientId" element={<ProtokollMaske />} />
         <Route path="/protokoll-alt/:patientId" element={<ProtokollBearbeiten />} />
-        <Route path="/protokoll-2" element={<Suspense fallback={null}><AelrdProtokoll /></Suspense>} />
-        <Route path="/datensatz" element={<Suspense fallback={null}><NaepErfassung /></Suspense>} />
+        <Route path="/protokoll-2" element={<Suspense fallback={<Zwischenschirm />}><AelrdProtokoll /></Suspense>} />
+        <Route path="/datensatz" element={<Suspense fallback={<Zwischenschirm />}><NaepErfassung /></Suspense>} />
         <Route path="/p/:code" element={<PatientView />} />
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
@@ -161,7 +184,7 @@ function App() {
         <Route path="/wissen" element={<Wissen />} />
         <Route path="/website" element={<WebsiteEditor />} />
         {/* EKS ist entfernt (Owner, 22.11.2026): alte Lesezeichen und Verknüpfungen führen zu den Einsätzen */}
-        <Route path="/eks/*" element={<Navigate to="/einsaetze" replace />} />
+        <Route path="/eks/*" element={<><Zwischenschirm /><Navigate to="/einsaetze" replace /></>} />
         {isMarketingDomain ? (
           // Auf responda.systems sind einteilige Pfade Website-Unterseiten
           <Route path="/:slug" element={<Index />} />
@@ -176,8 +199,8 @@ function App() {
               * Das alte Formular ist unter /patienten-alt erreichbar — es
               * bleibt, bis die neue Maske im Dienst bestanden hat.
               */}
-            <Route path="patienten" element={<FormularFrei formular="patienten"><Suspense fallback={null}><Doku /></Suspense></FormularFrei>} />
-            <Route path="doku" element={<FormularFrei formular="patienten"><Suspense fallback={null}><Doku /></Suspense></FormularFrei>} />
+            <Route path="patienten" element={<FormularFrei formular="patienten"><Suspense fallback={<Zwischenschirm />}><Doku /></Suspense></FormularFrei>} />
+            <Route path="doku" element={<FormularFrei formular="patienten"><Suspense fallback={<Zwischenschirm />}><Doku /></Suspense></FormularFrei>} />
             <Route path="patienten-alt" element={<FormularFrei formular="patienten"><OrgPatienten /></FormularFrei>} />
             <Route path="schnelldoku" element={<FormularFrei formular="patienten"><OrgSchnelldoku /></FormularFrei>} />
             <Route path="produktausgabe" element={<FormularFrei formular="produktausgabe"><OrgProduktausgabe /></FormularFrei>} />

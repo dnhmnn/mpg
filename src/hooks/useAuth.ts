@@ -20,9 +20,62 @@ export function vorlageNachziehen(u: Pick<User, 'role' | 'permissions_migrated'>
   return orgFrisch || !istEigeneRolleId(u.role || 'benutzer')
 }
 
+// Zuletzt bestätigter Benutzer samt Organisation, nur im Speicher dieser Sitzung. Jede Seite ruft
+// useAuth neu auf; ohne diesen Stand zeigte jeder Seitenwechsel erst eine leere Fläche, bis
+// authRefresh und Organisation (zwei Anfragen) zurück waren. Geprüft wird weiter bei jedem Öffnen,
+// nur im Hintergrund: Gesperrte, abgelaufene oder abgelehnte Konten gehen wie bisher zu /login.
+// Gilt nur für dieselbe gültige Anmeldung; jede Abmeldung oder andere Person leert ihn.
+let zuletzt: User | null = null
+
+/** Der zuletzt bestätigte Benutzer, wenn er zur jetzigen Anmeldung passt. */
+export function zuletztBestaetigt(): User | null {
+  const rec = pb.authStore.model as { id?: string } | null
+  if (!zuletzt || !pb.authStore.isValid || !rec || rec.id !== zuletzt.id) return null
+  return zuletzt
+}
+
+/** Stand eines Datensatzes (PocketBase „updated“, als Text sortierbar). */
+const stand = (u: unknown): string => String((u as { updated?: unknown } | null)?.updated ?? '')
+
+/**
+ * Nach bestandener Prüfung merken (null: vergessen, etwa beim Abmelden). Ist inzwischen ein neuerer
+ * Stand derselben Person da (eigene Änderung, während die Prüfung unterwegs war), bleibt der, nur die
+ * frisch geladene Organisation kommt dazu. Gibt zurück, was jetzt gilt.
+ */
+export function zuletztMerken(u: User | null): User | null {
+  if (u && zuletzt && u.id === zuletzt.id && stand(u) < stand(zuletzt)) {
+    zuletzt = { ...zuletzt, organization_name: u.organization_name, organization_logo: u.organization_logo, organization: u.organization }
+  } else {
+    zuletzt = u
+  }
+  return zuletzt
+}
+
+/** Eigene Änderung am Benutzer (etwa die App-Auswahl im Hub) gleich in den letzten Stand übernehmen. */
+export function zuletztErgaenzen(teil: Partial<User> & Record<string, unknown>): void {
+  if (zuletzt) zuletzt = { ...zuletzt, ...teil }
+}
+
+pb.authStore.onChange((token, rec) => {
+  if (!token || !rec || rec.id !== zuletzt?.id) { zuletzt = null; return }
+  // Eigene Änderung über das SDK (update des eigenen Datensatzes legt ihn in die Anmeldung): gleich
+  // übernehmen, damit die nächste Seite nicht erst den alten Stand zeigt. Die Felder der Organisation
+  // setzt nur checkAuth; ein älterer Stand zählt nicht.
+  if (stand(rec) < stand(zuletzt)) return
+  const { organization_name: _n, organization_logo: _l, organization: _o, ...rest } = rec as Record<string, unknown>
+  zuletzt = { ...zuletzt, ...rest } as User
+})
+
+/** Unveränderter Benutzer behält sein Objekt: Seiten mit [user] laden dann nicht doppelt. */
+function gleich(a: User | null, b: User | null): boolean {
+  if (a === b) return true
+  if (!a || !b) return false
+  try { return JSON.stringify(a) === JSON.stringify(b) } catch { return false }
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [user, setUser] = useState<User | null>(() => zuletztBestaetigt())
+  const [loading, setLoading] = useState(() => !zuletztBestaetigt())
 
   useEffect(() => {
     checkAuth()
@@ -99,7 +152,8 @@ export function useAuth() {
         }
       }
 
-      setUser(userData)
+      const gilt = zuletztMerken(userData) ?? userData
+      setUser((vorher) => (gleich(vorher, gilt) ? vorher : gilt))
       setLoading(false)
       document.body.classList.add('loaded')
     } catch (e: any) {
@@ -133,7 +187,9 @@ export function useAuth() {
       return
     }
     applyCachedOrg(userData)
-    setUser({ ...userData })
+    const u = { ...userData }
+    const gilt = zuletztMerken(u) ?? u
+    setUser((vorher) => (gleich(vorher, gilt) ? vorher : gilt))
     setLoading(false)
     document.body.classList.add('loaded')
   }
@@ -184,6 +240,7 @@ export function useAuth() {
       ? `Achtung: ${warnungen.join(' ')}\n\nBeim Abmelden gehen lokale Daten verloren.${lagerHinweis}\n\nWirklich abmelden?`
       : lagerHinweis ? `${lagerHinweis.trim()}\n\nWirklich abmelden?` : 'Wirklich abmelden?'
     if (confirm(frage)) {
+      zuletztMerken(null)
       const lager = localStorage.getItem('lager_pending_count')
       // Push: dieses Gerät beim Server abmelden (noch mit Anmeldung, höchstens 3 s), dann immer Abo
       // beenden, Merker löschen und angezeigte Benachrichtigungen schließen (src/lib/push/abgleich.ts)

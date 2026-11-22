@@ -35,8 +35,12 @@ export function LgIcon({ n, className }: { n: string; className?: string }) {
 }
 
 /** Standort im roten Kopf. Die Auswahl des Systems liegt unsichtbar darüber. */
-export function StandortWahl({ standorte, id, onChange }: { standorte: { id: string; name: string }[]; id: string | null; onChange: (id: string) => void }) {
+export function StandortWahl({ standorte, id, onChange, laedt }: { standorte: { id: string; name: string }[]; id: string | null; onChange: (id: string) => void; laedt?: boolean }) {
   const aktuell = standorte.find((s) => s.id === id)
+  // Beim Laden schon den Platz halten, sonst springt der Kopf mit allem darunter, sobald die Standorte da sind
+  if (!standorte.length && laedt) {
+    return <div className="lg-standort" aria-hidden="true"><LgIcon n="standort" /><span className="lg-standort-tx"><small>Standort</small><b>…</b></span></div>
+  }
   if (!standorte.length) return null
   return (
     <label className="lg-standort">
@@ -83,38 +87,41 @@ function Zeile({ icon, titel, unter, onClick }: { icon: string; titel: string; u
   )
 }
 
-export function LagerStart({ orgName, zurueck, standorte, standortId, onStandort, zahlen, offline, onAktion, onFilter }: {
+export function LagerStart({ orgName, zurueck, standorte, standortId, onStandort, zahlen, laedt, offline, onAktion, onFilter }: {
   orgName: string
   zurueck: () => void
   standorte: { id: string; name: string }[]
   standortId: string | null
   onStandort: (id: string) => void
   zahlen: LagerZahlen
+  /** Zahlen noch nicht da: Striche statt Nullen */
+  laedt?: boolean
   offline?: { text: string; onClick: () => void } | null
   onAktion: (a: LagerAktion) => void
   onFilter: (f: 'warning' | 'expired' | 'ok') => void
 }) {
   const a = (x: LagerAktion) => () => onAktion(x)
+  const z = (n: number) => (laedt ? '–' : n)
   return (
     <Seite
       titel="Lager" unter={orgName} zurueck={zurueck} zurueckLabel="Zurück zur Übersicht"
       rechts={<button type="button" className="bv-rund" aria-label="Einstellungen des Lagers" title="Einstellungen" onClick={a('einstellungen')}><LgIcon n="einstellungen" className="bv-i" /></button>}
-      reiter={<StandortWahl standorte={standorte} id={standortId} onChange={onStandort} />}
+      reiter={<StandortWahl standorte={standorte} id={standortId} onChange={onStandort} laedt={laedt} />}
     >
       {offline && <button type="button" className="lg-offline" onClick={offline.onClick}>{offline.text}</button>}
 
       <div className="lg-zustand" role="group" aria-label="Zustand am Standort">
-        <button type="button" onClick={() => onFilter('ok')}><small className="ok">In Ordnung</small><b className="ok">{zahlen.ok}</b><span>Artikel</span></button>
-        <button type="button" onClick={() => onFilter('warning')}><small className="bald">Bald fällig</small><b className="bald">{zahlen.bald}</b><span>Ablauf naht</span></button>
-        <button type="button" onClick={() => onFilter('expired')}><small className="ab">Abgelaufen</small><b className="ab">{zahlen.abgelaufen}</b><span>aussortieren</span></button>
+        <button type="button" onClick={() => onFilter('ok')}><small className="ok">In Ordnung</small><b className="ok">{z(zahlen.ok)}</b><span>Artikel</span></button>
+        <button type="button" onClick={() => onFilter('warning')}><small className="bald">Bald fällig</small><b className="bald">{z(zahlen.bald)}</b><span>Ablauf naht</span></button>
+        <button type="button" onClick={() => onFilter('expired')}><small className="ab">Abgelaufen</small><b className="ab">{z(zahlen.abgelaufen)}</b><span>aussortieren</span></button>
       </div>
 
       <Abschnitt titel="Häufig" />
       <div className="lg-kacheln">
-        <Kachel icon="bestand" titel="Bestand" zeile={mehrzahl(zahlen.artikel, 'Artikel', 'Artikel') + ', ansehen und buchen'} onClick={a('bestand')} />
+        <Kachel icon="bestand" titel="Bestand" zeile={laedt ? 'Ansehen und buchen' : mehrzahl(zahlen.artikel, 'Artikel', 'Artikel') + ', ansehen und buchen'} onClick={a('bestand')} />
         <Kachel icon="scannen" titel="Scannen" zeile="Code scannen, Artikel finden" onClick={a('scannen')} />
-        <Kachel icon="ausgaben" titel="Ausgaben" zeile={zahlen.ausgaben ? mehrzahl(zahlen.ausgaben, 'Ausgabe offen', 'Ausgaben offen') : 'Nichts offen'} wichtig={zahlen.ausgaben > 0} zahl={zahlen.ausgaben} onClick={a('ausgaben')} />
-        <Kachel icon="bestellen" titel="Bestellen" zeile={zahlen.unterSoll ? mehrzahl(zahlen.unterSoll, 'Artikel unter Soll', 'Artikel unter Soll') : 'Alles auf Soll'} wichtig={zahlen.unterSoll > 0} onClick={a('bestellen')} />
+        <Kachel icon="ausgaben" titel="Ausgaben" zeile={zahlen.ausgaben ? mehrzahl(zahlen.ausgaben, 'Ausgabe offen', 'Ausgaben offen') : laedt ? 'Offene Ausgaben' : 'Nichts offen'} wichtig={zahlen.ausgaben > 0} zahl={zahlen.ausgaben} onClick={a('ausgaben')} />
+        <Kachel icon="bestellen" titel="Bestellen" zeile={zahlen.unterSoll ? mehrzahl(zahlen.unterSoll, 'Artikel unter Soll', 'Artikel unter Soll') : laedt ? 'Was unter Soll ist' : 'Alles auf Soll'} wichtig={zahlen.unterSoll > 0} onClick={a('bestellen')} />
         <Kachel icon="inventur" titel="Inventur" zeile="Zählen und abgleichen" onClick={a('inventur')} />
         <Kachel icon="checks" titel="Checks" zeile="Fahrzeug und Rucksack" onClick={a('checks')} />
       </div>

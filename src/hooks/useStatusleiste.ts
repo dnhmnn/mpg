@@ -28,7 +28,7 @@
 // overscroll-behavior none (kein Scrollen, kein Nachfedern). Beim Verlassen und beim Wechsel
 // auf eine rollende Seite stellt das Aufräumen genau die vorherigen Werte wieder her.
 // Die Werte kommen aus CSS-Tokens und folgen der Darstellung (hell, dunkel, Retro).
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 
 /** Was eine statische Seite an html und body festsetzt (Längsschreibweise, damit das Zurücksetzen genau ist). */
 const FEST: [string, string][] = [
@@ -90,8 +90,12 @@ export function statusleistenFarben(o: { statisch: boolean; oben: boolean; homeb
 
 export function useStatusleiste(token = '--lbf-kopf', opt: { kopf?: string; blatt?: string; statisch?: boolean } = {}): void {
   const { kopf, blatt = '--warm-bg', statisch = false } = opt
-  useEffect(() => {
-    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+  // Vor dem ersten Bild der Seite: React räumt die vorige Seite zuerst auf (beim Entfernen) und
+  // setzt erst danach die Farben der neuen. Mit useEffect galt beim Wechsel ein Bild lang noch die
+  // Farbe der vorigen Seite, und die Leiste schlug sichtbar um.
+  useLayoutEffect(() => {
+    // Nie das des roten Zwischenbildschirms (src/components/Zwischenschirm.tsx), das kommt und geht selbst
+    let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]:not([data-zwischen])')
     const angelegt = !meta
     if (!meta) {
       meta = document.createElement('meta')

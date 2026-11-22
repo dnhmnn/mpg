@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { pb } from '../lib/pocketbase'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 interface Notiz {
   id: string
@@ -170,7 +172,7 @@ export default function Notizen() {
       .sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0))
   }, [notes, search, tagFilter, scope, user])
 
-  if (authLoading) return null
+  if (authLoading) return <Zwischenschirm />
 
   if (user && !user.supervisor && !(user as any).permissions?.notizen) {
     return (
@@ -189,9 +191,9 @@ export default function Notizen() {
       {/* MASTHEAD HEADER */}
       <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
         <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <a href="/hub" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
+          <Link to="/hub" aria-label="Zurück zur Übersicht" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-          </a>
+          </Link>
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Notizen</div>
             <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{user?.organization_name || 'Responda'}</div>

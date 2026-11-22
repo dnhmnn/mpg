@@ -7,6 +7,7 @@ import {
   DEFAULT_DESIGN, DEF_NAV, KONTAKT_EMAIL, SECTION_LABEL, defaultHomeSections, newSection, uid,
   type Btn, type Design, type GlobalSettings, type PageRec, type Section, type SectionType, type Tier,
 } from '../lib/landingSchema'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 const RED = 'var(--lbf-akzent)'
 const RED_GRUND = 'var(--lbf-akzent-grund)'
@@ -163,7 +164,7 @@ export default function WebsiteEditor() {
     }
   }
 
-  if (authLoading || loading) return <div style={{ padding: 40, textAlign: 'center', color: 'var(--warm-gray)', fontStyle: 'italic' }}>Lade…</div>
+  if (authLoading || loading) return <Zwischenschirm />
 
   const design: Design = { ...DEFAULT_DESIGN, ...(global.design || {}) }
 

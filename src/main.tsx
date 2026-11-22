@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import Zwischenschirm, { startVorbei } from './components/Zwischenschirm'
 import { einmalNeuLaden, istLadefehler, neueFassungAbfangen, wirdNeuGeladen } from './lib/neueFassung'
 import { pb } from './lib/pocketbase'
 import { pushAbgleichEinrichten } from './lib/push/abgleich'
@@ -31,6 +32,8 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // Fehlerseite statt App: der rote Start aus index.html darf nicht hinter ihr stehen bleiben
+    startVorbei()
     // Teil der App fehlt (alte Fassung nach Veröffentlichung): einmal neu laden statt Fehler
     if (istLadefehler(error) && einmalNeuLaden()) { this.forceUpdate(); return }
     console.error('React Error:', error, errorInfo)
@@ -39,9 +42,7 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError && wirdNeuGeladen()) {
       return (
-        <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--warm-bg)' }}>
-          <div style={{ fontStyle: 'italic', fontSize: 15, color: 'var(--warm-gray)' }}>Responda wird aktualisiert …</div>
-        </div>
+        <Zwischenschirm text="Responda wird aktualisiert …" />
       )
     }
     if (this.state.hasError && istLadefehler(this.state.error)) {

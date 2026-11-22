@@ -20,6 +20,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { pb } from '../../lib/pocketbase'
+import { zuletztErgaenzen } from '../../hooks/useAuth'
 import {
   befristeteApps, erlaubteApps, hubAppsAltSchluessel, hubKacheln, hubWahlOffenSchluessel, hubWahlSchluessel, wahlLesen,
   wahlQuelle, type HubAppsWahl,
@@ -44,7 +45,22 @@ export function useHubApps(user: User | null) {
   const feldDa = !!roh && 'hub_apps' in roh
   const kontoText = feldDa ? JSON.stringify(roh!.hub_apps ?? null) : ''
 
-  const [wahl, setWahl] = useState<HubAppsWahl | null>(null)
+  // Die Wahl gleich im ersten Bild, nicht erst nach dem Effekt unten: Sonst standen die Apps beim
+  // Öffnen des Hubs ein Bild lang in der Grundreihenfolge und sprangen dann um. Nur lesen; was zu
+  // schreiben oder aufzuräumen ist, macht weiter der Effekt.
+  const anfang = (): HubAppsWahl | null => (id && roh
+    ? wahlQuelle({
+      feldDa, server: roh.hub_apps, lokal: lsLesen(hubWahlSchluessel(id)), alt: lsLesen(hubAppsAltSchluessel(id)),
+      offen: lsLesen(hubWahlOffenSchluessel(id)) !== null,
+    }).wahl
+    : null)
+  const [wahl, setWahl] = useState<HubAppsWahl | null>(anfang)
+  // Benutzer kommt erst nach dem Laden (Kaltstart): Wahl im selben Bild nachziehen
+  const [wahlFuer, setWahlFuer] = useState(roh ? id : '')
+  if (roh && id && wahlFuer !== id) {
+    setWahlFuer(id)
+    setWahl(anfang())
+  }
   const [stand, setStand] = useState<Speicherstand | null>(null)
   const [fehlerText, setFehlerText] = useState('')
   // Was im Konto steht (zuletzt gelesen oder geschrieben), als Text: Unverändertes nicht schreiben
@@ -89,6 +105,8 @@ export function useHubApps(user: User | null) {
       }
       imKonto.current = text
       geraetAufraeumen(text)
+      // Der nächste Hub beginnt mit dem zuletzt bestätigten Benutzer: dort gleich die neue Wahl
+      zuletztErgaenzen({ hub_apps: w })
       setStand('konto'); setFehlerText('')
     } catch (e) {
       // Gekennzeichnet auf dem Gerät lassen: gilt weiter und wird später nachgeholt

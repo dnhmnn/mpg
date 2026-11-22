@@ -5,7 +5,7 @@
 //   Meldung, damit andere nicht einmal sehen, dass es eine gibt), Löschen für Leitung und Recht Einsätze.
 // - Seiten in der Adresse: ?seite=einsatz&id=…, ?seite=neu, ?seite=bearbeiten&id=…
 // Rechnung in src/pages/einsaetze/logik.ts, Stile EZ_CSS. Alamos und EKS gibt es nicht mehr.
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
@@ -21,6 +21,7 @@ import {
   neueNummer, nummerVergeben, organisationDazu, organisationVorschlaege, organisationWeg, organisationenLesen, passt, titel,
   verknuepfen, verknuepfungenLesen, zugeordnet, type Einsatz, type EinsatzStatus, type VerknuepfungArt,
 } from './einsaetze/logik'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 const STIL = BV_CSS + EZ_CSS
 
@@ -66,7 +67,7 @@ export default function Einsaetze() {
     pb.collection('einsaetze').subscribe('*', () => { void laden() }).catch(() => { /* ohne Echtzeit: beim nächsten Öffnen */ })
     return () => { pb.collection('einsaetze').unsubscribe('*').catch(() => {}) }
   }, [user, laden])
-  useEffect(() => { scrollOben() }, [seite, id])
+  useLayoutEffect(() => { scrollOben() }, [seite, id])
 
   function oeffne(s: string, eid?: string) {
     const q = new URLSearchParams({ seite: s, ...(eid ? { id: eid } : {}) })
@@ -78,7 +79,7 @@ export default function Einsaetze() {
   }
 
   const orgName = user?.organization_name || 'Responda'
-  if (authLoading) return <style>{STIL}</style>
+  if (authLoading) return <><style>{STIL}</style><Zwischenschirm /></>
   const verwalten = darfVerwalten(user)
   const einsatz = einsaetze.find((e) => e.id === id) || null
 

@@ -6,6 +6,7 @@ import StatusBar from '../components/StatusBar'
 import { encryptData, decryptData, generateDocumentKey, encryptDocumentKeyForRecipient, decryptDocumentKey } from '../lib/crypto'
 import { getSessionPrivKey, getSessionPubKey, hasSessionKeys, initializeAndUnlock, getPublicKey, getPublicKeyB64, cachePublicKey, getCachedPublicKey } from '../lib/keyManager'
 import { sichtbareEmail } from '../lib/apps'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 interface Channel {
   id: string
@@ -279,7 +280,7 @@ export default function Chat() {
     sichtbareEmail(u.email).toLowerCase().includes(contactSearch.toLowerCase())
   )
 
-  if (loading) return null
+  if (loading) return <Zwischenschirm />
 
   return (
     <>

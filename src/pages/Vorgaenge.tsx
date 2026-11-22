@@ -34,6 +34,7 @@ import StandardSeite from './vorgaenge/StandardSeite'
 import type { VgKontext } from './vorgaenge/kontext'
 import { adresseBauen, adresseLesen, hatZugriff, reiterListe, vorgaengeVoll } from './vorgaenge/logik'
 import { VG_TEXTE as T } from './vorgaenge/texte'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 type SeitenKomponente = ComponentType<{ k: VgKontext; id?: string }>
 
@@ -64,7 +65,7 @@ export default function Vorgaenge() {
   // Statusleiste im Dunkelrot des Kopfs, solange der rote Kopf zu sehen ist
   useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
   const navigate = useNavigate()
-  if (loading) return null
+  if (loading) return <Zwischenschirm />
   if (!user) {
     return (
       <>

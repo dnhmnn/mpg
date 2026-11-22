@@ -16,7 +16,7 @@
 // nach der Begrüßung und nach einer laufenden Einführung. Eine Mitteilung der Organisation öffnet
 // das Blatt der Glocke einmal von selbst, wenn nichts anderes im Weg ist (useMitteilungAutomatisch).
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useNotifications } from '../hooks/useNotifications'
@@ -27,6 +27,8 @@ import { istVerantwortlich, vermerken, type Teil } from '../lib/einfuehrung'
 import { befristetBis } from '../lib/hubApps'
 import { glockeAnzahl } from '../lib/hubGlocke'
 import { pb } from '../lib/pocketbase'
+import { vorladen } from '../lib/seitenLaden'
+import { ALL_APPS } from '../lib/apps'
 import { BV_CSS } from './benutzer/stil'
 import { Seite } from './benutzer/bausteine'
 import { HUB_CSS } from './hub/stil'
@@ -39,6 +41,7 @@ import KurzbefehleBlatt from './hub/KurzbefehleBlatt'
 import ProfilBlatt, { anzeigeName, initialen } from './hub/ProfilBlatt'
 import AppsSeite from './hub/AppsSeite'
 import BenutzernameSeite from './hub/BenutzernameSeite'
+import Zwischenschirm from '../components/Zwischenschirm'
 
 // „Apps anpassen“ rollt je nach Darstellung im Fenster oder im body (wie in Unitarii.tsx)
 function nachOben() {
@@ -131,7 +134,11 @@ export default function Hub() {
   // Luft im Kopf (zwischen Datum und Gruß, unter dem Gruß): nur aus dem Platz, der unter den Apps übrig ist
   const [luft, setLuft] = useState({ oben: 0, unten: 0 })
   const luftMelden = useCallback((l: { oben: number; unten: number }) => setLuft((v) => (v.oben === l.oben && v.unten === l.unten ? v : l)), [])
-  useEffect(() => { if (unterseite) nachOben() }, [unterseite])
+  useLayoutEffect(() => { if (unterseite) nachOben() }, [unterseite])
+
+  // Die Bausteine der eigenen Apps im Leerlauf vorladen: Tippen auf eine Kachel wechselt dann sofort
+  const appPfade = apps.kacheln.map((id) => (id === 'settings' ? '/settings' : ALL_APPS[id]?.isInternal ? ALL_APPS[id].url : '')).join(' ')
+  useEffect(() => vorladen(appPfade.split(' ').filter(Boolean)), [appPfade])
 
   function appsOeffnen() {
     setBlatt(null)
@@ -147,7 +154,7 @@ export default function Hub() {
   const vorname = anzeigeName(user).split(' ')[0]
   const stil = <style>{BV_CSS + HUB_CSS}</style>
 
-  if (loading) return stil
+  if (loading) return <>{stil}<Zwischenschirm /></>
 
   const datum = new Date().toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long' })
   const ausgeblendet = apps.erlaubt.length - apps.kacheln.length
