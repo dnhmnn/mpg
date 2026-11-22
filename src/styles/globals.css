@@ -1674,6 +1674,19 @@ html.startet, html.startet body, html.zwischen, html.zwischen body { background-
 @media (prefers-reduced-motion: reduce) { .zs-zeichen, .zs-text { animation-duration: 0.01s; } }
 @keyframes zsZeichen { from { opacity: 0; } to { opacity: 1; } }
 
+/* Sanft einblenden beim Wechsel der App (AppEinblenden in App.tsx), kein Federn.
+   Dunkelrot-Seiten: Kopf und Blatt stehen als Flächen, nur ihr Inhalt blendet ein (sonst schiene das Rot
+   durch und das Blatt wirkte kurz rosa); der Inhalt des Blatts hebt sich dabei 8 px. Nicht im Hub
+   (statisch): Er misst beim Öffnen, wie viele Reihen Apps passen, und verlöre sonst 8 px.
+   Seiten mit weißem Kopf (MPG, Unitas …): die ganze Seite, dort ist alles hell. Kein transform auf #root,
+   feste Elemente blieben sonst nicht am Rand. */
+html.app-ein #root:not(:has(.bv)) { animation: appEin 0.2s ease-out both; }
+html.app-ein .bv-kopf-innen, html.app-ein .bv.statisch > .bv-blatt > .bv-innen { animation: appEin 0.2s ease-out both; }
+html.app-ein .bv:not(.statisch) > .bv-blatt > .bv-innen { animation: inhaltEin 0.2s ease-out both; }
+@keyframes appEin { from { opacity: 0.35; } to { opacity: 1; } }
+@keyframes inhaltEin { from { opacity: 0.35; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { html.app-ein #root, html.app-ein .bv-kopf-innen, html.app-ein .bv-innen { animation: none !important; } }
+
 /* Badge styles */
 .badge {
   display: inline-block;

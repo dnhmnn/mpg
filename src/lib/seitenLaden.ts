@@ -57,6 +57,15 @@ export function appVonPfad(pfad: string): string {
   return '/' + (pfad.split(/[?#]/)[0].split('/')[1] || '')
 }
 
+/**
+ * Blendet die neue App ein? Nur beim Wechsel der App (Hub → App, App → Hub, App → App), nicht bei
+ * Unterseiten derselben App und nicht bei Zurück/Vor des Browsers (POP): Safari zeigt beim
+ * Zurückwischen schon seine eigene Bewegung, sonst liefe es doppelt.
+ */
+export function appEinblenden(vorher: string, jetzt: string, art: 'POP' | 'PUSH' | 'REPLACE'): boolean {
+  return art !== 'POP' && appVonPfad(vorher) !== appVonPfad(jetzt)
+}
+
 /** Der Baustein zu einem Pfad der App („/mpg/geraete“ gehört zu „/mpg“), sonst null. */
 export function bausteinFuer(pfad: string): Baustein | null {
   return (SEITEN as Record<string, Baustein>)[appVonPfad(pfad)] ?? null

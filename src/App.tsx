@@ -1,11 +1,11 @@
-import { lazy, Suspense, useEffect, useLayoutEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import NeueFassungHinweis from './components/NeueFassungHinweis'
 import Zwischenschirm, { startVorbei } from './components/Zwischenschirm'
 import Login from './pages/Login'
 import Index from './pages/Index'
 import { urlSicher } from './lib/push/geraet'
-import { appVonPfad, seite } from './lib/seitenLaden'
+import { appEinblenden, appVonPfad, seite } from './lib/seitenLaden'
 
 import './styles/globals.css'
 import { applyTheme, getTheme } from './lib/theme'
@@ -128,6 +128,31 @@ function ObenBeginnen() {
   return null
 }
 
+/**
+ * Sanft einblenden beim Wechsel der App (Owner, 22.11.2026: „Sanft einblenden“): Die neue App kommt in
+ * 0,2 s von 35 % Deckkraft, das helle Blatt hebt sich dabei 8 px (CSS html.app-ein in globals.css).
+ * Gesetzt vor dem ersten Bild der neuen Seite, nach dem Ende wieder weg, damit später eingehängte
+ * Blätter (Unterseiten) nicht mitlaufen. Kein transform auf #root: feste Elemente blieben sonst nicht am Rand.
+ */
+let einblendenUhr = 0
+function AppEinblenden() {
+  const { pathname } = useLocation()
+  const art = useNavigationType()
+  const vorher = useRef(pathname)
+  useLayoutEffect(() => {
+    const alt = vorher.current
+    vorher.current = pathname
+    if (!appEinblenden(alt, pathname, art)) return
+    const h = document.documentElement
+    window.clearTimeout(einblendenUhr)
+    h.classList.remove('app-ein')
+    void h.offsetWidth // neu starten, falls die vorige Einblendung noch läuft
+    h.classList.add('app-ein')
+    einblendenUhr = window.setTimeout(() => h.classList.remove('app-ein'), 400)
+  }, [pathname, art])
+  return null
+}
+
 function App() {
   // Erstes Bild der App: Der rote Start aus index.html geht, im selben Bild steht schon die Seite
   // oder der rote Zwischenbildschirm (Ersatzfläche) – kein helles Aufblitzen dazwischen
@@ -137,6 +162,7 @@ function App() {
     // Seiten erscheinen sofort (src/lib/seitenLaden.ts), sonst steht beim Laden der rote Zwischenbildschirm
     <BrowserRouter>
       <ObenBeginnen />
+      <AppEinblenden />
       <PushNavigation />
       <NeueFassungHinweis />
       {/* Ersatzfläche, solange der Baustein einer Seite lädt: der rote Zwischenbildschirm */}

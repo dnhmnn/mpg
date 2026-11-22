@@ -323,6 +323,14 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   (`useLayoutEffect` bzw. im ersten Rendern). Zurück zum Hub nie mit `<a href>` (lädt alles neu),
   sondern `Link` oder `navigate`.
 - Was beim Laden schon Platz braucht, hält ihn (Standort im Kopf des Lagers, Striche statt Nullen).
+- Sanft einblenden (Owner, 22.11.2026): Beim Wechsel der App (erster Pfadteil; Hub → App, App → Hub,
+  App → App) blendet die neue App in 0,2 s von 35 % Deckkraft ein. Auf Dunkelrot-Seiten stehen Kopf und
+  Blatt als Flächen, nur ihr Inhalt blendet ein (sonst schien das Rot durch, das Blatt wirkte rosa), und
+  der Inhalt des Blatts hebt sich 8 px (nicht im Hub: er misst beim Öffnen die Reihen der Apps); Seiten
+  mit weißem Kopf blenden als Ganzes ein
+  (`AppEinblenden` in `App.tsx`, `appEinblenden` in `src/lib/seitenLaden.ts`, CSS `html.app-ein`). Nicht
+  bei Unterseiten und nicht bei Zurück/Vor des Browsers (Safari zeigt beim Zurückwischen schon eigene
+  Bewegung). Kein `transform` auf `#root` (feste Elemente blieben sonst nicht am Rand), kein Federn.
 - Roter Zwischenbildschirm (Owner, 22.11.2026: „Kann man einen roten Zwischenbildschirm stattdessen?“):
   Wo gewartet wird, steht nie eine leere oder helle Fläche, sondern `Zwischenschirm`
   (`src/components/Zwischenschirm.tsx`): ganz Dunkelrot wie die Begrüßung, das Responda-Zeichen erst nach

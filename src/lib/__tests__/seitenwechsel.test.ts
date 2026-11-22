@@ -15,7 +15,7 @@ const auth = vi.hoisted(() => {
 vi.mock('../pocketbase', () => ({ pb: { baseURL: 'https://api.test', authStore: auth } }))
 
 const { zuletztBestaetigt, zuletztMerken, zuletztErgaenzen } = await import('../../hooks/useAuth')
-const { appVonPfad, bausteinFuer, SEITEN } = await import('../seitenLaden')
+const { appEinblenden, appVonPfad, bausteinFuer, SEITEN } = await import('../seitenLaden')
 
 const lena = { id: 'lena', name: 'Lena Berger', hub_apps: null } as unknown as Parameters<typeof zuletztMerken>[0]
 
@@ -75,6 +75,19 @@ describe('eigene Änderungen und ältere Prüfungen', () => {
     const gilt = zuletztMerken(u({ id: 'lena', name: 'alt', updated: '2026-11-19 08:00:00.000Z', organization_name: 'Feuerwehr Musterstadt' })) as unknown as Record<string, unknown>
     expect(gilt.name).toBe('neu')
     expect(gilt.organization_name).toBe('Feuerwehr Musterstadt')
+  })
+})
+
+describe('Sanft einblenden (Owner, 22.11.2026)', () => {
+  it('beim Wechsel der App, auch zurück zum Hub über den Pfeil', () => {
+    expect(appEinblenden('/hub', '/lager', 'PUSH')).toBe(true)
+    expect(appEinblenden('/lager?seite=bestand', '/hub', 'PUSH')).toBe(true)
+    expect(appEinblenden('/', '/hub', 'REPLACE')).toBe(true)
+  })
+  it('nicht bei Unterseiten derselben App und nicht bei Zurückwischen', () => {
+    expect(appEinblenden('/lager', '/lager', 'PUSH')).toBe(false)
+    expect(appEinblenden('/mpg/geraete', '/mpg/geraete/abc', 'PUSH')).toBe(false)
+    expect(appEinblenden('/lager', '/hub', 'POP')).toBe(false)
   })
 })
 
