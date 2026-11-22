@@ -1,623 +1,357 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+// Schreibstube (/office) im Dunkelrot-Design, Owner 22.11.2026: Dokumente, Tabellen und Präsentationen der
+// Organisation ansehen und bearbeiten (Euro-Office). Neu anlegen (Name, Ordner), Suche, Filter nach Art,
+// zuletzt geöffnet. Der Editor ist eine eigene Seite in der Adresse (?seite=bearbeiten&id=…), damit „Zurück“
+// ihn schließt; statisch wie der Hub, das Dokument rollt im Editor. Verweise anderer Apps (?open=…, auch
+// Anhänge anderer Sammlungen mit collection, field, index) führen dorthin. Rechnung in src/pages/schreibstube/logik.ts.
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { pb } from '../lib/pocketbase'
 import { useAuth } from '../hooks/useAuth'
+import { useStatusleiste } from '../hooks/useStatusleiste'
 import { getTheme } from '../lib/theme'
+import type { User } from '../types'
+import { Abschnitt, Auswahl, Hinweis, Icon, Seite, Toast } from './benutzer/bausteine'
+import { BV_CSS } from './benutzer/stil'
+import { HUB_CSS } from './hub/stil'
+import Blatt from './hub/Blatt'
+import { DF_CSS } from './dateien/stil'
+import { ArtSymbol } from './dateien/ArtSymbol'
+import { endung, nameVergeben, type Eintrag } from './dateien/logik'
+import { SS_CSS } from './schreibstube/stil'
+import {
+  FILTER, NEU, anzeigeName, artName, dokArt, dokumente, editorTyp, filtern, merken, merkerLesen, neuerName, ordnerWahl, wannText, zuletzt,
+  type Filter, type NeuArt,
+} from './schreibstube/logik'
 import Zwischenschirm from '../components/Zwischenschirm'
 
-interface OfficeFile {
-  id: string
-  name: string
-  file: string
-  file_type?: string
-  file_size?: number
-  created: string
-  updated: string
-  collectionId: string
-  organization_id?: string
-  collection?: string
-}
-
-const EDITABLE_EXTS = ['docx', 'doc', 'odt', 'rtf', 'txt', 'xlsx', 'xls', 'ods', 'csv', 'pptx', 'ppt', 'odp', 'pdf']
+const STIL = BV_CSS + HUB_CSS + DF_CSS + SS_CSS
 const OFFICE_URL = (import.meta as unknown as { env: Record<string, string> }).env.VITE_OFFICE_URL || 'http://localhost:8090'
-const RECENT_KEY = 'office_recent'
+/** Merker „zuletzt geöffnet“ auf dem Gerät (Schlüssel wie bisher, damit nichts verloren geht) */
+const MERKER = 'office_recent'
 
-type DocCategory = 'word' | 'cell' | 'slide' | 'pdf'
-
-function getDocType(ext: string): DocCategory {
-  if (ext === 'pdf') return 'pdf'
-  if (['xlsx', 'xls', 'ods', 'csv'].includes(ext)) return 'cell'
-  if (['pptx', 'ppt', 'odp'].includes(ext)) return 'slide'
-  return 'word'
-}
-
-// Hex bleibt: wird mit Alpha-Anhang zusammengesetzt (`${color}18`)
-function getDocColor(type: DocCategory | string): string {
-  if (type === 'cell') return '#166534'
-  if (type === 'slide') return '#9a3412'
-  if (type === 'pdf') return '#600812'
-  return '#1e40af'
-}
-
-// Fuer Schrift, Linien und Symbole: PDF-Akzent folgt dem Thema
-function getDocAkzent(type: DocCategory | string): string {
-  return type === 'pdf' ? 'var(--lbf-akzent)' : getDocColor(type)
-}
-
-function getBorderColor(ext: string): string {
-  return getDocAkzent(getDocType(ext))
-}
-
-function getOfficeUiTheme(): string {
+function officeThema(): string {
   const mode = getTheme()
-  const isDark = mode === 'dark' || mode === 'retro'
-    || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-  return isDark ? 'theme-lbf-dark' : 'theme-lbf'
+  const dunkel = mode === 'dark' || mode === 'retro' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+  return dunkel ? 'theme-lbf-dark' : 'theme-lbf'
 }
 
-function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const mins = Math.floor(diff / 60000)
-  if (mins < 1) return 'gerade eben'
-  if (mins < 60) return `vor ${mins} Min.`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `vor ${hours} Std.`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `vor ${days} Tag${days === 1 ? '' : 'en'}`
-  return new Date(dateStr).toLocaleDateString('de-DE')
-}
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString('de-DE', { day: '2-digit', month: 'long', year: 'numeric' })
-}
-
-function DocTypeIcon({ type, size = 36 }: { type: DocCategory; size?: number }) {
-  const color = getDocColor(type)
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: size * 0.22,
-      background: `${color}18`, color: getDocAkzent(type),
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0,
-    }}>
-      {type === 'word' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="8" y1="13" x2="16" y2="13"/>
-          <line x1="8" y1="17" x2="13" y2="17"/>
-        </svg>
-      )}
-      {type === 'cell' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <line x1="3" y1="9" x2="21" y2="9"/>
-          <line x1="3" y1="15" x2="21" y2="15"/>
-          <line x1="9" y1="3" x2="9" y2="21"/>
-          <line x1="15" y1="3" x2="15" y2="21"/>
-        </svg>
-      )}
-      {type === 'slide' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2"/>
-          <line x1="8" y1="21" x2="16" y2="21"/>
-          <line x1="12" y1="17" x2="12" y2="21"/>
-        </svg>
-      )}
-      {type === 'pdf' && (
-        <svg width={size * 0.5} height={size * 0.5} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-      )}
-    </div>
-  )
-}
-
-function FileCard({ f, onClick }: { f: OfficeFile; onClick: () => void }) {
-  const ext = f.file.split('.').pop()?.toLowerCase() || 'docx'
-  const type = getDocType(ext)
-  const borderColor = getBorderColor(ext)
-  return (
-    <div onClick={onClick} style={{
-      background: 'var(--lbf-card)', borderRadius: 12,
-      boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-      borderLeft: `3px solid ${borderColor}`,
-      padding: '12px 14px', cursor: 'pointer',
-      display: 'flex', alignItems: 'center', gap: 12,
-    }}>
-      <DocTypeIcon type={type} size={36} />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontWeight: 700, fontStyle: 'italic', fontSize: 15,
-          color: 'var(--lbf-text)', overflow: 'hidden',
-          textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        }}>{f.name}</div>
-        <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic', marginTop: 2 }}>
-          {relativeTime(f.updated)}
-        </div>
-      </div>
-      <div style={{
-        fontSize: 10, fontWeight: 700, textTransform: 'uppercase' as const,
-        letterSpacing: '0.08em', color: getDocAkzent(type),
-        background: `${getDocColor(type)}14`,
-        padding: '3px 7px', borderRadius: 5, flexShrink: 0,
-      }}>
-        {ext.toUpperCase()}
-      </div>
-    </div>
-  )
+function merkerHolen(): string[] {
+  try { return merkerLesen(localStorage.getItem(MERKER)) } catch { return [] }
 }
 
 export default function Office() {
-  const navigate = useNavigate()
-  const [searchParams, setSearchParams] = useSearchParams()
   const { user, loading: authLoading } = useAuth()
+  const navigate = useNavigate()
+  const ort = useLocation()
+  const [adr] = useSearchParams()
+  const bearbeiten = adr.get('seite') === 'bearbeiten'
+  // Liste rollt (rot, solange der Kopf zu sehen ist); der Editor steht still wie der Hub
+  useStatusleiste('--lbf-kopf', bearbeiten ? { statisch: true } : { kopf: '.bv-kopf' })
+  const org = user?.organization_id || ''
 
-  const [files, setFiles] = useState<OfficeFile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [editingFile, setEditingFile] = useState<OfficeFile | null>(null)
-  const [editorLoading, setEditorLoading] = useState(false)
-  const [msg, setMsg] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
-  const [recentIds, setRecentIds] = useState<string[]>([])
-  const [createType, setCreateType] = useState<DocCategory | null>(null)
-  const [newDocName, setNewDocName] = useState('')
-  const [creating, setCreating] = useState(false)
-  const nameInputRef = useRef<HTMLInputElement>(null)
+  const [alle, setAlle] = useState<Eintrag[]>([])
+  const [laedt, setLaedt] = useState(true)
+  const [fehler, setFehler] = useState('')
+  const [suche, setSuche] = useState('')
+  const [filter, setFilter] = useState<Filter>('alle')
+  const [merker, setMerker] = useState<string[]>(merkerHolen)
+  const [neu, setNeu] = useState<NeuArt | null>(null)
+  const [neuName, setNeuName] = useState('')
+  const [neuOrdner, setNeuOrdner] = useState('')
+  const [laeuft, setLaeuft] = useState(false)
+  const [meldung, setMeldung] = useState<{ text: string; fehler?: boolean } | null>(null)
+  const melden = useCallback((text: string, f = false) => { setMeldung({ text, fehler: f }); window.setTimeout(() => setMeldung(null), 4000) }, [])
 
-  function showMsg(text: string, type: 'success' | 'error' = 'success') {
-    setMsg({ text, type })
-    setTimeout(() => setMsg(null), 4000)
-  }
-
-  useEffect(() => {
-    if (user?.organization_id) loadFiles()
-  }, [user])
-
-  useEffect(() => {
-    const saved = localStorage.getItem(RECENT_KEY)
-    if (saved) setRecentIds(JSON.parse(saved))
-  }, [])
-
-  useEffect(() => {
-    const openId = searchParams.get('open')
-    if (!openId) return
-
-    const openCollection = searchParams.get('collection')
-    const openField = searchParams.get('field')
-    const openIndex = searchParams.get('index')
-
-    if (openCollection && openCollection !== 'files') {
-      pb.collection(openCollection).getOne<Record<string, unknown>>(openId).then(rec => {
-        const fieldVal = rec[openField || 'file']
-        const fileName = (Array.isArray(fieldVal) ? fieldVal[Number(openIndex || 0)] : fieldVal) as string | undefined
-        if (!fileName) {
-          showMsg('Datei nicht gefunden oder nicht editierbar.', 'error')
-          return
-        }
-        openFile({
-          id: rec.id as string,
-          name: (rec.name as string) || fileName,
-          file: fileName,
-          created: rec.created as string,
-          updated: (rec.updated as string) || (rec.created as string),
-          collectionId: rec.collectionId as string,
-          collection: openCollection,
-        })
-      }).catch(() => showMsg('Datei nicht gefunden oder nicht editierbar.', 'error'))
-      searchParams.delete('open')
-      searchParams.delete('collection')
-      searchParams.delete('field')
-      searchParams.delete('index')
-      setSearchParams(searchParams, { replace: true })
-      return
-    }
-
-    if (files.length === 0) return
-    const target = files.find(f => f.id === openId)
-    if (target) {
-      openFile(target)
-    } else {
-      showMsg('Datei nicht gefunden oder nicht editierbar.', 'error')
-    }
-    searchParams.delete('open')
-    setSearchParams(searchParams, { replace: true })
-  }, [files, searchParams])
-
-  useEffect(() => {
-    if (createType) {
-      const defaults: Record<DocCategory, string> = {
-        word: 'Neues Dokument',
-        cell: 'Neue Tabelle',
-        slide: 'Neue Präsentation',
-        pdf: 'Neues PDF',
-      }
-      setNewDocName(defaults[createType])
-      setTimeout(() => nameInputRef.current?.focus(), 100)
-    }
-  }, [createType])
-
-  async function loadFiles() {
-    if (!user?.organization_id) return
+  const laden = useCallback(async () => {
+    if (!org) return
     try {
-      setLoading(true)
-      const allFiles = await pb.collection('files').getFullList<OfficeFile>({
-        filter: `organization_id = "${user.organization_id}" && is_folder = false`,
-        sort: '-updated',
+      const l = await pb.collection('files').getFullList<Eintrag>({
+        filter: pb.filter('organization_id = {:o}', { o: org }),
+        fields: 'id,name,is_folder,parent_folder_id,organization_id,file,file_size,file_type,created,updated',
+        requestKey: null,
       })
-      setFiles(allFiles.filter(f => {
-        const ext = f.file?.split('.').pop()?.toLowerCase() || ''
-        return EDITABLE_EXTS.includes(ext) && f.file
-      }))
-    } catch (e: unknown) {
-      showMsg('Fehler beim Laden: ' + (e instanceof Error ? e.message : String(e)), 'error')
-    } finally {
-      setLoading(false)
-    }
-  }
+      setAlle(l)
+      setFehler('')
+    } catch { setFehler('Die Dokumente lassen sich gerade nicht laden.') }
+    finally { setLaedt(false) }
+  }, [org])
+  useEffect(() => { void laden() }, [laden])
 
-  function trackRecent(id: string) {
-    setRecentIds(prev => {
-      const updated = [id, ...prev.filter(x => x !== id)].slice(0, 10)
-      localStorage.setItem(RECENT_KEY, JSON.stringify(updated))
-      return updated
+  // Verweise anderer Apps (?open=…&collection=…&field=…&index=…) führen auf die Seite des Editors
+  useLayoutEffect(() => {
+    const offen = adr.get('open')
+    if (!offen) return
+    const p = new URLSearchParams({ seite: 'bearbeiten', id: offen })
+    const sammlung = adr.get('collection')
+    if (sammlung && sammlung !== 'files') {
+      p.set('sammlung', sammlung)
+      p.set('feld', adr.get('field') || 'file')
+      p.set('nr', adr.get('index') || '0')
+    }
+    navigate({ search: `?${p.toString()}` }, { replace: true, state: { ssVon: 'verweis' } })
+  }, [adr, navigate])
+
+  const docs = useMemo(() => dokumente(alle), [alle])
+  const ordner = useMemo(() => alle.filter((e) => e.is_folder), [alle])
+  const ordnerName = (id: string) => (id ? ordner.find((o) => o.id === id)?.name || '' : '')
+  const liste = useMemo(() => filtern(docs, filter, suche), [docs, filter, suche])
+  const kuerzlich = useMemo(() => zuletzt(merker, docs), [merker, docs])
+  const wahl = useMemo(() => ordnerWahl(alle), [alle])
+  const neuArt = NEU.find((n) => n.art === neu)
+
+  function merkenFuer(id: string) {
+    setMerker((m) => {
+      const n = merken(m, id)
+      try { localStorage.setItem(MERKER, JSON.stringify(n)) } catch { /* Speicher voll oder gesperrt */ }
+      return n
     })
   }
 
-  function openFile(f: OfficeFile) {
-    trackRecent(f.id)
-    setEditingFile(f)
+  function oeffnen(e: Eintrag) {
+    merkenFuer(e.id)
+    navigate({ search: `?seite=bearbeiten&id=${encodeURIComponent(e.id)}` }, { state: { ssUnter: true } })
   }
 
-  async function createNewDoc() {
-    if (!createType || !newDocName.trim() || !user?.organization_id) return
-    setCreating(true)
+  function editorZu() {
+    const s = ort.state as { ssUnter?: boolean; ssVon?: string } | null
+    // Aus der Liste geöffnet oder aus einer anderen App verwiesen: einen Schritt zurück; sonst (Link, neu geladen) zur Liste
+    if (s?.ssUnter || (s?.ssVon === 'verweis' && window.history.length > 1)) navigate(-1)
+    else navigate({ search: '' }, { replace: true })
+    void laden()
+  }
+
+  function neuOeffnen(a: NeuArt) {
+    setNeu(a)
+    setNeuName(NEU.find((n) => n.art === a)?.vorgabe || '')
+    setNeuOrdner('')
+  }
+
+  async function anlegen() {
+    if (!neuArt || !org || laeuft) return
+    const name = neuerName(neuName, neuArt.endung)
+    if (!name) return
+    const geschwister = alle.filter((e) => (e.parent_folder_id || '') === neuOrdner)
+    if (nameVergeben(geschwister, name)) { melden(`„${name}“ gibt es dort schon.`, true); return }
+    setLaeuft(true)
     try {
-      const extMap: Record<DocCategory, string> = { word: 'docx', cell: 'xlsx', slide: 'pptx', pdf: 'pdf' }
-      const ext = extMap[createType]
-      const templateUrl = `${OFFICE_URL}/empty/${ext}`
-
-      const res = await fetch(templateUrl)
-      if (!res.ok) throw new Error('Vorlage nicht erreichbar')
-      const blob = await res.blob()
-
-      const fileName = newDocName.trim().replace(/\.[^.]+$/, '') + '.' + ext
-      const formData = new FormData()
-      formData.append('file', blob, fileName)
-      formData.append('name', fileName)
-      formData.append('organization_id', user.organization_id)
-      formData.append('is_folder', 'false')
-
-      const created = await pb.collection('files').create<OfficeFile>(formData)
-      setCreateType(null)
-      await loadFiles()
-      openFile(created)
-    } catch {
-      showMsg('Vorlage nicht verfügbar — bitte erst Server-Setup abschließen.', 'error')
-      setCreateType(null)
-    } finally {
-      setCreating(false)
-    }
+      const r = await fetch(`${OFFICE_URL}/empty/${neuArt.endung}`)
+      if (!r.ok) throw new Error('vorlage')
+      const vorlage = await r.blob()
+      const fd = new FormData()
+      fd.append('file', vorlage, name)
+      fd.append('name', name)
+      fd.append('organization_id', org)
+      fd.append('is_folder', 'false')
+      fd.append('parent_folder_id', neuOrdner)
+      fd.append('file_size', String(vorlage.size))
+      if (vorlage.type) fd.append('file_type', vorlage.type)
+      const neuerEintrag = await pb.collection('files').create<Eintrag>(fd, { requestKey: null })
+      setNeu(null)
+      await laden()
+      oeffnen(neuerEintrag)
+    } catch (e) {
+      melden((e as Error)?.message === 'vorlage'
+        ? 'Die leere Vorlage kam nicht. Der Office-Server antwortet gerade nicht.'
+        : 'Nicht angelegt. Keine Verbindung oder keine Berechtigung?', true)
+    } finally { setLaeuft(false) }
   }
 
-  // Editor integration
+  if (authLoading) return <><style>{STIL}</style><Zwischenschirm /></>
+
+  if (bearbeiten) {
+    return (
+      <>
+        <style>{STIL}</style>
+        <Editor key={`${adr.get('sammlung') || 'files'}:${adr.get('id')}:${adr.get('feld') || ''}:${adr.get('nr') || ''}`}
+          id={adr.get('id') || ''} sammlung={adr.get('sammlung') || 'files'} feld={adr.get('feld') || 'file'} nr={Number(adr.get('nr') || 0)}
+          user={user} zurueck={editorZu} geoeffnet={(id, sammlung) => { if (sammlung === 'files') merkenFuer(id) }} />
+        {meldung && <Toast text={meldung.text} fehler={meldung.fehler} onClose={() => setMeldung(null)} />}
+      </>
+    )
+  }
+
+  const zeile = (e: Eintrag) => (
+    <button key={e.id} type="button" className="bv-z" onClick={() => oeffnen(e)}>
+      <ArtSymbol a={dokArt(e)} />
+      <span className="bv-tx"><b>{anzeigeName(e.name)}</b><small>{[wannText(e.updated || e.created), ordnerName(e.parent_folder_id || '') && `in ${ordnerName(e.parent_folder_id || '')}`].filter(Boolean).join(' · ')}</small></span>
+      <span className="ss-endung">{endung(e.file || e.name)}</span>
+    </button>
+  )
+
+  const titelListe = suche.trim() ? 'Gefunden' : filter === 'alle' ? 'Alle Dokumente' : FILTER.find((f) => f.id === filter)?.titel || 'Dokumente'
+
+  return (
+    <>
+      <style>{STIL}</style>
+      <Seite titel="Schreibstube" unter={user?.organization_name || 'Responda'} zurueck={() => navigate('/hub')} zurueckLabel="Zurück zur Übersicht">
+        <Abschnitt titel="Neu" erst />
+        <div className="ss-neu">
+          {NEU.map((n) => (
+            <button key={n.art} type="button" onClick={() => neuOeffnen(n.art)}>
+              <ArtSymbol a={n.art} />{n.titel}<small>.{n.endung}</small>
+            </button>
+          ))}
+        </div>
+
+        <div className="bv-suche">
+          <Icon n="suche" />
+          <input type="search" placeholder="Dokumente suchen" aria-label="Dokumente suchen" value={suche} onChange={(e) => setSuche(e.target.value)} />
+          {suche && <button type="button" aria-label="Suche leeren" onClick={() => setSuche('')}><Icon n="kreuz" /></button>}
+        </div>
+        {docs.length > 0 && (
+          <div className="ss-filter" role="group" aria-label="Nach Art filtern">
+            {FILTER.map((f) => <button key={f.id} type="button" aria-pressed={filter === f.id} onClick={() => setFilter(f.id)}>{f.titel}</button>)}
+          </div>
+        )}
+
+        {fehler && <div className="bv-notiz" style={{ marginTop: 14 }}><b>{fehler}</b><p><button type="button" style={{ color: 'var(--lbf-akzent)', fontWeight: 700, minHeight: 44 }} onClick={() => void laden()}>Erneut versuchen</button></p></div>}
+
+        {!suche.trim() && filter === 'alle' && kuerzlich.length > 0 && (
+          <>
+            <Abschnitt titel="Zuletzt geöffnet" />
+            <div className="bv-flaeche">{kuerzlich.map(zeile)}</div>
+          </>
+        )}
+
+        {laedt ? <Hinweis>Wird geladen …</Hinweis> : (
+          <>
+            <Abschnitt titel={titelListe} rechts={liste.length || undefined} />
+            {liste.length ? <div className="bv-flaeche">{liste.map(zeile)}</div> : docs.length ? <Hinweis>Nichts gefunden.</Hinweis> : (
+              <div className="bv-notiz"><b>Noch keine Dokumente.</b><p>Oben ein neues anlegen. Was in den Dateien liegt (Word, Excel, PowerPoint, PDF), steht hier auch.</p></div>
+            )}
+          </>
+        )}
+      </Seite>
+
+      {neuArt && (
+        <Blatt titel={neuArt.vorgabe} onClose={() => setNeu(null)}>
+          <div className="bv-flaeche">
+            <div className="ss-blattfeld">
+              <label htmlFor="ss-name">Name</label>
+              <input id="ss-name" className="bv-eingabe" value={neuName} maxLength={120}
+                onChange={(e) => setNeuName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void anlegen() }} />
+              {wahl.length > 0 && (
+                <>
+                  <label htmlFor="ss-ordner">Ablegen in</label>
+                  <Auswahl value={neuOrdner} onChange={setNeuOrdner} label="Ordner">
+                    <option value="">Dateien (oberste Ebene)</option>
+                    {wahl.map((o) => <option key={o.id} value={o.id}>{o.titel}</option>)}
+                  </Auswahl>
+                </>
+              )}
+            </div>
+          </div>
+          <button type="button" className="ss-anlegen" disabled={laeuft || !neuerName(neuName, neuArt.endung)} onClick={() => void anlegen()}>
+            {laeuft ? 'Wird angelegt …' : 'Anlegen und öffnen'}
+          </button>
+        </Blatt>
+      )}
+      {meldung && <Toast text={meldung.text} fehler={meldung.fehler} onClose={() => setMeldung(null)} />}
+    </>
+  )
+}
+
+interface Dok { id: string; name: string; file: string; updated: string; sammlung: string }
+type DocsApi = { DocEditor: new (id: string, config: unknown) => { destroyEditor?: () => void } }
+
+/** Der Editor als eigene, statische Seite: Kopf mit Zurück und Name, darunter das Dokument im Blatt. */
+function Editor({ id, sammlung, feld, nr, user, zurueck, geoeffnet }: {
+  id: string; sammlung: string; feld: string; nr: number; user: User | null
+  zurueck: () => void; geoeffnet: (id: string, sammlung: string) => void
+}) {
+  const [dok, setDok] = useState<Dok | null>(null)
+  const [bereit, setBereit] = useState(false)
+  const [fehler, setFehler] = useState('')
+  const [versuch, setVersuch] = useState(0)
+  const geoeffnetRef = useRef(geoeffnet)
+  geoeffnetRef.current = geoeffnet
+
+  // Datensatz holen: in den Dateien die Datei selbst, sonst ein Anhang (Feld, bei mehreren die Nummer)
   useEffect(() => {
-    if (!editingFile) return
-    setEditorLoading(true)
+    if (!id) { setFehler('Kein Dokument angegeben.'); return }
+    let aus = false
+    setFehler('')
+    pb.collection(sammlung).getOne<Record<string, unknown>>(id, { requestKey: null }).then((rec) => {
+      if (aus) return
+      const wert = rec[feld]
+      const datei = (Array.isArray(wert) ? wert[nr] : wert) as string | undefined
+      if (!datei || typeof datei !== 'string') { setFehler('Dieses Dokument hat keine Datei, die sich bearbeiten lässt.'); return }
+      setDok({ id: String(rec.id), name: String(rec.name || datei), file: datei, updated: String(rec.updated || rec.created || ''), sammlung })
+      geoeffnetRef.current(String(rec.id), sammlung)
+    }).catch(() => { if (!aus) setFehler('Dieses Dokument lässt sich nicht öffnen. Vielleicht gelöscht, oder es fehlt die Berechtigung.') })
+    return () => { aus = true }
+  }, [id, sammlung, feld, nr, versuch])
 
-    const ext = editingFile.file.split('.').pop()?.toLowerCase() || 'docx'
-    const collectionName = editingFile.collection || 'files'
-    const fileUrl = `${pb.baseUrl}/api/files/${collectionName}/${editingFile.id}/${editingFile.file}?token=${pb.authStore.token}`
-    const callbackUrl = `${pb.baseUrl}/api/office/callback?file_id=${editingFile.id}`
-
-    const script = document.createElement('script')
-    script.src = `${OFFICE_URL}/web-apps/apps/api/documents/api.js`
-    script.onload = () => {
-      const w = window as unknown as { DocsAPI?: { DocEditor: new (id: string, config: unknown) => void } }
-      if (!w.DocsAPI) {
-        setEditorLoading(false)
-        showMsg('Euro-Office Server nicht erreichbar. Prüfe VITE_OFFICE_URL.', 'error')
-        setEditingFile(null)
-        return
-      }
-      new w.DocsAPI.DocEditor('office-editor-container', {
-        document: {
-          fileType: ext,
-          key: `${editingFile.id}_${new Date(editingFile.updated).getTime()}`,
-          title: editingFile.name,
-          url: fileUrl,
-        },
-        documentType: getDocType(ext),
+  // Editor des Office-Servers einhängen, beim Verlassen sauber abbauen
+  useEffect(() => {
+    if (!dok) return
+    let aus = false
+    let editor: { destroyEditor?: () => void } | null = null
+    let skript: HTMLScriptElement | null = null
+    setBereit(false)
+    const starten = async () => {
+      const w = window as unknown as { DocsAPI?: DocsApi }
+      if (aus) return
+      if (!w.DocsAPI) { setFehler('Die Schreibstube ist gerade nicht erreichbar.'); return }
+      // Kurzlebiges Datei-Token statt der Anmeldung in der Adresse, die der Office-Server abruft
+      let token = ''
+      try { token = await pb.files.getToken() } catch { /* ohne: öffentliche Dateien gehen trotzdem */ }
+      if (aus) return
+      const url = `${pb.baseURL}/api/files/${dok.sammlung}/${dok.id}/${encodeURIComponent(dok.file)}${token ? `?token=${encodeURIComponent(token)}` : ''}`
+      const typ = editorTyp(dok.file)
+      editor = new w.DocsAPI.DocEditor('ss-editor-flaeche', {
+        width: '100%', height: '100%',
+        document: { fileType: endung(dok.file), key: `${dok.id}_${new Date((dok.updated || '').replace(' ', 'T')).getTime() || 0}`, title: dok.name, url },
+        documentType: typ,
         editorConfig: {
-          callbackUrl,
+          callbackUrl: `${pb.baseURL}/api/office/callback?file_id=${encodeURIComponent(dok.id)}`,
           user: { id: user?.id || '', name: user?.name || '' },
           lang: 'de',
           customization: {
-            autosave: true, chat: false, comments: true,
-            compactHeader: false, feedback: false, forcesave: true,
-            help: false, plugins: false,
-            uiTheme: getOfficeUiTheme(),
-            logo: {
-              image: 'https://app.responda.systems/office-logo-header.svg',
-              imageDark: 'https://app.responda.systems/office-logo-header.svg',
-              url: 'https://app.responda.systems/office',
-            },
+            autosave: true, chat: false, comments: true, compactHeader: false, feedback: false, forcesave: true,
+            help: false, plugins: false, uiTheme: officeThema(),
+            logo: { image: 'https://app.responda.systems/office-logo-header.svg', imageDark: 'https://app.responda.systems/office-logo-header.svg', url: 'https://app.responda.systems/office' },
           },
         },
         events: {
-          onAppReady: () => setEditorLoading(false),
-          onDocumentReady: () => setEditorLoading(false),
+          onAppReady: () => { if (!aus) setBereit(true) },
+          onDocumentReady: () => { if (!aus) setBereit(true) },
           onError: (event: unknown) => {
-            setEditorLoading(false)
             const e = event as { data?: { errorDescription?: string } }
-            showMsg('Editor-Fehler: ' + (e?.data?.errorDescription || 'Unbekannter Fehler'), 'error')
-            setEditingFile(null)
+            if (!aus) setFehler(`Der Editor meldet einen Fehler${e?.data?.errorDescription ? `: ${e.data.errorDescription}` : '.'}`)
           },
         },
       })
     }
-    script.onerror = () => {
-      setEditorLoading(false)
-      showMsg('Euro-Office Server nicht erreichbar. Prüfe VITE_OFFICE_URL.', 'error')
+    if ((window as unknown as { DocsAPI?: DocsApi }).DocsAPI) void starten()
+    else {
+      skript = document.createElement('script')
+      skript.src = `${OFFICE_URL}/web-apps/apps/api/documents/api.js`
+      skript.onload = () => { void starten() }
+      skript.onerror = () => { if (!aus) setFehler('Die Schreibstube ist gerade nicht erreichbar.') }
+      document.head.appendChild(skript)
     }
-    document.head.appendChild(script)
-
     return () => {
-      if (document.head.contains(script)) document.head.removeChild(script)
-      const container = document.getElementById('office-editor-container')
-      if (container) container.innerHTML = ''
+      aus = true
+      try { editor?.destroyEditor?.() } catch { /* schon weg */ }
+      if (skript && document.head.contains(skript)) document.head.removeChild(skript)
     }
-  }, [editingFile])
-
-  const today = formatDate(new Date().toISOString())
-  const recentFiles = recentIds.map(id => files.find(f => f.id === id)).filter(Boolean) as OfficeFile[]
-  const allFiles = files
-
-  if (authLoading) return <Zwischenschirm />
-
-  const CREATE_OPTIONS: { type: DocCategory; label: string; sub: string }[] = [
-    { type: 'word', label: 'Dokument', sub: 'Word' },
-    { type: 'cell', label: 'Tabelle', sub: 'Excel' },
-    { type: 'slide', label: 'Präsentation', sub: 'PowerPoint' },
-  ]
+  }, [dok, user?.id, user?.name, versuch])
 
   return (
-    <div style={{
-      minHeight: '100dvh',
-      background: 'var(--warm-bg)',
-      fontFamily: "'Atkinson Hyperlegible', -apple-system, sans-serif",
-    }}>
-
-      {/* MASTHEAD */}
-      <div style={{
-        background: 'var(--lbf-card)',
-        borderBottom: '0.5px solid var(--lbf-border)',
-        position: 'sticky', top: 0, zIndex: 100,
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'max(20px, env(safe-area-inset-left))',
-        paddingRight: 'max(20px, env(safe-area-inset-right))',
-      }}>
-        <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-          <button onClick={() => navigate(-1)} style={{
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'none', border: 'none', cursor: 'pointer',
-            color: 'var(--lbf-akzent)', padding: 4, flexShrink: 0,
-          }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 18l-6-6 6-6"/>
-            </svg>
-          </button>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Schreibstube</div>
-            <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{today}</div>
-          </div>
+    <Seite statisch titel={dok ? anzeigeName(dok.name) : 'Dokument'} unter={dok ? artName(dokArt({ name: dok.name, file: dok.file })) : 'Wird geöffnet …'}
+      zurueck={zurueck} zurueckLabel="Schließen">
+      {fehler ? (
+        <div className="bv-notiz ss-fehler">
+          <b>{fehler}</b>
+          <p><button type="button" style={{ color: 'var(--lbf-akzent)', fontWeight: 700, minHeight: 44 }} onClick={() => { setFehler(''); setDok(null); setVersuch((v) => v + 1) }}>Erneut versuchen</button></p>
         </div>
-      </div>
-
-      {/* TOAST */}
-      {msg && (
-        <div style={{
-          position: 'fixed',
-          bottom: 'calc(70px + env(safe-area-inset-bottom))',
-          left: '50%', transform: 'translateX(-50%)',
-          zIndex: 9999, padding: '10px 20px', borderRadius: 20,
-          fontWeight: 600, fontSize: 13,
-          boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
-          whiteSpace: 'nowrap', maxWidth: 'calc(100vw - 40px)',
-          ...(msg.type === 'error'
-            ? { background: 'var(--lbf-fehler-grund)', border: '1px solid #fecaca', color: '#dc2626' }
-            : { background: 'var(--lbf-ok-grund)', border: '1px solid #bbf7d0', color: 'var(--lbf-ok-text)' }),
-        }}>
-          {msg.text}
+      ) : (
+        <div className="ss-editor">
+          {!bereit && <div className="ss-laedt" role="status">Wird geöffnet …</div>}
+          {dok && <div id="ss-editor-flaeche" />}
         </div>
       )}
-
-      {/* CONTENT */}
-      <div style={{ maxWidth: 800, margin: '0 auto', padding: '20px 16px 120px', boxSizing: 'border-box' as const }}>
-
-        {/* NEU ERSTELLEN */}
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 12 }}>
-          NEU ERSTELLEN
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 28 }}>
-          {CREATE_OPTIONS.map(({ type, label, sub }) => {
-            const color = getDocColor(type)
-            return (
-              <button
-                key={type}
-                onClick={() => setCreateType(type)}
-                style={{
-                  background: 'var(--lbf-card)', border: 'none', borderRadius: 12,
-                  boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
-                  borderTop: `3px solid ${color}`,
-                  padding: '14px 10px 12px',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                  transition: 'transform .12s',
-                }}
-                onTouchStart={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(0.96)' }}
-                onTouchEnd={e => { (e.currentTarget as HTMLButtonElement).style.transform = '' }}
-              >
-                <DocTypeIcon type={type} size={40} />
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--lbf-text)' }}>{label}</div>
-                  <div style={{ fontSize: 10, color: 'var(--warm-gray)', fontStyle: 'italic' }}>{sub}</div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* ZULETZT VERWENDET */}
-        {recentFiles.length > 0 && (
-          <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
-              ZULETZT VERWENDET
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
-              {recentFiles.slice(0, 5).map(f => (
-                <FileCard key={f.id} f={f} onClick={() => openFile(f)} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* ALLE DOKUMENTE */}
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 10 }}>
-          ALLE DOKUMENTE
-        </div>
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12, fontStyle: 'italic' }}>
-            Lade Dokumente…
-          </div>
-        ) : allFiles.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--warm-gray)', background: 'var(--lbf-card)', borderRadius: 12 }}>
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-              style={{ opacity: 0.25, marginBottom: 12 }} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-              <polyline points="14 2 14 8 20 8"/>
-            </svg>
-            <div style={{ fontWeight: 700, marginBottom: 6, color: 'var(--lbf-text)' }}>Keine Dokumente</div>
-            <div style={{ fontStyle: 'italic', fontSize: 13 }}>Erstelle ein neues Dokument oder lade eines in der Dateien-App hoch.</div>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {allFiles.map(f => (
-              <FileCard key={f.id} f={f} onClick={() => openFile(f)} />
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* NEU ERSTELLEN MODAL */}
-      {createType && (
-        <>
-          <div onClick={() => setCreateType(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 400 }} />
-          <div style={{
-            position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 401,
-            background: 'var(--lbf-card)', borderRadius: '20px 20px 0 0',
-            padding: '24px 20px',
-            paddingBottom: 'calc(24px + env(safe-area-inset-bottom))',
-          }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(var(--lbf-rot-rgb),0.15)', margin: '0 auto 20px' }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-              <DocTypeIcon type={createType} size={44} />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 17, color: 'var(--lbf-text)' }}>
-                  {createType === 'word' ? 'Neues Dokument' : createType === 'cell' ? 'Neue Tabelle' : 'Neue Präsentation'}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--warm-gray)', fontStyle: 'italic' }}>
-                  {createType === 'word' ? '.docx' : createType === 'cell' ? '.xlsx' : '.pptx'}
-                </div>
-              </div>
-            </div>
-            <label style={{ fontSize: 10, fontWeight: 700, color: 'var(--lbf-akzent)', textTransform: 'uppercase', letterSpacing: '0.14em', display: 'block', marginBottom: 8 }}>
-              NAME
-            </label>
-            <input
-              ref={nameInputRef}
-              value={newDocName}
-              onChange={e => setNewDocName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && createNewDoc()}
-              style={{
-                width: '100%', boxSizing: 'border-box' as const,
-                border: '1.5px solid rgba(var(--lbf-rot-rgb),0.2)', borderRadius: 10,
-                padding: '12px 14px', fontSize: 15, fontFamily: 'inherit',
-                fontStyle: 'italic', outline: 'none',
-                background: 'var(--warm-bg)', color: 'var(--lbf-text)',
-                marginBottom: 16,
-              }}
-            />
-            <button
-              onClick={createNewDoc}
-              disabled={creating || !newDocName.trim()}
-              style={{
-                width: '100%', background: creating || !newDocName.trim() ? 'rgba(var(--lbf-rot-rgb),0.3)' : 'var(--lbf-akzent-grund)',
-                color: '#fff', border: 'none', borderRadius: 12,
-                padding: '14px', fontSize: 15, fontWeight: 700,
-                fontFamily: 'inherit', cursor: creating || !newDocName.trim() ? 'default' : 'pointer',
-              }}
-            >
-              {creating ? 'Erstelle…' : 'Erstellen'}
-            </button>
-          </div>
-        </>
-      )}
-
-      {/* FULL-SCREEN EDITOR OVERLAY */}
-      {editingFile && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 300, background: '#1a1a1a', display: 'flex', flexDirection: 'column' }}>
-          <div style={{
-            height: 50, background: '#1a0e08', // bleibt dunkel: Editor-Leiste mit weisser Schrift in beiden Modi
-            display: 'flex', alignItems: 'center',
-            paddingLeft: 'max(16px, env(safe-area-inset-left))',
-            paddingRight: 'max(16px, env(safe-area-inset-right))',
-            paddingTop: 'env(safe-area-inset-top)',
-            gap: 12, flexShrink: 0,
-          }}>
-            <button onClick={() => setEditingFile(null)} style={{
-              background: 'none', border: 'none', cursor: 'pointer',
-              color: '#fff', fontSize: 24, lineHeight: 1,
-              padding: '0 4px', flexShrink: 0, fontFamily: 'inherit',
-            }}>×</button>
-            <div style={{ flex: 1, textAlign: 'center' }}>
-              <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#fff', fontSize: 14 }}>
-                {editingFile.name}
-              </span>
-            </div>
-            <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }}>Strg+S</div>
-          </div>
-          <div style={{ flex: 1, position: 'relative' }}>
-            {editorLoading && (
-              <div style={{
-                position: 'absolute', inset: 0,
-                display: 'flex', flexDirection: 'column',
-                alignItems: 'center', justifyContent: 'center',
-                background: '#1a1a1a', zIndex: 10,
-              }}>
-                <div style={{
-                  width: 32, height: 32, borderRadius: '50%',
-                  border: '3px solid rgba(255,255,255,0.15)',
-                  borderTopColor: '#fff',
-                  animation: 'office-spin 0.8s linear infinite',
-                  marginBottom: 16,
-                }} />
-                <div style={{ fontStyle: 'italic', color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>
-                  Editor lädt…
-                </div>
-              </div>
-            )}
-            <div id="office-editor-container" style={{ width: '100%', height: '100%' }} />
-          </div>
-        </div>
-      )}
-
-      <style>{`
-        @keyframes office-spin { to { transform: rotate(360deg); } }
-      `}</style>
-    </div>
+    </Seite>
   )
 }
