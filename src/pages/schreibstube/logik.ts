@@ -2,6 +2,8 @@
 // (Prüffälle: src/lib/__tests__/schreibstubeLogik.test.ts). Arten, Endungen und Pfade wie in den Dateien.
 import { art, bearbeitbar, endung, nameSauber, passt, pfad, type Art, type Eintrag } from '../dateien/logik'
 
+export { bearbeitbar }
+
 /** Was die Schreibstube neu anlegen kann (Endung der leeren Vorlage des Office-Servers). */
 export type NeuArt = 'text' | 'tabelle' | 'praesentation'
 export const NEU: { art: NeuArt; titel: string; endung: string; vorgabe: string }[] = [
@@ -90,6 +92,23 @@ export function ordnerWahl(alle: Eintrag[]): { id: string; titel: string }[] {
 export function anzeigeName(name: string): string {
   const x = endung(name)
   return x ? name.slice(0, -(x.length + 1)) || name : name
+}
+
+/**
+ * Schlüssel des Dokuments für den Office-Server. Er erkennt ein Dokument allein daran und nimmt bei
+ * bekanntem Schlüssel seinen Zwischenspeicher: Darum gehören Sammlung, Feld, Nummer und die gespeicherte
+ * Datei dazu (sonst teilten sich zwei Anhänge desselben Termins einen Schlüssel), dazu der Stand.
+ * Erlaubt sind nur [0-9A-Za-z._=-] und höchstens 128 Zeichen; Längeres wird kurz gehasht.
+ */
+export function dokSchluessel(d: { sammlung: string; id: string; feld: string; nr: number; datei: string; stand: string }): string {
+  const t = new Date((d.stand || '').replace(' ', 'T')).getTime() || 0
+  const quelle = [d.sammlung, d.id, d.feld, String(d.nr), d.datei, String(t)].join('_')
+  const roh = quelle.replace(/[^0-9A-Za-z._=-]/g, '-')
+  if (roh.length <= 128 && roh === quelle) return roh
+  // Zu lang oder mit ersetzten Zeichen: Prüfwert aus dem Original, damit „ä“ und „ö“ nicht zusammenfallen.
+  // FNV-1a, zweimal mit verschiedenem Anfang: kurz, ohne Abhängigkeiten, immer gleich
+  const fnv = (s: string, h: number) => { for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0 } return h.toString(16).padStart(8, '0') }
+  return `${roh.slice(0, 100)}_${fnv(quelle, 2166136261)}${fnv(quelle, 33554467)}`
 }
 
 /** „vor 5 Min.“, „vor 3 Std.“, „vor 2 Tagen“, sonst das Datum. */

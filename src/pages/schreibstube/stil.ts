@@ -21,7 +21,9 @@ export const SS_CSS = `
 .bv .ss-anlegen, .ss-anlegen{ width: 100%; min-height: 50px; border: none; border-radius: 14px; background: var(--lbf-akzent-grund); color: #fff;
   font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; display: flex; align-items: center; justify-content: center; text-align: center; }
 .ss-anlegen:disabled{ opacity: 0.45; cursor: default; }
-/* Editor als eigene, statische Seite (?seite=bearbeiten): füllt das Blatt, rollt selbst */
+/* Editor als eigene, statische Seite (?seite=bearbeiten): füllt das Blatt in voller Breite (am Rechner
+   nicht auf 760 px begrenzt wie die übrigen Seiten), rollt selbst */
+.bv.statisch > .bv-blatt > .bv-innen, .bv.statisch > .bv-kopf > .bv-kopf-innen{ max-width: none; }
 .ss-editor{ flex: 1 1 0; min-height: 0; position: relative; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: var(--lbf-shadow); }
 .ss-editor > div, .ss-editor iframe{ position: absolute; inset: 0; width: 100% !important; height: 100% !important; border: 0; }
 .ss-laedt{ position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; background: var(--lbf-card);

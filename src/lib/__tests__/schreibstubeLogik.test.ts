@@ -1,6 +1,6 @@
 // Schreibstube (src/pages/schreibstube/logik.ts, Owner 22.11.2026).
 import { describe, expect, it } from 'vitest'
-import { anzeigeName, artName, dokArt, dokumente, editorTyp, filtern, merken, merkerLesen, neuerName, ordnerWahl, wannText, zuletzt } from '../../pages/schreibstube/logik'
+import { anzeigeName, artName, dokSchluessel, dokArt, dokumente, editorTyp, filtern, merken, merkerLesen, neuerName, ordnerWahl, wannText, zuletzt } from '../../pages/schreibstube/logik'
 import type { Eintrag } from '../../pages/dateien/logik'
 
 const e = (x: Partial<Eintrag>): Eintrag => ({ id: 'x', name: 'x', is_folder: false, parent_folder_id: '', organization_id: 'o', created: '2026-11-01 10:00:00.000Z', ...x })
@@ -91,5 +91,25 @@ describe('Wann', () => {
     expect(wannText('2026-11-15 09:00:00.000Z', jetzt)).toBe('vor 4 Tagen')
     expect(wannText('2026-10-01 09:00:00.000Z', jetzt)).toBe('1.10.2026')
     expect(wannText('', jetzt)).toBe('')
+  })
+})
+
+describe('Schlüssel für den Office-Server', () => {
+  const d = { sammlung: 'ausbildungen_termine', id: 'termin000000001', feld: 'anhang', nr: 0, datei: 'ablauf_x1.docx', stand: '2026-11-19 08:00:00.000Z' }
+  it('verschiedene Anhänge desselben Datensatzes, verschiedene Schlüssel', () => {
+    expect(dokSchluessel(d)).not.toBe(dokSchluessel({ ...d, nr: 1, datei: 'liste_x2.xlsx' }))
+    expect(dokSchluessel(d)).not.toBe(dokSchluessel({ ...d, feld: 'dateien' }))
+  })
+  it('neuer Stand, neuer Schlüssel; gleicher Stand, gleicher Schlüssel', () => {
+    expect(dokSchluessel(d)).toBe(dokSchluessel({ ...d }))
+    expect(dokSchluessel(d)).not.toBe(dokSchluessel({ ...d, stand: '2026-11-19 09:00:00.000Z' }))
+  })
+  it('nur erlaubte Zeichen, höchstens 128', () => {
+    const lang = dokSchluessel({ ...d, datei: 'ä'.repeat(200) + '.docx' })
+    for (const k of [dokSchluessel(d), lang]) {
+      expect(k).toMatch(/^[0-9A-Za-z._=-]+$/)
+      expect(k.length).toBeLessThanOrEqual(128)
+    }
+    expect(lang).not.toBe(dokSchluessel({ ...d, datei: 'ö'.repeat(200) + '.docx' }))
   })
 })

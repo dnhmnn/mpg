@@ -19,7 +19,7 @@ import { ArtSymbol } from './dateien/ArtSymbol'
 import { endung, nameVergeben, type Eintrag } from './dateien/logik'
 import { SS_CSS } from './schreibstube/stil'
 import {
-  FILTER, NEU, anzeigeName, artName, dokArt, dokumente, editorTyp, filtern, merken, merkerLesen, neuerName, ordnerWahl, wannText, zuletzt,
+  FILTER, NEU, anzeigeName, artName, bearbeitbar, dokArt, dokSchluessel, dokumente, editorTyp, filtern, merken, merkerLesen, neuerName, ordnerWahl, wannText, zuletzt,
   type Filter, type NeuArt,
 } from './schreibstube/logik'
 import Zwischenschirm from '../components/Zwischenschirm'
@@ -88,8 +88,10 @@ export default function Office() {
       p.set('feld', adr.get('field') || 'file')
       p.set('nr', adr.get('index') || '0')
     }
-    navigate({ search: `?${p.toString()}` }, { replace: true, state: { ssVon: 'verweis' } })
-  }, [adr, navigate])
+    // Nur ein Verweis aus Responda selbst (Dateien, Lernbar, Ausbildungen) führt mit „Schließen“ dorthin zurück.
+    // Kam er von außen (Lesezeichen, Mail, frisch geladen: Schlüssel „default“), schließt er zur Liste.
+    navigate({ search: `?${p.toString()}` }, { replace: true, state: ort.key !== 'default' ? { ssVon: 'verweis' } : null })
+  }, [adr, navigate, ort.key])
 
   const docs = useMemo(() => dokumente(alle), [alle])
   const ordner = useMemo(() => alle.filter((e) => e.is_folder), [alle])
@@ -115,7 +117,7 @@ export default function Office() {
   function editorZu() {
     const s = ort.state as { ssUnter?: boolean; ssVon?: string } | null
     // Aus der Liste geöffnet oder aus einer anderen App verwiesen: einen Schritt zurück; sonst (Link, neu geladen) zur Liste
-    if (s?.ssUnter || (s?.ssVon === 'verweis' && window.history.length > 1)) navigate(-1)
+    if (s?.ssUnter || s?.ssVon === 'verweis') navigate(-1)
     else navigate({ search: '' }, { replace: true })
     void laden()
   }
@@ -263,6 +265,9 @@ function Editor({ id, sammlung, feld, nr, user, zurueck, geoeffnet }: {
   const [bereit, setBereit] = useState(false)
   const [fehler, setFehler] = useState('')
   const [versuch, setVersuch] = useState(0)
+  // Der Benutzer über eine Ref: Ein neuer Name aus der Hintergrundprüfung hängt den Editor nicht neu ein
+  const nutzerRef = useRef(user)
+  nutzerRef.current = user
   const geoeffnetRef = useRef(geoeffnet)
   geoeffnetRef.current = geoeffnet
 
@@ -275,7 +280,7 @@ function Editor({ id, sammlung, feld, nr, user, zurueck, geoeffnet }: {
       if (aus) return
       const wert = rec[feld]
       const datei = (Array.isArray(wert) ? wert[nr] : wert) as string | undefined
-      if (!datei || typeof datei !== 'string') { setFehler('Dieses Dokument hat keine Datei, die sich bearbeiten lässt.'); return }
+      if (!datei || typeof datei !== 'string' || !bearbeitbar({ name: datei, is_folder: false })) { setFehler('Diese Datei lässt sich in der Schreibstube nicht öffnen.'); return }
       setDok({ id: String(rec.id), name: String(rec.name || datei), file: datei, updated: String(rec.updated || rec.created || ''), sammlung })
       geoeffnetRef.current(String(rec.id), sammlung)
     }).catch(() => { if (!aus) setFehler('Dieses Dokument lässt sich nicht öffnen. Vielleicht gelöscht, oder es fehlt die Berechtigung.') })
@@ -301,11 +306,11 @@ function Editor({ id, sammlung, feld, nr, user, zurueck, geoeffnet }: {
       const typ = editorTyp(dok.file)
       editor = new w.DocsAPI.DocEditor('ss-editor-flaeche', {
         width: '100%', height: '100%',
-        document: { fileType: endung(dok.file), key: `${dok.id}_${new Date((dok.updated || '').replace(' ', 'T')).getTime() || 0}`, title: dok.name, url },
+        document: { fileType: endung(dok.file), key: dokSchluessel({ sammlung: dok.sammlung, id: dok.id, feld, nr, datei: dok.file, stand: dok.updated }), title: dok.name, url },
         documentType: typ,
         editorConfig: {
-          callbackUrl: `${pb.baseURL}/api/office/callback?file_id=${encodeURIComponent(dok.id)}`,
-          user: { id: user?.id || '', name: user?.name || '' },
+          callbackUrl: `${pb.baseURL}/api/office/callback?file_id=${encodeURIComponent(dok.id)}&sammlung=${encodeURIComponent(dok.sammlung)}&feld=${encodeURIComponent(feld)}&nr=${nr}`,
+          user: { id: nutzerRef.current?.id || '', name: nutzerRef.current?.name || '' },
           lang: 'de',
           customization: {
             autosave: true, chat: false, comments: true, compactHeader: false, feedback: false, forcesave: true,
@@ -336,7 +341,7 @@ function Editor({ id, sammlung, feld, nr, user, zurueck, geoeffnet }: {
       try { editor?.destroyEditor?.() } catch { /* schon weg */ }
       if (skript && document.head.contains(skript)) document.head.removeChild(skript)
     }
-  }, [dok, user?.id, user?.name, versuch])
+  }, [dok, feld, nr, versuch])
 
   return (
     <Seite statisch titel={dok ? anzeigeName(dok.name) : 'Dokument'} unter={dok ? artName(dokArt({ name: dok.name, file: dok.file })) : 'Wird geöffnet …'}
