@@ -12,44 +12,20 @@
 // Protokoll nie auf: Es ist schon gespeichert, der Einsatz fehlt dann nur und steht im Log.
 
 onRecordAfterCreateSuccess((e) => {
-  try {
-    const R = require(`${__hooks}/einsatz-regeln.js`)
-    const rec = e.record
-    const sammlung = rec.collection().name
-    const org = rec.getString("organization_id")
-    const daten = org ? R.ausDatensatz(sammlung, rec.getString("payload"), rec.getString("created")) : null
-    if (daten) {
-      let kandidaten = []
-      try {
-        const ab = R.suchenAb(Date.now())
-        const recs = $app.findRecordsByFilter("einsaetze", "organization_id = {:org} && created >= {:ab}", "-created", 500, 0, { org: org, ab: ab })
-        for (let i = 0; i < recs.length; i++) kandidaten.push({ id: recs[i].id, unit: recs[i].getString("unit") })
-      } catch (err) {
-        // Sammlung ohne created (sehr alt): ohne Zeitgrenze suchen
-        const recs = $app.findRecordsByFilter("einsaetze", "organization_id = {:org}", "", 500, 0, { org: org })
-        for (let i = 0; i < recs.length; i++) kandidaten.push({ id: recs[i].id, unit: recs[i].getString("unit") })
-      }
-      const schon = R.vorhanden(kandidaten, daten.nummer)
-      if (schon) {
-        $app.logger().info("[einsatz] vorhanden", "aus", sammlung, "einsatz", schon.id)
-      } else {
-        const neu = new Record($app.findCollectionByNameOrId("einsaetze"))
-        neu.set("unit", daten.nummer)
-        neu.set("keyword", daten.art)
-        neu.set("adresse", "")
-        neu.set("datum", daten.datum)
-        neu.set("status", R.STATUS_NEU)
-        neu.set("organization_id", org)
-        neu.set("alamos_id", "")
-        $app.save(neu)
-        $app.logger().info("[einsatz] angelegt", "aus", sammlung, "einsatz", neu.id)
-      }
-    }
-  } catch (err) {
+  try { require(`${__hooks}/einsatz-regeln.js`).ausDoku($app, e.record, true, (c) => new Record(c)) } catch (err) {
     $app.logger().warn("[einsatz] nicht angelegt", "fehler", String(err).slice(0, 300))
   }
   return e.next()
 }, "patients", "product_outputs")
+
+// Mannschaft später nachgetragen (Patienten → „Mannschaft nachtragen“): neue Personen kommen zum vorhandenen
+// Einsatz dazu. Einen Einsatz legt ein Ändern nie an (ein gelöschter Einsatz käme sonst zurück).
+onRecordAfterUpdateSuccess((e) => {
+  try { require(`${__hooks}/einsatz-regeln.js`).ausDoku($app, e.record, false, (c) => new Record(c)) } catch (err) {
+    $app.logger().warn("[einsatz] Personen nicht ergänzt", "fehler", String(err).slice(0, 300))
+  }
+  return e.next()
+}, "patients")
 
 // 2. Einsatz löschen (Owner, 22.11.2026: Leitung und Recht Einsätze, Regel deleteRule der Sammlung):
 // Protokolle, Produktausgaben und CIRS-Meldungen bleiben. Weg sind danach die Personen des Einsatzes, und

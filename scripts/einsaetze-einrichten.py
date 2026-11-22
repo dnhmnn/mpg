@@ -75,6 +75,14 @@ def main():
         felder_dazu("einsaetze", [{"name": "organisationen", "type": "json", "required": False, "maxSize": 0},
                                   {"name": "verknuepfungen", "type": "json", "required": False, "maxSize": 0}])
         c = sammlung("einsaetze")
+        # Einsätze aus der Dokumentation haben nicht immer Stichwort oder Ort: keine Pflicht mehr
+        pflicht = [f for f in c["fields"] if f["name"] in ("keyword", "adresse", "unit") and f.get("required")]
+        if pflicht:
+            for f in pflicht: f["required"] = False
+            s, d = anfrage("PATCH", "/api/collections/einsaetze", {"fields": c["fields"]})
+            if s == 200: neu("einsaetze: " + ", ".join(f["name"] for f in pflicht) + " nicht mehr Pflicht")
+            else: warn("Pflicht nicht aufgehoben: " + json.dumps(d, ensure_ascii=False)[:300])
+            c = sammlung("einsaetze")
         for k in ("listRule", "viewRule", "createRule", "updateRule"):
             print("           " + k + ": " + json.dumps(c.get(k), ensure_ascii=False))
         if c.get("deleteRule") == LOESCHEN:

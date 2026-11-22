@@ -13,6 +13,7 @@ export const EZ_CSS = `
   background: rgba(var(--lbf-rot-rgb), 0.07); color: var(--lbf-akzent); }
 .bv .ez-chip button{ width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; color: var(--lbf-akzent); }
 .bv .ez-chip.vorschlag{ background: transparent; border: 1px dashed rgba(var(--lbf-rot-rgb), 0.3); padding: 0 12px; }
+.bv .bv-z.neu .bv-tx small{ color: var(--bv-text-2); font-weight: 400; }
 .ez-leer{ padding: 14px; font-size: 14px; color: var(--bv-text-2); font-style: italic; }
 .ez-eingabe-zeile{ display: flex; gap: 8px; padding: 12px 14px; align-items: center; }
 .ez-eingabe-zeile .bv-eingabe{ flex: 1; min-width: 0; }

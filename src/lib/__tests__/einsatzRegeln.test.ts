@@ -56,3 +56,37 @@ describe('Gleichlauf App und Server', () => {
     }
   })
 })
+
+describe('Besatzung aus dem Protokoll (Owner 22.11.2026)', () => {
+  const A = 'aaaaaaaaaaaaaaa', B = 'bbbbbbbbbbbbbbb', C = 'ccccccccccccccc'
+  it('Konten mit Funktion, Teamführer zuerst; Namen ohne Konto fallen weg', () => {
+    const p = {
+      mannschaft_tf: 'Lena Berger', mannschaft_1: 'Jonas Weber', mannschaft_2: 'Gast ohne Konto',
+      mannschaft: { tf: { id: A, name: 'Lena Berger' }, m1: { id: B, name: 'Jonas Weber' }, m2: null },
+    }
+    expect(R.besatzung(p)).toEqual([{ id: A, rolle: 'Teamführer' }, { id: B, rolle: '' }])
+  })
+  it('Kennung nur, wenn der flache Name derselbe ist (wie in der App)', () => {
+    expect(R.besatzung({ mannschaft_tf: 'Andere Person', mannschaft: { tf: { id: A, name: 'Lena Berger' } } })).toEqual([])
+    expect(R.besatzung({ mannschaft: { m3: { id: C, name: 'Mia Schneider' } } })).toEqual([{ id: C, rolle: '' }])
+  })
+  it('kaputte Kennungen, Doppelte und Text-payload', () => {
+    expect(R.besatzung({ mannschaft: { tf: { id: 'kurz', name: 'X' } } })).toEqual([])
+    expect(R.besatzung({ mannschaft: { tf: { id: A, name: 'X' }, m1: { id: A, name: 'X' } } })).toEqual([{ id: A, rolle: 'Teamführer' }])
+    expect(R.besatzung(JSON.stringify({ mannschaft: { m1: { id: B, name: 'Y' } } }))).toEqual([{ id: B, rolle: '' }])
+  })
+  it('gleich wie besatzungLesen in der App', async () => {
+    const { besatzungLesen, POSTEN } = await import('../../pages/public/doku/besatzung')
+    const faelle = [
+      { mannschaft_tf: 'Lena Berger', mannschaft: { tf: { id: A, name: 'Lena Berger' }, m1: { id: B, name: 'Jonas Weber' } } },
+      { mannschaft_tf: 'Andere', mannschaft: { tf: { id: A, name: 'Lena Berger' } } },
+      { mannschaft_1: 'Jonas Weber', mannschaft: { m1: { id: B, name: 'Jonas Weber' }, m2: { id: C, name: 'Mia' } } },
+      {},
+    ]
+    for (const f of faelle) {
+      const b = besatzungLesen(f as never)
+      const app = POSTEN.map((p) => b[p.pos]).filter((x): x is { id: string; name: string } => !!x && /^[a-z0-9]{15}$/.test(x.id)).map((x) => x.id)
+      expect(R.besatzung(f).map((x: { id: string }) => x.id)).toEqual([...new Set(app)])
+    }
+  })
+})

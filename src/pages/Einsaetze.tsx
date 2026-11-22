@@ -14,6 +14,8 @@ import { sichtbareEmail } from '../lib/apps'
 import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, Seite, Toast } from './benutzer/bausteine'
 import { BV_CSS } from './benutzer/stil'
 import { EZ_CSS } from './einsaetze/stil'
+import { besatzungLesen, POSTEN } from './public/doku/besatzung'
+import type { Werte } from './public/doku/DokuFeld'
 import {
   ROLLEN_IM_EINSATZ, STATUS_TEXT, darfCirs, darfPatientennamen, darfVerwalten, datumText, gruppieren, loesen,
   neueNummer, nummerVergeben, organisationDazu, organisationVorschlaege, organisationWeg, organisationenLesen, passt, titel,
@@ -244,6 +246,34 @@ function Detail({ user, orgName, einsatz, alle, zurueck, oeffne, neuLaden, melde
   const zuProtokolle = zugeordnet(einsatz, 'protokoll', protokolle)
   const zuAusgaben = zugeordnet(einsatz, 'produktausgabe', ausgaben)
 
+  // Besatzung aus den Protokollen des Einsatzes, die noch nicht unter Personen steht (Owner 22.11.2026).
+  // Neue Protokolle trägt der Server selbst ein (pb_hooks/einsaetze.pb.js); das hier ist für ältere.
+  const besatzungFehlt: { id: string; rolle: string }[] = []
+  for (const { dok } of zuProtokolle) {
+    const b = besatzungLesen(payload(dok.payload) as Werte)
+    for (const p of POSTEN) {
+      const x = b[p.pos]
+      if (x?.id && !personen.some((q) => q.user_id === x.id) && !besatzungFehlt.some((q) => q.id === x.id)) besatzungFehlt.push({ id: x.id, rolle: p.pos === 'tf' ? 'Teamführer' : '' })
+    }
+  }
+  async function besatzungUebernehmen() {
+    await einmal(async () => {
+      try {
+        // Nur Konten der eigenen Organisation
+        const org = mitglieder.length ? mitglieder : await pb.collection('users').getFullList<OrgUser>({ filter: pb.filter('organization_id = {:o}', { o: user?.organization_id || '' }), fields: 'id,name,email', sort: 'name', requestKey: null })
+        if (!mitglieder.length) setMitglieder(org)
+        let n = 0
+        for (const p of besatzungFehlt) {
+          if (!org.some((m) => m.id === p.id)) continue
+          await pb.collection('einsatz_personen').create({ einsatz_id: einsatz.id, user_id: p.id, rolle: p.rolle })
+          n++
+        }
+        await ladeDetails()
+        melden(n ? (n === 1 ? 'Eine Person übernommen.' : `${n} Personen übernommen.`) : 'Niemand aus der Besatzung hat ein Konto in eurer Organisation.')
+      } catch { melden('Besatzung nicht übernommen.', true) }
+    })
+  }
+
   // Eins nach dem anderen: Organisationen und Verknüpfungen werden als ganze Liste geschrieben; ein zweiter
   // Tipp während des Speicherns rechnete sonst mit dem alten Stand (Durchsicht 22.11.2026)
   const beschaeftigt = useRef(false)
@@ -383,6 +413,11 @@ function Detail({ user, orgName, einsatz, alle, zurueck, oeffne, neuLaden, melde
             {verwalten && <button type="button" className="ez-weg" aria-label="Person entfernen" onClick={() => void personWeg(p)}><Icon n="kreuz" /></button>}
           </div>
         ))}
+        {verwalten && besatzungFehlt.length > 0 && (
+          <button type="button" className="bv-z neu" onClick={() => void besatzungUebernehmen()}>
+            <Icon n="personplus" /><span className="bv-tx"><b>Besatzung aus den Protokollen übernehmen</b><small>{besatzungFehlt.length === 1 ? 'Eine Person' : `${besatzungFehlt.length} Personen`} mit Konto, Teamführer mit Funktion</small></span>
+          </button>
+        )}
         {verwalten && (
           <button type="button" className="bv-z neu" aria-expanded={offen === 'person'} onClick={() => setOffen(offen === 'person' ? '' : 'person')}>
             <Icon n="personplus" /><span className="bv-tx"><b>Person hinzufügen</b></span>
