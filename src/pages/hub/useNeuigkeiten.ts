@@ -118,9 +118,12 @@ async function laden(user: User, org: string, heute: Tag): Promise<Neuigkeit[]> 
     })
   )
 
-  if (enabled('ausbildungen')) queries.push(
+  // Zu- und Absagen: nur die der eigenen Organisation (vorher fehlte der Filter, und je nach API-Regel
+  // erschienen Rückmeldungen anderer Organisationen in der Glocke), und nur für wen sie gedacht sind:
+  // Supervisor oder „Ausbildungen verwalten“, wie bei der Push-Benachrichtigung (push-regeln.js)
+  if (enabled('ausbildungen') && hatRecht(user, 'ausbildungen_manage')) queries.push(
     pb.collection('ausbildungen_termine_user').getList<{ id: string; status?: string }>(1, 50, {
-      filter: pb.filter('updated >= {:seit} && (status = "abgesagt" || status = "zugesagt")', { seit: weekStr }),
+      filter: pb.filter('organization_id = {:org} && updated >= {:seit} && (status = "abgesagt" || status = "zugesagt")', { org, seit: weekStr }),
       fields: 'id,status',
       requestKey: 'widget-ausb',
     }).then(r => {

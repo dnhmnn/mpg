@@ -1885,7 +1885,11 @@ nicht öffnen kann:
 
 Die Prüffälle `src/lib/__tests__/pushGleichlauf.test.ts` lesen die Regeln aus dieser Datei: Ändert
 sich eine Regel, schlägt der Test an, und `darfAnlass` ist anzupassen. Für `patients` (List) und
-`ausbildungen_termine_user` stehen die Regeln nicht im Repo; die Diagnose zeigt die echten.
+`ausbildungen_termine_user` stehen die Regeln nicht im Repo; die Diagnose zeigt die echten. Für alle
+Sammlungen `ausbildungen_*` und `lernbar_*` zeigt `python3 scripts/ausbildungen-pruefen.py` Felder und
+Regeln und markiert, was nicht auf die eigene Organisation beschränkt ist (Owner, 23.11.2026: eine
+Rückmeldung einer Organisation erschien bei allen). Die App filtert dort seit 23.11.2026 selbst nach
+Organisation (Glocke im Hub, Verwaltung der Ausbildungen); die Sperre gehört aber in die Regeln.
 
 Inhalt: Namen von Geräten, Formularen, Artikeln und Lagern nur aus den Stammdaten derselben
 Organisation, nie aus Feldern, die der Client setzt. **Nie** Patientennamen oder anderes aus

@@ -784,6 +784,32 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     }
   }
 
+  /**
+   * Liste nur der eigenen Organisation (Multi-Mandant, Owner 23.11.2026): erst mit Filter beim Server.
+   * Kennt der Server das Feld im Filter nicht (400, ältere Sammlung), wie bisher alles holen und hier
+   * auf die eigene Organisation beschränken, nie fremde Datensätze zeigen. Die eigentliche Sperre sind
+   * die API-Regeln (scripts/ausbildungen-pruefen.py).
+   */
+  async function eigeneListe<T>(sammlung: string, filter: string, optionen: Record<string, unknown>,
+    ersatz: () => Promise<(r: T) => boolean>): Promise<T[]> {
+    try {
+      return await pb.collection(sammlung).getFullList<T>({ ...optionen, filter: pb.filter(filter, { org: user?.organization_id || '' }) })
+    } catch (e: any) {
+      if (e?.status !== 400) throw e
+      const passt = await ersatz()
+      const alle = await pb.collection(sammlung).getFullList<T>({ ...optionen, requestKey: null })
+      return alle.filter(passt)
+    }
+  }
+
+  /** Kennungen der eigenen Termine bzw. Module (für den Ersatzweg in eigeneListe). */
+  async function eigeneIds(sammlung: 'ausbildungen_termine' | 'ausbildungen_module'): Promise<Set<string>> {
+    const l = await pb.collection(sammlung).getFullList<{ id: string }>({
+      filter: pb.filter('organization_id = {:org}', { org: user?.organization_id || '' }), fields: 'id', requestKey: null,
+    })
+    return new Set(l.map((x) => x.id))
+  }
+
   async function loadTermine() {
     try {
       const records = await pb.collection('ausbildungen_termine').getFullList<Termin>({
@@ -826,11 +852,12 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
   }
 
   async function loadTerminTeilnehmer() {
+    if (!user?.organization_id) return
     try {
-      const records = await pb.collection('ausbildungen_termine_user').getFullList<TerminTeilnehmer>({
-        sort: 'created',
-        requestKey: `loadTerminTeilnehmer-${Date.now()}`
-      })
+      // Nur die eigene Organisation (Multi-Mandant): vorher ohne Filter geladen
+      const records = await eigeneListe<TerminTeilnehmer>('ausbildungen_termine_user', 'organization_id = {:org}',
+        { sort: 'created', requestKey: `loadTerminTeilnehmer-${Date.now()}` },
+        async () => { const ids = await eigeneIds('ausbildungen_termine'); return (r) => ids.has((r as unknown as { termin_id: string }).termin_id) })
       setTerminTeilnehmer(records)
     } catch(e: any) {
       if (e?.status !== 404) console.error('loadTerminTeilnehmer:', e)
@@ -865,11 +892,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadModulTermine() {
     try {
-      const records = await pb.collection('ausbildungen_module_termine').getFullList<ModulTermin>({
-        expand: 'modul_id',
-        sort: '-created',
-        requestKey: `loadModulTermine-${Date.now()}`
-      })
+      if (!user?.organization_id) return
+      const records = await eigeneListe<ModulTermin>('ausbildungen_module_termine', 'modul_id.organization_id = {:org}',
+        { expand: 'modul_id', sort: '-created', requestKey: `loadModulTermine-${Date.now()}` },
+        async () => { const ids = await eigeneIds('ausbildungen_module'); return (r) => ids.has((r as unknown as { modul_id: string }).modul_id) })
       setModulTermine(records)
     } catch(e: any) {
       if (e?.status !== 404) console.error('loadModulTermine:', e)
@@ -878,10 +904,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
 
   async function loadModulProgress() {
     try {
-      const records = await pb.collection('ausbildungen_module_progress').getFullList<ModulProgress>({
-        sort: 'created',
-        requestKey: `loadModulProgress-${Date.now()}`
-      })
+      if (!user?.organization_id) return
+      const records = await eigeneListe<ModulProgress>('ausbildungen_module_progress', 'modul_id.organization_id = {:org}',
+        { sort: 'created', requestKey: `loadModulProgress-${Date.now()}` },
+        async () => { const ids = await eigeneIds('ausbildungen_module'); return (r) => ids.has((r as unknown as { modul_id: string }).modul_id) })
       setModulProgress(records)
     } catch(e: any) {
       if (e?.status !== 404) console.error('loadModulProgress:', e)
@@ -909,13 +935,10 @@ const [viewMode, setViewMode] = useState<'termine' | 'teilnehmer' | 'module' | '
     if (!user?.organization_id) return
     setBeitraegeLoading(true)
     try {
-      const all = await pb.collection('lernbar_beitraege').getFullList({
-        requestKey: `loadBeitraege-${Date.now()}`
-      })
-      console.log('Alle Beitraege (ohne Filter):', all.length, all.map(r => ({ id: r.id, organisation_id: (r as any).organisation_id, organization_id: (r as any).organization_id })))
-      const records = all.filter((r: any) =>
-        r.organisation_id === user.organization_id || r.organization_id === user.organization_id
-      )
+      // Nur die Beiträge der eigenen Organisation vom Server holen (vorher alle, hier erst gefiltert)
+      const records = await eigeneListe<Record<string, unknown>>('lernbar_beitraege', 'organisation_id = {:org}',
+        { requestKey: `loadBeitraege-${Date.now()}` },
+        async () => (r) => r.organisation_id === user.organization_id || r.organization_id === user.organization_id)
       setBeitraege(records as any)
     } catch (e: any) {
       console.error('loadBeitraege Fehler:', e?.message, e?.data)
