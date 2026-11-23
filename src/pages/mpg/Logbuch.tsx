@@ -76,7 +76,7 @@ export default function Logbuch() {
   const zahlText = art === 'buch' ? `${gesamt} ${gesamt === 1 ? 'Eintrag' : 'Einträge'} im Gerätebuch` : `${gesamt} ${gesamt === 1 ? 'Prüfung' : 'Prüfungen'}`
   return (
     <>
-      <SeitenKopf zurueck={breit ? undefined : '/mpg/mehr'} titel="Logbuch" unter={laedt && liste.length === 0 ? 'Lädt …' : zahlText} />
+      <SeitenKopf zurueck="/mpg" tiefe={1} titel="Logbuch" unter={laedt && liste.length === 0 ? 'Lädt …' : zahlText} />
       {m.buch && <Reiter wert={art} onWahl={a => setze('art', a === 'buch' ? 'buch' : '')} optionen={[['pruefungen', 'Prüfungen'], ['buch', 'Gerätebuch']]} />}
       <div style={{ display: 'grid', gridTemplateColumns: breit ? '2fr 1fr 1fr 1.4fr' : '1fr 1fr', gap: 10, marginBottom: 16, maxWidth: 900 }}>
         <div style={{ gridColumn: breit ? undefined : '1 / -1' }}>

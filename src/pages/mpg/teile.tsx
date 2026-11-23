@@ -8,6 +8,7 @@ import { STUFE_TEXT } from '../../lib/mpg/zustand'
 import type { PruefErgebnis } from '../../lib/mpg/pruefung'
 import { ERGEBNIS_TEXT } from '../../lib/mpg/pruefung'
 import { SCHWERE_NAME, type Severity } from './typen'
+import { MpgKopf } from './kopf'
 
 export const SCHRIFT = "'Atkinson Hyperlegible', -apple-system, sans-serif"
 
@@ -143,12 +144,11 @@ export function relativeDate(s?: string | null): string {
 
 // ── Bausteine ─────────────────────────────────────────────────────────────
 
+/** Abschnitt im Dunkelrot-Design (.bv-ab aus BV_CSS): Überschrift fett, rechts klein grau */
 export function Abschnitt({ titel, rechts, children, style }: { titel: ReactNode; rechts?: ReactNode; children: ReactNode; style?: CSSProperties }) {
   return (
-    <section style={{ marginBottom: 24, ...style }}>
-      <div style={{ ...abschnittKopf, display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-        <span>{titel}</span>{rechts}
-      </div>
+    <section style={{ marginBottom: 8, ...style }}>
+      <div className="bv-ab"><h2>{titel}</h2>{rechts != null && rechts !== false && <span>{rechts}</span>}</div>
       {children}
     </section>
   )
@@ -253,33 +253,44 @@ export function useZurueck(ziel: string): () => void {
   return () => { if (hatVerlauf()) navigate(-1); else navigate(ziel, { replace: true }) }
 }
 
-/** Kopf einer Unterseite: zurück und Titel */
-export function SeitenKopf({ zurueck, titel, unter, rechts }: { zurueck?: string; titel: ReactNode; unter?: ReactNode; rechts?: ReactNode }) {
-  const geheZurueck = useZurueck(zurueck ?? '/mpg')
-  return (
+const alsText = (n: ReactNode): string => (typeof n === 'string' || typeof n === 'number' ? String(n) : '')
+
+/**
+ * Kopf einer Unterseite. Im Dunkelrot-Design meldet er Titel, Zurück und Knöpfe an den roten Kopf des
+ * Rahmens (kopf.tsx). Steht die Ansicht am Rechner neben der Liste, zeigt er sich klein in der Spalte.
+ */
+export function SeitenKopf({ zurueck, titel, unter, rechts, tiefe = 2 }: { zurueck?: string; titel: ReactNode; unter?: ReactNode; rechts?: ReactNode; tiefe?: number }) {
+  const ziel = zurueck ?? '/mpg'
+  const geheZurueck = useZurueck(ziel)
+  // Neben der Liste (am Rechner): Zurück schließt die Spalte wieder, wie bisher
+  const klein = (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
       {zurueck && (
         <button onClick={geheZurueck} aria-label="Zurück" style={{ color: 'var(--lbf-akzent)', display: 'flex', padding: 10, margin: -10, background: 'none', border: 'none', cursor: 'pointer' }}>{pik(ICON.zurueck, 22)}</button>
       )}
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontStyle: 'italic', fontWeight: 700, fontSize: 20, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{titel}</div>
+        <div style={{ fontWeight: 700, fontSize: 19, color: 'var(--lbf-text)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{titel}</div>
         {unter && <div style={{ ...kursivGrau, marginTop: 2 }}>{unter}</div>}
       </div>
       {rechts}
     </div>
   )
+  // Marken (Zustand, Schwere) haben halbdurchsichtige Gründe: im roten Kopf auf hellem Grund, sonst kaum lesbar
+  return <MpgKopf tiefe={tiefe} titel={alsText(titel)} unter={alsText(unter) || undefined} zurueck={ziel}
+    rechts={rechts ? <span className="mp-kopf-marke">{rechts}</span> : undefined} klein={klein} />
 }
 
-/** Reiter innerhalb einer Seite (10 px, Großbuchstaben, aktiver Reiter unterstrichen) */
+/** Reiter innerhalb einer Seite: Umschalter wie im roten Kopf (.bv-reiter), hier auf dem hellen Blatt */
 export function Reiter<T extends string>({ wert, optionen, onWahl }: { wert: T; optionen: [T, string][]; onWahl: (t: T) => void }) {
   return (
-    <div role="tablist" style={{ display: 'flex', gap: 18, borderBottom: '0.5px solid var(--lbf-border-light)', marginBottom: 16, overflowX: 'auto' }}>
+    <div role="tablist" style={{ display: 'flex', gap: 2, padding: 4, borderRadius: 14, background: 'rgba(var(--lbf-rot-rgb),0.06)', marginBottom: 16, overflowX: 'auto', scrollbarWidth: 'none' }}>
       {optionen.map(([t, name]) => (
         <button key={t} role="tab" aria-selected={wert === t} onClick={() => onWahl(t)} style={{
-          border: 'none', background: 'none', padding: '10px 0 8px', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
-          fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em',
+          flex: '1 1 auto', minHeight: 40, padding: '0 10px', borderRadius: 10, border: 'none', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+          fontSize: 14, fontWeight: 700, textAlign: 'center',
           color: wert === t ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
-          borderBottom: wert === t ? '2px solid var(--lbf-akzent)' : '2px solid transparent',
+          background: wert === t ? 'var(--lbf-card)' : 'transparent',
+          boxShadow: wert === t ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
         }}>{name}</button>
       ))}
     </div>

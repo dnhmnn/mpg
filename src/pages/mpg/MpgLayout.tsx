@@ -1,64 +1,83 @@
-// Rahmen des MPG-Moduls: Kopf oben, auf dem Telefon die Tab-Leiste unten
-// (HEUTE · GERÄTE · MELDUNGEN · MEHR), ab 960 px eine Seitenleiste. Darunter die Seite.
+// Rahmen des MPG-Moduls im Dunkelrot-Design (Owner, 22.11.2026: Startseite mit Kacheln, jeder Bereich eine
+// eigene Seite mit Zurück; keine Leiste unten, keine Seitenleiste mehr). Ein roter Kopf (Seite aus
+// benutzer/bausteine); Titel, Zurück, Knöpfe und Reiter meldet die Ansicht, die vorne ist (kopf.tsx).
+// Am Rechner stehen Geräte und Meldungen weiter neben ihrem Detail.
 
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
-import FormularEinstellungLink from '../../components/FormularEinstellungLink'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
+import { useStatusleiste } from '../../hooks/useStatusleiste'
+import { Seite } from '../benutzer/bausteine'
+import { BV_CSS } from '../benutzer/stil'
 import { Blaetter } from './blaetter'
 import { useMpg } from './MpgDaten'
-import { ICON, SCHRIFT, abschnittKopf, pik, useBreit } from './teile'
+import { KopfKontext, gleicherKopf, siegerVon, type KopfEintrag } from './kopf'
+import { MP_CSS } from './stil'
+import { rollZiel } from './rollen'
+import { hatVerlauf, useBreit } from './teile'
 import Zwischenschirm from '../../components/Zwischenschirm'
 
-interface Ziel { pfad: string; name: string; icon: keyof typeof ICON; ende?: boolean; auch?: string[] }
-
-const TABS: Ziel[] = [
-  { pfad: '/mpg', name: 'Heute', icon: 'heute', ende: true, auch: ['/mpg/runde'] },
-  { pfad: '/mpg/geraete', name: 'Geräte', icon: 'geraete' },
-  { pfad: '/mpg/meldungen', name: 'Meldungen', icon: 'meldungen' },
-  { pfad: '/mpg/mehr', name: 'Mehr', icon: 'mehr', auch: ['/mpg/vorlagen', '/mpg/logbuch', '/mpg/fristen'] },
-]
-
-const LEISTE: { titel: string; ziele: Ziel[] }[] = [
-  { titel: 'Arbeit', ziele: [{ pfad: '/mpg', name: 'Heute', icon: 'heute', ende: true, auch: ['/mpg/runde'] }, { pfad: '/mpg/meldungen', name: 'Meldungen', icon: 'meldungen' }, { pfad: '/mpg/fristen', name: 'Fristen', icon: 'fristen' }] },
-  { titel: 'Bestand', ziele: [{ pfad: '/mpg/geraete', name: 'Geräte', icon: 'geraete' }] },
-  { titel: 'Einrichtung', ziele: [{ pfad: '/mpg/vorlagen', name: 'Prüfvorlagen', icon: 'vorlagen' }] },
-  { titel: 'Nachweis', ziele: [{ pfad: '/mpg/logbuch', name: 'Logbuch', icon: 'logbuch' }] },
-]
-
-function istAktiv(z: Ziel, pfad: string): boolean {
-  if (z.ende ? pfad === z.pfad || pfad === z.pfad + '/' : pfad.startsWith(z.pfad)) return true
-  return (z.auch ?? []).some(a => pfad.startsWith(a))
-}
+const STIL = BV_CSS + MP_CSS
 
 export default function MpgLayout() {
   const m = useMpg()
   const breit = useBreit()
-  const { pathname } = useLocation()
-  if (m.authLoading) return <Zwischenschirm />
+  const navigate = useNavigate()
+  useStatusleiste('--lbf-kopf', { kopf: '.bv-kopf' })
 
-  const eingang = m.externalReports.filter(r => r.status === 'pending').length
+  const [eintraege, setEintraege] = useState<Map<number, KopfEintrag>>(() => new Map())
+  const [rechtsZiel, setRechtsZiel] = useState<HTMLElement | null>(null)
+  const [reiterZiel, setReiterZiel] = useState<HTMLElement | null>(null)
+  const melden = useCallback((e: KopfEintrag) => setEintraege((alt) => (gleicherKopf(alt.get(e.id), e) ? alt : new Map(alt).set(e.id, e))), [])
+  const weg = useCallback((id: number) => setEintraege((alt) => {
+    if (!alt.has(id)) return alt
+    const neu = new Map(alt)
+    neu.delete(id)
+    return neu
+  }), [])
+  // Rollposition: neue Seite oben, mit Zurück dort, wo man in der Liste war; am Rechner bleibt die Liste
+  // stehen, wenn nur das Gerät daneben wechselt (rollZiel in rollen.ts)
+  const ort = useLocation()
+  const art = useNavigationType()
+  const stellen = useRef(new Map<string, number>())
+  const vorher = useRef(ort.pathname)
+  useEffect(() => {
+    let geplant = 0
+    const merken = () => {
+      if (geplant) return
+      geplant = requestAnimationFrame(() => { geplant = 0; stellen.current.set(window.location.pathname, window.scrollY) })
+    }
+    window.addEventListener('scroll', merken, { passive: true })
+    return () => { window.removeEventListener('scroll', merken); cancelAnimationFrame(geplant) }
+  }, [])
+  useLayoutEffect(() => {
+    const alt = vorher.current
+    vorher.current = ort.pathname
+    const y = rollZiel({ alt, neu: ort.pathname, zurueck: art === 'POP', breit, gemerkt: stellen.current.get(ort.pathname) })
+    if (y === null) return
+    window.scrollTo(0, y)
+    document.body.scrollTop = y
+    document.documentElement.scrollTop = y
+  }, [ort.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Kopf wie in allen Modulen (Lager, Lernbar, Patienten …): zurück zum Hub, Modulname, Organisation
-  const kopf = (
-    <div style={{ background: 'var(--lbf-card)', borderBottom: '0.5px solid var(--lbf-border)', position: 'sticky', top: 0, zIndex: 100, paddingTop: 'env(safe-area-inset-top)', paddingLeft: 'max(20px, env(safe-area-inset-left))', paddingRight: 'max(20px, env(safe-area-inset-right))' }}>
-      <div style={{ height: 60, display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Link to="/hub" aria-label="Zurück zur Übersicht" style={{ display: 'flex', color: 'var(--lbf-akzent)', textDecoration: 'none', flexShrink: 0 }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-        </Link>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15, letterSpacing: '-0.01em', color: 'var(--lbf-text)' }}>Medizinprodukte</div>
-          <div style={{ fontStyle: 'italic', fontSize: 11, color: 'var(--warm-gray)', marginTop: 1 }}>{m.user?.organization_name || 'Responda'}</div>
-        </div>
-      </div>
-    </div>
-  )
+  const sieger = siegerVon(eintraege.values())
+  const wert = useMemo(() => ({ melden, weg, sieger: sieger?.id ?? null, rechtsZiel, reiterZiel }), [melden, weg, sieger?.id, rechtsZiel, reiterZiel])
 
-  const zaehler = (z: Ziel) => z.pfad === '/mpg/meldungen' && eingang > 0 ? eingang : 0
+  if (m.authLoading) return <><style>{STIL}</style><Zwischenschirm /></>
 
-  // Meldungen oben, solange ein Blatt offen ist — unten lägen dessen Knöpfe
+  const org = m.user?.organization_name || 'Responda'
+  const zurueck = () => {
+    const ziel = sieger?.zurueck ?? '/hub'
+    // Startseite: immer in den Hub; sonst dorthin, woher man kam, ohne Verlauf zur festen Elternseite
+    if (!sieger || sieger.fest) navigate(ziel)
+    else if (hatVerlauf()) navigate(-1)
+    else navigate(ziel, { replace: true })
+  }
+
+  // Meldungen oben, solange ein Blatt offen ist (unten lägen dessen Knöpfe)
   const toast = m.msg && (
     <div role="status" style={{
       position: 'fixed', left: 16, right: 16, margin: '0 auto', width: 'fit-content', maxWidth: 520, zIndex: 9999, pointerEvents: 'none',
-      ...(m.blatt ? { top: 'calc(env(safe-area-inset-top) + 72px)' } : { bottom: breit ? 24 : 'calc(76px + env(safe-area-inset-bottom))' }),
+      ...(m.blatt ? { top: 'calc(env(safe-area-inset-top) + 72px)' } : { bottom: breit ? 24 : 'calc(20px + env(safe-area-inset-bottom))' }),
       padding: '10px 20px', borderRadius: 14, fontWeight: 600, fontSize: 13, lineHeight: 1.4, textAlign: 'center', boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
       background: m.msg.type === 'success' ? 'var(--lbf-ok-grund)' : 'var(--lbf-fehler-grund)',
       border: `1px solid ${m.msg.type === 'success' ? '#bbf7d0' : '#fecaca'}`,
@@ -67,62 +86,16 @@ export default function MpgLayout() {
   )
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--warm-bg)', fontFamily: SCHRIFT, color: 'var(--lbf-text)' }}>
-      {kopf}
-      {/* Gleicher Baum in beiden Breiten — sonst baute ein gedrehtes Tablet die Seite neu auf
-          und Eingaben gingen verloren */}
-      <div style={breit ? { display: 'flex', alignItems: 'flex-start' } : undefined}>
-        {breit ? (
-          <nav aria-label="MPG" style={{ width: 220, flexShrink: 0, position: 'sticky', top: 60, padding: '24px 12px', boxSizing: 'border-box', height: 'calc(100dvh - 60px)', borderRight: '0.5px solid var(--lbf-border-light)' }}>
-            {LEISTE.map(g => (
-              <div key={g.titel} style={{ marginBottom: 20 }}>
-                <div style={{ ...abschnittKopf, padding: '0 12px', marginBottom: 6 }}>{g.titel}</div>
-                {g.ziele.map(z => {
-                  const aktiv = istAktiv(z, pathname)
-                  return (
-                    <NavLink key={z.pfad} to={z.pfad} end={z.ende} style={{
-                      display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, textDecoration: 'none', fontSize: 14,
-                      fontWeight: aktiv ? 700 : 400, color: aktiv ? 'var(--lbf-akzent)' : 'var(--lbf-text)',
-                      background: aktiv ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'transparent',
-                    }}>
-                      {pik(ICON[z.icon], 17)}
-                      <span style={{ flex: 1 }}>{z.name}</span>
-                      {zaehler(z) > 0 && <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)' }}>{zaehler(z)}</span>}
-                    </NavLink>
-                  )
-                })}
-                {/* Ohne Modul Vorgänge der einzige Weg zur Einstellung des Formulars (Bauplan Formulare 3.4) */}
-                {g.titel === 'Einrichtung' && <FormularEinstellungLink formular="defektmeldung" user={m.user} kompakt />}
-              </div>
-            ))}
-          </nav>
-        ) : null}
-        <main style={breit
-          ? { flex: 1, minWidth: 0, padding: '24px 28px 48px' }
-          : { padding: '16px 16px calc(84px + env(safe-area-inset-bottom))', maxWidth: 720, margin: '0 auto' }}>
-          <Outlet />
-        </main>
-      </div>
-      {!breit && (
-        <nav aria-label="MPG" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 100, background: 'var(--lbf-card)', borderTop: '0.5px solid var(--lbf-border)', display: 'flex', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-          {TABS.map(z => {
-            const aktiv = istAktiv(z, pathname)
-            return (
-              <NavLink key={z.pfad} to={z.pfad} end={z.ende} style={{
-                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textDecoration: 'none', position: 'relative',
-                color: aktiv ? 'var(--lbf-akzent)' : 'var(--warm-gray)',
-                borderTop: aktiv ? '2px solid var(--lbf-akzent)' : '2px solid transparent', paddingTop: 10, paddingBottom: 8,
-              }}>
-                {pik(ICON[z.icon], 20)}
-                {zaehler(z) > 0 && <span style={{ position: 'absolute', top: 6, left: 'calc(50% + 6px)', fontSize: 9, fontWeight: 700, color: '#fff', background: 'var(--lbf-akzent-grund)', borderRadius: 8, padding: '1px 5px' }}>{zaehler(z)}</span>}
-                <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{z.name}</span>
-              </NavLink>
-            )
-          })}
-        </nav>
-      )}
+    <KopfKontext.Provider value={wert}>
+      <style>{STIL}</style>
+      <Seite titel={sieger?.titel ?? 'Medizinprodukte'} unter={sieger?.unter ?? org}
+        zurueck={zurueck} zurueckLabel={!sieger || sieger.tiefe === 0 ? 'Zurück zur Übersicht' : 'Zurück'}
+        rechts={<span ref={setRechtsZiel} className="mp-rechts" />}
+        reiter={<div ref={setReiterZiel} className="mp-reiter" />}>
+        <div className="mp-innen"><Outlet /></div>
+      </Seite>
       {toast}
       <Blaetter />
-    </div>
+    </KopfKontext.Provider>
   )
 }

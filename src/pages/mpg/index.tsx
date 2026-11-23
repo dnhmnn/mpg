@@ -22,7 +22,6 @@ import GeraetForm from './GeraetForm'
 import Pruefung from './Pruefung'
 import Meldungen from './Meldungen'
 import Fall from './Fall'
-import Mehr from './Mehr'
 import Vorlagen from './Vorlagen'
 import Logbuch from './Logbuch'
 import Fristen from './Fristen'
@@ -43,7 +42,8 @@ export default function MpgModul() {
           <Route path="meldungen" element={<Meldungen />}>
             <Route path=":id" element={<Fall />} />
           </Route>
-          <Route path="mehr" element={<Mehr />} />
+          {/* Die Leiste unten gibt es nicht mehr (Owner, 22.11.2026): Fristen, Vorlagen und Logbuch stehen auf der Startseite */}
+          <Route path="mehr" element={<Navigate to="/mpg" replace />} />
           <Route path="vorlagen" element={<Vorlagen />} />
           <Route path="vorlagen/:typ" element={<Vorlagen />} />
           <Route path="logbuch" element={<Logbuch />} />

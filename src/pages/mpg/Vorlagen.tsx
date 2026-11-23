@@ -29,7 +29,7 @@ export default function Vorlagen() {
   const typen = [...new Set([...DEVICE_TYPES, ...m.checklists.map(c => c.device_type), ...m.bestand.map(d => d.type)].filter(Boolean))]
   return (
     <>
-      <SeitenKopf zurueck={breit ? undefined : '/mpg/mehr'} titel="Prüfvorlagen" unter="Prüfpunkte je Gerätetyp" />
+      <SeitenKopf zurueck="/mpg" tiefe={1} titel="Prüfvorlagen" unter="Prüfpunkte je Gerätetyp" />
       {banner}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 640 }}>
         {typen.map(t => {

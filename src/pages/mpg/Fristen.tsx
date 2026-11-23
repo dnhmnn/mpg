@@ -35,7 +35,7 @@ export default function Fristen() {
 
   return (
     <>
-      <SeitenKopf zurueck={breit ? undefined : '/mpg/mehr'} titel="Fristen" unter="Sicherheitstechnische (STK) und messtechnische Kontrollen (MTK)" />
+      <SeitenKopf zurueck="/mpg" tiefe={1} titel="Fristen" unter="Sicherheitstechnische (STK) und messtechnische Kontrollen (MTK)" />
       {banner}
       {m.darfVerwalten && !m.buch && alle.length > 0 && (
         <div style={{ marginBottom: 14, maxWidth: 760 }}>
@@ -47,9 +47,9 @@ export default function Fristen() {
           const an = filter === f
           return (
             <button key={f} onClick={() => setze(f)} aria-pressed={an} style={{
-              border: `1px solid ${an ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: an ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'var(--lbf-card)',
-              color: an ? 'var(--lbf-akzent)' : 'var(--lbf-text)', borderRadius: 8, padding: '8px 11px', fontSize: 12, fontWeight: 700, fontFamily: 'inherit', cursor: 'pointer',
-            }}>{f === 'alle' ? 'Alle' : KONTROLLE_NAME[f]} <span style={{ color: 'var(--warm-gray)', fontWeight: 400 }}>{zahl(f)}</span></button>
+              flex: 'none', border: 'none', minHeight: 36, padding: '0 14px', borderRadius: 18, fontSize: 13, fontWeight: 700,
+              background: an ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)', color: an ? '#fff' : 'var(--bv-text-2)', fontFamily: 'inherit', cursor: 'pointer',
+            }}>{f === 'alle' ? 'Alle' : KONTROLLE_NAME[f]} <span style={{ fontWeight: 400, opacity: 0.75 }}>{zahl(f)}</span></button>
           )
         })}
       </div>

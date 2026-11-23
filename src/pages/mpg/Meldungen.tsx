@@ -5,7 +5,8 @@ import { Link, useOutlet, useParams, useSearchParams } from 'react-router-dom'
 import { darfBeheben } from '../../lib/mpg/rechte'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
-import { Aktionen, Karte, Leer, Reiter, SCHWERE_RAND, SchwereMarke, fmtDate, knopfLeise, kursivGrau, relativeDate, useBreit } from './teile'
+import { Aktionen, Karte, Leer, SCHWERE_RAND, SchwereMarke, fmtDate, knopfLeise, kursivGrau, relativeDate, useBreit } from './teile'
+import { ImBereich, MpgKopf } from './kopf'
 import { abzeichenStil, melder, type Defect, type ExternalReport } from './typen'
 import { angabenLesen } from '../../lib/formular/felder'
 import AngabenAnsicht from '../../components/AngabenAnsicht'
@@ -65,7 +66,6 @@ export default function Meldungen() {
   const liste = (
     <>
       {banner}
-      <Reiter wert={teil} onWahl={setTeil} optionen={[['eingang', `Eingang (${eingang.length})`], ['offen', `Offen (${offen.length})`], ['behoben', 'Behoben']]} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {teil === 'eingang' && eingang.length > 0 && !m.darfVerwalten && <div style={kursivGrau}>Bestätigen oder ablehnen kann, wer „MPG verwalten“ hat.</div>}
         {teil === 'eingang' && (eingang.length === 0 ? <Leer>Keine neuen Meldungen</Leer> : eingang.map(r => (
@@ -98,14 +98,32 @@ export default function Meldungen() {
     </>
   )
 
+  // Im roten Kopf: Titel und die drei Teile als Reiter (wie in der Patientenverwaltung)
+  const TEILE: [Teil, string, number | null][] = [['eingang', 'Eingang', eingang.length], ['offen', 'Offen', offen.length], ['behoben', 'Behoben', null]]
+  const rotKopf = (
+    <MpgKopf tiefe={1} titel="Meldungen" unter="Meldungen von außen und Defekte" zurueck="/mpg"
+      reiter={(
+        <div className="bv-reiter" role="tablist" aria-label="Meldungen">
+          {TEILE.map(([t, name, n]) => (
+            <button key={t} type="button" role="tab" aria-selected={teil === t} onClick={() => setTeil(t)}>
+              {name}{n !== null && <em>{n}</em>}
+            </button>
+          ))}
+        </div>
+      )} />
+  )
+
   // Gleicher Baum in beiden Breiten (siehe Geraete.tsx); auf dem Telefon ersetzt der Fall die Liste
   return (
     <div style={breit ? { display: 'flex', gap: 24, alignItems: 'flex-start' } : undefined}>
+      {rotKopf}
       {breit || !detail ? (
         <div style={breit ? { flex: detail ? '0 0 46%' : 1, minWidth: 0, maxWidth: detail ? undefined : 760 } : undefined}>{blocker ?? liste}</div>
       ) : null}
       {detail ? (
-        <div style={breit ? { flex: 1, minWidth: 0, position: 'sticky', top: 84, maxHeight: 'calc(100dvh - 108px)', overflowY: 'auto' } : undefined}>{detail}</div>
+        <div style={breit ? { flex: 1, minWidth: 0, position: 'sticky', top: 16, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto' } : undefined}>
+          <ImBereich.Provider value={breit}>{detail}</ImBereich.Provider>
+        </div>
       ) : null}
     </div>
   )

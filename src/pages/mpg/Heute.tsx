@@ -1,5 +1,7 @@
-// HEUTE: Was ist zu tun? Begonnene Prüfung, Arbeitsliste nach Dringlichkeit, Prüfrunden
-// je Standort (vorerst nach dem Standort-Text der Geräte).
+// Startseite des MPG im Dunkelrot-Design (Owner, 22.11.2026: Startseite mit Kacheln). Im roten Kopf die
+// Zahlen (bereit, Handlungsbedarf, gesperrt), darunter die Bereiche als Kacheln (Geräte, Meldungen, Fristen,
+// Logbuch) und, was heute zu tun ist: begonnene Prüfung, Arbeitsliste nach Dringlichkeit, Prüfrunden je
+// Standort (vorerst nach dem Standort-Text der Geräte), bald fällig, Einrichtung.
 
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -10,7 +12,9 @@ import { abschnittVon, fristenEintraege } from './fristenListe'
 import { useMpg } from './MpgDaten'
 import { GeraetKarte } from './GeraetKarte'
 import { useLadestand } from './Ladestand'
-import { Abschnitt, Aktionen, Karte, Leer, StatKarte, ICON, knopfLeise, knopfVoll, kursivGrau, pik } from './teile'
+import FormularEinstellungLink from '../../components/FormularEinstellungLink'
+import { MpgKopf } from './kopf'
+import { Abschnitt, Aktionen, Karte, Leer, ICON, knopfLeise, knopfVoll, kursivGrau, pik } from './teile'
 import { OHNE_STANDORT, rundenPfad, standortSchluessel, type Device } from './typen'
 
 export interface Runde { schluessel: string; name: string; geraete: Device[] }
@@ -37,7 +41,27 @@ export default function Heute() {
   const entwurf = useMemo(() => m.leseEntwurf(), [m.entwurfStand, m.user?.id])
   const runden = useMemo(() => rundenVon(m.bestand), [m.bestand])
 
-  if (blocker) return blocker
+  // Zahlen im roten Kopf; solange die Geräte laden, Striche statt Nullen (der Platz bleibt, nichts springt)
+  const da = m.geraeteGeladen
+  const z = (n: number) => (da ? n : '–')
+  const kopf = (
+    <MpgKopf tiefe={0} titel="Medizinprodukte" unter={m.user?.organization_name || 'Responda'} zurueck="/hub" fest
+      reiter={(
+        <div className="mp-zahlen" role="group" aria-label="Zustand der Geräte">
+          <button type="button" disabled={!da} onClick={() => navigate('/mpg/geraete?zustand=bereit')}>
+            <small>Bereit</small><b>{z(m.stats.ok + m.stats.bald)}</b><span>{da && m.stats.bald ? `${m.stats.bald} bald fällig` : 'einsatzbereit'}</span>
+          </button>
+          <button type="button" disabled={!da} className={da && m.stats.handlung ? 'warn' : undefined} onClick={() => navigate('/mpg/geraete?zustand=handlung')}>
+            <small>Handeln</small><b>{z(m.stats.handlung)}</b><span>zu tun</span>
+          </button>
+          <button type="button" disabled={!da} className={da && m.stats.gesperrt ? 'warn' : undefined} onClick={() => navigate('/mpg/geraete?zustand=gesperrt')}>
+            <small>Gesperrt</small><b>{z(m.stats.gesperrt)}</b><span>nicht bereit</span>
+          </button>
+        </div>
+      )} />
+  )
+
+  if (blocker) return <>{kopf}{blocker}</>
 
   const entwurfGeraet = entwurf ? m.devices.find(d => d.id === entwurf.device_id) : undefined
   // Läuft sein Speichern gerade (Seite schon verlassen), ist er nicht „unklar“, sondern unterwegs
@@ -94,59 +118,71 @@ export default function Heute() {
     kAbschnitt(2).length && `${kAbschnitt(2).length} ohne Datum`,
     kAbschnitt(3).length && `${kAbschnitt(3).length} in den nächsten drei Monaten`,
   ].filter(Boolean)
-  const fristenKarte = kTeile.length > 0 && (
-    <Karte rand={kGesperrt ? '#dc2626' : 'var(--lbf-akzent)'} style={{ marginBottom: 24 }}>
-      <Link to="/mpg/fristen" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>STK und MTK <span style={{ fontWeight: 400, fontStyle: 'italic', fontSize: 12, color: 'var(--warm-gray)' }}>· sicherheits- und messtechnische Kontrollen</span></div>
-          <div style={kursivGrau}>{kTeile.join(' · ')}</div>
-        </div>
-        <span style={{ color: 'var(--lbf-akzent)' }}>{pik(ICON.weiter)}</span>
-      </Link>
-    </Karte>
+  const offeneFaelle = m.defects.filter(d => d.status !== 'resolved').length
+  const kachel = (pfad: string, icon: keyof typeof ICON, titel: string, zeile: string, wichtig = false, zahl = 0) => (
+    <Link to={pfad} className="mp-kachel">
+      <span className="mp-kachel-icon">{pik(ICON[icon], 22)}</span>
+      {zahl > 0 && <span className="mp-zahl" aria-label={`${zahl} neu`}>{zahl}</span>}
+      <span><b>{titel}</b><small className={wichtig ? 'wichtig' : undefined}>{zeile}</small></span>
+    </Link>
   )
-  const eingangKarte = eingang.length > 0 && (
-    <Karte rand="var(--lbf-akzent)" style={{ marginBottom: 24 }} >
-      <Link to="/mpg/meldungen" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', textDecoration: 'none', color: 'inherit' }}>
-        <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 700, fontSize: 15 }}>{eingang.length === 1 ? 'Eine neue Meldung' : `${eingang.length} neue Meldungen`} von außen</div>
-          <div style={kursivGrau}>{eingang.slice(0, 3).map(r => m.geraeteName(r.device_id, r.device_name)).join(', ')}{eingang.length > 3 ? ' …' : ''}</div>
-        </div>
-        <span style={{ color: 'var(--lbf-akzent)' }}>{pik(ICON.weiter)}</span>
-      </Link>
-    </Karte>
+  const kacheln = (
+    <div className="mp-kacheln">
+      {kachel('/mpg/geraete', 'geraete', 'Geräte', m.bestand.length ? `${m.bestand.length} im Bestand` : 'Noch keine')}
+      {kachel('/mpg/meldungen', 'meldungen', 'Meldungen',
+        eingang.length ? `${eingang.length === 1 ? 'Eine neue' : `${eingang.length} neue`} von außen` : offeneFaelle ? `${offeneFaelle} offen` : 'Nichts offen',
+        eingang.length > 0, eingang.length)}
+      {kachel('/mpg/fristen', 'fristen', 'STK und MTK', kTeile.length ? String(kTeile[0]) : 'Nichts fällig', kGesperrt > 0)}
+      {kachel('/mpg/logbuch', 'logbuch', 'Logbuch', 'Prüfungen und Gerätebuch')}
+    </div>
+  )
+  const einrichtung = (
+    <Abschnitt titel="Einrichtung">
+      <div className="bv-flaeche">
+        <Link to="/mpg/vorlagen" className="bv-z">
+          <span className="mp-z-icon">{pik(ICON.vorlagen, 18)}</span>
+          <span className="bv-tx"><b>Prüfvorlagen</b><small>Prüfpunkte je Gerätetyp</small></span>
+          <span style={{ color: 'var(--warm-gray)' }}>{pik(ICON.weiter, 16)}</span>
+        </Link>
+        {m.darfVerwalten && (
+          <Link to="/mpg/geraete/neu" className="bv-z">
+            <span className="mp-z-icon">{pik(ICON.plus, 18)}</span>
+            <span className="bv-tx"><b>Gerät anlegen</b><small>Neues Medizinprodukt in den Bestand</small></span>
+            <span style={{ color: 'var(--warm-gray)' }}>{pik(ICON.weiter, 16)}</span>
+          </Link>
+        )}
+      </div>
+      {/* Ohne Modul Vorgänge der einzige Weg zur Einstellung des Formulars (Bauplan Formulare 3.4) */}
+      <div style={{ marginTop: 10 }}><FormularEinstellungLink formular="defektmeldung" user={m.user} /></div>
+    </Abschnitt>
   )
 
   if (!m.bestand.length) {
     return (
       <>
+        {kopf}
         {banner}
         {entwurfKarte}
         {unklarKarten}
-        {eingangKarte}
+        {kacheln}
         <Leer>
           {m.devices.length ? 'Keine Geräte im Bestand.' : 'Noch keine Geräte angelegt.'}
           {m.darfVerwalten && <div style={{ marginTop: 14 }}><Link to="/mpg/geraete/neu" style={{ ...knopfVoll, textDecoration: 'none', display: 'inline-block' }}>{m.devices.length ? 'Gerät anlegen' : 'Erstes Gerät anlegen'}</Link></div>}
         </Leer>
+        {einrichtung}
       </>
     )
   }
 
   return (
     <>
+      {kopf}
       {banner}
 
       {entwurfKarte}
       {unklarKarten}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10, marginBottom: 24 }}>
-        <StatKarte label="Bereit" zahl={m.stats.ok + m.stats.bald} text={m.stats.bald ? `davon ${m.stats.bald} bald fällig` : 'einsatzbereit'} onClick={() => navigate('/mpg/geraete?zustand=bereit')} />
-        <StatKarte label="Handeln" zahl={m.stats.handlung} text="Handlungsbedarf" onClick={() => navigate('/mpg/geraete?zustand=handlung')} />
-        <StatKarte label="Gesperrt" zahl={m.stats.gesperrt} text="nicht einsatzbereit" onClick={() => navigate('/mpg/geraete?zustand=gesperrt')} />
-      </div>
-
-      {eingangKarte}
-      {fristenKarte}
+      {kacheln}
 
       <Abschnitt titel={`Zu tun (${arbeit.length})`}>
         {arbeit.length === 0
@@ -178,6 +214,8 @@ export default function Heute() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{bald.map(d => <GeraetKarte key={d.id} device={d} zurueck="/mpg" />)}</div>
         </Abschnitt>
       )}
+
+      {einrichtung}
     </>
   )
 }

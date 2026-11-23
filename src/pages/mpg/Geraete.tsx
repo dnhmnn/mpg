@@ -9,7 +9,9 @@ import { useMpg } from './MpgDaten'
 import { GeraetKarte, naechsteFrist } from './GeraetKarte'
 import { rundenVon } from './Heute'
 import { useLadestand } from './Ladestand'
-import { Abschnitt, Karte, Leer, STUFE_FARBE, ZustandMarke, ICON, eingabe, knopfVoll, kursivGrau, pik, useBreit } from './teile'
+import { Abschnitt, Karte, Leer, STUFE_FARBE, ZustandMarke, ICON, kursivGrau, pik, useBreit } from './teile'
+import { Icon } from '../benutzer/bausteine'
+import { ImBereich, MpgKopf } from './kopf'
 import { rundenPfad, type Device } from './typen'
 
 type Filter = 'alle' | 'gesperrt' | 'handlung' | 'bald' | 'bereit' | 'ausser'
@@ -50,25 +52,27 @@ export default function Geraete() {
   }, [m.bestand, ausser, m.zustand, q, filter])
 
   const zahl = (f: Filter) => f === 'ausser' ? ausser.length : m.bestand.filter(d => passt(f, m.zustand(d).stufe)).length
+  // Im roten Kopf: Titel, Zurück zur Startseite, Gerät anlegen
+  const rotKopf = (
+    <MpgKopf tiefe={1} titel="Geräte" unter={`${m.bestand.length} im Bestand`} zurueck="/mpg"
+      rechts={m.darfVerwalten ? <Link to="/mpg/geraete/neu" className="bv-rund" aria-label="Gerät anlegen" title="Gerät anlegen">{pik(ICON.plus, 22)}</Link> : undefined} />
+  )
   const kopf = (
     <>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}>
-        <input value={q} onChange={e => setze('q', e.target.value)} placeholder="Name, Typ, Standort, Seriennummer …" aria-label="Geräte durchsuchen" style={{ ...eingabe, flex: 1 }} />
-        {m.darfVerwalten && (
-          <Link to="/mpg/geraete/neu" style={{ ...knopfVoll, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-            {pik(ICON.plus, 16)} Gerät
-          </Link>
-        )}
+      <div className="bv-suche" style={{ marginBottom: 12 }}>
+        <Icon n="suche" />
+        <input type="search" value={q} onChange={e => setze('q', e.target.value)} placeholder="Name, Typ, Standort, Seriennummer …" aria-label="Geräte durchsuchen" />
+        {q && <button type="button" aria-label="Suche leeren" onClick={() => setze('q', '')}><Icon n="kreuz" /></button>}
       </div>
-      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, paddingBottom: 2 }}>
+      <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, paddingBottom: 2, scrollbarWidth: 'none' }}>
         {FILTER.filter(([f]) => f !== 'ausser' || ausser.length > 0 || filter === 'ausser').map(([f, name]) => {
           const an = filter === f
           return (
             <button key={f} onClick={() => setze('zustand', f)} aria-pressed={an} style={{
-              border: `1px solid ${an ? 'var(--lbf-akzent)' : 'var(--lbf-border)'}`, background: an ? 'rgba(var(--lbf-rot-rgb),0.06)' : 'var(--lbf-card)',
-              color: an ? 'var(--lbf-akzent)' : 'var(--lbf-text)', borderRadius: 8, padding: '8px 11px', fontSize: 12, fontWeight: 700,
+              flex: 'none', border: 'none', minHeight: 36, padding: '0 14px', borderRadius: 18, fontSize: 13, fontWeight: 700,
+              background: an ? 'var(--lbf-akzent-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)', color: an ? '#fff' : 'var(--bv-text-2)',
               fontFamily: 'inherit', cursor: 'pointer', whiteSpace: 'nowrap',
-            }}>{name} <span style={{ color: 'var(--warm-gray)', fontWeight: 400 }}>{zahl(f)}</span></button>
+            }}>{name} <span style={{ fontWeight: 400, opacity: 0.75 }}>{zahl(f)}</span></button>
           )
         })}
       </div>
@@ -129,13 +133,17 @@ export default function Geraete() {
   // erhalten, wenn ein Tablet gedreht wird. Auf dem Telefon ersetzt das Detail die Liste.
   return (
     <div style={breit ? { display: 'flex', gap: 24, alignItems: 'flex-start' } : undefined}>
+      {rotKopf}
       {breit || !detail ? (
         <div style={breit ? { flex: detail ? '0 0 46%' : 1, minWidth: 0 } : undefined}>
           {blocker ?? <>{banner}{kopf}{breit ? tabelle : gruppiert}</>}
         </div>
       ) : null}
+      {/* Am Rechner steht das Gerät als Spalte neben der Liste: sein Kopf klein darin, oben bleibt „Geräte“ */}
       {detail ? (
-        <div style={breit ? { flex: 1, minWidth: 0, position: 'sticky', top: 84, maxHeight: 'calc(100dvh - 108px)', overflowY: 'auto', paddingRight: 4 } : undefined}>{detail}</div>
+        <div style={breit ? { flex: 1, minWidth: 0, position: 'sticky', top: 16, maxHeight: 'calc(100dvh - 32px)', overflowY: 'auto', paddingRight: 4 } : undefined}>
+          <ImBereich.Provider value={breit}>{detail}</ImBereich.Provider>
+        </div>
       ) : null}
     </div>
   )
