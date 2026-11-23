@@ -10,7 +10,7 @@ import {
 import { bleibtGesperrt, defektAusKontrolle, istAusserBetrieb, kontrolleNichtBestanden, pruefungNichtBestanden, zustandVon, zaehleStufen } from './zustand'
 import { ergebnisVon, moeglicheErgebnisse, restInOrdnung, setzePunkt, vorlageWaehlen, MANGEL_VERMERK, type PunktStatus, type Pruefpunkt } from './pruefung'
 import {
-  anker, ausserBetriebText, planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeGeraetAenderung,
+  anker, ausserBetriebText, planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeGeraetAenderung, planeSchwere, schwereBraucht,
   planeLoeschen, planeNeuesGeraet, planePruefung, planeSperre, planeVermerk, planeWiederInBetrieb, restNachAnker, stammdatenAenderungen,
   stammdatenText, type Stammdaten,
 } from './aktionen'
@@ -277,6 +277,33 @@ export function laufeMpgSelbsttest(): TestErgebnis[] {
   const bestBuch = planeBestaetigung({ meldung, anmerkung: '', sperren: true, geraetDa: true, wer, defektId: 'm1', buch: true })
   r.push(eq('Bestätigen mit Sperre und Gerätebuch: Status der Meldung bleibt zuletzt', arten(bestBuch), ['mpg_defects', 'operational', 'buch:gesperrt', 'mpg_defect_reports']))
   r.push(eq('Bestätigen ohne Gerät: kein Eintrag', arten(planeBestaetigung({ meldung, anmerkung: '', sperren: true, geraetDa: false, wer, defektId: 'm1', buch: true })), ['mpg_defects', 'mpg_defect_reports']))
+
+  // ── Schwere selbst einschätzen (Owner, 23.11.2026) ──
+  const gering = { ...meldung, severity: 'low' as const }
+  const hoeher = planeBestaetigung({ meldung: gering, anmerkung: '', sperren: false, schwere: 'critical', geraetDa: true, wer, defektId: 'm1', buch: true })
+  r.push(eq('Bestätigen „gering“ als kritisch eingeschätzt: Defekt kritisch, Gerät gesperrt, auch ohne Haken',
+    [arten(hoeher), hoeher[0].body.severity], [['mpg_defects', 'operational', 'buch:gesperrt', 'mpg_defect_reports'], 'critical']))
+  r.push(eq('Bestätigen mit eigener Schwere: beides steht im Defekt',
+    planeBestaetigung({ meldung: gering, anmerkung: 'Gesehen', sperren: false, schwere: 'high', geraetDa: true, wer, defektId: 'm1' })[0].body.description,
+    'Kabel lose\n\nAnmerkung bei Bestätigung (Anna): Gesehen\nSchwere bei Bestätigung (Anna): hoch (gemeldet: gering)'))
+  const tiefer = planeBestaetigung({ meldung, anmerkung: '', sperren: false, schwere: 'medium', geraetDa: true, wer, defektId: 'm1', buch: true })
+  r.push(eq('Bestätigen „hoch“ als mittel eingeschätzt: Defekt mittel, ohne Haken keine Sperre', [arten(tiefer), tiefer[0].body.severity], [['mpg_defects', 'mpg_defect_reports'], 'medium']))
+  r.push(eq('Bestätigen mit eigener Schwere: Text im Gerätebuch beginnt wie bisher (Grund der Push)', hoeher[2].body.text, 'Meldung von außen bestätigt: Kabel lose\nSchwere kritisch (gemeldet: gering)'))
+  r.push(eq('Bestätigen mit gleicher Schwere: kein Zusatz', planeBestaetigung({ meldung, anmerkung: '', sperren: true, schwere: 'high', geraetDa: true, wer, defektId: 'm1' })[0].body.description, 'Kabel lose'))
+  r.push(eq('Bestätigen ohne eigene Schwere: die gemeldete sperrt weiter', arten(planeBestaetigung({ meldung, anmerkung: '', sperren: false, geraetDa: true, wer, defektId: 'm1' })), ['mpg_defects', 'operational', 'mpg_defect_reports']))
+  const def = { id: 'd5', device_id: 'g1', device_name: 'Defi RTW 1', description: 'Display flackert\nzweite Zeile', severity: 'medium' as const }
+  const rauf = planeSchwere({ defekt: def, schwere: 'high', begruendung: '', geraetDa: true, wer, id: 'e8', buch: true })
+  r.push(eq('Schwere rauf auf hoch: erst Sperre, dann Gerätebuch (Anker), die Schwere zuletzt', [arten(rauf), anker(rauf), rauf[2].body],
+    [['operational', 'buch:gesperrt', 'mpg_defects'], { collection: 'mpg_ereignisse', id: 'e8' }, { severity: 'high' }]))
+  r.push(eq('Schwere: Text und Bezug im Gerätebuch', [rauf[1].body.text, rauf[1].body.bezug], ['Schwere des Defekts geändert: mittel → hoch („Display flackert“)', 'd5']))
+  const runter = planeSchwere({ defekt: { ...def, severity: 'critical' }, schwere: 'low', begruendung: ' nur Kratzer ', geraetDa: true, wer, id: 'e9', buch: true })
+  r.push(eq('Schwere runter: gibt nie frei, nur Vermerk mit Begründung', [arten(runter), runter.some(a => a.body.operational === true), runter[0].body.text],
+    [['buch:vermerk', 'mpg_defects'], false, 'Schwere des Defekts geändert: kritisch → gering („Display flackert“)\nBegründung: nur Kratzer']))
+  r.push(eq('Schwere hoch → kritisch: sperrt schon, nur Vermerk', arten(planeSchwere({ defekt: { ...def, severity: 'high' }, schwere: 'critical', begruendung: '', geraetDa: true, wer, id: 'e9', buch: true })), ['buch:vermerk', 'mpg_defects']))
+  r.push(eq('Schwere rauf, Gerät gelöscht: keine Sperre', arten(planeSchwere({ defekt: def, schwere: 'critical', begruendung: '', geraetDa: false, wer, id: 'e9', buch: true })), ['buch:vermerk', 'mpg_defects']))
+  r.push(eq('Schwere rauf ohne Gerätebuch: Sperre und Schwere', arten(planeSchwere({ defekt: def, schwere: 'high', begruendung: '', geraetDa: true, wer, id: 'e9', buch: false })), ['operational', 'mpg_defects']))
+  r.push(eq('Schwere unverändert: nichts zu senden', planeSchwere({ defekt: def, schwere: 'medium', begruendung: '', geraetDa: true, wer, id: 'e9', buch: true }), []))
+  r.push(eq('Begründung nötig nur beim Herabstufen unter hoch', [schwereBraucht('high', 'medium'), schwereBraucht('critical', 'high'), schwereBraucht('low', 'critical'), schwereBraucht('medium', 'low')], [true, false, false, false]))
 
   const aus = planeAusserBetrieb({ geraet: g1, datum: '2026-10-20', grund: ' Sturzschaden ', verbleib: ' verschrottet ', wer, id: 'e4', buch: true })
   r.push(eq('außer Betrieb nehmen: Gerät zuerst (und gesperrt), dann das Gerätebuch', [arten(aus), aus[0].body],

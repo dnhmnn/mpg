@@ -80,6 +80,12 @@ export default function Geraet() {
           <button onClick={() => m.setBlatt({ art, device })} style={{ ...knopfRand, padding: '8px 12px', fontSize: 12 }}>Öffnen</button>
         </Karte>
       ))}
+      {m.defects.filter(d => d.device_id === device.id && m.blattVersuch(`schwere:${d.id}`)).map(d => (
+        <Karte key={`schwere:${d.id}`} rand="#dc2626" style={{ padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, fontSize: 13, fontStyle: 'italic', color: 'var(--lbf-fehler-text)' }}>Neue Schwere des Defekts „{d.description.split('\n')[0].slice(0, 60)}“ nicht sicher gespeichert — bitte öffnen und erneut senden oder verwerfen.</div>
+          <button onClick={() => m.setBlatt({ art: 'schwere', defekt: d })} style={{ ...knopfRand, padding: '8px 12px', fontSize: 12 }}>Öffnen</button>
+        </Karte>
+      ))}
       {m.defects.filter(d => d.device_id === device.id && m.blattVersuch(`beheben:${d.id}`)).map(d => (
         <Karte key={`beheben:${d.id}`} rand="#dc2626" style={{ padding: '10px 14px', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ flex: 1, fontSize: 13, fontStyle: 'italic', color: 'var(--lbf-fehler-text)' }}>Beheben des Defekts „{d.description.split('\n')[0].slice(0, 60)}“ nicht sicher gespeichert — bitte öffnen und erneut senden oder verwerfen.</div>
@@ -295,9 +301,10 @@ function Ueberblick({ device }: { device: Device }) {
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><div style={{ fontSize: 14, whiteSpace: 'pre-line' }}>{d.description}</div><SchwereMarke severity={d.severity} /></div>
                     <div style={{ ...kursivGrau, marginTop: 4 }}>{relativeDate(d.created)} · {d.reported_by}</div>
                   </Link>
-                  {darfBeheben(m.user, d.severity) && (
+                  {(darfBeheben(m.user, d.severity) || m.darfVerwalten) && (
                     <Aktionen>
-                      <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={{ ...knopfLeise, background: '#16a34a', color: '#fff' }}>Beheben</button>
+                      {darfBeheben(m.user, d.severity) && <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={{ ...knopfLeise, background: '#16a34a', color: '#fff' }}>Beheben</button>}
+                      {m.darfVerwalten && <button onClick={() => m.setBlatt({ art: 'schwere', defekt: d })} style={knopfLeise}>Schwere ändern</button>}
                     </Aktionen>
                   )}
                 </Karte>
@@ -381,7 +388,9 @@ function Verlauf({ device }: { device: Device }) {
           <Seitenliste l={eintraege} leer="Noch keine Einträge.">
             {e => {
               const p = e.bezug ? pruefungVon(e.bezug) : undefined
-              return <GeraetebuchEintrag key={e.id} e={e} bezugText={e.art === 'vermerk' && e.bezug ? (p ? `zur ${pruefungText(p)}` : 'zu einem Prüfprotokoll') : undefined} />
+              // Vermerke mit Bezug: Korrektur zu einer Prüfung — oder die neue Schwere eines Defekts (der Text sagt es selbst)
+              const zuDefekt = !!e.bezug && (m.defects.some(d => d.id === e.bezug) || e.text.startsWith('Schwere des Defekts'))
+              return <GeraetebuchEintrag key={e.id} e={e} bezugText={e.art === 'vermerk' && e.bezug && !zuDefekt ? (p ? `zur ${pruefungText(p)}` : 'zu einem Prüfprotokoll') : undefined} />
             }}
           </Seitenliste>
         </Abschnitt>

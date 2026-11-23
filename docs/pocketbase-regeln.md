@@ -557,9 +557,15 @@ Befristete Rechte zählen mit, auf die Sekunde (siehe „Befristete Rechte in Re
 leer heißt „öffentlich“.
 
 **¹ Geräte — List/View.** Das öffentliche Meldeformular
-(`src/pages/public/OrgDefektmeldung.tsx`) liest die Geräteliste ohne Anmeldung.
-List und View von `mpg_devices` bleiben deshalb vorerst öffentlich (leer,
-Schloss offen); das schließt MPG-Paket 4 (Meldung über einen Hook). Danach auf **R**.
+(`src/pages/public/OrgDefektmeldung.tsx`) holt seine Geräteliste seit 23.11.2026
+über die Route `GET /api/responda/formular/{code}/geraete` (`pb_hooks/formular.pb.js`):
+nur Kennung, Name, Typ und Standort, ohne außer Betrieb genommene, nur bei
+eingeschaltetem Formular (nicht öffentlich: nur für Mitglieder). Die Route hängt
+nicht an dieser Regel. Direkt gelesen war die Liste ohne Anmeldung je nach Regel
+leer („Keine Geräte gefunden“, Owner 23.11.2026). Kennt der Server die Route nicht
+(404), liest die App wie bisher direkt. Liegt `formular.pb.js` mit der Route in
+`/opt/pb_hooks`, List und View von `mpg_devices` auf **R** setzen; bis dahin
+öffentlich (leer, Schloss offen).
 
 **² Geräte — Update.** Mit „MPG verwalten“ alles. Ohne nur der Prüfstand
 (`last_inspection`, `last_inspection_passed`, `next_inspection_due`) und

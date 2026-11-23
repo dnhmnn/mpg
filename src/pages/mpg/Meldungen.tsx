@@ -57,6 +57,7 @@ export default function Meldungen() {
       {d.status !== 'resolved' && (
         <Aktionen>
           {darfBeheben(m.user, d.severity) && <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={{ ...knopfLeise, background: '#16a34a', color: '#fff' }}>Beheben</button>}
+          {m.darfVerwalten && <button onClick={() => m.setBlatt({ art: 'schwere', defekt: d })} style={knopfLeise}>Schwere ändern</button>}
           <Link to={`/mpg/geraete/${d.device_id}`} style={{ ...knopfLeise, textDecoration: 'none' }}>Zum Gerät</Link>
         </Aktionen>
       )}

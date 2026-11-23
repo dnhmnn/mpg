@@ -21,7 +21,7 @@
 import { faelligFeld, INTERVALL_TEXT, intervallVon, kalendertag, monateVon, mtkAbweichend, mtkJahre, stkAbweichend, stkMonate, tagText, tagVonDatum, type FristFelder, type Tag } from './fristen'
 import { defektText, maengelText, MANGEL_VERMERK, type PruefErgebnis, type Pruefpunkt } from './pruefung'
 import type { Anfrage } from './schreiben'
-import type { Schwere } from './zustand'
+import { SCHWERE_TEXT, sperrtDefekt, type Schwere } from './zustand'
 
 export interface Wer { organization_id: string; name: string }
 
@@ -364,11 +364,16 @@ export function planeBeheben(o: {
  * Anker ist hier der Status der Meldung (zuletzt) — vor jedem Senden wird er gelesen.
  * Der Defekt (mit der ID der Meldung) steht vor der Sperre: Eine Sperre ohne Defekt kann so
  * nicht entstehen, und Ablehnen erkennt eine teilweise gespeicherte Bestätigung am Defekt.
+ *
+ * Die Schwere schätzt, wer bestätigt, selbst ein (Owner, 23.11.2026); ohne Angabe gilt die
+ * gemeldete. Weicht sie ab, steht beides im Defekt. Hoch oder kritisch sperrt immer.
  */
 export function planeBestaetigung(o: {
   meldung: { id: string; device_id: string; device_name: string; reporter_name?: string; description: string; severity: Schwere }
   anmerkung: string
   sperren: boolean
+  /** Eigene Einschätzung; ohne gilt die gemeldete Schwere */
+  schwere?: Schwere
   /** Gibt es das Gerät noch? Sonst wird nur der Defekt angelegt. */
   geraetDa: boolean
   wer: Wer
@@ -377,21 +382,74 @@ export function planeBestaetigung(o: {
 }): Anfrage[] {
   const { meldung: m } = o
   const anmerkung = o.anmerkung.trim()
+  const schwere = o.schwere ?? m.severity
+  const anders = schwere !== m.severity
+  const zusatz = [
+    anmerkung && `Anmerkung bei Bestätigung (${o.wer.name}): ${anmerkung}`,
+    anders && `Schwere bei Bestätigung (${o.wer.name}): ${SCHWERE_TEXT[schwere]} (gemeldet: ${SCHWERE_TEXT[m.severity]})`,
+  ].filter(Boolean).join('\n')
   const anfragen: Anfrage[] = []
   anfragen.push({
     collection: 'mpg_defects', aktion: 'create', id: o.defektId,
     body: {
       device_id: m.device_id, device_name: m.device_name,
       reported_by: m.reporter_name || 'Externe Meldung',
-      description: anmerkung ? `${m.description}\n\nAnmerkung bei Bestätigung (${o.wer.name}): ${anmerkung}` : m.description,
-      severity: m.severity, status: 'open', organization_id: o.wer.organization_id,
+      description: zusatz ? `${m.description}\n\n${zusatz}` : m.description,
+      severity: schwere, status: 'open', organization_id: o.wer.organization_id,
     },
   })
-  if (o.sperren && o.geraetDa) {
+  if ((o.sperren || sperrtDefekt(schwere)) && o.geraetDa) {
     anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: m.device_id, body: { operational: false } })
-    if (o.buch) anfragen.push(ereignis({ id: o.defektId, geraet: { id: m.device_id, name: m.device_name }, art: 'gesperrt', text: `Meldung von außen bestätigt: ${m.description}`, bezug: m.id, wer: o.wer }))
+    if (o.buch) {
+      // Beginnt immer mit „Meldung von außen bestätigt:“ — daran erkennt die Push den Grund (push-regeln.js)
+      const text = `Meldung von außen bestätigt: ${m.description}${anders ? `\nSchwere ${SCHWERE_TEXT[schwere]} (gemeldet: ${SCHWERE_TEXT[m.severity]})` : ''}`
+      anfragen.push(ereignis({ id: o.defektId, geraet: { id: m.device_id, name: m.device_name }, art: 'gesperrt', text, bezug: m.id, wer: o.wer }))
+    }
   }
   anfragen.push({ collection: 'mpg_defect_reports', aktion: 'update', id: m.id, body: { status: 'confirmed' } })
+  return anfragen
+}
+
+/** Text im Gerätebuch, wenn die Schwere eines Defekts neu eingeschätzt wird. */
+export function schwereText(o: { alt: Schwere; neu: Schwere; begruendung: string; beschreibung: string }): string {
+  const erste = o.beschreibung.trim().split('\n')[0].slice(0, 80)
+  return [
+    `Schwere des Defekts geändert: ${SCHWERE_TEXT[o.alt]} → ${SCHWERE_TEXT[o.neu]}${erste ? ` („${erste}“)` : ''}`,
+    o.begruendung.trim() && `Begründung: ${o.begruendung.trim()}`,
+  ].filter(Boolean).join('\n')
+}
+
+/** Muss die Änderung begründet werden? Herabstufen eines sperrenden Defekts — er sperrt danach nicht mehr. */
+export function schwereBraucht(alt: Schwere, neu: Schwere): boolean {
+  return sperrtDefekt(alt) && !sperrtDefekt(neu)
+}
+
+/**
+ * Schwere eines offenen Defekts neu einschätzen — braucht „MPG verwalten“ (API-Regel ³).
+ * Wird er hoch oder kritisch, wird das Gerät gesperrt (die Sperre zuerst). Herabstufen gibt nie
+ * frei: Ein gesperrtes Gerät bleibt gesperrt, bis jemand es freigibt. Im Gerätebuch steht die
+ * Änderung mit Bezug auf den Defekt (als Sperre oder Vermerk, der Anker); die neue Schwere am
+ * Defekt zuletzt — sie lässt ein Gerät beim Herabstufen besser aussehen.
+ */
+export function planeSchwere(o: {
+  defekt: { id: string; device_id: string; device_name: string; description: string; severity: Schwere }
+  schwere: Schwere
+  begruendung: string
+  /** Gibt es das Gerät noch (und ist es in Betrieb)? Sonst wird nicht gesperrt. */
+  geraetDa: boolean
+  wer: Wer
+  id: string
+  buch?: boolean
+}): Anfrage[] {
+  const { defekt: d } = o
+  if (o.schwere === d.severity) return []
+  const geraet = { id: d.device_id, name: d.device_name }
+  const sperrt = sperrtDefekt(o.schwere) && !sperrtDefekt(d.severity) && o.geraetDa
+  const text = schwereText({ alt: d.severity, neu: o.schwere, begruendung: o.begruendung, beschreibung: d.description })
+  const anfragen: Anfrage[] = []
+  if (sperrt) anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: d.device_id, body: { operational: false } })
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet, art: sperrt ? 'gesperrt' : 'vermerk', text, bezug: d.id, wer: o.wer }))
+  anfragen.push({ collection: 'mpg_defects', aktion: 'update', id: d.id, body: { severity: o.schwere } })
   return anfragen
 }
 

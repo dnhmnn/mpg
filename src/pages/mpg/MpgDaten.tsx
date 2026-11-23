@@ -44,7 +44,7 @@ interface Unklar {
   /** je Geräte-ID die gesendete Defektmeldung */
   defekte: Record<string, DefektFormular>
   /** je Meldungs-ID die gesendete Bestätigung */
-  bestaetigungen: Record<string, { anmerkung: string; sperren: boolean; seit?: string }>
+  bestaetigungen: Record<string, { anmerkung: string; sperren: boolean; schwere?: Severity; seit?: string }>
   /** je Blatt („freigeben:<Gerät>“ …) der unklar gesendete Vorgang — übersteht Schließen und Neuladen */
   blaetter: Record<string, BlattVersuch>
 }
@@ -66,6 +66,7 @@ export function altenVersuchSenden(seit: string | undefined): boolean {
 export type Blatt =
   | { art: 'defekt'; device: Device }
   | { art: 'beheben'; defekt: Defect }
+  | { art: 'schwere'; defekt: Defect }
   | { art: 'bestaetigen'; meldung: ExternalReport }
   | { art: 'ablehnen'; meldung: ExternalReport }
   | { art: 'sperren' | 'freigeben' | 'ausserBetrieb' | 'wiederInBetrieb'; device: Device }

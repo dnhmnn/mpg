@@ -21,6 +21,7 @@ export default function Fall() {
   const offen = d.status !== 'resolved'
   // Unklar gesendetes Beheben: auch wenn der Defekt schon behoben aussieht, erreichbar lassen
   const versuchDa = !!m.blattVersuch(`beheben:${d.id}`)
+  const schwereVersuch = !!m.blattVersuch(`schwere:${d.id}`)
   const zeilen: [string, string][] = [
     ['Gemeldet', `${fmtDateTime(d.created)} · ${d.reported_by}`],
     ...(offen ? [] : [['Behoben', `${d.resolved_by || '—'}${d.updated ? ` · ${fmtDateTime(d.updated)}` : ''}`] as [string, string]]),
@@ -46,6 +47,9 @@ export default function Fall() {
         {versuchDa
           ? <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={knopfVollWenn(true, '#dc2626')}>Beheben nicht sicher gespeichert — öffnen</button>
           : offen && darfBeheben(m.user, d.severity) && <button onClick={() => m.setBlatt({ art: 'beheben', defekt: d })} style={knopfVollWenn(true, '#16a34a')}>Als behoben markieren</button>}
+        {schwereVersuch
+          ? <button onClick={() => m.setBlatt({ art: 'schwere', defekt: d })} style={knopfVollWenn(true, '#dc2626')}>Schwere nicht sicher gespeichert — öffnen</button>
+          : offen && m.darfVerwalten && <button onClick={() => m.setBlatt({ art: 'schwere', defekt: d })} style={knopfRand}>Schwere ändern</button>}
         <Link to={`/mpg/geraete/${d.device_id}`} style={{ ...knopfRand, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Zum Gerät</Link>
       </div>
       {!m.devices.some(g => g.id === d.device_id) && <div style={{ ...kursivGrau, marginTop: 8 }}>Das Gerät gibt es nicht mehr.</div>}

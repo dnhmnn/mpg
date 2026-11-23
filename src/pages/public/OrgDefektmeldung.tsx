@@ -120,13 +120,23 @@ export default function OrgDefektmeldung() {
     return b && b.art === 'kern' ? b.label : sonst
   }
 
+  // Geräteliste über die Route des Servers (pb_hooks/formular.pb.js): Direkt aus mpg_devices war sie ohne
+  // Anmeldung je nach API-Regel leer, die Geräteauswahl fehlte (Owner, 23.11.2026). Kennt der Server die
+  // Route noch nicht (404), wie bisher direkt. Ohne Abbruch durch gleichzeitige Anfragen (requestKey null).
   function ladeGeraete() {
     setListe('laedt')
-    pb.collection('mpg_devices').getFullList<DeviceSummary>({
-      filter: `organization_id = "${org.id}"`,
-      sort: 'name',
-      fields: 'id,name,type,location,ausser_betrieb',
-    }).then(ds => {
+    const holen = async (): Promise<DeviceSummary[]> => {
+      try {
+        const r = await pb.send<{ geraete?: DeviceSummary[] }>(`/api/responda/formular/${encodeURIComponent(orgCode)}/geraete`, { method: 'GET', requestKey: null })
+        return Array.isArray(r?.geraete) ? r.geraete : []
+      } catch (e) {
+        if ((e as { status?: number })?.status !== 404) throw e
+        return pb.collection('mpg_devices').getFullList<DeviceSummary>({
+          filter: pb.filter('organization_id = {:o}', { o: org.id }), sort: 'name', fields: 'id,name,type,location,ausser_betrieb', requestKey: null,
+        })
+      }
+    }
+    holen().then(ds => {
       const aktiv = ds.filter(d => !istAusserBetrieb(d))
       setDevices(aktiv)
       setListe('ok')

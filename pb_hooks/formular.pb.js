@@ -127,6 +127,33 @@ routerAdd("GET", "/api/responda/formular/{code}/stand", (e) => {
   })
 })
 
+// ── Geräte der Defektmeldung ────────────────────────────────────────────────
+
+// Die Geräteliste des Meldeformulars (Owner, 23.11.2026: „nicht immer die Geräteauswahl“). Direkt aus
+// mpg_devices gelesen war sie ohne Anmeldung je nach API-Regel leer: Eine Liste, die die Regel nicht
+// erlaubt, ist in PocketBase leer statt ein Fehler. Hier nur, was das Formular braucht (Kennung, Name,
+// Typ, Standort), ohne außer Betrieb genommene, und nur, wenn das Formular an ist; ist es nicht öffentlich,
+// nur für Mitglieder der Organisation.
+routerAdd("GET", "/api/responda/formular/{code}/geraete", (e) => {
+  const R = require(`${__hooks}/formular-regeln.js`)
+  const org = R.orgPerCode($app, e.request.pathValue("code"))
+  if (!org) return R.antwort(e, 404, "organisation")
+  if (!R.formularAn(org, "defektmeldung")) return R.antwort(e, 403, "formular_aus")
+  if (!R.formularOeffentlich(org, "defektmeldung") && !R.mitgliedAusToken(e.auth ? R.personAusRecord(e.auth) : null, org.id, Date.now())) {
+    return R.antwort(e, 403, "formular_aus")
+  }
+  let liste = []
+  try { liste = $app.findRecordsByFilter("mpg_devices", "organization_id = {:o}", "name", 2000, 0, { o: org.id }) } catch (err) { liste = [] }
+  const geraete = []
+  for (let i = 0; i < liste.length; i++) {
+    const g = liste[i]
+    const feld = (f) => { try { return g.getString(f) } catch (err) { return "" } }
+    if (feld("ausser_betrieb").trim()) continue
+    geraete.push({ id: g.id, name: feld("name"), type: feld("type"), location: feld("location") })
+  }
+  return e.json(200, { geraete: geraete })
+})
+
 // ── Name bekannt? ───────────────────────────────────────────────────────────
 
 routerAdd("POST", "/api/responda/formular/{code}/name", (e) => {

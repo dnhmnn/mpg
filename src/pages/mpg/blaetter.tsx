@@ -5,7 +5,8 @@
 import { useState } from 'react'
 import { bleibtGesperrt, defektAusKontrolle, istAusserBetrieb, kontrolleNichtBestanden, sperrtDefekt, type Grund } from '../../lib/mpg/zustand'
 import {
-  planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeSperre, planeVermerk, planeWiederInBetrieb,
+  planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeSchwere, planeSperre, planeVermerk, planeWiederInBetrieb,
+  restNachAnker, schwereBraucht,
 } from '../../lib/mpg/aktionen'
 import { kalendertag, plusMonate, tagText } from '../../lib/mpg/fristen'
 import { ERGEBNIS_NAME, KONTROLLE_LANG, KONTROLLE_NAME, naechsteNachKontrolle, plakettenText, planeKontrolle, type KontrollArt, type KontrollErgebnis } from '../../lib/mpg/kontrollen'
@@ -35,6 +36,7 @@ export function Blaetter() {
   switch (blatt.art) {
     case 'defekt': return <DefektMelden key={blatt.device.id} device={blatt.device} />
     case 'beheben': return <DefektBeheben key={blatt.defekt.id} defekt={blatt.defekt} />
+    case 'schwere': return <SchwereAendern key={blatt.defekt.id} defekt={blatt.defekt} />
     case 'bestaetigen': return <MeldungBestaetigen key={blatt.meldung.id} meldung={blatt.meldung} />
     case 'ablehnen': return <MeldungAblehnen key={blatt.meldung.id} meldung={blatt.meldung} />
     case 'sperren': return <Sperren key={blatt.device.id} device={blatt.device} />
@@ -130,6 +132,36 @@ function KnopfZeile({ abbrechen, abbrechenText = 'Abbrechen', los, losText, frei
   )
 }
 
+/**
+ * Schweregrad wählen. Hoch und kritisch stehen rot: Sie sperren das Gerät. `vorher` nennt die
+ * bisherige Einschätzung (gemeldet von außen, bisher am Defekt).
+ */
+function SchwereWahl({ wert, setWert, fest, label = 'Schweregrad', vorher }: {
+  wert: Severity; setWert: (s: Severity) => void; fest: boolean; label?: string; vorher?: { text: string; schwere: Severity }
+}) {
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 6 }}>
+        <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)' }}>{label}</div>
+        {vorher && <div style={{ ...kursivGrau }}>{vorher.text}: {SCHWERE_NAME[vorher.schwere]}</div>}
+      </div>
+      <div role="radiogroup" aria-label={label} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {(Object.keys(SCHWERE_NAME) as Severity[]).map(s => {
+          const an = wert === s
+          return (
+            <button key={s} type="button" role="radio" aria-checked={an} disabled={fest} onClick={() => setWert(s)} style={{
+              padding: '11px 10px', borderRadius: 10, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: fest ? 'default' : 'pointer',
+              border: `1.5px solid ${an ? (sperrtDefekt(s) ? '#dc2626' : 'var(--lbf-akzent)') : 'var(--lbf-border)'}`,
+              background: an ? (sperrtDefekt(s) ? 'var(--lbf-fehler-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)') : 'transparent',
+              color: sperrtDefekt(s) ? 'var(--lbf-fehler-text)' : 'var(--lbf-akzent)',
+            }}>{SCHWERE_NAME[s]}</button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Defekt melden ─────────────────────────────────────────────────────────
 
 function DefektMelden({ device }: { device: Device }) {
@@ -186,22 +218,7 @@ function DefektMelden({ device }: { device: Device }) {
             onChange={e => setForm({ ...form, description: e.target.value })}
             placeholder="Was genau ist defekt? Wie macht sich der Fehler bemerkbar?" style={{ ...eingabe, resize: 'vertical' }} />
         </Feld>
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--lbf-akzent)', marginBottom: 6 }}>Schweregrad</div>
-          <div role="radiogroup" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {(Object.keys(SCHWERE_NAME) as Severity[]).map(s => {
-              const an = form.severity === s
-              return (
-                <button key={s} type="button" role="radio" aria-checked={an} disabled={fest} onClick={() => setForm({ ...form, severity: s })} style={{
-                  padding: '11px 10px', borderRadius: 10, fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: fest ? 'default' : 'pointer',
-                  border: `1.5px solid ${an ? (sperrtDefekt(s) ? '#dc2626' : 'var(--lbf-akzent)') : 'var(--lbf-border)'}`,
-                  background: an ? (sperrtDefekt(s) ? 'var(--lbf-fehler-grund)' : 'rgba(var(--lbf-rot-rgb),0.06)') : 'transparent',
-                  color: sperrtDefekt(s) ? 'var(--lbf-fehler-text)' : 'var(--lbf-akzent)',
-                }}>{SCHWERE_NAME[s]}</button>
-              )
-            })}
-          </div>
-        </div>
+        <SchwereWahl wert={form.severity} setWert={s => setForm({ ...form, severity: s })} fest={fest} />
         {sperrtDefekt(form.severity)
           ? <Hinweis ton="warn">Bei „{SCHWERE_NAME[form.severity]}“ wird das Gerät gesperrt, bis der Defekt behoben ist.</Hinweis>
           : <Haken an={form.sperren} setAn={b => setForm({ ...form, sperren: b })} gesperrt={fest} titel="Gerät sperren" text="Als nicht einsatzbereit markieren" />}
@@ -304,7 +321,9 @@ function MeldungBestaetigenFormular({ meldung }: { meldung: ExternalReport }) {
   // Ging eine Bestätigung unklar aus, wird genau sie erneut gesendet
   const [versuch, setVersuch] = useState(() => m.unklareBestaetigung(meldung.id))
   const [anmerkung, setAnmerkung] = useState(versuch?.anmerkung ?? '')
-  const [sperren, setSperren] = useState(versuch?.sperren ?? sperrtDefekt(meldung.severity))
+  // Die Schwere schätzt ein, wer bestätigt (vorbelegt mit der gemeldeten). Hoch oder kritisch sperrt immer.
+  const [schwere, setSchwere] = useState<Severity>(versuch?.schwere ?? meldung.severity)
+  const [sperren, setSperren] = useState(versuch?.sperren ?? false)
   const geraetGeladen = m.devices.some(d => d.id === meldung.device_id)
 
   async function bestaetigen() {
@@ -315,15 +334,17 @@ function MeldungBestaetigenFormular({ meldung }: { meldung: ExternalReport }) {
       const geraetDa = offen ? await m.gibtEs('mpg_devices', meldung.device_id) : true
       // Ist ein früherer Versuch teilweise angekommen (einzeln geschrieben), stehen Defekt oder
       // Eintrag mit der Kennung der Meldung schon da — dann nur noch den Rest senden
-      const defektDa = offen ? await m.gibtEs('mpg_defects', meldung.id) : false
+      // Seine Schwere zählt dann: Hat ein früherer Versuch (auch von einem anderen Gerät) den Defekt
+      // schon „kritisch“ angelegt, sperrt das Gerät, auch wenn hier eine geringere gewählt ist
+      const vorhanden = offen ? (await pb.collection('mpg_defects').getList<Defect>(1, 1, { filter: pb.filter('id = {:id}', { id: meldung.id }), fields: 'id,severity', ...pbOptionen() })).items[0] : undefined
       const eintragDa = offen && m.buch ? await m.gibtEs('mpg_ereignisse', meldung.id) : false
-      return { offen, geraetDa, defektDa, eintragDa }
+      return { offen, geraetDa, defektDa: !!vorhanden, defektSchwere: vorhanden?.severity, eintragDa }
     })
     if (!vorab.ok || !vorab.wert.offen) { Promise.all([m.loadExternalReports(), m.loadDefects(), m.loadDevices()]).catch(() => undefined); return }
-    const stand = versuch ?? { anmerkung, sperren: sperren || sperrtDefekt(meldung.severity), seit: new Date().toISOString() }
+    const stand = versuch ?? { anmerkung, sperren: sperren || sperrtDefekt(schwere), schwere, seit: new Date().toISOString() }
     // Der Defekt trägt die ID der Meldung: Eine Meldung kann so nur einen Defekt erzeugen,
     // auch nach Neuladen, erneutem Öffnen oder von einem zweiten Gerät aus
-    const anfragen = planeBestaetigung({ meldung: { ...meldung, device_name: m.geraeteName(meldung.device_id, meldung.device_name) }, anmerkung: stand.anmerkung, sperren: stand.sperren, geraetDa: vorab.wert.geraetDa, wer: m.wer(), defektId: meldung.id, buch: m.buch })
+    const anfragen = planeBestaetigung({ meldung: { ...meldung, device_name: m.geraeteName(meldung.device_id, meldung.device_name) }, anmerkung: stand.anmerkung, sperren: stand.sperren, schwere: (vorab.wert.defektDa && vorab.wert.defektSchwere) || stand.schwere, geraetDa: vorab.wert.geraetDa, wer: m.wer(), defektId: meldung.id, buch: m.buch })
       .filter(a => !(a.aktion === 'create' && a.id === meldung.id && ((a.collection === 'mpg_defects' && vorab.wert.defektDa) || (a.collection === 'mpg_ereignisse' && vorab.wert.eintragDa))))
     m.aendereUnklar(u => ({ ...u, bestaetigungen: { ...u.bestaetigungen, [meldung.id]: stand } }))
     const gesperrt = anfragen.some(a => a.collection === 'mpg_devices')
@@ -359,18 +380,109 @@ function MeldungBestaetigenFormular({ meldung }: { meldung: ExternalReport }) {
           </div>
         </div>
         <MeldungAngaben meldung={meldung} />
+        <SchwereWahl wert={schwere} setWert={setSchwere} fest={fest} label="Eigene Einschätzung" vorher={{ text: 'Gemeldet', schwere: meldung.severity }} />
         <Feld label="Anmerkung (optional)">
           <textarea value={anmerkung} readOnly={fest} onChange={e => setAnmerkung(e.target.value)} rows={3}
             placeholder="z. B. Gerät gesichtet, Ersatz auf RTW 2 gelegt …" style={{ ...eingabe, resize: 'vertical' }} />
         </Feld>
         {m.geraeteGeladen && !geraetGeladen
           ? <Hinweis>Das Gerät gibt es nicht mehr — es wird nur der Defekt-Eintrag angelegt.</Hinweis>
-          : sperrtDefekt(meldung.severity)
-            ? <Hinweis ton="warn">Ein Defekt-Eintrag wird angelegt. Bei „{SCHWERE_NAME[meldung.severity]}“ wird das Gerät gesperrt, bis der Defekt behoben ist.</Hinweis>
+          : sperrtDefekt(schwere)
+            ? <Hinweis ton="warn">Ein Defekt-Eintrag wird angelegt. Bei „{SCHWERE_NAME[schwere]}“ wird das Gerät gesperrt, bis der Defekt behoben ist.</Hinweis>
             : <Haken an={sperren} setAn={setSperren} gesperrt={fest} titel="Gerät sperren" text="Als nicht einsatzbereit markieren. Ein Defekt-Eintrag wird in jedem Fall angelegt." />}
         {versuch && !m.busy && <Hinweis>Ob diese Bestätigung gespeichert wurde, ist unklar. Erneut senden legt den Defekt nicht doppelt an.</Hinweis>}
         <KnopfZeile abbrechen={() => m.setBlatt(null)} abbrechenText={versuch ? 'Schließen' : 'Abbrechen'}
           los={bestaetigen} losText={versuch ? 'Erneut senden' : 'Bestätigen & Defekt anlegen'} frei />
+      </div>
+    </Blatt>
+  )
+}
+
+// ── Schwere eines offenen Defekts ändern (MPG verwalten) ──────────────────
+
+function SchwereAendern({ defekt }: { defekt: Defect }) {
+  const m = useMpg()
+  // Eine ID je Blatt für den Eintrag im Gerätebuch: erneutes Senden legt ihn nicht doppelt an
+  const { versuch, id, merke, unklarNach } = useBlattVersuch(`schwere:${defekt.id}`)
+  const unklar = !!versuch
+  const gesendet = versuch?.anfragen.find(a => a.collection === 'mpg_defects')?.body.severity as Severity | undefined
+  const [schwere, setSchwere] = useState<Severity>(gesendet ?? defekt.severity)
+  const [begruendung, setBegruendung] = useState(() => eintragText(versuch).split('\nBegründung: ')[1] ?? '')
+  const schliessen = () => m.setBlatt(null)
+  const ueber = m.geraeteName(defekt.device_id, defekt.device_name)
+  if (!m.darfVerwalten && !versuch) return <Blatt ueber={ueber} titel="Schwere ändern" onClose={schliessen}><NurVerwalter was="Die Schwere eines Defekts ändern" /></Blatt>
+
+  const geraet = m.devices.find(d => d.id === defekt.device_id)
+  const rauf = sperrtDefekt(schwere) && !sperrtDefekt(defekt.severity)
+  const runter = schwereBraucht(defekt.severity, schwere)
+  const frei = unklar || (schwere !== defekt.severity && (!runter || !m.buch || !!begruendung.trim()))
+  const fertig = () => { merke(null); schliessen(); Promise.all([m.loadDefects(), m.loadDevices()]).catch(() => undefined) }
+
+  async function aendern() {
+    if (versuch && !altenVersuchSenden(versuch.seit)) return
+    // Die Schwere, die gesendet wird (beim erneuten Senden die aus dem festgehaltenen Plan)
+    const ziel = (versuch?.anfragen.find(a => a.collection === 'mpg_defects')?.body.severity as Severity | undefined) ?? schwere
+    const eintrag = versuch?.anfragen.find(a => a.collection === 'mpg_ereignisse' && a.aktion === 'create')
+    // Stand am Server: Die Liste kann alt sein (ein anderer Admin hat die Schwere geändert, das Gerät
+    // ist außer Betrieb), und ein unklarer Versuch kann schon angekommen sein
+    const vorab = await m.mitSperre(async () => {
+      const jetzt = await pb.collection('mpg_defects').getOne<Defect>(defekt.id, { fields: 'id,status,severity,description,device_id,device_name,updated', ...pbOptionen() })
+      const eintragDa = !!eintrag && m.buch && await m.gibtEs('mpg_ereignisse', eintrag.id)
+      const sperrtNeu = !versuch && sperrtDefekt(ziel) && !sperrtDefekt(jetzt.severity)
+      const g = sperrtNeu
+        ? await pb.collection('mpg_devices').getOne<Device>(jetzt.device_id, { fields: 'id,ausser_betrieb', ...pbOptionen() })
+          .catch((e: { status?: number }) => { if (e?.status === 404) return null; throw e })
+        : null
+      return { jetzt, eintragDa, geraetDa: !!g && !istAusserBetrieb(g) }
+    })
+    if (!vorab.ok) return
+    const { jetzt, eintragDa, geraetDa } = vorab.wert
+    if (jetzt.severity === ziel) { m.showMsg(versuch ? 'War bereits gespeichert' : 'War bereits so eingeschätzt'); fertig(); return }
+    if (jetzt.status === 'resolved') { m.showMsg('Dieser Defekt ist inzwischen behoben.', 'error'); fertig(); return }
+    let anfragen: Anfrage[]
+    if (versuch) {
+      // Eintrag da und als Sammelbuchung gesendet: Es kam alles an, danach hat jemand die Schwere
+      // geändert — nicht zurückdrehen
+      if (eintragDa && !versuch.einzeln) { m.showMsg('War bereits gespeichert. Die Schwere wurde danach noch einmal geändert.'); fertig(); return }
+      // updatedVorher ist hier der Stand des Defekts vor dem ersten Versuch
+      const unveraendert = !!versuch.updatedVorher && jetzt.updated === versuch.updatedVorher
+      if (!unveraendert && !confirm(`Seit dem ersten Versuch wurde der Defekt geändert (jetzt „${SCHWERE_NAME[jetzt.severity]}“), vielleicht hat ihn jemand neu eingeschätzt.\n\nTrotzdem „${SCHWERE_NAME[ziel]}“ senden?`)) return
+      anfragen = eintragDa ? restNachAnker(versuch.anfragen) : versuch.anfragen
+    } else {
+      // Inzwischen anders eingeschätzt: Vorschlag und Hinweise (Begründung, Sperre) passten nicht mehr
+      if (jetzt.severity !== defekt.severity) {
+        m.showMsg(`Die Schwere wurde inzwischen geändert (jetzt „${SCHWERE_NAME[jetzt.severity]}“). Bitte neu prüfen.`, 'error')
+        fertig(); return
+      }
+      anfragen = planeSchwere({
+        defekt: { ...jetzt, device_name: m.geraeteName(jetzt.device_id, jetzt.device_name) }, schwere, begruendung,
+        geraetDa, wer: m.wer(), id, buch: m.buch,
+      })
+    }
+    const sperrt = anfragen.some(a => a.collection === 'mpg_devices')
+    const r = await m.ausfuehren(anfragen, sperrt ? 'Schwere geändert — Gerät gesperrt' : 'Schwere geändert')
+    if (r === 'ok') fertig()
+    else if (r === 'unklar') unklarNach(versuch?.anfragen ?? anfragen, defekt.device_id, jetzt.updated ?? '')
+  }
+
+  return (
+    <Blatt ueber={ueber} titel="Schwere ändern" onClose={schliessen} gesperrt={m.busy}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div style={{ ...kursivGrau, fontSize: 13, whiteSpace: 'pre-line' }}>{defekt.description}</div>
+        <SchwereWahl wert={schwere} setWert={setSchwere} fest={unklar || m.busy} label="Neue Einschätzung" vorher={{ text: 'Bisher', schwere: defekt.severity }} />
+        {rauf && !unklar && (geraet && istAusserBetrieb(geraet)
+          ? <Hinweis>Das Gerät ist außer Betrieb — es wird nicht gesperrt.</Hinweis>
+          : <Hinweis ton="warn">Bei „{SCHWERE_NAME[schwere]}“ wird das Gerät gesperrt, bis der Defekt behoben ist.</Hinweis>)}
+        {runter && <Hinweis>Der Defekt sperrt danach nicht mehr.{geraet?.operational === false ? ' Das Gerät bleibt gesperrt, bis jemand mit „MPG verwalten“ es freigibt.' : ''}</Hinweis>}
+        {m.buch && (
+          <Feld label={runter ? 'Begründung *' : 'Begründung (optional)'} hinweis="Steht im Gerätebuch.">
+            <textarea value={begruendung} onChange={e => setBegruendung(e.target.value)} rows={3} readOnly={m.busy || unklar}
+              placeholder="z. B. Gerät gesichtet: nur Kratzer am Gehäuse, Funktion in Ordnung …" style={{ ...eingabe, resize: 'vertical' }} />
+          </Feld>
+        )}
+        {unklar && !m.busy && <UnklarHinweis />}
+        <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
+          los={aendern} losText={unklar ? 'Erneut senden' : 'Schwere ändern'} frei={frei} gefahr={rauf} />
       </div>
     </Blatt>
   )

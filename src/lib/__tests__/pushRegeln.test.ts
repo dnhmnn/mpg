@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { runInNewContext } from 'node:vm'
 import { createHash, createHmac } from 'node:crypto'
+import { planeBestaetigung, planeDefekt, planeSchwere } from '../mpg/aktionen'
 
 // Die Regeln der Push-Benachrichtigungen laufen in PocketBase (pb_hooks, CommonJS). Hier
 // derselbe Code, wie dort in einem eigenen Kontext mit module.exports ausgeführt
@@ -523,6 +524,19 @@ describe('Texte (3.2)', () => {
       const g = R.grundAusEreignis('gesperrt', frei, null)
       expect(g).toBe('von Hand gesperrt')
     }
+  })
+  it('grundAusEreignis erkennt die Sperren aus den MPG-Plänen (auch mit eigener Schwere)', () => {
+    const wer = { organization_id: 'org', name: 'Lena Berger' }
+    const meldung = { id: 'm1', device_id: 'g1', device_name: 'Defi', description: 'Kabel lose', severity: 'low' as const }
+    const grund = (plan: { collection: string; body: Record<string, unknown> }[]) => {
+      const e = plan.find(a => a.collection === 'mpg_ereignisse')
+      return R.grundAusEreignis(e?.body.art, e?.body.text, null)
+    }
+    expect(grund(planeBestaetigung({ meldung, anmerkung: '', sperren: false, schwere: 'critical', geraetDa: true, wer, defektId: 'm1', buch: true }))).toBe('Meldung von außen bestätigt')
+    expect(grund(planeBestaetigung({ meldung: { ...meldung, severity: 'high' }, anmerkung: '', sperren: true, geraetDa: true, wer, defektId: 'm1', buch: true }))).toBe('Meldung von außen bestätigt')
+    expect(grund(planeDefekt({ geraet: { id: 'g1', name: 'Defi' }, beschreibung: 'x', schwere: 'high', sperren: true, wer, id: 'd1', buch: true }))).toBe('Defekt gemeldet')
+    // Hochstufen durch „MPG verwalten“: eine Entscheidung von Hand
+    expect(grund(planeSchwere({ defekt: { id: 'd1', device_id: 'g1', device_name: 'Defi', description: 'x', severity: 'medium' }, schwere: 'high', begruendung: '', geraetDa: true, wer, id: 'e1', buch: true }))).toBe('von Hand gesperrt')
   })
   it('nameKurz: höchstens 60 Zeichen, mit @ → Jemand', () => {
     expect(R.nameKurz('Max Muster')).toBe('Max Muster')
