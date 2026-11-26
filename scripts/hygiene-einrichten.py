@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Responda: Hygiene einrichten (Owner, 23.11.2026: Reinigung und Desinfektion von Fahrzeugen, Räumen,
-# Rucksäcken, Geräten und Material nach Intervall und Checkliste; jede Durchführung ist ein Nachweis).
+# Rucksäcken, Geräten und Material nach Intervall und Checkliste; jede Durchführung ist ein Nachweis.
+# Owner, 26.11.2026: „Checklisten bearbeiten“ — Checklisten-Vorlagen der Organisation in hygiene_vorlagen).
 #
 # Aufruf auf dem Server (erst den Hook kopieren und PocketBase neu starten, siehe docs/pocketbase-regeln.md,
 # „Hygiene: API-Regeln“):
@@ -11,11 +12,13 @@
 #    Nur mit `zurueck <datei> users` auch users, und nur wenn dort noch genau die neue Fassung steht.)
 #
 # 1. Prüft, dass der Hook läuft (pb_hooks/hygiene.pb.js: GET /api/responda/hygiene/quellen ohne Anmeldung
-#    antwortet 401, ohne Hook 404). Ohne Hook setzt „anwenden“ keine Regeln.
+#    antwortet 401, ohne Hook 404), und zwar im Stand mit Vorlagen (GET /api/responda/hygiene/stand als
+#    Superuser: fassung 2; der Stand davor antwortet 404). Sonst setzt „anwenden“ keine Regeln.
 # 2. Prüft, ob die Batch-API an ist (die App schreibt Durchführungen als Sammelbuchung, genau einmal).
-# 3. Legt hygiene_objekte und hygiene_durchfuehrungen an (gesperrt, bis die Regeln gesetzt sind) oder
-#    ergänzt fehlende Felder und Indizes. Felder mit anderem Typ zeigt es nur.
-# 4. Regeln der beiden Sammlungen: zeigt, was es täte; mit „anwenden“ nach einer Sicherung setzen.
+# 3. Legt hygiene_objekte, hygiene_durchfuehrungen und hygiene_vorlagen an (gesperrt, bis die Regeln
+#    gesetzt sind) oder ergänzt fehlende Felder (etwa hygiene_objekte.vorlage_id) und Indizes. Felder mit
+#    anderem Typ zeigt es nur.
+# 4. Regeln der drei Sammlungen: zeigt, was es täte; mit „anwenden“ nach einer Sicherung setzen.
 # 5. users: das neue Recht hygiene_verwalten in die Liste der Rechte, die Ausbildungs-Verwalter nicht
 #    vergeben dürfen (Update, Create, Übergangsregel), und zwar in der Fassung, die auch auf PocketBase 0.23.4
 #    wirkt (die bisherige wirkt dort nicht, siehe unten). Nur wenn die Regel genau einer bekannten Fassung in
@@ -53,6 +56,14 @@ ZIEL = {
         "updateRule": None,
         "deleteRule": None,
     },
+    # Wie die Objekte: lesen mit Zugang, einrichten mit „Hygiene verwalten“, archivieren statt löschen
+    "hygiene_vorlagen": {
+        "listRule": f"{AKTIV} && {ORG} && {ZUGANG}",
+        "viewRule": f"{AKTIV} && {ORG} && {ZUGANG}",
+        "createRule": f"{AKTIV} && {NEU_ORG} && {VERWALTEN}",
+        "updateRule": f"{AKTIV} && {ORG} && {BLEIBT} && {VERWALTEN}",
+        "deleteRule": None,
+    },
 }
 
 # ── Felder (Datenmodell: src/lib/hygiene/typen.ts) ──────────────────────────────────────────────────
@@ -77,6 +88,7 @@ FELDER = {
         auswahl("quelle", ["mpg_geraet", "lager_ort", "lager_satz", "lager_artikel"]),
         text("quelle_id", False, 64),
         text("quelle_name", False, 200),
+        text("vorlage_id", False, 64),
         datum("archiviert"),
     ] + ZEITEN,
     "hygiene_durchfuehrungen": [
@@ -93,6 +105,15 @@ FELDER = {
         text("user_id"),
         text("user_name", False, 200),
     ] + ZEITEN,
+    "hygiene_vorlagen": [
+        text("organization_id", True),
+        text("name", True, 120),
+        auswahl("art", ["fahrzeug", "raum", "rucksack", "geraet", "material", "sonstiges"], True),
+        auswahl("intervall", ["taeglich", "woechentlich", "tage", "monatlich", "benutzung"], True),
+        zahl_("intervall_tage", 365),
+        jsonfeld("punkte"),
+        datum("archiviert"),
+    ] + ZEITEN,
 }
 
 INDIZES = {
@@ -102,6 +123,9 @@ INDIZES = {
     "hygiene_durchfuehrungen": [
         ("idx_hygiene_df_org_zeit", "CREATE INDEX `idx_hygiene_df_org_zeit` ON `hygiene_durchfuehrungen` (`organization_id`, `zeitpunkt`)"),
         ("idx_hygiene_df_objekt", "CREATE INDEX `idx_hygiene_df_objekt` ON `hygiene_durchfuehrungen` (`objekt_id`)"),
+    ],
+    "hygiene_vorlagen": [
+        ("idx_hygiene_vorlagen_org", "CREATE INDEX `idx_hygiene_vorlagen_org` ON `hygiene_vorlagen` (`organization_id`)"),
     ],
 }
 
@@ -302,8 +326,12 @@ def main():
 
     print("\n1. Hook pb_hooks/hygiene.pb.js")
     s, _ = anfrage("GET", "/api/responda/hygiene/quellen", mit_token=False)
-    hook = s == 401
-    if hook: ok("läuft (Route quellen antwortet ohne Anmeldung 401)")
+    da = s == 401
+    s2, d2 = anfrage("GET", "/api/responda/hygiene/stand")
+    fassung = d2.get("fassung") if s2 == 200 and isinstance(d2, dict) else None
+    hook = da and isinstance(fassung, int) and not isinstance(fassung, bool) and fassung >= 2
+    if hook: ok("läuft, Stand mit Checklisten-Vorlagen (Route quellen ohne Anmeldung 401, Route stand: Fassung " + str(fassung) + ")")
+    elif da: warn(f"läuft, aber im alten Stand ohne Checklisten-Vorlagen (Route stand antwortet {s2}). Neu kopieren: cp /opt/responda-quelle/pb_hooks/hygiene.pb.js /opt/pb_hooks/ und PocketBase neu starten. Bis dahin setzt dieses Skript keine Regeln (Vorlagen würden nicht geprüft).")
     else: warn(f"antwortet {s} statt 401 (404 heißt: Hook nicht geladen). Erst kopieren: cp /opt/responda-quelle/pb_hooks/hygiene.pb.js /opt/pb_hooks/ und PocketBase neu starten. Ohne Hook setzt dieses Skript keine Regeln (Nachweise wären änderbar, Namen nicht vom Server).")
 
     print("\n2. Batch-API")

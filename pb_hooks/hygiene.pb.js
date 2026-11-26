@@ -6,6 +6,10 @@
 //                            Wird archiviert statt gelöscht, solange Durchführungen darauf verweisen.
 //   hygiene_durchfuehrungen  Nachweise — nur anlegen, nie ändern oder löschen. Eine Korrektur ist
 //                            eine neue Durchführung mit Bemerkung.
+//   hygiene_vorlagen         Checklisten-Vorlagen der Organisation (Owner, 26.11.2026: „Checklisten
+//                            bearbeiten“). Werden archiviert statt gelöscht, solange ein Objekt darauf
+//                            verweist (hygiene_objekte.vorlage_id). Vorlagen von Responda stehen im Code
+//                            (src/lib/hygiene/checklisten.ts, Kennung „std:…“), nicht in der Datenbank.
 // Datenmodell und Grenzen: src/lib/hygiene/typen.ts (NACHTRAG_TAGE, MAX_PUNKTE, MAX_PUNKT_LAENGE,
 // MAX_BEMERKUNG, MAX_NAME — hier dieselben Zahlen). Verweise auf MPG und Lager stehen als Text-Kennung
 // mit einer Kopie des Namens am Objekt, nie als Relation.
@@ -17,9 +21,12 @@
 // nicht. Die Prüfung der Felder gilt für alle außer dem Superuser. Nicht abgedeckt: Felder einer
 // Sammlung in der Admin-Oberfläche entfernen (dabei gehen deren Werte verloren) — das bitte unterlassen.
 //
-// Route (nur angemeldete, aktive Konten mit „Hygiene verwalten“, keine Teilnehmenden):
+// Routen:
 //   GET /api/responda/hygiene/quellen   Geräte, Lager-Orte, Sollausstattungen und Artikel der eigenen
-//                                       Organisation für die Vorschläge (src/lib/hygiene/vorschlaege.ts)
+//                                       Organisation für die Vorschläge (src/lib/hygiene/vorschlaege.ts);
+//                                       nur angemeldete, aktive Konten mit „Hygiene verwalten“, keine
+//                                       Teilnehmenden
+//   GET /api/responda/hygiene/stand     Stand dieses Hooks für scripts/hygiene-einrichten.py (nur Superuser)
 //
 // Muss in den Hook-Ordner der laufenden PocketBase (/opt/pb_hooks) kopiert werden; PocketBase lädt
 // ihn nach einem Neustart.
@@ -67,11 +74,35 @@ onRecordDelete((e) => {
   e.next()
 }, "hygiene_objekte")
 
-// Sammlungen mit Nachweisen bleiben — auch beim Import mit „fehlende löschen“ — und behalten ihren
+// Eine Vorlage, auf die ein Objekt verweist, bleibt (archivieren statt löschen) — auch beim Leeren der
+// Sammlung. Fehlen die Sammlung der Objekte oder ihr Feld vorlage_id, verweist nichts; jeder andere Fehler
+// verhindert das Löschen. Zweimal wie bei den Objekten (eigene Meldung über die API).
+onRecordDeleteRequest((e) => {
+  let da = true
+  try { da = !!e.app.findCollectionByNameOrId("hygiene_objekte").fields.getByName("vorlage_id") } catch (err) { da = false }
+  if (da && e.app.findRecordsByFilter("hygiene_objekte", "vorlage_id = {:id}", "", 1, 0, { id: e.record.id }).length > 0) {
+    throw new BadRequestError("Diese Vorlage ist an Objekten hinterlegt und bleibt. Bitte archivieren.")
+  }
+  e.next()
+}, "hygiene_vorlagen")
+
+onRecordDelete((e) => {
+  let da = true
+  try { da = !!e.app.findCollectionByNameOrId("hygiene_objekte").fields.getByName("vorlage_id") } catch (err) { da = false }
+  if (da && e.app.findRecordsByFilter("hygiene_objekte", "vorlage_id = {:id}", "", 1, 0, { id: e.record.id }).length > 0) {
+    throw new BadRequestError("Diese Vorlage ist an Objekten hinterlegt und bleibt. Bitte archivieren.")
+  }
+  e.next()
+}, "hygiene_vorlagen")
+
+// Die Sammlungen der Hygiene bleiben — auch beim Import mit „fehlende löschen“ — und behalten ihren
 // Namen (umbenannt griffe keiner dieser Hooks mehr)
 onCollectionDelete((e) => {
   if (["hygiene_objekte", "hygiene_durchfuehrungen"].includes(e.collection.name)) {
     throw new BadRequestError("Diese Sammlung enthält Nachweise der Hygiene und bleibt.")
+  }
+  if (e.collection.name === "hygiene_vorlagen") {
+    throw new BadRequestError("Diese Sammlung enthält die Checklisten-Vorlagen der Hygiene und bleibt.")
   }
   e.next()
 })
@@ -80,15 +111,20 @@ onCollectionDeleteRequest((e) => {
   if (["hygiene_objekte", "hygiene_durchfuehrungen"].includes(e.collection.name)) {
     throw new BadRequestError("Diese Sammlung enthält Nachweise der Hygiene und bleibt.")
   }
+  if (e.collection.name === "hygiene_vorlagen") {
+    throw new BadRequestError("Diese Sammlung enthält die Checklisten-Vorlagen der Hygiene und bleibt.")
+  }
   e.next()
 })
 
 onCollectionUpdate((e) => {
-  const namen = ["hygiene_objekte", "hygiene_durchfuehrungen"]
+  const namen = ["hygiene_objekte", "hygiene_durchfuehrungen", "hygiene_vorlagen"]
   let bisher = ""
   try { bisher = e.app.findCollectionByNameOrId(e.collection.id).name } catch (err) { bisher = "" }
   if (namen.includes(bisher) && e.collection.name !== bisher) {
-    throw new BadRequestError("Diese Sammlung enthält Nachweise der Hygiene und behält ihren Namen.")
+    throw new BadRequestError(bisher === "hygiene_vorlagen"
+      ? "Diese Sammlung enthält die Checklisten-Vorlagen der Hygiene und behält ihren Namen."
+      : "Diese Sammlung enthält Nachweise der Hygiene und behält ihren Namen.")
   }
   e.next()
 })
@@ -96,8 +132,8 @@ onCollectionUpdate((e) => {
 // ── Objekte ────────────────────────────────────────────────────────────────
 
 // Anlegen und Ändern (nicht Superuser): Felder prüfen und säubern, Organisation bleibt, Herkunft aus
-// MPG oder Lager nur aus derselben Organisation (Name der Quelle setzt der Server), Zeitpunkt des
-// Archivierens setzt der Server.
+// MPG oder Lager nur aus derselben Organisation (Name der Quelle setzt der Server), Vorlage von Responda
+// („std:…“) oder der eigenen Organisation, Zeitpunkt des Archivierens setzt der Server.
 const hygieneObjektPruefen = (e) => {
   if (e.hasSuperuserAuth()) return e.next()
   const MAX_NAME = 120, MAX_PUNKTE = 40, MAX_PUNKT_LAENGE = 200
@@ -178,6 +214,24 @@ const hygieneObjektPruefen = (e) => {
     r.set("quelle_id", quelleId)
   }
 
+  // Vorlage, aus der die Checkliste stammt: leer, eine von Responda („std:…“, stehen im Code) oder eine der
+  // eigenen Organisation in Gebrauch. Nur prüfen, wenn sie neu ist oder sich ändert — eine inzwischen
+  // archivierte Vorlage blockiert das Ändern eines Objekts nie. Ohne das Feld (Skript noch nicht gelaufen)
+  // kommt hier immer leer an.
+  const vorlage = text("vorlage_id").trim()
+  if (vorlage !== "" && (neu || vorlage !== alt.getString("vorlage_id"))) {
+    if (vorlage.indexOf("std:") === 0) {
+      if (!/^std:[a-z_]{1,40}$/.test(vorlage)) throw new BadRequestError("Diese Vorlage gibt es nicht.")
+    } else {
+      // Nicht gefunden und andere Organisation sagen dasselbe (keine Auskunft über fremde Kennungen)
+      let v = null
+      if (vorlage.length <= 64) { try { v = e.app.findRecordById("hygiene_vorlagen", vorlage) } catch (err) { v = null } }
+      if (!v || v.getString("organization_id") !== org) throw new BadRequestError("Die Vorlage wurde in deiner Organisation nicht gefunden.")
+      if (v.getString("archiviert")) throw new BadRequestError("Diese Vorlage ist archiviert — bitte eine Vorlage in Gebrauch wählen.")
+    }
+  }
+  if (vorlage !== text("vorlage_id")) r.set("vorlage_id", vorlage)
+
   // Archivieren: Zeitpunkt setzt der Server; ein schon archiviertes Objekt behält seinen Zeitpunkt
   const archiviert = text("archiviert")
   const vorher = neu ? "" : alt.getString("archiviert")
@@ -188,6 +242,70 @@ const hygieneObjektPruefen = (e) => {
 
 onRecordCreateRequest(hygieneObjektPruefen, "hygiene_objekte")
 onRecordUpdateRequest(hygieneObjektPruefen, "hygiene_objekte")
+
+// ── Checklisten-Vorlagen ───────────────────────────────────────────────────
+
+// Anlegen und Ändern (nicht Superuser): wie bei den Objekten — Name, Art, Intervall und Checkliste prüfen
+// und säubern, nur in der eigenen Organisation, die beim Ändern bleibt; Zeitpunkt des Archivierens setzt
+// der Server. Rechte prüfen die API-Regeln (Hygiene verwalten).
+const hygieneVorlagePruefen = (e) => {
+  if (e.hasSuperuserAuth()) return e.next()
+  const MAX_NAME = 120, MAX_PUNKTE = 40, MAX_PUNKT_LAENGE = 200
+  const ARTEN = ["fahrzeug", "raum", "rucksack", "geraet", "material", "sonstiges"]
+  const INTERVALLE = ["taeglich", "woechentlich", "tage", "monatlich", "benutzung"]
+  const r = e.record
+  const neu = r.isNew()
+  const alt = neu ? null : r.original()
+  const text = (f) => { try { return String(r.getString(f) || "") } catch (err) { return "" } }
+  const sauber = (s) => String(s).replace(/\s+/g, " ").trim()
+
+  let sammlung = ""
+  try { sammlung = e.auth ? e.auth.collection().name : "" } catch (err) { sammlung = "" }
+  if (!e.auth || sammlung !== "users") throw new ForbiddenError("Bitte melde dich an.")
+  const org = text("organization_id")
+  if (!neu && org !== alt.getString("organization_id")) throw new BadRequestError("Eine Vorlage bleibt in ihrer Organisation.")
+  if (!org || org !== e.auth.getString("organization_id")) throw new ForbiddenError("Vorlagen nur in der eigenen Organisation.")
+
+  const name = sauber(text("name"))
+  if (!name) throw new BadRequestError("Bitte einen Namen für die Vorlage eingeben.")
+  if (name.length > MAX_NAME) throw new BadRequestError("Der Name der Vorlage ist zu lang (höchstens " + MAX_NAME + " Zeichen).")
+  r.set("name", name)
+  if (!ARTEN.includes(text("art"))) throw new BadRequestError("Bitte die Art wählen (Fahrzeug, Raum, Rucksack oder Koffer, Gerät, Material, Sonstiges).")
+
+  const intervall = text("intervall")
+  if (!INTERVALLE.includes(intervall)) throw new BadRequestError("Bitte das Intervall wählen.")
+  if (intervall === "tage") {
+    let tage = NaN
+    try { tage = Number(r.get("intervall_tage")) } catch (err) { tage = NaN }
+    if (!Number.isInteger(tage) || tage < 1 || tage > 365) throw new BadRequestError("Bitte angeben, alle wie viele Tage (1 bis 365).")
+  } else {
+    r.set("intervall_tage", 0)
+  }
+
+  let punkte = null
+  try { punkte = JSON.parse(text("punkte") || "null") } catch (err) { punkte = null }
+  if (!Array.isArray(punkte) || punkte.length === 0) throw new BadRequestError("Die Checkliste braucht mindestens einen Punkt.")
+  if (punkte.length > MAX_PUNKTE) throw new BadRequestError("Die Checkliste hat zu viele Punkte (höchstens " + MAX_PUNKTE + ").")
+  const liste = []
+  for (const p of punkte) {
+    if (typeof p !== "string") throw new BadRequestError("Die Punkte der Checkliste bitte als Text angeben.")
+    const t = sauber(p)
+    if (!t) throw new BadRequestError("Ein Punkt der Checkliste ist leer.")
+    if (t.length > MAX_PUNKT_LAENGE) throw new BadRequestError("Ein Punkt der Checkliste ist zu lang (höchstens " + MAX_PUNKT_LAENGE + " Zeichen).")
+    liste.push(t)
+  }
+  r.set("punkte", liste)
+
+  // Archivieren: Zeitpunkt setzt der Server; eine schon archivierte Vorlage behält ihren Zeitpunkt
+  const archiviert = text("archiviert")
+  const vorher = neu ? "" : alt.getString("archiviert")
+  if (archiviert && vorher) r.set("archiviert", vorher)
+  else if (archiviert) r.set("archiviert", new Date().toISOString().replace("T", " "))
+  return e.next()
+}
+
+onRecordCreateRequest(hygieneVorlagePruefen, "hygiene_vorlagen")
+onRecordUpdateRequest(hygieneVorlagePruefen, "hygiene_vorlagen")
 
 // ── Durchführungen ─────────────────────────────────────────────────────────
 
@@ -331,4 +449,14 @@ routerAdd("GET", "/api/responda/hygiene/quellen", (e) => {
     saetze: liste("inventory_kits", "archiviert", ["name"]),
     artikel: liste("inventory_items", "archiviert", ["name"]),
   })
+})
+
+// ── Stand des Hooks ────────────────────────────────────────────────────────
+
+// Für scripts/hygiene-einrichten.py: Es setzt die Regeln erst, wenn dieser Stand geladen ist (fassung 2 =
+// mit Checklisten-Vorlagen; der Stand davor kennt die Route nicht und antwortet 404). Nur Superuser.
+routerAdd("GET", "/api/responda/hygiene/stand", (e) => {
+  if (!e.auth) return e.json(401, { status: 401, message: "Bitte melde dich an.", grund: "nicht_angemeldet" })
+  if (!e.hasSuperuserAuth()) return e.json(403, { status: 403, message: "Nur für den Superuser.", grund: "nicht_berechtigt" })
+  return e.json(200, { fassung: 2, vorlagen: true })
 })

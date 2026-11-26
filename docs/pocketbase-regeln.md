@@ -2039,14 +2039,21 @@ wird nur angezeigt, nichts wird gesperrt (auch nicht im MPG oder Lager). Datenmo
 
 - **Eintragen** (Durchführungen anlegen, alles lesen): jede Person mit Zugang, also dem Recht
   „MPG & Einstellungen“ (`permissions.dashboard`, wie Geräte prüfen im MPG), auch befristet, und Supervisor.
-- **Einrichten** (Objekte anlegen, ändern, archivieren): nur mit **Hygiene verwalten** — Leitung
-  (`role = "admin"`) und Supervisor immer, sonst das Häkchen `permissions.hygiene_verwalten`, auch befristet.
+- **Einrichten** (Objekte und Checklisten-Vorlagen anlegen, ändern, archivieren): nur mit **Hygiene
+  verwalten** — Leitung (`role = "admin"`) und Supervisor immer, sonst das Häkchen
+  `permissions.hygiene_verwalten`, auch befristet.
 - **Teilnehmende** (`role = "teilnehmer"`) nie, auch nicht mit Häkchen. Alles nur mit aktivem Konto (nicht
   gesperrt, nicht abgelaufen) und nur in der eigenen Organisation.
 - Objekte werden nie gelöscht, solange Durchführungen darauf verweisen (archivieren). Durchführungen werden
   nie geändert oder gelöscht; eine Korrektur ist eine neue Durchführung mit Bemerkung.
 - Verweise auf MPG und Lager stehen als Text-Kennung mit Kopie des Namens am Objekt (`quelle`, `quelle_id`,
   `quelle_name`), nie als Relation: Das Löschen eines Geräts oder Artikels ändert keinen Nachweis.
+- **Checklisten-Vorlagen** (Owner, 26.11.2026: „Checklisten bearbeiten“): Die Organisation legt eigene
+  Vorlagen an (`hygiene_vorlagen`: Name, Art, vorgeschlagenes Intervall, Checkliste), dazu kommen die
+  Vorlagen von Responda im Code (`src/lib/hygiene/checklisten.ts`, Kennung `std:…`, nicht in der Datenbank).
+  Ein Objekt merkt sich in `vorlage_id`, woher seine Checkliste stammt (Text-Kennung, keine Relation); die
+  Punkte selbst stehen kopiert am Objekt, eine Vorlage zu ändern ändert also kein Objekt still. Vorlagen
+  werden archiviert statt gelöscht.
 - Keine Patientendaten: feste Anlässe statt freiem Grund, Punkte nur als Text und erledigt. Namen setzt der
   Server aus dem Konto (`name`, sonst „Unbekannt“), nie die E-Mail-Adresse.
 
@@ -2059,17 +2066,33 @@ wird nur angezeigt, nichts wird gesperrt (auch nicht im MPG oder Lager). Datenmo
    cp pb_hooks/hygiene.pb.js pb_hooks/formular-regeln.js pb_hooks/push-regeln.js /opt/pb_hooks/
    systemctl restart pocketbase
    ```
-2. `python3 scripts/hygiene-einrichten.py` legt `hygiene_objekte` und `hygiene_durchfuehrungen` an (alle Regeln
-   gesperrt, bis sie gesetzt sind) oder ergänzt fehlende Felder und Indizes; Felder mit anderem Typ zeigt es nur.
-   Es prüft, ob der Hook läuft (`GET /api/responda/hygiene/quellen` ohne Anmeldung: 401, ohne Hook 404) und ob
-   die Batch-API an ist (sonst *Settings → Application → Batch API* einschalten, Max. Anfragen 50 oder mehr),
-   und zeigt, welche Regeln es setzen würde. Zeigt nie Namen oder Daten, nur Zahlen. Beliebig oft ausführbar.
-3. `python3 scripts/hygiene-einrichten.py anwenden` sichert die bisherigen Regeln beider Sammlungen und die
+2. `python3 scripts/hygiene-einrichten.py` legt `hygiene_objekte`, `hygiene_durchfuehrungen` und
+   `hygiene_vorlagen` an (alle Regeln gesperrt, bis sie gesetzt sind) oder ergänzt fehlende Felder und Indizes;
+   Felder mit anderem Typ zeigt es nur. Es prüft, ob der Hook läuft (`GET /api/responda/hygiene/quellen` ohne
+   Anmeldung: 401, ohne Hook 404), und zwar im Stand mit Vorlagen (`GET /api/responda/hygiene/stand` als
+   Superuser: `fassung` 2; der Stand davor antwortet 404), und ob die Batch-API an ist (sonst *Settings →
+   Application → Batch API* einschalten, Max. Anfragen 50 oder mehr), und zeigt, welche Regeln es setzen würde.
+   Zeigt nie Namen oder Daten, nur Zahlen. Beliebig oft ausführbar.
+3. `python3 scripts/hygiene-einrichten.py anwenden` sichert die bisherigen Regeln der drei Sammlungen und die
    Update- und Create-Regel von `users` nach `~/hygiene-regeln-vorher-<Zeit>.json` (überschreibt nie eine
    Sicherung; Ordner mit `RESPONDA_SICHERUNG` änderbar) und setzt dann die Regeln unten. Ohne laufenden Hook
-   setzt es keine Regeln. Ist nichts zu ändern, sichert es auch nichts. Zurück:
-   `python3 scripts/hygiene-einrichten.py zurueck <Sicherung>`.
+   oder mit dem Hook im alten Stand (ohne Vorlagen) setzt es keine Regeln. Ist nichts zu ändern, sichert es
+   auch nichts. Zurück: `python3 scripts/hygiene-einrichten.py zurueck <Sicherung>`.
 4. In der Benutzerverwaltung „Hygiene verwalten“ an die vergeben, die außer der Leitung einrichten sollen.
+
+**Nachtrag Checklisten-Vorlagen (26.11.2026), auf dem Server mit Hygiene im bisherigen Stand:**
+```bash
+cd /opt/responda-quelle && git pull
+cp pb_hooks/hygiene.pb.js /opt/pb_hooks/
+systemctl restart pocketbase
+python3 scripts/hygiene-einrichten.py            # legt hygiene_vorlagen an (gesperrt), ergänzt hygiene_objekte.vorlage_id
+python3 scripts/hygiene-einrichten.py anwenden   # Sicherung, dann die Regeln von hygiene_vorlagen
+```
+Der erste Lauf soll unter 1. „Stand mit Checklisten-Vorlagen“ zeigen; steht dort „alter Stand“, ist der Hook
+nicht neu kopiert oder PocketBase nicht neu gestartet. Die Regeln der beiden anderen Sammlungen und von `users`
+stehen schon („schon so“) und bleiben. Bis `anwenden` gelaufen ist, ist `hygiene_vorlagen` gesperrt: Die App
+zeigt dann nur die Vorlagen von Responda. Mit dem alten Hook nähme der Server am Objekt jede `vorlage_id` an,
+die die API-Regeln durchlassen (nur eigene Organisation, nur mit Hygiene verwalten); deshalb den Hook zuerst.
 
 `users`: Das Skript ersetzt die Update-Regel (bzw. die Übergangsregel) und die Create-Regel durch die Fassung
 im Abschnitt „users: Rechte vergeben nur Verantwortliche“: Liste der Rechte, die Ausbildungs-Verwalter nicht
@@ -2103,10 +2126,11 @@ neuer Teilnehmer, den ein Ausbildungs-Verwalter angelegt hat.
 |---|---|---|---|---|
 | `hygiene_objekte` | Aktiv + Organisation + Zugang | Aktiv + neu in der eigenen Organisation + Hygiene verwalten | Aktiv + Organisation, bleibt + Hygiene verwalten | gesperrt |
 | `hygiene_durchfuehrungen` | Aktiv + Organisation + Zugang | Aktiv + neu in der eigenen Organisation + Zugang | gesperrt | gesperrt |
+| `hygiene_vorlagen` | Aktiv + Organisation + Zugang | Aktiv + neu in der eigenen Organisation + Hygiene verwalten | Aktiv + Organisation, bleibt + Hygiene verwalten | gesperrt |
 
 **Gesperrt** heißt: Schloss stehen lassen (null), nicht leeren Text eintragen — leer heißt „öffentlich“.
 Wer einrichten darf, aber keinen Zugang hat (Hygiene verwalten ohne „MPG & Einstellungen“), legt an, sieht die
-Objekte aber nicht; die Leitung hat beides.
+Objekte und Vorlagen aber nicht; die Leitung hat beides.
 
 **Objekte List/Search und View**
 ```
@@ -2137,6 +2161,23 @@ Objekte aber nicht; die Leitung hat beides.
 
 **Durchführungen Update** und **Delete**: gesperrt (null).
 
+**Vorlagen List/Search und View**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now))
+```
+
+**Vorlagen Create**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.hygiene_verwalten = true || @request.auth.role = "admin" || @request.auth.supervisor = true || (@request.auth.temp_permissions.hygiene_verwalten.until ~ " " && @request.auth.temp_permissions.hygiene_verwalten.until > @now))
+```
+
+**Vorlagen Update**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && organization_id = @request.auth.organization_id && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && (@request.auth.permissions.hygiene_verwalten = true || @request.auth.role = "admin" || @request.auth.supervisor = true || (@request.auth.temp_permissions.hygiene_verwalten.until ~ " " && @request.auth.temp_permissions.hygiene_verwalten.until > @now))
+```
+
+**Vorlagen Delete**: gesperrt (null) — archivieren statt löschen.
+
 ### Felder
 
 `hygiene_objekte`: `organization_id` (Text, Pflicht), `name` (Text, Pflicht, höchstens 120), `art` (Auswahl
@@ -2144,14 +2185,20 @@ Objekte aber nicht; die Leitung hat beides.
 `intervall` (Auswahl `taeglich`, `woechentlich`, `tage`, `monatlich`, `benutzung`, Pflicht), `intervall_tage`
 (Zahl, ganz, 0 bis 365), `punkte` (JSON, Liste von Texten), `quelle` (Auswahl `mpg_geraet`, `lager_ort`,
 `lager_satz`, `lager_artikel`, leer = von Hand), `quelle_id` (Text, höchstens 64), `quelle_name` (Text,
-höchstens 200), `archiviert` (Datum, leer = in Gebrauch), `created`, `updated` (Autodate). Index auf
-`organization_id`.
+höchstens 200), `vorlage_id` (Text, höchstens 64: leer, `std:…` oder Kennung aus `hygiene_vorlagen`; seit
+26.11.2026, das Skript ergänzt es), `archiviert` (Datum, leer = in Gebrauch), `created`, `updated` (Autodate).
+Index auf `organization_id`.
 
 `hygiene_durchfuehrungen`: `organization_id` (Text, Pflicht), `objekt_id` (Text, Pflicht), `objekt_name` (Text,
 höchstens 200), `art` (Auswahl `plan`, `anlass`, Pflicht), `anlass` (Auswahl `infektion`, `verschmutzung`,
 `sonstiges`), `einsatz_nummer` (Text, höchstens 40), `punkte` (JSON, Liste von `{text, erledigt}`), `offen`
 (Zahl, ganz, 0 bis 40), `bemerkung` (Text, höchstens 1000), `zeitpunkt` (Datum, Pflicht), `user_id`,
 `user_name` (Text), `created`, `updated` (Autodate). Indizes auf `organization_id, zeitpunkt` und `objekt_id`.
+
+`hygiene_vorlagen` (seit 26.11.2026): `organization_id` (Text, Pflicht), `name` (Text, Pflicht, höchstens 120),
+`art` (Auswahl wie bei den Objekten, Pflicht), `intervall` (Auswahl wie bei den Objekten, Pflicht; Vorschlag für
+neue Objekte), `intervall_tage` (Zahl, ganz, 0 bis 365), `punkte` (JSON, Liste von Texten), `archiviert` (Datum,
+leer = in Gebrauch), `created`, `updated` (Autodate). Index auf `organization_id`.
 
 ### Hook `pb_hooks/hygiene.pb.js`
 
@@ -2161,9 +2208,12 @@ außer dem Superuser.
 
 - `hygiene_durchfuehrungen`: Ändern und Löschen abgelehnt („Nachweise der Hygiene sind unveränderlich — eine
   Korrektur bitte als neue Durchführung mit Bemerkung eintragen.“, „… dürfen nicht gelöscht werden.“).
-- Auch „Truncate“, das Löschen und Umbenennen beider Sammlungen und ein Import mit „fehlende löschen“, der eine
+- Auch „Truncate“, das Löschen und Umbenennen der drei Sammlungen und ein Import mit „fehlende löschen“, der eine
   davon entfernen würde, sind gesperrt. **Nicht abgedeckt:** Felder in der Admin-Oberfläche entfernen.
 - `hygiene_objekte`: Löschen nur ohne Durchführungen („… Bitte archivieren.“), auch beim Leeren der Sammlung.
+- `hygiene_vorlagen`: Löschen (nur der Superuser, die Regel ist gesperrt) nur, solange kein Objekt in
+  `vorlage_id` darauf verweist („Diese Vorlage ist an Objekten hinterlegt und bleibt. Bitte archivieren.“), auch
+  beim Leeren der Sammlung; auch archivierte Objekte zählen.
 - Durchführung anlegen: nur angemeldet aus `users`, nur in der eigenen Organisation; das Objekt muss zur
   Organisation gehören und darf nicht archiviert sein (unbekannt und fremd: dieselbe Meldung); `objekt_name`,
   `user_id`, `user_name` und `offen` (Zahl der nicht erledigten Punkte) setzt der Server, ein mitgeschickter
@@ -2181,6 +2231,17 @@ außer dem Superuser.
   bleibt es beim gesendeten Namen. Geprüft wird nur, wenn die Herkunft neu ist oder sich ändert: Ein später
   gelöschtes Gerät blockiert das Ändern nicht, und der gespeicherte Name bleibt. Ohne Herkunft werden Kennung und
   Name geleert. `archiviert`: den Zeitpunkt setzt der Server; ein archiviertes Objekt behält ihn.
+- `vorlage_id` am Objekt: leer, `std:` gefolgt von 1 bis 40 Zeichen `a`–`z` oder `_` (Vorlage von Responda; welche
+  es gibt, weiß nur die App), oder die Kennung einer Vorlage derselben Organisation, die nicht archiviert ist
+  (unbekannt und fremd: dieselbe Meldung „Die Vorlage wurde in deiner Organisation nicht gefunden.“). Geprüft wird
+  nur, wenn sie neu ist oder sich ändert: Eine inzwischen archivierte Vorlage blockiert das Ändern eines
+  bestehenden Objekts nicht. Leerzeichen am Rand entfernt der Server. Fehlt das Feld noch (Skript nicht gelaufen),
+  kommt immer leer an.
+- Vorlage anlegen und ändern: nur angemeldet aus `users`, nur in der eigenen Organisation, die Organisation bleibt
+  beim Ändern („Eine Vorlage bleibt in ihrer Organisation.“). Name 1 bis 120 Zeichen (mit einfachen
+  Leerzeichen), Art und Intervall aus den Listen, bei `tage` 1 bis 365 Tage (sonst setzt der Server 0),
+  Checkliste 1 bis 40 Punkte, je Text, nicht leer, höchstens 200 Zeichen (gesäubert). `archiviert`: den
+  Zeitpunkt setzt der Server; eine archivierte Vorlage behält ihn, leer nimmt sie wieder in Gebrauch.
 
 Muss ein Nachweis ausnahmsweise wirklich weg (etwa Datenschutz): Datei vorübergehend entfernen, neu starten,
 löschen, Datei zurück, neu starten — und den Vorgang festhalten.
@@ -2198,11 +2259,22 @@ eigene Organisation, je nach Name, höchstens 2000:
 Ohne außer Betrieb genommene Geräte (`ausser_betrieb` gesetzt) und ohne archivierte Orte, Sollausstattungen und
 Artikel (`archiviert`, wo es das Feld gibt). Fehlt eine Sammlung, ist ihre Liste leer.
 
+### Route `GET /api/responda/hygiene/stand`
+
+Für `scripts/hygiene-einrichten.py`: Nur der Superuser bekommt `200 { "fassung": 2, "vorlagen": true }`
+(ohne Anmeldung 401, andere Konten 403). Der Hook vor den Vorlagen kennt die Route nicht (404); dann setzt das
+Skript keine Regeln.
+
 ### Rücknahme
 
 Regeln mit `… zurueck <Sicherung>` zurück (die Sammlungen sind dann wieder gesperrt), danach `hygiene.pb.js`
 aus `/opt/pb_hooks` entfernen und neu starten. Die Sammlungen bleiben (der Hook sperrt ihr Löschen, solange er
-geladen ist). `zurueck` setzt nur Regeln zurück, die seitdem niemand geändert hat. **`users` bleibt auf der neuen
+geladen ist). `zurueck` setzt nur Regeln zurück, die seitdem niemand geändert hat. Nur die Vorlagen zurücknehmen:
+`… zurueck <Sicherung vom Nachtrag>` sperrt `hygiene_vorlagen` wieder (die beiden anderen Sammlungen standen
+dort schon so und bleiben); danach den vorherigen `hygiene.pb.js` kopieren und neu starten. Feld
+`hygiene_objekte.vorlage_id` und Sammlung bleiben. Ganz zurück: erst `… zurueck <Sicherung vom Nachtrag>`,
+dann `… zurueck <Sicherung vom ersten Einrichten>` (die erste Sicherung kennt `hygiene_vorlagen` nicht und
+ließe sie sonst offen), danach `hygiene.pb.js` entfernen. **`users` bleibt auf der neuen
 Fassung:** Die alte wirkt auf 0.23.4 nicht (ein Ausbildungs-Verwalter käme bis zur Leitung), die neue schadet ohne
 Hygiene nicht. Nur mit `… zurueck <Sicherung> users` auch `users`, und nur, wenn dort noch genau die neue Fassung steht.
 
@@ -2223,6 +2295,33 @@ Unveränderlichkeit auch für den Superuser und im Batch, Leeren, Löschen, Umbe
 und Durchführung in einer Buchung und mit einem ungültigen Teil (ganz abgelehnt), die Route mit allen Personen.
 Gegenprobe auf 0.23.4 mit gesetzten Regeln, aber ohne Hook: 57 schlagen an, dann bricht der Lauf ab, weil sich
 die Sammlungen leeren und löschen ließen. Die Rauchprobe (`scripts/hooks-rauchprobe.mjs`) besteht auf beiden.
+
+**Checklisten-Vorlagen (26.11.2026)**, wieder nur erfundene Daten in frischen Verzeichnissen:
+- Nachtrag auf **0.23.4** mit Hygiene im bisherigen Stand (alter Hook, bisheriges Skript mit `anwenden`, Objekte
+  und Durchführungen zweier Organisationen):
+  - Reihenfolge wie oben, erst der neue Hook: Auf der Datenbank ohne `hygiene_vorlagen` und ohne `vorlage_id`
+    gehen Objekte anlegen, ändern und archivieren, Durchführungen, Route `quellen` und der Löschschutz wie
+    bisher; eine mitgeschickte `vorlage_id` wird ignoriert (13 von 13).
+  - Danach das Skript: legt die Sammlung gesperrt an und ergänzt `vorlage_id`; `anwenden` sichert und setzt nur
+    die Regeln von `hygiene_vorlagen` (die übrigen und `users` „schon so“); der zweite Lauf ändert nichts und
+    sichert nichts.
+  - Hook vergessen (Skript mit dem alten Hook): Sammlung und Feld werden angelegt, „alter Stand“ als Hinweis,
+    `anwenden` setzt keine Regel und sichert nichts. Nach dem Kopieren des Hooks wie oben.
+  - `zurueck` mit der Sicherung vom Nachtrag sperrt `hygiene_vorlagen` wieder, `users` bleibt; eine von Hand
+    geänderte Regel der Vorlagen bleibt („seit dem Setzen geändert“); ganz zurück mit beiden Sicherungen sperrt
+    alle drei Sammlungen.
+- Frisch eingerichtet auf **0.23.4** und **0.40.5**: Skript zweimal (drei Sammlungen, dann nichts zu ändern), die
+  Regeln am Server wörtlich wie hier, die bisherigen Prüfungen (in der jetzigen Fassung 161) und 132 neue, alle
+  bestanden, ebenso die 132 im Nachtrag. Neu geprüft: Vorlagen anlegen, ändern, lesen mit denselben Personen wie
+  oben (Leitung, Häkchen, befristet, Helfer, Teilnehmer mit Häkchen, gesperrt, abgelaufen, Ausbilder, Supervisor,
+  andere Organisation, ohne Anmeldung); Felder und Grenzen (auch als Formular); Organisation bleibt; Archivieren
+  mit Zeitpunkt vom Server und wieder in Gebrauch; `vorlage_id` mit leer, `std:…`, zehn ungültigen Kennungen, eigener,
+  fremder, unbekannter und archivierter Vorlage, beim Ändern unverändert trotz inzwischen archivierter oder
+  fremder Vorlage; Batch mit Vorlage und Objekt daraus in einer Buchung und mit einem ungültigen Teil (ganz
+  abgelehnt); Löschen über die API gesperrt, als Superuser nur ohne verweisende Objekte (auch archivierte zählen,
+  auch im Batch), Leeren, Löschen, Umbenennen und Import der Sammlung abgelehnt; Route `stand`.
+- Gegenprobe auf 0.23.4 mit gesetzten Regeln, aber altem Hook: 55 der neuen Prüfungen schlagen an, dann bricht der
+  Lauf ab, weil sich `hygiene_vorlagen` umbenennen ließ. Die Rauchprobe besteht auf 0.23.4 und 0.40.5.
 
 **`users`, gefunden dabei und behoben (betraf nicht nur Hygiene):** Auf PocketBase **0.23.4** wirkte die Liste
 der Rechte im Zweig der Ausbildungs-Verwalter nicht (`@request.body.permissions.<recht>` ist dort immer leer).
