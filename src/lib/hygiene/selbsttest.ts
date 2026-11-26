@@ -2,8 +2,8 @@
 // Angebunden an vitest in src/lib/__tests__/hygiene.test.ts (Europe/Berlin und UTC).
 
 import { anker, restNachAnker } from '../mpg/aktionen'
-import { einsatzNummerBereinigen, objektPruefen, planeArchiv, planeDurchfuehrung, planeObjektAenderung, planeObjekte } from './aktionen'
-import { checklisteVorschlag, punkteBereinigen } from './checklisten'
+import { einsatzNummerBereinigen, objektPruefen, planeArchiv, planeDurchfuehrung, planeObjektAenderung, planeObjekte, planeUebertragen, planeVorlage, vorlageIdGueltig, vorlagePruefen } from './aktionen'
+import { checklisteVorschlag, punkteBereinigen, STD_VORLAGEN, uebertragen, vorlageFuer } from './checklisten'
 import { intervallText, istFaellig, naechsteFaelligkeit, standText, standVon, tageVon, vollstaendig, zaehle } from './fristen'
 import { darfHygiene, darfHygieneVerwalten } from './rechte'
 import { istMehrweg, namensSchluessel, ortArt, satzTeilen, vorschlaegeVon, type Quellen } from './vorschlaege'
@@ -22,7 +22,7 @@ const um = (j: number, m: number, t: number, h = 8, min = 0) => new Date(j, m - 
 
 const obj = (x: Partial<HyObjekt> = {}): HyObjekt => ({
   id: 'o1', organization_id: 'org', name: 'RTW 83/1', art: 'fahrzeug', standort: '', intervall: 'woechentlich', intervall_tage: 0,
-  punkte: ['Trage', 'Boden'], quelle: '', quelle_id: '', quelle_name: '', archiviert: '', ...x,
+  punkte: ['Trage', 'Boden'], quelle: '', quelle_id: '', quelle_name: '', vorlage_id: '', archiviert: '', ...x,
 })
 let n = 0
 const df = (zeit: string, x: Partial<HyDurchfuehrung> = {}): HyDurchfuehrung => ({
@@ -108,7 +108,7 @@ export function laufeHygieneSelbsttest(): TestErgebnis[] {
   // ── Pläne ──
   const wer = { organization_id: 'org', name: 'Lena Berger' }
   const gut = objektPruefen({ name: '  RTW  83/1 ', art: 'fahrzeug', intervall: 'tage', intervall_tage: 14, punkte: [' Trage ', 'trage'], standort: ' Wache ' })
-  r.push(eq('Objekt prüfen: säubert Name, Standort und Punkte', gut, { ok: true, daten: { name: 'RTW 83/1', art: 'fahrzeug', intervall: 'tage', punkte: ['Trage'], standort: 'Wache', intervall_tage: 14, quelle: '', quelle_id: '', quelle_name: '' } }))
+  r.push(eq('Objekt prüfen: säubert Name, Standort und Punkte', gut, { ok: true, daten: { name: 'RTW 83/1', art: 'fahrzeug', intervall: 'tage', punkte: ['Trage'], vorlage_id: '', standort: 'Wache', intervall_tage: 14, quelle: '', quelle_id: '', quelle_name: '' } }))
   r.push(eq('Objekt prüfen: ungültige Tage werden gemeldet, nicht still ersetzt', [400, 0, 3.5, NaN].map(t => objektPruefen({ name: 'x', art: 'raum', intervall: 'tage', intervall_tage: t, punkte: ['a'] }).ok), [false, false, false, false]))
   r.push(eq('Objekt prüfen: mehr als 40 Punkte werden gemeldet, nicht abgeschnitten', objektPruefen({ name: 'x', art: 'raum', intervall: 'monatlich', punkte: Array.from({ length: 41 }, (_, i) => `P${i}`) }).ok, false))
   r.push(eq('Objekt prüfen: Fehler ohne Namen, Art, Intervall oder Punkte', [
@@ -121,7 +121,7 @@ export function laufeHygieneSelbsttest(): TestErgebnis[] {
   const anlegen = planeObjekte({ neu: [{ id: 'n1', daten: (gut as { daten: Parameters<typeof planeObjektAenderung>[0]['daten'] }).daten }], wer })
   r.push(eq('Objekt anlegen: mit Organisation, nicht archiviert, Anker ist das Objekt', [anlegen[0].body.organization_id, anlegen[0].body.archiviert, anker(anlegen)], ['org', '', { collection: 'hygiene_objekte', id: 'n1' }]))
   r.push(eq('Objekt ändern: Herkunft bleibt unberührt', Object.keys(planeObjektAenderung({ id: 'o1', daten: { ...(gut as { daten: Parameters<typeof planeObjektAenderung>[0]['daten'] }).daten, quelle: 'mpg_geraet', quelle_id: 'x', quelle_name: 'y' } })[0].body).sort(),
-    ['art', 'intervall', 'intervall_tage', 'name', 'punkte', 'standort']))
+    ['art', 'intervall', 'intervall_tage', 'name', 'punkte', 'standort', 'vorlage_id']))
   r.push(eq('Archivieren und zurückholen', [planeArchiv({ id: 'o1', seit: '2026-11-23 10:00:00.000Z' })[0].body, planeArchiv({ id: 'o1', seit: '' })[0].body], [{ archiviert: '2026-11-23 10:00:00.000Z' }, { archiviert: '' }]))
   const plan = planeDurchfuehrung({ id: 'h1', objekt: { id: 'o1', name: 'RTW 83/1' }, art: 'anlass', anlass: 'infektion', einsatzNummer: ' E-2026-0417 ', punkte: [{ text: 'Trage', erledigt: true }, { text: 'Boden', erledigt: false }, { text: ' ', erledigt: true }], bemerkung: ' ok ', zeitpunkt: '2026-11-23 10:00:00.000Z', wer })
   r.push(eq('Durchführung aus Anlass: Anlass, Nummer, offen gezählt, leere Punkte weg', [plan[0].body.anlass, plan[0].body.einsatz_nummer, plan[0].body.offen, (plan[0].body.punkte as unknown[]).length, plan[0].body.bemerkung], ['infektion', 'E-2026-0417', 1, 2, 'ok']))
@@ -130,6 +130,30 @@ export function laufeHygieneSelbsttest(): TestErgebnis[] {
   r.push(eq('Durchführung nach Plan: kein Anlass, keine Einsatznummer', [nachPlan[0].body.anlass, nachPlan[0].body.einsatz_nummer], ['', '']))
   r.push(eq('Durchführung aus Anlass mit unbekanntem Anlass: leer (Server lehnt ab)', planeDurchfuehrung({ id: 'h3', objekt: { id: 'o1', name: 'x' }, art: 'anlass', anlass: 'irgendwas' as HyDurchfuehrung['anlass'], einsatzNummer: '', punkte: [], bemerkung: '', zeitpunkt: 'x', wer })[0].body.anlass, ''))
   r.push(eq('Einsatznummer: höchstens 40 Zeichen', einsatzNummerBereinigen('x'.repeat(60)).length, 40))
+
+  // ── Checklisten-Vorlagen (Owner, 26.11.2026: keine Trage im Feuerwehrauto) ──
+  r.push(eq('Vorlage nach Fahrzeugname', ['RTW 83/1', 'KTW 85/2', 'HLF 20/1', 'LF 10', 'TLF 3000', 'DLK 23/12', 'MTW', 'ELW 1', 'Florian Musterstadt 1/83/1', 'Bus'].map(n => vorlageFuer('fahrzeug', n).id),
+    ['std:rettungsdienst', 'std:rettungsdienst', 'std:feuerwehr', 'std:feuerwehr', 'std:feuerwehr', 'std:feuerwehr', 'std:mannschaft', 'std:mannschaft', 'std:fahrzeug', 'std:fahrzeug']))
+  r.push(eq('Feuerwehrfahrzeug ohne Trage, Rettungswagen mit', [vorlageFuer('fahrzeug', 'HLF 20/1').punkte.some(p => /trage/i.test(p)), vorlageFuer('fahrzeug', 'RTW 83/1').punkte.some(p => /trage/i.test(p))], [false, true]))
+  r.push(eq('Vorlage nach Raumname und Material', [vorlageFuer('raum', 'Umkleide Herren').id, vorlageFuer('raum', 'Desinfektionsraum').id, vorlageFuer('raum', 'Fahrzeughalle').id, vorlageFuer('material', 'Tragestuhl').id, vorlageFuer('material', 'Blutdruckmanschette').id, vorlageFuer('rucksack').id],
+    ['std:sanitaer', 'std:desinfektionsraum', 'std:raum', 'std:transport', 'std:material', 'std:rucksack']))
+  r.push(eq('Vorlagen von Responda: eindeutige Kennungen, je Art mindestens eine, jede mit Punkten', [new Set(STD_VORLAGEN.map(x => x.id)).size === STD_VORLAGEN.length, ['fahrzeug', 'raum', 'rucksack', 'geraet', 'material', 'sonstiges'].every(a => STD_VORLAGEN.some(x => x.art === a)), STD_VORLAGEN.every(x => x.punkte.length > 0 && vorlageIdGueltig(x.id))], [true, true, true]))
+  const vsF = vorschlaegeVon({ geraete: [], orte: [{ id: 'f1', name: 'HLF 20/1' }, { id: 'f2', name: 'RTW 83/1' }], saetze: [], artikel: [] }, [])
+  r.push(eq('Vorschläge: Fahrzeug bekommt die passende Vorlage', vsF.map(x => [x.name, x.vorlage_id, x.punkte.some(p => /trage/i.test(p))]), [['HLF 20/1', 'std:feuerwehr', false], ['RTW 83/1', 'std:rettungsdienst', true]]))
+  r.push(eq('Kennung einer Vorlage', ['', 'std:feuerwehr', 'abcdefghij12345', 'std:Feuer', 'x', 'std:'].map(vorlageIdGueltig), [true, true, true, false, false, false]))
+  r.push(eq('Objekt prüfen: ungültige Vorlage wird leer', (objektPruefen({ name: 'x', art: 'raum', intervall: 'monatlich', punkte: ['a'], vorlage_id: '../x' }) as { daten: { vorlage_id: string } }).daten.vorlage_id, ''))
+  const objs = [
+    { id: 'a', vorlage_id: 'v1', punkte: ['Sitze', 'Boden'] },
+    { id: 'b', vorlage_id: 'v1', punkte: ['Sitze', 'Boden', 'Extra'] },
+    { id: 'c', vorlage_id: 'v2', punkte: ['Sitze', 'Boden'] },
+    { id: 'd', vorlage_id: 'v1', punkte: ['Sitze', 'Boden'], archiviert: '2026-11-01 00:00:00.000Z' },
+    { id: 'e', vorlage_id: 'v1', punkte: [' sitze', 'Boden '] },
+  ]
+  r.push(eq('Übertragen: nur unveränderte Objekte dieser Vorlage, archivierte nie', uebertragen('v1', ['Sitze', 'Boden'], objs), { gleich: ['a'], abweichend: ['b', 'e'] }))
+  r.push(eq('Übertragen: Plan ändert nur die Punkte', planeUebertragen({ objekte: ['a'], punkte: ['Sitze'] }), [{ collection: 'hygiene_objekte', aktion: 'update', id: 'a', body: { punkte: ['Sitze'] } }]))
+  const vp = vorlagePruefen({ name: ' Feuerwehr ', art: 'fahrzeug', intervall: 'monatlich', punkte: ['Sitze'] })
+  r.push(eq('Vorlage prüfen und anlegen', [vp.ok, planeVorlage({ id: 'v9', neu: true, daten: (vp as { daten: Parameters<typeof planeVorlage>[0]['daten'] }).daten, wer })[0].body], [true, { name: 'Feuerwehr', art: 'fahrzeug', intervall: 'monatlich', intervall_tage: 0, punkte: ['Sitze'], organization_id: 'org', archiviert: '' }]))
+  r.push(eq('Vorlage ohne Punkte: Fehler', vorlagePruefen({ name: 'x', art: 'raum', intervall: 'monatlich', punkte: [] }).ok, false))
 
   // ── Rechte ──
   const u = (x: Partial<User>) => ({ id: 'u', email: 'probe@example.invalid', name: 'Probe', ...x }) as User

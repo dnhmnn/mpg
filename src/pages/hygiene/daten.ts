@@ -10,7 +10,7 @@ import { plusTage, tagVonDatum } from '../../lib/mpg/fristen'
 import { standVon, type HyStand } from '../../lib/hygiene/fristen'
 import { punkteBereinigen } from '../../lib/hygiene/checklisten'
 import type { Quellen } from '../../lib/hygiene/vorschlaege'
-import type { HyDurchfuehrung, HyObjekt } from '../../lib/hygiene/typen'
+import type { HyDurchfuehrung, HyObjekt, HyVorlage } from '../../lib/hygiene/typen'
 import type { User } from '../../types'
 
 export type Ausgang = 'ok' | 'unklar' | 'fehler' | 'belegt'
@@ -22,7 +22,10 @@ function liste(x: unknown): unknown[] {
   return []
 }
 function objektLesen(o: HyObjekt): HyObjekt {
-  return { ...o, punkte: punkteBereinigen(liste(o.punkte)), standort: o.standort || '', quelle: o.quelle || '', quelle_id: o.quelle_id || '', quelle_name: o.quelle_name || '', archiviert: o.archiviert || '', intervall_tage: Number(o.intervall_tage) || 0 }
+  return { ...o, punkte: punkteBereinigen(liste(o.punkte)), standort: o.standort || '', quelle: o.quelle || '', quelle_id: o.quelle_id || '', quelle_name: o.quelle_name || '', vorlage_id: o.vorlage_id || '', archiviert: o.archiviert || '', intervall_tage: Number(o.intervall_tage) || 0 }
+}
+function vorlageLesen(v: HyVorlage): HyVorlage {
+  return { ...v, punkte: punkteBereinigen(liste(v.punkte)), archiviert: v.archiviert || '', intervall_tage: Number(v.intervall_tage) || 0 }
 }
 function dfLesen(d: HyDurchfuehrung): HyDurchfuehrung {
   const punkte = liste(d.punkte).map(p => ({ text: String((p as { text?: unknown })?.text ?? ''), erledigt: (p as { erledigt?: unknown })?.erledigt === true })).filter(p => p.text)
@@ -34,6 +37,9 @@ export function useHygieneDaten(user: User | null) {
   const heute = useHeute()
   const [objekte, setObjekte] = useState<HyObjekt[]>([])
   const [dfs, setDfs] = useState<HyDurchfuehrung[]>([])
+  const [vorlagen, setVorlagen] = useState<HyVorlage[]>([])
+  /** Gibt es hygiene_vorlagen am Server? (Vor dem neuen Einrichtungsskript nicht: dann nur die Vorlagen von Responda) */
+  const [vorlagenDa, setVorlagenDa] = useState(true)
   const [laedt, setLaedt] = useState(true)
   const [fehlt, setFehlt] = useState(false)
   /** Einmal vollständig geladen? Vorher keine Vorschläge und kein Anlegen (sonst Doppeltes) */
@@ -61,7 +67,12 @@ export function useHygieneDaten(user: User | null) {
         pb.collection('hygiene_objekte').getFullList<HyObjekt>({ filter: pb.filter('organization_id = {:o}', { o: org }), sort: 'name', ...pbOptionen() }),
         pb.collection('hygiene_durchfuehrungen').getFullList<HyDurchfuehrung>({ filter: pb.filter('organization_id = {:o} && zeitpunkt >= {:s}', { o: org, s: `${seit} 00:00:00` }), sort: '-zeitpunkt', batch: 500, ...pbOptionen() }),
       ])
+      // Vorlagen für sich: Fehlen sie am Server noch, geht der Rest trotzdem
+      const v = await pb.collection('hygiene_vorlagen').getFullList<HyVorlage>({ filter: pb.filter('organization_id = {:o}', { o: org }), sort: 'name', ...pbOptionen() })
+        .then(l => ({ da: true, l })).catch((e: { status?: number }) => ({ da: e?.status !== 404, l: null as HyVorlage[] | null }))
       if (nr !== ladeNr.current) return
+      setVorlagenDa(v.da)
+      if (v.l) setVorlagen(v.l.map(vorlageLesen))
       setObjekte(o.map(objektLesen))
       setDfs(d.map(dfLesen))
       setFehlt(false)
@@ -81,7 +92,9 @@ export function useHygieneDaten(user: User | null) {
     const neu = () => { void laden() }
     pb.collection('hygiene_objekte').subscribe('*', neu).catch(() => {})
     pb.collection('hygiene_durchfuehrungen').subscribe('*', neu).catch(() => {})
+    pb.collection('hygiene_vorlagen').subscribe('*', neu).catch(() => {})
     return () => {
+      pb.collection('hygiene_vorlagen').unsubscribe('*').catch(() => {})
       pb.collection('hygiene_objekte').unsubscribe('*').catch(() => {})
       pb.collection('hygiene_durchfuehrungen').unsubscribe('*').catch(() => {})
     }
@@ -100,6 +113,9 @@ export function useHygieneDaten(user: User | null) {
       if (a.collection === 'hygiene_objekte') {
         if (a.aktion === 'create') setObjekte(l => (l.some(x => x.id === a.id) ? l : [...l, objektLesen({ ...(a.body as unknown as HyObjekt), id: a.id, created: jetzt, updated: jetzt })]))
         else setObjekte(l => l.map(x => (x.id === a.id ? objektLesen({ ...x, ...(a.body as Partial<HyObjekt>), ...(a.body.archiviert ? { archiviert: jetzt } : {}) }) : x)))
+      } else if (a.collection === 'hygiene_vorlagen') {
+        if (a.aktion === 'create') setVorlagen(l => (l.some(x => x.id === a.id) ? l : [...l, vorlageLesen({ ...(a.body as unknown as HyVorlage), id: a.id, created: jetzt, updated: jetzt })]))
+        else setVorlagen(l => l.map(x => (x.id === a.id ? vorlageLesen({ ...x, ...(a.body as Partial<HyVorlage>), ...(a.body.archiviert ? { archiviert: jetzt } : {}) }) : x)))
       } else if (a.collection === 'hygiene_durchfuehrungen' && a.aktion === 'create') {
         setDfs(l => (l.some(x => x.id === a.id) ? l : [dfLesen({ ...(a.body as unknown as HyDurchfuehrung), id: a.id, created: jetzt }), ...l]))
       }
@@ -147,7 +163,7 @@ export function useHygieneDaten(user: User | null) {
     }
   }, [])
 
-  return { objekte, aktiv, dfs, staende, heute, laedt, fehlt, geladen, ladeFehler, busy, meldung, setMeldung, melden, laden, ausfuehren, quellenLaden }
+  return { objekte, aktiv, dfs, vorlagen, vorlagenDa, staende, heute, laedt, fehlt, geladen, ladeFehler, busy, meldung, setMeldung, melden, laden, ausfuehren, quellenLaden }
 }
 
 export type HygieneDaten = ReturnType<typeof useHygieneDaten>

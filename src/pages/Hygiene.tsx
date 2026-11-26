@@ -4,7 +4,8 @@
 // gesperrt. Vorschläge aus MPG und Lager über die Route /api/responda/hygiene/quellen.
 // Eintragen: jede Person mit Zugang; Einrichten: „Hygiene verwalten“ (src/lib/hygiene/rechte.ts).
 // Seiten in der Adresse wie bei den Einsätzen: ?seite=objekte, objekt&id, durchfuehren&id(&anlass=1),
-// neu, bearbeiten&id, vorschlaege, nachweise, nachweis&id. Rechnung in src/lib/hygiene/.
+// neu, bearbeiten&id, vorschlaege, nachweise, nachweis&id, vorlagen, vorlage&id, vorlage-neu(&von=).
+// Checklisten-Vorlagen: src/pages/hygiene/vorlagen.tsx (Owner, 26.11.2026). Rechnung in src/lib/hygiene/.
 import React, { useLayoutEffect } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
@@ -16,6 +17,7 @@ import { HY_CSS } from './hygiene/stil'
 import { useHygieneDaten } from './hygiene/daten'
 import { Nachweis, Nachweise, Objekt, Objekte, Start } from './hygiene/seiten'
 import { Durchfuehren, ObjektForm, Vorschlaege } from './hygiene/formulare'
+import { VorlageSeite, Vorlagen } from './hygiene/vorlagen'
 import Zwischenschirm from '../components/Zwischenschirm'
 
 const STIL = BV_CSS + HY_CSS
@@ -80,10 +82,13 @@ export default function Hygiene() {
     case 'bearbeiten': inhalt = <ObjektForm key={id} {...p} id={id} vonObjekt={vonObjekt} />; break
     case 'vorschlaege': inhalt = <Vorschlaege {...p} org={user?.organization_id || ''} />; break
     case 'nachweise': inhalt = <Nachweise {...p} />; break
+    case 'vorlagen': inhalt = <Vorlagen {...p} />; break
+    case 'vorlage': inhalt = <VorlageSeite key={id} {...p} id={id} />; break
+    case 'vorlage-neu': inhalt = <VorlageSeite key={`neu:${adr.get('von') || ''}`} {...p} von={adr.get('von') || ''} />; break
     case 'nachweis': inhalt = <Nachweis {...p} id={id} />; break
     default: inhalt = <Start {...p} />
   }
-  const mitLeiste = ['durchfuehren', 'neu', 'bearbeiten', 'vorschlaege'].includes(seite)
+  const mitLeiste = ['durchfuehren', 'neu', 'bearbeiten', 'vorschlaege', 'vorlage', 'vorlage-neu'].includes(seite)
   return (
     <>
       <style>{STIL}</style>

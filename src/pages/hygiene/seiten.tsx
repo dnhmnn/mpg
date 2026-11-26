@@ -7,6 +7,7 @@ import { planeArchiv } from '../../lib/hygiene/aktionen'
 import { ANLASS_NAME, ARTEN, ART_GRUPPE, ART_NAME, QUELLE_NAME, type HyDurchfuehrung, type HyObjekt } from '../../lib/hygiene/typen'
 import { namensSchluessel } from '../../lib/hygiene/vorschlaege'
 import { Abschnitt, Hinweis, Icon, Seite } from '../benutzer/bausteine'
+import { vorlageNach } from './vorlagen'
 import { uhrText, zeitText } from './daten'
 import type { HyProps } from '../Hygiene'
 
@@ -108,6 +109,11 @@ export function Start({ d, orgName, verwalten, oeffne, zurHub }: HyProps) {
                 <span className="bv-tx"><b>Vorschläge aus MPG und Lager</b><small>Geräte, Fahrzeuge, Räume, Rucksäcke und Mehrweg-Material übernehmen</small></span>
                 <Icon n="weiter" className="bv-pfeil" />
               </button>
+              <button type="button" className="bv-z" onClick={() => oeffne('vorlagen')}>
+                <span className="hy-z-icon"><Sym n="liste" /></span>
+                <span className="bv-tx"><b>Checklisten</b><small>Vorlagen für Fahrzeuge, Räume, Rucksäcke und Geräte bearbeiten</small></span>
+                <Icon n="weiter" className="bv-pfeil" />
+              </button>
               <button type="button" className="bv-z" onClick={() => oeffne('neu')}>
                 <span className="hy-z-icon"><Sym n="plus" /></span>
                 <span className="bv-tx"><b>Objekt anlegen</b><small>Mit Intervall und Checkliste</small></span>
@@ -170,6 +176,7 @@ export function Objekt({ d, orgName, verwalten, oeffne, zurueck, id }: HyProps &
   if (!o) return <Seite titel="Objekt" unter={orgName} zurueck={zurueck}><Hinweis oben>{d.laedt ? 'Wird geladen …' : !d.geladen ? 'Konnte nicht geladen werden. Bitte bei Verbindung erneut öffnen.' : 'Dieses Objekt gibt es nicht mehr.'}</Hinweis></Seite>
   const s = d.staende.get(o.id)
   const verlauf = d.dfs.filter(x => x.objekt_id === o.id)
+  const vorlage = vorlageNach(d.vorlagen, o.vorlage_id)
   async function archiv() {
     if (!o) return
     if (!o.archiviert && !confirm(`„${o.name}“ archivieren? Es wird nicht mehr fällig. Die Nachweise bleiben erhalten.`)) return
@@ -198,6 +205,7 @@ export function Objekt({ d, orgName, verwalten, oeffne, zurueck, id }: HyProps &
         <div className="bv-z"><span className="bv-tx"><b>Intervall</b><small>{intervallText(o.intervall, o.intervall_tage)}</small></span></div>
         {o.standort && <div className="bv-z"><span className="bv-tx"><b>Standort</b><small>{o.standort}</small></span></div>}
         {o.quelle && <div className="bv-z"><span className="bv-tx"><b>Verknüpft</b><small>{QUELLE_NAME[o.quelle]}: {o.quelle_name || '—'}</small></span></div>}
+        {vorlage && <button type="button" className="bv-z" onClick={() => oeffne('vorlage', { id: vorlage.id })}><span className="bv-tx"><b>Checkliste aus Vorlage</b><small>{vorlage.name}</small></span><Icon n="weiter" className="bv-pfeil" /></button>}
       </div>
       <Abschnitt titel="Checkliste" rechts={o.punkte.length} />
       <div className="bv-flaeche">{o.punkte.map((t, i) => <div key={i} className="bv-z"><span className="bv-tx"><b style={{ fontWeight: 400 }}>{t}</b></span></div>)}</div>

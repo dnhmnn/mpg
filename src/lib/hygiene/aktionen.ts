@@ -9,13 +9,19 @@ import { punkteBereinigen } from './checklisten'
 import { tageVon } from './fristen'
 import {
   ANLAESSE, ARTEN, INTERVALLE, MAX_BEMERKUNG, MAX_NAME, MAX_PUNKTE,
-  type HyAnlass, type HyArt, type HyDfArt, type HyIntervall, type HyObjekt, type HyPunktErgebnis, type HyQuelle,
+  type HyAnlass, type HyArt, type HyDfArt, type HyIntervall, type HyObjekt, type HyPunktErgebnis, type HyQuelle, type HyVorlage,
 } from './typen'
 
 export interface Wer { organization_id: string; name: string }
 
 /** Die Felder eines Objekts, die man einrichtet */
-export type ObjektDaten = Pick<HyObjekt, 'name' | 'art' | 'standort' | 'intervall' | 'intervall_tage' | 'punkte' | 'quelle' | 'quelle_id' | 'quelle_name'>
+export type ObjektDaten = Pick<HyObjekt, 'name' | 'art' | 'standort' | 'intervall' | 'intervall_tage' | 'punkte' | 'quelle' | 'quelle_id' | 'quelle_name'> & { vorlage_id?: string }
+
+/** Gültige Kennung einer Vorlage: '' (eigene Liste), 'std:…' (Responda) oder eine Kennung aus hygiene_vorlagen. */
+export function vorlageIdGueltig(id: unknown): boolean {
+  const s = String(id ?? '')
+  return s === '' || /^std:[a-z_]{1,40}$/.test(s) || /^[a-z0-9]{15}$/.test(s)
+}
 
 const QUELLEN: HyQuelle[] = ['', 'mpg_geraet', 'lager_ort', 'lager_satz', 'lager_artikel']
 
@@ -40,7 +46,7 @@ export function objektPruefen(d: Partial<ObjektDaten>): { ok: true; daten: Objek
   return {
     ok: true,
     daten: {
-      name, art, intervall, punkte,
+      name, art, intervall, punkte, vorlage_id: vorlageIdGueltig(d.vorlage_id) ? String(d.vorlage_id ?? '') : '',
       standort: String(d.standort ?? '').replace(/\s+/g, ' ').trim().slice(0, MAX_NAME),
       intervall_tage: intervall === 'tage' ? tageVon(d.intervall_tage) : 0,
       quelle, quelle_id: quelle ? String(d.quelle_id ?? '') : '', quelle_name: quelle ? String(d.quelle_name ?? '').slice(0, MAX_NAME) : '',
@@ -60,6 +66,33 @@ export function planeObjektAenderung(o: { id: string; daten: ObjektDaten }): Anf
   // Herkunft bleibt, wie sie ist: Wer ein Objekt ändert, hängt es nicht an eine andere Quelle
   const { quelle: _q, quelle_id: _i, quelle_name: _n, ...rest } = o.daten
   return [{ collection: 'hygiene_objekte', aktion: 'update', id: o.id, body: rest }]
+}
+
+// ── Checklisten-Vorlagen der Organisation (hygiene_vorlagen) ─────────────────────
+
+export type VorlageDaten = Pick<HyVorlage, 'name' | 'art' | 'intervall' | 'intervall_tage' | 'punkte'>
+
+/** Vorlage prüfen wie ein Objekt (Name, Art, Intervall, Punkte). */
+export function vorlagePruefen(d: Partial<VorlageDaten>): { ok: true; daten: VorlageDaten } | { ok: false; fehler: string } {
+  const p = objektPruefen({ ...d, standort: '', quelle: '', quelle_id: '', quelle_name: '', vorlage_id: '' })
+  if ('fehler' in p) return p
+  const { name, art, intervall, intervall_tage, punkte } = p.daten
+  return { ok: true, daten: { name, art, intervall, intervall_tage, punkte } }
+}
+
+export function planeVorlage(o: { id: string; neu: boolean; daten: VorlageDaten; wer: Wer }): Anfrage[] {
+  return [o.neu
+    ? { collection: 'hygiene_vorlagen', aktion: 'create', id: o.id, body: { ...o.daten, organization_id: o.wer.organization_id, archiviert: '' } }
+    : { collection: 'hygiene_vorlagen', aktion: 'update', id: o.id, body: { ...o.daten } }]
+}
+
+export function planeVorlageArchiv(o: { id: string; seit: string }): Anfrage[] {
+  return [{ collection: 'hygiene_vorlagen', aktion: 'update', id: o.id, body: { archiviert: o.seit } }]
+}
+
+/** Neue Checkliste einer Vorlage auf Objekte übertragen (die Kennungen aus uebertragen().gleich). */
+export function planeUebertragen(o: { objekte: string[]; punkte: string[] }): Anfrage[] {
+  return o.objekte.map(id => ({ collection: 'hygiene_objekte', aktion: 'update' as const, id, body: { punkte: o.punkte } }))
 }
 
 /** Archivieren (seit = Zeitpunkt) oder wieder in Gebrauch nehmen (seit = ''). */

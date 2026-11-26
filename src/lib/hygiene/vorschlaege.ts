@@ -7,7 +7,7 @@
 // Sollausstattungen heißen „RTW 1 – Notfallrucksack“, Artikel haben keine Kategorie. Eingeordnet
 // wird deshalb am Namen, und nichts wird ohne Bestätigung übernommen.
 
-import { checklisteVorschlag, INTERVALL_VORSCHLAG } from './checklisten'
+import { checklisteVorschlag, vorlageFuer } from './checklisten'
 import type { HyArt, HyIntervall, HyObjekt, HyQuelle } from './typen'
 
 export interface Quellen {
@@ -30,6 +30,8 @@ export interface Vorschlag {
   herkunft: string
   intervall: HyIntervall
   punkte: string[]
+  /** Vorlage von Responda, aus der Checkliste und Intervall stammen */
+  vorlage_id: string
 }
 
 /** Vergleichsschlüssel für Namen: klein, ohne Leerzeichen, Binde- und Schrägstriche („RTW 1“ = „rtw1“). */
@@ -82,7 +84,7 @@ export function vorschlaegeVon(q: Quellen, objekte: Pick<HyObjekt, 'name' | 'que
   const orte = new Set<string>()
   const weg = new Set(ausgeblendet)
   const aus: Vorschlag[] = []
-  const dazu = (v: Omit<Vorschlag, 'intervall' | 'punkte'> & { typ?: string }) => {
+  const dazu = (v: Omit<Vorschlag, 'intervall' | 'punkte' | 'vorlage_id'> & { typ?: string }) => {
     const k = namensSchluessel(v.name)
     if (!k || weg.has(v.schluessel) || namen.has(k)) return
     if (v.quelle && v.quelle_id && vergeben.has(`${v.quelle}:${v.quelle_id}`)) return
@@ -90,7 +92,8 @@ export function vorschlaegeVon(q: Quellen, objekte: Pick<HyObjekt, 'name' | 'que
     if (istOrt && orte.has(k)) return
     if (istOrt) orte.add(k)
     const { typ, ...rest } = v
-    aus.push({ ...rest, intervall: INTERVALL_VORSCHLAG[v.art], punkte: checklisteVorschlag(v.art, typ) })
+    const vorlage = vorlageFuer(v.art, v.name)
+    aus.push({ ...rest, intervall: vorlage.intervall, punkte: checklisteVorschlag(v.art, typ, v.name), vorlage_id: vorlage.id })
   }
 
   // Fahrzeuge und Räume: Lager-Orte (mit Kennung) vor freien Standorten aus dem MPG

@@ -3,12 +3,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { newId } from '../../lib/ids'
 import { objektPruefen, planeDurchfuehrung, planeObjektAenderung, planeObjekte, type ObjektDaten } from '../../lib/hygiene/aktionen'
-import { checklisteVorschlag, INTERVALL_VORSCHLAG } from '../../lib/hygiene/checklisten'
+import { punkteBereinigen, vorlageFuer } from '../../lib/hygiene/checklisten'
+import { PunkteEditor, vorlageNach, vorlagenFuer } from './vorlagen'
 import { intervallText, standText } from '../../lib/hygiene/fristen'
 import { vorschlaegeVon, type Quellen } from '../../lib/hygiene/vorschlaege'
 import {
   ANLAESSE, ANLASS_NAME, ARTEN, ART_GRUPPE, ART_NAME, INTERVALLE, MAX_BEMERKUNG, MAX_NAME, NACHTRAG_TAGE, QUELLE_NAME,
-  type HyAnlass, type HyArt, type HyIntervall, type HyObjekt, type HyPunktErgebnis,
+  STD, type HyAnlass, type HyArt, type HyIntervall, type HyObjekt, type HyPunktErgebnis,
 } from '../../lib/hygiene/typen'
 import { Abschnitt, Auswahl, Feld, Hinweis, Icon, Leiste, Seite } from '../benutzer/bausteine'
 import { ausgeblendetLesen, ausgeblendetSchreiben, zeitText } from './daten'
@@ -136,9 +137,9 @@ function ObjektFormInhalt({ d, user, orgName, zurueck, ersetze, id, alt, vonObje
   const [kennung] = useState(() => newId())
   const [f, setF] = useState<ObjektDaten>(() => alt ? {
     name: alt.name, art: alt.art, standort: alt.standort, intervall: alt.intervall, intervall_tage: alt.intervall_tage || 14,
-    punkte: [...alt.punkte], quelle: alt.quelle, quelle_id: alt.quelle_id, quelle_name: alt.quelle_name,
-  } : { name: '', art: 'fahrzeug', standort: '', intervall: INTERVALL_VORSCHLAG.fahrzeug, intervall_tage: 14, punkte: checklisteVorschlag('fahrzeug'), quelle: '', quelle_id: '', quelle_name: '' })
-  // Liste noch unberührt? Dann folgt sie beim Wechsel der Art dem Vorschlag
+    punkte: [...alt.punkte], quelle: alt.quelle, quelle_id: alt.quelle_id, quelle_name: alt.quelle_name, vorlage_id: alt.vorlage_id,
+  } : (() => { const v = vorlageFuer('fahrzeug'); return { name: '', art: 'fahrzeug' as HyArt, standort: '', intervall: v.intervall, intervall_tage: 14, punkte: [...v.punkte], quelle: '' as const, quelle_id: '', quelle_name: '', vorlage_id: v.id } })())
+  // Liste noch unberührt? Dann folgt sie bei einem neuen Objekt Art und Namen (z. B. „HLF“ → Feuerwehrfahrzeug)
   const [eigeneListe, setEigeneListe] = useState(!!alt)
   const [neuerPunkt, setNeuerPunkt] = useState('')
   // Unklar gesendet: genau dieser Plan wird erneut gesendet, das Formular ist bis dahin fest
@@ -147,11 +148,25 @@ function ObjektFormInhalt({ d, user, orgName, zurueck, ersetze, id, alt, vonObje
   const neu = !id
 
 
-  const setArt = (art: HyArt) => setF(x => ({ ...x, art, ...(neu && !eigeneListe ? { punkte: checklisteVorschlag(art), intervall: INTERVALL_VORSCHLAG[art] } : {}) }))
-  const setPunkt = (i: number, t: string) => { setEigeneListe(true); setF(x => ({ ...x, punkte: x.punkte.map((p, j) => (j === i ? t : p)) })) }
-  const schieben = (i: number, um: number) => { setEigeneListe(true); setF(x => { const p = [...x.punkte]; const [e] = p.splice(i, 1); p.splice(i + um, 0, e); return { ...x, punkte: p } }) }
-  const weg = (i: number) => { setEigeneListe(true); setF(x => ({ ...x, punkte: x.punkte.filter((_, j) => j !== i) })) }
-  const dazu = () => { if (!neuerPunkt.trim()) return; setEigeneListe(true); setF(x => ({ ...x, punkte: [...x.punkte, neuerPunkt.trim()] })); setNeuerPunkt('') }
+  // Vorschlag aus Art und Namen, solange die Liste unberührt ist (nur bei neuen Objekten)
+  const folgen = (x: ObjektDaten): ObjektDaten => {
+    if (!neu || eigeneListe) return x
+    const v = vorlageFuer(x.art, x.name)
+    return { ...x, punkte: [...v.punkte], intervall: v.intervall, intervall_tage: v.intervall_tage || x.intervall_tage, vorlage_id: v.id }
+  }
+  const setArt = (art: HyArt) => setF(x => folgen({ ...x, art }))
+  const setName = (name: string) => setF(x => folgen({ ...x, name }))
+  const auswahl = vorlagenFuer(d.vorlagen, f.art)
+  const vorlage = vorlageNach(d.vorlagen, f.vorlage_id)
+  const angepasst = !!vorlage && JSON.stringify(punkteBereinigen(vorlage.punkte)) !== JSON.stringify(punkteBereinigen(f.punkte))
+  function waehleVorlage(vid: string) {
+    if (!vid) { setEigeneListe(true); setF(x => ({ ...x, vorlage_id: '' })); return }
+    const v = vorlageNach(d.vorlagen, vid)
+    if (!v) return
+    if (angepasst && !confirm(`Die Checkliste durch „${v.name}“ ersetzen? Eigene Änderungen gehen verloren.`)) return
+    setEigeneListe(true)
+    setF(x => ({ ...x, vorlage_id: v.id, punkte: [...v.punkte], ...(neu ? { intervall: v.intervall, intervall_tage: v.intervall_tage || x.intervall_tage } : {}) }))
+  }
 
   async function speichern() {
     if (!user?.organization_id) return
@@ -173,7 +188,7 @@ function ObjektFormInhalt({ d, user, orgName, zurueck, ersetze, id, alt, vonObje
       leiste={<Leiste titel={f.name.trim() || (neu ? 'Neues Objekt' : '')} unter={`${ART_NAME[f.art]} · ${intervallText(f.intervall, f.intervall_tage)} · ${f.punkte.length} Punkte`}
         knopf={gesendet ? 'Erneut senden' : neu ? 'Anlegen' : 'Speichern'} onClick={speichern} laeuft={d.busy} />}>
       <fieldset disabled={!!gesendet || d.busy} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
-      <Feld label="Bezeichnung" erst><input className="bv-eingabe" value={f.name} onChange={e => setF({ ...f, name: e.target.value })} placeholder="z. B. RTW 83/1, Desinfektionsraum, Notfallrucksack" maxLength={120} /></Feld>
+      <Feld label="Bezeichnung" erst><input className="bv-eingabe" value={f.name} onChange={e => setName(e.target.value)} placeholder="z. B. RTW 83/1, Desinfektionsraum, Notfallrucksack" maxLength={120} /></Feld>
       <Feld label="Art" gruppe>
         <div className="bv-segmente" role="group" aria-label="Art" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
           {ARTEN.map(a => <button key={a} type="button" className="bv-seg" aria-pressed={f.art === a} onClick={() => setArt(a)}>{a === 'rucksack' ? 'Rucksack' : ART_NAME[a]}</button>)}
@@ -192,23 +207,14 @@ function ObjektFormInhalt({ d, user, orgName, zurueck, ersetze, id, alt, vonObje
         <input className="bv-eingabe" type="number" inputMode="numeric" min={1} max={365} value={f.intervall_tage || ''} onChange={e => setF({ ...f, intervall_tage: Number(e.target.value) })} />
       </Feld>}
       <Abschnitt titel="Checkliste" rechts={f.punkte.length} />
-      <div className="bv-flaeche">
-        {f.punkte.map((p, i) => (
-          <div key={i} className="hy-liste-z">
-            <input value={p} onChange={e => setPunkt(i, e.target.value)} aria-label={`Punkt ${i + 1}`} maxLength={200} />
-            <button type="button" className="hy-klein" aria-label="Nach oben" disabled={i === 0} onClick={() => schieben(i, -1)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 15l6-6 6 6" /></svg></button>
-            <button type="button" className="hy-klein" aria-label="Nach unten" disabled={i === f.punkte.length - 1} onClick={() => schieben(i, 1)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 9l6 6 6-6" /></svg></button>
-            <button type="button" className="hy-klein" aria-label="Punkt entfernen" onClick={() => weg(i)}><Icon n="kreuz" /></button>
-          </div>
-        ))}
-        <div className="hy-liste-z">
-          <input value={neuerPunkt} onChange={e => setNeuerPunkt(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); dazu() } }} placeholder="Punkt hinzufügen" aria-label="Punkt hinzufügen" maxLength={200} />
-          <button type="button" className="hy-klein" aria-label="Hinzufügen" disabled={!neuerPunkt.trim()} onClick={dazu}><Icon n="plus" /></button>
-        </div>
-      </div>
-      <div className="hy-alle">
-        <button type="button" className="bv-knopf" onClick={() => { setEigeneListe(false); setF(x => ({ ...x, punkte: checklisteVorschlag(x.art) })) }}>Vorschlag für {ART_NAME[f.art]} einsetzen</button>
-      </div>
+      <Feld label="Aus Vorlage" erst gruppe hinweis={angepasst ? 'Von Hand angepasst: Änderungen an der Vorlage werden nicht übertragen.' : vorlage && !vorlage.id.startsWith(STD) ? 'Ändert sich die Vorlage, lässt sich die neue Liste übertragen.' : undefined}>
+        <Auswahl value={f.vorlage_id || ''} onChange={waehleVorlage} label="Checkliste aus Vorlage">
+          <option value="">Eigene Liste, ohne Vorlage</option>
+          {auswahl.eigene.length > 0 && <optgroup label="Eigene Checklisten">{auswahl.eigene.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>}
+          <optgroup label="Vorlagen von Responda">{auswahl.std.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</optgroup>
+        </Auswahl>
+      </Feld>
+      <PunkteEditor punkte={f.punkte} onChange={punkte => { setEigeneListe(true); setF(x => ({ ...x, punkte })) }} neu={neuerPunkt} setNeu={setNeuerPunkt} />
       <Hinweis>Die Vorschläge sind nur ein Anfang. Maßgeblich ist der Hygieneplan eurer Organisation (Mittel, Konzentration, Einwirkzeit).</Hinweis>
       {f.quelle && <Hinweis>Verknüpft mit {QUELLE_NAME[f.quelle]}: {f.quelle_name}</Hinweis>}
       </fieldset>
@@ -247,7 +253,7 @@ export function Vorschlaege({ d, user, orgName, verwalten, zurueck, ersetze, org
     let fertig = 0
     // Höchstens 50 je Sammelbuchung; jeder Vorschlag behält seine Kennung (erneut senden legt nichts doppelt an)
     // Wie beim Anlegen von Hand geprüft und gekürzt (Namen aus MPG und Lager können länger sein, als der Server annimmt)
-    const geprueft = auswahl.map(v => ({ v, p: objektPruefen({ name: v.name.slice(0, MAX_NAME), art: v.art, standort: v.standort.slice(0, MAX_NAME), intervall: v.intervall, intervall_tage: 0, punkte: v.punkte, quelle: v.quelle, quelle_id: v.quelle_id, quelle_name: v.quelle_name }) }))
+    const geprueft = auswahl.map(v => ({ v, p: objektPruefen({ name: v.name.slice(0, MAX_NAME), art: v.art, standort: v.standort.slice(0, MAX_NAME), intervall: v.intervall, intervall_tage: 0, punkte: v.punkte, quelle: v.quelle, quelle_id: v.quelle_id, quelle_name: v.quelle_name, vorlage_id: v.vorlage_id }) }))
     const falsch = geprueft.find(x => 'fehler' in x.p)
     if (falsch) { d.melden(`„${falsch.v.name}“: ${(falsch.p as { fehler: string }).fehler}`, true); return }
     const gut = geprueft.map(x => ({ v: x.v, daten: (x.p as { daten: ObjektDaten }).daten }))

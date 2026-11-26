@@ -6,6 +6,8 @@
 // Sammlungen (scripts/hygiene-einrichten.py, Regeln in docs/pocketbase-regeln.md, „Hygiene: API-Regeln“):
 //   hygiene_objekte           was gereinigt wird, mit Intervall und Checkliste
 //   hygiene_durchfuehrungen   Nachweise (nur anlegen, nie ändern oder löschen)
+//   hygiene_vorlagen          Checklisten-Vorlagen der Organisation (Owner, 26.11.2026: „Checklisten bearbeiten“)
+// Dazu Vorlagen von Responda im Code (checklisten.ts, Kennung „std:…“), nicht in der Datenbank.
 // Verweise auf MPG und Lager stehen als Text-Kennung mit einer Kopie des Namens am Objekt, nie als
 // Relation: Das Löschen eines Geräts oder Artikels darf keinen Nachweis still ändern.
 
@@ -44,8 +46,29 @@ export interface HyObjekt {
   quelle: HyQuelle
   quelle_id: string
   quelle_name: string
+  /** Vorlage, aus der die Checkliste stammt: '' (eigene), 'std:…' (von Responda) oder Kennung aus hygiene_vorlagen */
+  vorlage_id: string
   /** Leer = in Gebrauch; sonst seit wann archiviert */
   archiviert: string
+  created?: string
+  updated?: string
+}
+
+/** Kennungen der Vorlagen von Responda beginnen so (nicht in der Datenbank) */
+export const STD = 'std:'
+
+/** Checklisten-Vorlage: von Responda (id „std:…“, nur lesen) oder der Organisation (hygiene_vorlagen) */
+export interface HyVorlage {
+  id: string
+  organization_id?: string
+  name: string
+  art: HyArt
+  /** Vorgeschlagenes Intervall für neue Objekte */
+  intervall: HyIntervall
+  intervall_tage: number
+  punkte: string[]
+  /** Leer = in Gebrauch; sonst seit wann archiviert (nur eigene) */
+  archiviert?: string
   created?: string
   updated?: string
 }
