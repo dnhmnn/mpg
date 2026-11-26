@@ -108,6 +108,14 @@ const icons: Record<string, JSX.Element> = {
       <polyline points="2 12 5.5 12 8 4 10.5 20 13.5 8 16 16 18.5 12 22 12"/>
     </svg>
   ),
+  hygiene: (
+    <svg viewBox="0 0 24 24" {...s}>
+      <path d="M9 7h6v3H9z"/>
+      <path d="M10 10v2h4v-2"/>
+      <rect x="8" y="12" width="8" height="9" rx="2"/>
+      <path d="M15 7l3-2M17 9h3M15 4.5L17 3"/>
+    </svg>
+  ),
   cross: (
     <svg viewBox="0 0 24 24" {...s}>
       <path d="M9 3h6v6h6v6h-6v6H9v-6H3v-6h6V3z"/>

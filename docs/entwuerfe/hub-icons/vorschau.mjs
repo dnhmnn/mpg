@@ -14,7 +14,7 @@ const hell = JSON.parse(readFileSync(`${ordner}/icons.json`, 'utf8'))
 const dunkel = JSON.parse(readFileSync(`${ordner}/icons-dunkel.json`, 'utf8'))
 const APPS = [
   ['einsaetze', 'Einsätze'], ['eks', 'EKS'], ['patienten', 'Patienten'], ['dokumente', 'Vorgänge'],
-  ['lager', 'Lager'], ['mpg', 'MPG'], ['lernbar', 'Unitas'], ['ausbildungen', 'Ausbildungen'],
+  ['lager', 'Lager'], ['mpg', 'MPG'], ['hygiene', 'Hygiene'], ['lernbar', 'Unitas'], ['ausbildungen', 'Ausbildungen'],
   ['dateien', 'Dateien'], ['office', 'Schreibstube'], ['chat', 'Chat'], ['notizen', 'Notizen'],
   ['unitarii', 'Benutzer'], ['settings', 'Einstellungen'],
 ]

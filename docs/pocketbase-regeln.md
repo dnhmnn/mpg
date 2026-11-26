@@ -339,11 +339,30 @@ Regel erlaubt:
   Rechte, die ein verknüpfter Benutzer schon hat, bleiben erlaubt. (Sonst legte
   er einen Teilnehmer mit selbst gewähltem Passwort und Benutzerverwaltung an
   und meldete sich damit an.) Kommt ein neues Recht dazu, gehört es in diese
-  Liste.
+  Liste, und zwar an allen Stellen der Regel (zuletzt „Hygiene verwalten“,
+  `hygiene_verwalten`, siehe „Hygiene: API-Regeln“; `scripts/hygiene-einrichten.py
+  anwenden` setzt die Fassung unten). Befristete Rechte vergeben sie nicht, auch
+  nicht beim Anlegen (`@request.body.temp_permissions:isset = false`).
+- **Warum die Liste so lang ist (PocketBase 0.23.4, gefunden 26.11.2026):** Einen
+  Pfad in das JSON der Anfrage wie `@request.body.permissions.unitarii` wertet
+  0.23.4 nie aus (erst neuere Versionen). Mit der bisherigen Fassung legte ein
+  Ausbildungs-Verwalter dort einen Teilnehmer mit Benutzerverwaltung und eigenem
+  Passwort an, meldete sich damit an und machte das Konto zur Leitung. Deshalb
+  prüft die Regel zusätzlich, was auf 0.23.4 wirkt: beim **Anlegen** das Feld des
+  neuen Datensatzes (`permissions.<recht> != true`, so wie es gespeichert wird),
+  beim **Ändern** den Text der gesendeten Rechte: Kommt ein Recht darin vor
+  (`'"<recht>"'`), dann mit `false` und nur einmal, außer die Person hat es schon.
+  In beiden kein `\u` im gesendeten Text (sonst ließe sich der Name eines Rechts
+  verschleiern) und kein Recht doppelt (0.23.4 speichert doppelte Schlüssel; die
+  Regeln läsen den ersten, Hooks und App den letzten). Die App schickt die Rechte
+  als Objekt (`Ausbildungen.tsx`), PocketBase macht daraus Text ohne Leerzeichen;
+  als Text mit Leerzeichen geschickt, lehnt die Regel ein Recht auch mit `false`
+  ab. Im Update bleibt der Pfad in das JSON drin (wirkt auf neueren Versionen); beim
+  Anlegen ersetzt ihn das Feld des neuen Datensatzes, das auf beiden wirkt.
 
 **Update**
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && @request.body.supervisor:isset = false) || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && @request.body.supervisor:isset = false) || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false && (@request.body.permissions:isset = false || (@request.body.permissions !~ "\\u" && ((@request.body.permissions.dashboard != true && (@request.body.permissions !~ '"dashboard"' || (@request.body.permissions ~ '"dashboard":false' && @request.body.permissions !~ '%"dashboard"%"dashboard"%'))) || permissions.dashboard = true) && ((@request.body.permissions.unitarii != true && (@request.body.permissions !~ '"unitarii"' || (@request.body.permissions ~ '"unitarii":false' && @request.body.permissions !~ '%"unitarii"%"unitarii"%'))) || permissions.unitarii = true) && ((@request.body.permissions.patienten != true && (@request.body.permissions !~ '"patienten"' || (@request.body.permissions ~ '"patienten":false' && @request.body.permissions !~ '%"patienten"%"patienten"%'))) || permissions.patienten = true) && ((@request.body.permissions.dokumente != true && (@request.body.permissions !~ '"dokumente"' || (@request.body.permissions ~ '"dokumente":false' && @request.body.permissions !~ '%"dokumente"%"dokumente"%'))) || permissions.dokumente = true) && ((@request.body.permissions.einsaetze != true && (@request.body.permissions !~ '"einsaetze"' || (@request.body.permissions ~ '"einsaetze":false' && @request.body.permissions !~ '%"einsaetze"%"einsaetze"%'))) || permissions.einsaetze = true) && ((@request.body.permissions.eks != true && (@request.body.permissions !~ '"eks"' || (@request.body.permissions ~ '"eks":false' && @request.body.permissions !~ '%"eks"%"eks"%'))) || permissions.eks = true) && ((@request.body.permissions.lager != true && (@request.body.permissions !~ '"lager"' || (@request.body.permissions ~ '"lager":false' && @request.body.permissions !~ '%"lager"%"lager"%'))) || permissions.lager = true) && ((@request.body.permissions.lager_verwalten != true && (@request.body.permissions !~ '"lager_verwalten"' || (@request.body.permissions ~ '"lager_verwalten":false' && @request.body.permissions !~ '%"lager_verwalten"%"lager_verwalten"%'))) || permissions.lager_verwalten = true) && ((@request.body.permissions.produktausgabe != true && (@request.body.permissions !~ '"produktausgabe"' || (@request.body.permissions ~ '"produktausgabe":false' && @request.body.permissions !~ '%"produktausgabe"%"produktausgabe"%'))) || permissions.produktausgabe = true) && ((@request.body.permissions.dateien != true && (@request.body.permissions !~ '"dateien"' || (@request.body.permissions ~ '"dateien":false' && @request.body.permissions !~ '%"dateien"%"dateien"%'))) || permissions.dateien = true) && ((@request.body.permissions.ausbildungen_manage != true && (@request.body.permissions !~ '"ausbildungen_manage"' || (@request.body.permissions ~ '"ausbildungen_manage":false' && @request.body.permissions !~ '%"ausbildungen_manage"%"ausbildungen_manage"%'))) || permissions.ausbildungen_manage = true) && ((@request.body.permissions.mpg_verwalten != true && (@request.body.permissions !~ '"mpg_verwalten"' || (@request.body.permissions ~ '"mpg_verwalten":false' && @request.body.permissions !~ '%"mpg_verwalten"%"mpg_verwalten"%'))) || permissions.mpg_verwalten = true) && ((@request.body.permissions.hygiene_verwalten != true && (@request.body.permissions !~ '"hygiene_verwalten"' || (@request.body.permissions ~ '"hygiene_verwalten":false' && @request.body.permissions !~ '%"hygiene_verwalten"%"hygiene_verwalten"%'))) || permissions.hygiene_verwalten = true)))))
 ```
 
 **Manage** (E-Mail eines anderen ohne altes Passwort setzen, etwa bei einer
@@ -357,7 +376,7 @@ legt jeder selbst fest“):
 **Create** — ohne passende Regel legt man sich sonst einfach ein zweites Konto
 mit Admin-Rechten an:
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && (@request.body.supervisor:isset = false || @request.body.supervisor = false)) || (@request.body.organization_id = @request.auth.organization_id && (@request.body.supervisor:isset = false || @request.body.supervisor = false) && ((@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) || (@request.auth.permissions.ausbildungen_manage = true && @request.body.role = "teilnehmer" && @request.body.zusatzrollen:isset = false && @request.body.permissions.dashboard != true && @request.body.permissions.unitarii != true && @request.body.permissions.patienten != true && @request.body.permissions.dokumente != true && @request.body.permissions.einsaetze != true && @request.body.permissions.eks != true && @request.body.permissions.lager != true && @request.body.permissions.lager_verwalten != true && @request.body.permissions.produktausgabe != true && @request.body.permissions.dateien != true && @request.body.permissions.ausbildungen_manage != true && @request.body.permissions.mpg_verwalten != true))))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && (@request.body.supervisor:isset = false || @request.body.supervisor = false)) || (@request.body.organization_id = @request.auth.organization_id && (@request.body.supervisor:isset = false || @request.body.supervisor = false) && ((@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) || (@request.auth.permissions.ausbildungen_manage = true && @request.body.role = "teilnehmer" && @request.body.zusatzrollen:isset = false && @request.body.temp_permissions:isset = false && permissions.dashboard != true && permissions.unitarii != true && permissions.patienten != true && permissions.dokumente != true && permissions.einsaetze != true && permissions.eks != true && permissions.lager != true && permissions.lager_verwalten != true && permissions.produktausgabe != true && permissions.dateien != true && permissions.ausbildungen_manage != true && permissions.mpg_verwalten != true && permissions.hygiene_verwalten != true && (@request.body.permissions:isset = false || (@request.body.permissions !~ "\\u" && @request.body.permissions !~ '%"dashboard"%"dashboard"%' && @request.body.permissions !~ '%"unitarii"%"unitarii"%' && @request.body.permissions !~ '%"patienten"%"patienten"%' && @request.body.permissions !~ '%"dokumente"%"dokumente"%' && @request.body.permissions !~ '%"einsaetze"%"einsaetze"%' && @request.body.permissions !~ '%"eks"%"eks"%' && @request.body.permissions !~ '%"lager"%"lager"%' && @request.body.permissions !~ '%"lager_verwalten"%"lager_verwalten"%' && @request.body.permissions !~ '%"produktausgabe"%"produktausgabe"%' && @request.body.permissions !~ '%"dateien"%"dateien"%' && @request.body.permissions !~ '%"ausbildungen_manage"%"ausbildungen_manage"%' && @request.body.permissions !~ '%"mpg_verwalten"%"mpg_verwalten"%' && @request.body.permissions !~ '%"hygiene_verwalten"%"hygiene_verwalten"%'))))))
 ```
 
 **Delete**
@@ -387,7 +406,7 @@ oder übergangsweise diese Update-Regel nehmen, die die Übernahme genau einmal
 zulässt (bis dahin kann sich ein solches Konto dabei aber beliebige Rechte
 geben):
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && @request.body.supervisor:isset = false) || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false && (@request.body.permissions.dashboard != true || permissions.dashboard = true) && (@request.body.permissions.unitarii != true || permissions.unitarii = true) && (@request.body.permissions.patienten != true || permissions.patienten = true) && (@request.body.permissions.dokumente != true || permissions.dokumente = true) && (@request.body.permissions.einsaetze != true || permissions.einsaetze = true) && (@request.body.permissions.eks != true || permissions.eks = true) && (@request.body.permissions.lager != true || permissions.lager = true) && (@request.body.permissions.lager_verwalten != true || permissions.lager_verwalten = true) && (@request.body.permissions.produktausgabe != true || permissions.produktausgabe = true) && (@request.body.permissions.dateien != true || permissions.dateien = true) && (@request.body.permissions.ausbildungen_manage != true || permissions.ausbildungen_manage = true) && (@request.body.permissions.mpg_verwalten != true || permissions.mpg_verwalten = true)) || (id = @request.auth.id && permissions_migrated != true && @request.body.permissions_migrated = true && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.zusatzrollen:isset = false))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && ((@request.auth.supervisor = true && @request.body.supervisor:isset = false) || (organization_id = @request.auth.organization_id && (@request.auth.role = "admin" || @request.auth.permissions.unitarii = true || (@request.auth.temp_permissions.unitarii.until ~ " " && @request.auth.temp_permissions.unitarii.until > @now)) && supervisor != true && @request.body.supervisor:isset = false && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id)) || (id = @request.auth.id && @request.body.permissions:isset = false && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false) || (organization_id = @request.auth.organization_id && @request.auth.permissions.ausbildungen_manage = true && id != @request.auth.id && supervisor != true && (role = "teilnehmer" || ((role = "benutzer" || role = "") && @request.body.role = "teilnehmer")) && (@request.body.role:isset = false || @request.body.role = "teilnehmer") && @request.body.temp_permissions:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.permissions_migrated:isset = false && @request.body.zusatzrollen:isset = false && (@request.body.permissions:isset = false || (@request.body.permissions !~ "\\u" && ((@request.body.permissions.dashboard != true && (@request.body.permissions !~ '"dashboard"' || (@request.body.permissions ~ '"dashboard":false' && @request.body.permissions !~ '%"dashboard"%"dashboard"%'))) || permissions.dashboard = true) && ((@request.body.permissions.unitarii != true && (@request.body.permissions !~ '"unitarii"' || (@request.body.permissions ~ '"unitarii":false' && @request.body.permissions !~ '%"unitarii"%"unitarii"%'))) || permissions.unitarii = true) && ((@request.body.permissions.patienten != true && (@request.body.permissions !~ '"patienten"' || (@request.body.permissions ~ '"patienten":false' && @request.body.permissions !~ '%"patienten"%"patienten"%'))) || permissions.patienten = true) && ((@request.body.permissions.dokumente != true && (@request.body.permissions !~ '"dokumente"' || (@request.body.permissions ~ '"dokumente":false' && @request.body.permissions !~ '%"dokumente"%"dokumente"%'))) || permissions.dokumente = true) && ((@request.body.permissions.einsaetze != true && (@request.body.permissions !~ '"einsaetze"' || (@request.body.permissions ~ '"einsaetze":false' && @request.body.permissions !~ '%"einsaetze"%"einsaetze"%'))) || permissions.einsaetze = true) && ((@request.body.permissions.eks != true && (@request.body.permissions !~ '"eks"' || (@request.body.permissions ~ '"eks":false' && @request.body.permissions !~ '%"eks"%"eks"%'))) || permissions.eks = true) && ((@request.body.permissions.lager != true && (@request.body.permissions !~ '"lager"' || (@request.body.permissions ~ '"lager":false' && @request.body.permissions !~ '%"lager"%"lager"%'))) || permissions.lager = true) && ((@request.body.permissions.lager_verwalten != true && (@request.body.permissions !~ '"lager_verwalten"' || (@request.body.permissions ~ '"lager_verwalten":false' && @request.body.permissions !~ '%"lager_verwalten"%"lager_verwalten"%'))) || permissions.lager_verwalten = true) && ((@request.body.permissions.produktausgabe != true && (@request.body.permissions !~ '"produktausgabe"' || (@request.body.permissions ~ '"produktausgabe":false' && @request.body.permissions !~ '%"produktausgabe"%"produktausgabe"%'))) || permissions.produktausgabe = true) && ((@request.body.permissions.dateien != true && (@request.body.permissions !~ '"dateien"' || (@request.body.permissions ~ '"dateien":false' && @request.body.permissions !~ '%"dateien"%"dateien"%'))) || permissions.dateien = true) && ((@request.body.permissions.ausbildungen_manage != true && (@request.body.permissions !~ '"ausbildungen_manage"' || (@request.body.permissions ~ '"ausbildungen_manage":false' && @request.body.permissions !~ '%"ausbildungen_manage"%"ausbildungen_manage"%'))) || permissions.ausbildungen_manage = true) && ((@request.body.permissions.mpg_verwalten != true && (@request.body.permissions !~ '"mpg_verwalten"' || (@request.body.permissions ~ '"mpg_verwalten":false' && @request.body.permissions !~ '%"mpg_verwalten"%"mpg_verwalten"%'))) || permissions.mpg_verwalten = true) && ((@request.body.permissions.hygiene_verwalten != true && (@request.body.permissions !~ '"hygiene_verwalten"' || (@request.body.permissions ~ '"hygiene_verwalten":false' && @request.body.permissions !~ '%"hygiene_verwalten"%"hygiene_verwalten"%'))) || permissions.hygiene_verwalten = true)))) || (id = @request.auth.id && permissions_migrated != true && @request.body.permissions_migrated = true && @request.body.temp_permissions:isset = false && @request.body.role:isset = false && @request.body.supervisor:isset = false && @request.body.organization_id:isset = false && @request.body.disabled:isset = false && @request.body.expires_at:isset = false && @request.body.zusatzrollen:isset = false))
 ```
 
 ## MPG: API-Regeln
@@ -2010,3 +2029,217 @@ Stand 16.11.2026, alles nur mit erfundenen Testdaten auf Wegwerf-Servern:
   abgelaufene Sitzung (nur neutraler Text, nach erneuter Anmeldung wieder Einzelheiten); Dienst weg
   und wieder da, Doppelte im echten Dienst. Die übrigen Abschnitte (16, 30 bis 39) laufen mit den
   Push-Hooks: 833 Prüfungen, alle bestanden.
+
+## Hygiene: API-Regeln
+
+Owner, 23.11.2026: Fahrzeuge, Räume, Rucksäcke und Koffer, Geräte und Material werden in einem Intervall
+nach Checkliste gereinigt und desinfiziert; jede Durchführung ist ein unveränderlicher Nachweis. Überfällig
+wird nur angezeigt, nichts wird gesperrt (auch nicht im MPG oder Lager). Datenmodell und Grenzen:
+`src/lib/hygiene/typen.ts`, Rechte in der App: `src/lib/hygiene/rechte.ts` (blendet nur aus).
+
+- **Eintragen** (Durchführungen anlegen, alles lesen): jede Person mit Zugang, also dem Recht
+  „MPG & Einstellungen“ (`permissions.dashboard`, wie Geräte prüfen im MPG), auch befristet, und Supervisor.
+- **Einrichten** (Objekte anlegen, ändern, archivieren): nur mit **Hygiene verwalten** — Leitung
+  (`role = "admin"`) und Supervisor immer, sonst das Häkchen `permissions.hygiene_verwalten`, auch befristet.
+- **Teilnehmende** (`role = "teilnehmer"`) nie, auch nicht mit Häkchen. Alles nur mit aktivem Konto (nicht
+  gesperrt, nicht abgelaufen) und nur in der eigenen Organisation.
+- Objekte werden nie gelöscht, solange Durchführungen darauf verweisen (archivieren). Durchführungen werden
+  nie geändert oder gelöscht; eine Korrektur ist eine neue Durchführung mit Bemerkung.
+- Verweise auf MPG und Lager stehen als Text-Kennung mit Kopie des Namens am Objekt (`quelle`, `quelle_id`,
+  `quelle_name`), nie als Relation: Das Löschen eines Geräts oder Artikels ändert keinen Nachweis.
+- Keine Patientendaten: feste Anlässe statt freiem Grund, Punkte nur als Text und erledigt. Namen setzt der
+  Server aus dem Konto (`name`, sonst „Unbekannt“), nie die E-Mail-Adresse.
+
+### Schritte auf dem Server
+
+1. Hooks kopieren und PocketBase neu starten — `hygiene.pb.js` neu, `formular-regeln.js` und `push-regeln.js`
+   kennen das Modul `hygiene` (`MODUL_IDS`):
+   ```bash
+   cd /opt/responda-quelle && git pull
+   cp pb_hooks/hygiene.pb.js pb_hooks/formular-regeln.js pb_hooks/push-regeln.js /opt/pb_hooks/
+   systemctl restart pocketbase
+   ```
+2. `python3 scripts/hygiene-einrichten.py` legt `hygiene_objekte` und `hygiene_durchfuehrungen` an (alle Regeln
+   gesperrt, bis sie gesetzt sind) oder ergänzt fehlende Felder und Indizes; Felder mit anderem Typ zeigt es nur.
+   Es prüft, ob der Hook läuft (`GET /api/responda/hygiene/quellen` ohne Anmeldung: 401, ohne Hook 404) und ob
+   die Batch-API an ist (sonst *Settings → Application → Batch API* einschalten, Max. Anfragen 50 oder mehr),
+   und zeigt, welche Regeln es setzen würde. Zeigt nie Namen oder Daten, nur Zahlen. Beliebig oft ausführbar.
+3. `python3 scripts/hygiene-einrichten.py anwenden` sichert die bisherigen Regeln beider Sammlungen und die
+   Update- und Create-Regel von `users` nach `~/hygiene-regeln-vorher-<Zeit>.json` (überschreibt nie eine
+   Sicherung; Ordner mit `RESPONDA_SICHERUNG` änderbar) und setzt dann die Regeln unten. Ohne laufenden Hook
+   setzt es keine Regeln. Ist nichts zu ändern, sichert es auch nichts. Zurück:
+   `python3 scripts/hygiene-einrichten.py zurueck <Sicherung>`.
+4. In der Benutzerverwaltung „Hygiene verwalten“ an die vergeben, die außer der Leitung einrichten sollen.
+
+`users`: Das Skript ersetzt die Update-Regel (bzw. die Übergangsregel) und die Create-Regel durch die Fassung
+im Abschnitt „users: Rechte vergeben nur Verantwortliche“: Liste der Rechte, die Ausbildungs-Verwalter nicht
+vergeben dürfen, mit `hygiene_verwalten`, und zwar so, dass sie auch auf PocketBase 0.23.4 wirkt (die bisherige
+Liste wirkte dort nicht, siehe „Geprüft“), dazu keine befristeten Rechte beim Anlegen. Nur wenn die Regel auf
+dem Server **genau** der bisherigen Fassung dieser Datei entspricht; sonst ändert es nichts und verweist auf den
+Abschnitt (dann von Hand vergleichen und ersetzen). Steht als Update-Regel noch die Übergangsregel, sagt es das:
+Mit ihr kann sich jedes Konto ohne `permissions_migrated` beim ersten Anmelden beliebige Rechte geben, auch ein
+neuer Teilnehmer, den ein Ausbildungs-Verwalter angelegt hat.
+
+### Bausteine
+
+**Aktiv** (angemeldet, nicht gesperrt, nicht abgelaufen, keine Teilnehmenden):
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer"
+```
+
+**Zugang** (Eintragen und Lesen):
+```
+(@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now))
+```
+
+**Hygiene verwalten** (Einrichten):
+```
+(@request.auth.permissions.hygiene_verwalten = true || @request.auth.role = "admin" || @request.auth.supervisor = true || (@request.auth.temp_permissions.hygiene_verwalten.until ~ " " && @request.auth.temp_permissions.hygiene_verwalten.until > @now))
+```
+
+### Übersicht
+
+| Collection | List/View | Create | Update | Delete |
+|---|---|---|---|---|
+| `hygiene_objekte` | Aktiv + Organisation + Zugang | Aktiv + neu in der eigenen Organisation + Hygiene verwalten | Aktiv + Organisation, bleibt + Hygiene verwalten | gesperrt |
+| `hygiene_durchfuehrungen` | Aktiv + Organisation + Zugang | Aktiv + neu in der eigenen Organisation + Zugang | gesperrt | gesperrt |
+
+**Gesperrt** heißt: Schloss stehen lassen (null), nicht leeren Text eintragen — leer heißt „öffentlich“.
+Wer einrichten darf, aber keinen Zugang hat (Hygiene verwalten ohne „MPG & Einstellungen“), legt an, sieht die
+Objekte aber nicht; die Leitung hat beides.
+
+**Objekte List/Search und View**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now))
+```
+
+**Objekte Create**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.hygiene_verwalten = true || @request.auth.role = "admin" || @request.auth.supervisor = true || (@request.auth.temp_permissions.hygiene_verwalten.until ~ " " && @request.auth.temp_permissions.hygiene_verwalten.until > @now))
+```
+
+**Objekte Update**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && organization_id = @request.auth.organization_id && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && (@request.auth.permissions.hygiene_verwalten = true || @request.auth.role = "admin" || @request.auth.supervisor = true || (@request.auth.temp_permissions.hygiene_verwalten.until ~ " " && @request.auth.temp_permissions.hygiene_verwalten.until > @now))
+```
+
+**Objekte Delete**: gesperrt (null).
+
+**Durchführungen List/Search und View**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now))
+```
+
+**Durchführungen Create**
+```
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && @request.auth.role != "teilnehmer" && @request.body.organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now))
+```
+
+**Durchführungen Update** und **Delete**: gesperrt (null).
+
+### Felder
+
+`hygiene_objekte`: `organization_id` (Text, Pflicht), `name` (Text, Pflicht, höchstens 120), `art` (Auswahl
+`fahrzeug`, `raum`, `rucksack`, `geraet`, `material`, `sonstiges`, Pflicht), `standort` (Text, höchstens 120),
+`intervall` (Auswahl `taeglich`, `woechentlich`, `tage`, `monatlich`, `benutzung`, Pflicht), `intervall_tage`
+(Zahl, ganz, 0 bis 365), `punkte` (JSON, Liste von Texten), `quelle` (Auswahl `mpg_geraet`, `lager_ort`,
+`lager_satz`, `lager_artikel`, leer = von Hand), `quelle_id` (Text, höchstens 64), `quelle_name` (Text,
+höchstens 200), `archiviert` (Datum, leer = in Gebrauch), `created`, `updated` (Autodate). Index auf
+`organization_id`.
+
+`hygiene_durchfuehrungen`: `organization_id` (Text, Pflicht), `objekt_id` (Text, Pflicht), `objekt_name` (Text,
+höchstens 200), `art` (Auswahl `plan`, `anlass`, Pflicht), `anlass` (Auswahl `infektion`, `verschmutzung`,
+`sonstiges`), `einsatz_nummer` (Text, höchstens 40), `punkte` (JSON, Liste von `{text, erledigt}`), `offen`
+(Zahl, ganz, 0 bis 40), `bemerkung` (Text, höchstens 1000), `zeitpunkt` (Datum, Pflicht), `user_id`,
+`user_name` (Text), `created`, `updated` (Autodate). Indizes auf `organization_id, zeitpunkt` und `objekt_id`.
+
+### Hook `pb_hooks/hygiene.pb.js`
+
+Die zweite Ebene, falls eine Regel versehentlich geöffnet wird. Unveränderlichkeit und Löschschutz gelten
+**auch für Superuser**, also auch in der Admin-Oberfläche und im Batch; die Prüfung der Felder gilt für alle
+außer dem Superuser.
+
+- `hygiene_durchfuehrungen`: Ändern und Löschen abgelehnt („Nachweise der Hygiene sind unveränderlich — eine
+  Korrektur bitte als neue Durchführung mit Bemerkung eintragen.“, „… dürfen nicht gelöscht werden.“).
+- Auch „Truncate“, das Löschen und Umbenennen beider Sammlungen und ein Import mit „fehlende löschen“, der eine
+  davon entfernen würde, sind gesperrt. **Nicht abgedeckt:** Felder in der Admin-Oberfläche entfernen.
+- `hygiene_objekte`: Löschen nur ohne Durchführungen („… Bitte archivieren.“), auch beim Leeren der Sammlung.
+- Durchführung anlegen: nur angemeldet aus `users`, nur in der eigenen Organisation; das Objekt muss zur
+  Organisation gehören und darf nicht archiviert sein (unbekannt und fremd: dieselbe Meldung); `objekt_name`,
+  `user_id`, `user_name` und `offen` (Zahl der nicht erledigten Punkte) setzt der Server, ein mitgeschickter
+  Wert wird überschrieben, auch im Batch. `art` `plan` ohne Anlass, `anlass` mit einem der drei Anlässe;
+  Einsatznummer höchstens 40 Zeichen; höchstens 40 Punkte, je Text (höchstens 200 Zeichen, nicht leer) und
+  erledigt als Ja/Nein, weitere Angaben werden nicht gespeichert; Bemerkung höchstens 1000 Zeichen;
+  `zeitpunkt` Pflicht, höchstens 10 Minuten in der Zukunft (Geräte-Uhr) und höchstens 8 Tage zurück
+  (`NACHTRAG_TAGE` = 7 plus ein Tag Puffer).
+- Objekt anlegen und ändern: nur angemeldet aus `users`, nur in der eigenen Organisation, die Organisation
+  bleibt beim Ändern. Name 1 bis 120 Zeichen, Standort höchstens 120 (beide mit einfachen Leerzeichen), Art und
+  Intervall aus den Listen, bei `tage` 1 bis 365 Tage (sonst setzt der Server 0), Checkliste 1 bis 40 Punkte,
+  je Text, nicht leer, höchstens 200 Zeichen. Mit Herkunft muss `quelle_id` ein Datensatz derselben
+  Organisation sein (`mpg_devices`, `inventory_locations`, `inventory_kits`, `inventory_items`, jeweils
+  `organization_id`); `quelle_name` setzt dann der Server aus dessen Namen. Fehlt die Sammlung auf dem Server,
+  bleibt es beim gesendeten Namen. Geprüft wird nur, wenn die Herkunft neu ist oder sich ändert: Ein später
+  gelöschtes Gerät blockiert das Ändern nicht, und der gespeicherte Name bleibt. Ohne Herkunft werden Kennung und
+  Name geleert. `archiviert`: den Zeitpunkt setzt der Server; ein archiviertes Objekt behält ihn.
+
+Muss ein Nachweis ausnahmsweise wirklich weg (etwa Datenschutz): Datei vorübergehend entfernen, neu starten,
+löschen, Datei zurück, neu starten — und den Vorgang festhalten.
+
+### Route `GET /api/responda/hygiene/quellen`
+
+Für die Vorschläge beim Einrichten (`src/lib/hygiene/vorschlaege.ts`). Nur angemeldete, aktive Konten aus
+`users` (ohne Anmeldung, gesperrt oder abgelaufen: 401 `nicht_angemeldet`), keine Teilnehmenden, mit „Hygiene
+verwalten“ wie in der Regel (sonst 403 `nicht_berechtigt`, auch für den Superuser ohne Konto). Antwort, nur die
+eigene Organisation, je nach Name, höchstens 2000:
+```json
+{ "geraete": [{ "id": "…", "name": "…", "type": "…", "location": "…" }], "orte": [{ "id": "…", "name": "…" }],
+  "saetze": [{ "id": "…", "name": "…" }], "artikel": [{ "id": "…", "name": "…" }] }
+```
+Ohne außer Betrieb genommene Geräte (`ausser_betrieb` gesetzt) und ohne archivierte Orte, Sollausstattungen und
+Artikel (`archiviert`, wo es das Feld gibt). Fehlt eine Sammlung, ist ihre Liste leer.
+
+### Rücknahme
+
+Regeln mit `… zurueck <Sicherung>` zurück (die Sammlungen sind dann wieder gesperrt), danach `hygiene.pb.js`
+aus `/opt/pb_hooks` entfernen und neu starten. Die Sammlungen bleiben (der Hook sperrt ihr Löschen, solange er
+geladen ist). `zurueck` setzt nur Regeln zurück, die seitdem niemand geändert hat. **`users` bleibt auf der neuen
+Fassung:** Die alte wirkt auf 0.23.4 nicht (ein Ausbildungs-Verwalter käme bis zur Leitung), die neue schadet ohne
+Hygiene nicht. Nur mit `… zurueck <Sicherung> users` auch `users`, und nur, wenn dort noch genau die neue Fassung steht.
+
+### Geprüft
+
+Gegen **PocketBase 0.23.4** (Produktion) und 0.40.5, je ein frisches Verzeichnis mit zwei Organisationen und nur
+erfundenen Daten (26.11.2026). Zuerst das Skript: Anzeigen (legt die Sammlungen gesperrt an, ändert keine Regel),
+`anwenden`, zweiter Lauf ohne Änderung und ohne neue Sicherung, `zurueck` (Regeln beider Sammlungen und von `users`
+wie vorher), `users`-Update-Regel mit einem Leerzeichen anders (nicht angefasst, Hinweis; die Create-Regel wird
+ersetzt), Übergangsregel (ersetzt, Hinweis), Zwischenstand mit `hygiene_verwalten` in der alten Form (ersetzt),
+ohne Hook (keine Regeln gesetzt, keine Sicherung; nur 0.23.4).
+Dann 163 Prüfungen je Version, alle bestanden: Leitung, Häkchen, befristet (gültig, abgelaufen, altes
+Datumsformat), Helfer, ohne Zugang, Zugang befristet, Teilnehmer mit Häkchen, gesperrt und abgelaufen mit altem
+Token, Supervisor, Ausbilder, Konto ohne Namen, Leitung der anderen Organisation, ohne Anmeldung, Superuser —
+anlegen, ändern, lesen, Felder und Grenzen (auch als Formular statt JSON), Herkunft (eigene, fremde, unbekannte
+Kennung, Sammlung fehlt, Gerät später gelöscht), Archivieren, Zeitpunkt (±Minuten, Tage zurück, ISO-Format),
+Unveränderlichkeit auch für den Superuser und im Batch, Leeren, Löschen, Umbenennen, Import, Batch mit Objekt
+und Durchführung in einer Buchung und mit einem ungültigen Teil (ganz abgelehnt), die Route mit allen Personen.
+Gegenprobe auf 0.23.4 mit gesetzten Regeln, aber ohne Hook: 57 schlagen an, dann bricht der Lauf ab, weil sich
+die Sammlungen leeren und löschen ließen. Die Rauchprobe (`scripts/hooks-rauchprobe.mjs`) besteht auf beiden.
+
+**`users`, gefunden dabei und behoben (betraf nicht nur Hygiene):** Auf PocketBase **0.23.4** wirkte die Liste
+der Rechte im Zweig der Ausbildungs-Verwalter nicht (`@request.body.permissions.<recht>` ist dort immer leer).
+Gegenprobe mit der bisherigen Fassung: Ein Ausbildungs-Verwalter legte einen Teilnehmer mit Benutzerverwaltung
+und eigenem Passwort an, meldete sich damit an und machte das Konto zur Leitung (`role = "admin"`, 200). Derselbe
+Weg ging auf **allen** Versionen, auch 0.40.5, über eine befristete Benutzerverwaltung beim Anlegen
+(`temp_permissions`, im Zweig nicht geprüft). Von 73 Prüfungen der Ausbildungs-Verwalter gingen auf 0.23.4 52
+anders aus als gewollt, auf 0.40.5 6. Mit der neuen Fassung (Abschnitt „users: Rechte vergeben nur
+Verantwortliche“) alle 73 wie gewollt, auf beiden Versionen, mit Update-Regel und mit Übergangsregel: Teilnehmer
+anlegen und ändern wie die App (`Ausbildungen.tsx`, Rechte-Karte mit `false`, Unitas an und aus, nur Name),
+Unitas, Chat, Notizen und QR geben, Benutzer mit eigenen Rechten verknüpfen und Rechte stehen lassen, die jemand
+schon hat — erlaubt; jedes der 13 Rechte der Liste beim Anlegen, Ändern und Verknüpfen, befristete
+Benutzerverwaltung, Rolle Leitung, andere Organisation, sich selbst Rechte geben — abgelehnt, ebenso die
+Schreibweisen `1`, `1.0`, Text mit Leerzeichen oder Zeilenumbruch, `\u`-Escape (als Text und im Objekt),
+doppelte Schlüssel (0.23.4 speichert sie: die Regeln läsen den ersten, Hooks wie `cirs.pb.js` den letzten), ein
+gefälschtes `\"unitarii`, multipart und `@jsonPayload`. Die Leitung vergibt weiter jedes Recht.
+
+**Offen:** Steht auf dem Server noch die Übergangsregel, kann sich jedes Konto ohne `permissions_migrated` beim
+ersten Anmelden beliebige Rechte geben, auch ein neuer Teilnehmer eines Ausbildungs-Verwalters (bekannt, siehe
+„Rechte-Übernahme beim ersten Login“; das Skript sagt es). Nicht gegen 0.28.4 geprüft (läuft nicht in Produktion).

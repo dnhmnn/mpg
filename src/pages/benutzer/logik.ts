@@ -39,7 +39,7 @@ export type Recht = { key: string; label: string }
 /** Bereiche der Rechte, in der Reihenfolge, in der sie auf der Seite stehen */
 export const RECHTE_GRUPPEN: { name: string; rechte: string[] }[] = [
   { name: 'Einsatz', rechte: ['einsaetze', 'patienten'] },
-  { name: 'Material', rechte: ['lager', 'lager_verwalten', 'dashboard', 'mpg_verwalten'] },
+  { name: 'Material', rechte: ['lager', 'lager_verwalten', 'dashboard', 'mpg_verwalten', 'hygiene_verwalten'] },
   { name: 'Ausbildung', rechte: ['lernbar', 'ausbildungen_manage'] },
   { name: 'Verwaltung', rechte: ['dokumente', 'dateien', 'unitarii', 'qr'] },
   { name: 'Kommunikation', rechte: ['chat', 'notizen'] },
@@ -49,6 +49,7 @@ export const RECHTE_GRUPPEN: { name: string; rechte: string[] }[] = [
 export const RECHT_BESCHREIBUNG: Record<string, string> = {
   lager_verwalten: 'Artikel anlegen, Bestand buchen',
   mpg_verwalten: 'Geräte anlegen, sperren, freigeben',
+  hygiene_verwalten: 'Objekte, Intervalle und Checklisten der Hygiene einrichten',
   ausbildungen_manage: 'Termine und Module pflegen',
   unitarii: 'Benutzer anlegen, Rechte vergeben',
 }

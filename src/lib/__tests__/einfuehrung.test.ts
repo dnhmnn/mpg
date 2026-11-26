@@ -152,8 +152,8 @@ describe('Einführung: welche Schritte jemand sieht', () => {
 
   it('der Modulüberblick nennt nur die eigenen Module', () => {
     const modul = schritte(nutzer({ permissions: { dashboard: true, patienten: true } }), ['basis']).find((s) => s.id === 'module')
-    // MPG hängt am Recht "dashboard" — wer das hat, sieht es auch
-    expect(modul?.module).toEqual(['patienten', 'mpg'])
+    // MPG und Hygiene hängen am Recht "dashboard" — wer das hat, sieht sie auch
+    expect(modul?.module).toEqual(['patienten', 'mpg', 'hygiene'])
     expect(modul?.punkte?.[0]).toMatch(/^Patienten: /)
     expect(schritte(nutzer({ permissions: { patienten: true } }), ['basis']).find((s) => s.id === 'module')?.module).toEqual(['patienten'])
   })

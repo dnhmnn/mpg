@@ -40,6 +40,7 @@ const F = {
   ocra:       ['#99691f', '#6e4a14', '#e2b76a'], // Notizen
   inchiostro: ['#343e5e', '#222940', '#9ba9cd'], // Personen
   cappuccino: ['#7d6d5a', '#584c3f', '#d3c1aa'], // System
+  azzurro:    ['#2d6a99', '#1e4a6d', '#9cc3e0'], // Hygiene
 }
 // Auf diesen Kacheln trägt Messing nicht → Detail in Elfenbein
 const MESSING_SCHWACH = new Set(['senape', 'ocra'])
@@ -228,6 +229,15 @@ const MOTIVE = {
     L('M29.5 41 H39 L42 36.5 L46 45 L49 41 H68.5', 2.6, { o: 0.85 }),
     V(kreisD(PK[0], PK[1], PR), { schnitte: plaketteSchnitte }),
     A(sektor(PK[0], PK[1], 7.6, PR - 1, -13, 13)),
+  ],
+
+  // Hygiene: Sprühflasche mit Kopf und Düse, Etikett ausgespart, Sprühnebel in Messing
+  hygiene: ['azzurro',
+    T(rr(37, 15, 29, 15, 4.5)),
+    T(rr(23, 18.5, 16, 8, 2.5)),
+    V(rr(44, 28.5, 16, 8, 1.5) + rr(33, 34, 38, 48, 8), { schnitte: schnitt(rr(41, 50, 22, 17, 3.5)) }),
+    L('M57 30 L52 41', 3, { o: 0.7 }),
+    A(kreisD(16.5, 16.5, 2.6) + kreisD(13, 23.5, 2.2) + kreisD(16.5, 30.5, 2.6)),
   ],
 
   // Unitas: aufgeschlagenes Buch

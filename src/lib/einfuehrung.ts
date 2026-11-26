@@ -182,6 +182,7 @@ export const MODULE: { id: string; recht: string; name: string; satz: string }[]
   { id: 'ausbildungen', recht: 'ausbildungen_manage', name: 'Ausbildungen', satz: 'Ausbildungstermine planen, Teilnehmer und Lernmodule verwalten, per Link einladen.' },
   { id: 'unitarii', recht: 'unitarii', name: 'Benutzer', satz: 'Benutzer deiner Organisation anlegen und ihre Rechte vergeben.' },
   { id: 'mpg', recht: 'dashboard', name: 'MPG', satz: 'Medizinprodukte verwalten, nach Vorlage prüfen und Defekte melden.' },
+  { id: 'hygiene', recht: 'dashboard', name: 'Hygiene', satz: 'Fahrzeuge, Räume, Rucksäcke und Geräte nach Plan desinfizieren und mit Checkliste nachweisen.' },
   { id: 'chat', recht: 'chat', name: 'Chat', satz: 'Direktnachrichten an Personen deiner Organisation, auf deinem Gerät verschlüsselt.' },
   { id: 'notizen', recht: 'notizen', name: 'Notizen', satz: 'Notizen für dich oder mit deiner Organisation geteilt, mit Tags und Anpinnen.' },
 ]

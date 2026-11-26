@@ -127,7 +127,9 @@ describe('Verknüpfte Rechte: Vergleich und Rechte-Liste', () => {
   it('die vergebbaren Rechte sagen, dass Dateien die Schreibstube öffnet', () => {
     const r = vergebbareRechte({})
     expect(r.find((p) => p.key === 'dateien')?.label).toBe('Dateien & Schreibstube')
-    expect(r.find((p) => p.key === 'dashboard')?.label).toBe('MPG & Einstellungen')
+    expect(r.find((p) => p.key === 'dashboard')?.label).toBe('MPG, Hygiene & Einstellungen')
+    expect(vergebbareRechte({ freigeschaltet: ['mpg'] }).find((p) => p.key === 'dashboard')?.label).toBe('MPG & Einstellungen')
+    expect(vergebbareRechte({ freigeschaltet: ['hygiene'] }).find((p) => p.key === 'dashboard')?.label).toBe('Hygiene & Einstellungen')
     expect(vergebbareRechte({ freigeschaltet: ['lernbar'] }).find((p) => p.key === 'dashboard')?.label).toBe('Einstellungen')
     expect(vergebbareRechte({ freigeschaltet: ['lernbar'] }).some((p) => p.key === 'lager')).toBe(false)
   })

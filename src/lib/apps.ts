@@ -12,6 +12,7 @@ export const ALL_APPS: Record<string, App> = {
   ausbildungen: { id: 'ausbildungen', name: 'Ausbildungen',  icon: 'book',       url: '/ausbildungen',              permission: 'ausbildungen_manage', color: '#7a1020', isInternal: true },
   unitarii:     { id: 'unitarii',     name: 'Benutzer',      icon: 'users',      url: '/unitarii',                  permission: 'unitarii',            color: '#3d0408', isInternal: true },
   mpg:          { id: 'mpg',          name: 'MPG',           icon: 'mpg',        url: '/mpg',                       permission: 'dashboard',           color: '#600812', isInternal: true },
+  hygiene:      { id: 'hygiene',      name: 'Hygiene',       icon: 'hygiene',    url: '/hygiene',                   permission: 'dashboard',           color: '#600812', isInternal: true },
   chat:         { id: 'chat',         name: 'Chat',          icon: 'chat',       url: '/chat',                      permission: 'chat',                color: '#3d5c6e', isInternal: true },
   notizen:      { id: 'notizen',      name: 'Notizen',       icon: 'note',       url: '/notizen',                   permission: 'notizen',             color: '#5c3800', isInternal: true },
   settings:     { id: 'settings',     name: 'Einstellungen', icon: 'settings',   url: '#settings',                  permission: 'dashboard',           color: '#8a7a68', isInternal: true },
@@ -66,7 +67,7 @@ export function zeitpunktBefristung(bis: string): number {
 const GRUND = { dashboard: true, lernbar: true, chat: true, notizen: true }
 export const ROLES: Record<string, { permissions: Record<string, boolean> }> = {
   // Leitung: alle Rechte samt Benutzerverwaltung, fest. Rechte gesperrter Module wirken erst, wenn das Modul frei ist.
-  admin:     { permissions: { ...GRUND, mpg_verwalten: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, unitarii: true } },
+  admin:     { permissions: { ...GRUND, mpg_verwalten: true, hygiene_verwalten: true, einsaetze: true, lager: true, lager_verwalten: true, produktausgabe: true, ausbildungen_manage: true, dokumente: true, patienten: true, dateien: true, qr: true, unitarii: true } },
   benutzer:  { permissions: { ...GRUND } },
   fuehrung:  { permissions: { ...GRUND, einsaetze: true, dateien: true } },
   medizin:   { permissions: { ...GRUND, patienten: true } },
@@ -116,6 +117,7 @@ export const PERM_LABELS: { key: string; label: string }[] = [
   { key: 'unitarii',           label: 'Benutzerverwaltung' },
   { key: 'dashboard',          label: 'MPG-Dashboard' },
   { key: 'mpg_verwalten',      label: 'MPG verwalten' },
+  { key: 'hygiene_verwalten',  label: 'Hygiene verwalten' },
   { key: 'chat',               label: 'Chat' },
   { key: 'notizen',            label: 'Notizen' },
 ]
@@ -130,7 +132,7 @@ export function vergebbareRechte(org: unknown): { key: string; label: string }[]
     .filter(p => rechtFrei(org, p.key))
     .map(p => {
       // "dashboard" öffnet MPG und die Einstellungen — der Name sagt, was davon freigeschaltet ist
-      if (p.key === 'dashboard') return { ...p, label: appFrei(org, 'mpg') ? 'MPG & Einstellungen' : 'Einstellungen' }
+      if (p.key === 'dashboard') return { ...p, label: [appFrei(org, 'mpg') && 'MPG', appFrei(org, 'hygiene') && 'Hygiene', 'Einstellungen'].filter(Boolean).join(' & ').replace(/ & (?=.* & )/g, ', ') }
       // "dateien" öffnet auch die Schreibstube
       if (p.key === 'dateien') return { ...p, label: 'Dateien & Schreibstube' }
       return p

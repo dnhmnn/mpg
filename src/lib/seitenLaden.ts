@@ -18,6 +18,7 @@ export const SEITEN = {
   '/files': () => import('../pages/Files'),
   '/lager': () => import('../pages/Lager'),
   '/mpg': () => import('../pages/mpg'),
+  '/hygiene': () => import('../pages/Hygiene'),
   '/lernbar': () => import('../pages/Lernbar'),
   '/unitas': () => import('../pages/Unitas'),
   '/unitarii': () => import('../pages/Unitarii'),

@@ -41,6 +41,7 @@ const OrgSchnelldoku = lazy(() => import('./pages/public/OrgSchnelldoku'))
 const Chat = seite('/chat')
 const Supervisor = seite('/supervisor')
 const Einsaetze = seite('/einsaetze')
+const Hygiene = seite('/hygiene')
 const Vorgaenge = seite('/vorgaenge')
 const AVV = lazy(() => import('./pages/AVV'))
 const Office = seite('/office')
@@ -203,6 +204,7 @@ function App() {
         <Route path="/chat" element={<Chat />} />
         <Route path="/supervisor" element={<Supervisor />} />
         <Route path="/einsaetze" element={<Einsaetze />} />
+        <Route path="/hygiene" element={<Hygiene />} />
         <Route path="/vorgaenge" element={<Vorgaenge />} />
         <Route path="/avv" element={<AVV />} />
         <Route path="/office" element={<Office />} />

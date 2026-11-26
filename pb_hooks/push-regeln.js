@@ -88,7 +88,7 @@ const AUTH_RE = /^[A-Za-z0-9_-]{22}$/
 const FORMULAR_MODUL = { patienten: "patienten", produktausgabe: "lager", defektmeldung: "mpg", eigen: "dokumente" }
 
 // Module wie in src/lib/freigabe.ts (Kopie aus formular-regeln.js, damit Push ohne diese Datei läuft)
-const MODUL_IDS = ["benutzer", "einsaetze", "patienten", "dokumente", "lager", "mpg", "dateien", "lernbar", "ausbildungen", "chat", "notizen"]
+const MODUL_IDS = ["benutzer", "einsaetze", "patienten", "dokumente", "lager", "mpg", "hygiene", "dateien", "lernbar", "ausbildungen", "chat", "notizen"]
 const ENTHAELT = { lager: ["dateien", "mpg", "dokumente"] }
 const IMMER = ["benutzer"]
 

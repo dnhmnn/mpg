@@ -88,8 +88,8 @@ describe('wahlQuelle', () => {
 })
 
 describe('erlaubteApps und befristeteApps', () => {
-  it('Grundrechte: Unitas, MPG, Chat, Notizen, Einstellungen in ALL_APPS-Reihenfolge', () => {
-    expect(erlaubteApps(nutzer({ permissions: grund }), JETZT)).toEqual(['lernbar', 'mpg', 'chat', 'notizen', 'settings'])
+  it('Grundrechte: Unitas, MPG, Hygiene, Chat, Notizen, Einstellungen in ALL_APPS-Reihenfolge', () => {
+    expect(erlaubteApps(nutzer({ permissions: grund }), JETZT)).toEqual(['lernbar', 'mpg', 'hygiene', 'chat', 'notizen', 'settings'])
   })
   it('Supervisor alles; Leitung hat die Benutzerverwaltung auch ohne Häkchen', () => {
     expect(erlaubteApps(nutzer({ supervisor: true }), JETZT)).toEqual(Object.keys(ALL_APPS))
