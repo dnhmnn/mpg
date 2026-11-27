@@ -1,13 +1,15 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import LandingRenderer from '../components/LandingRenderer'
 import Startseite from './landing/Startseite'
 import {
-  API_URL, APP_URL, KONTAKT_EMAIL, defaultHomeSections,
+  API_URL, APP_URL, DEF_NAV, KONTAKT_EMAIL, defaultHomeSections,
   type GlobalSettings, type PageRec,
 } from '../lib/landingSchema'
 
-const BESCHREIBUNG = 'Responda verbindet Patientendokumentation, Medizinprodukte und Lager für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Derzeit in Entwicklung.'
+// Gleich in index.html (description, og:description, twitter:description) und im JSON-LD
+const BESCHREIBUNG = 'Einsätze, Protokolle, Medizinprodukte, Hygiene, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren. Server in Nürnberg. In Erprobung.'
+const TITEL = 'Responda: Für den ganzen Dienst. In einer App.'
 
 const JSON_LD = JSON.stringify({
   '@context': 'https://schema.org',
@@ -17,7 +19,7 @@ const JSON_LD = JSON.stringify({
   operatingSystem: 'Web, iOS, Android',
   url: 'https://responda.systems',
   // In Entwicklung: keine Preise (kein "offers"), bis Pakete feststehen
-  description: 'Responda verbindet Patientendokumentation, Medizinprodukte und Lager für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. In Entwicklung.',
+  description: BESCHREIBUNG,
   provider: { '@type': 'Organization', name: 'Responda Systems', url: 'https://responda.systems', email: KONTAKT_EMAIL },
   inLanguage: 'de',
   keywords: 'Einsatzverwaltung, Hilfsorganisation, Sanitätsdienst, Feuerwehr, Patientendokumentation, Medizinprodukte, Lagerverwaltung, Ausbildung',
@@ -56,7 +58,7 @@ export default function LandingPage() {
     : { slug: '', title: 'Start', sections: defaultHomeSections(content) }
 
   useEffect(() => {
-    document.title = (!istStart && page.seo_title) || 'Responda: Digitale Einsatzverwaltung für Hilfsorganisationen'
+    document.title = (!istStart && page.seo_title) || TITEL
     const beschreibung = istStart ? BESCHREIBUNG : page.seo_description
     if (beschreibung) {
       let m = document.querySelector('meta[name="description"]') as HTMLMetaElement | null
@@ -79,6 +81,17 @@ export default function LandingPage() {
 
   useEffect(() => { document.body.style.overflow = legal ? 'hidden' : ''; return () => { document.body.style.overflow = '' } }, [legal])
 
+  // Fenster Impressum/Datenschutz: Fokus hinein, der Rest der Seite ist solange inert, danach Fokus zurück
+  const schliessenRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!legal) return
+    const ausloeser = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const root = document.getElementById('root')
+    root?.setAttribute('inert', '')
+    schliessenRef.current?.focus()
+    return () => { root?.removeAttribute('inert'); ausloeser?.focus() }
+  }, [legal])
+
   const email = KONTAKT_EMAIL
 
   // Unterseiten mit "In Navigation zeigen" automatisch ans Menü anhängen
@@ -88,10 +101,7 @@ export default function LandingPage() {
   const globalWithNav: GlobalSettings = {
     ...content,
     // Unterseiten führen zurück zu den Abschnitten der Startseite (alte Menüs mit "Preise" gelten nicht mehr)
-    nav_items: [
-      { label: 'Module', href: '/#module' }, { label: 'Für wen', href: '/#fuer-wen' }, { label: 'Stand', href: '/#stand' },
-      ...navExtra, { label: 'Kontakt', href: '/#kontakt' },
-    ],
+    nav_items: [...DEF_NAV.slice(0, 3), ...navExtra, DEF_NAV[3]],
   }
 
   const modalStyle: React.CSSProperties = {
@@ -110,7 +120,7 @@ export default function LandingPage() {
   const secStyle: React.CSSProperties = { marginTop: 28 }
   const secH: React.CSSProperties = { fontSize: 16, fontWeight: 700, color: '#1a0e08', marginBottom: 6 }
   const secP: React.CSSProperties = { fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.7, marginBottom: 8 }
-  const closeBtn: React.CSSProperties = { position: 'absolute', top: 20, right: 20, width: 32, height: 32, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', fontSize: 18, fontFamily: 'inherit' }
+  const closeBtn: React.CSSProperties = { position: 'absolute', top: 14, right: 14, width: 44, height: 44, borderRadius: '50%', background: 'rgba(96,8,18,0.08)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#600812', fontSize: 18, fontFamily: 'inherit' }
 
   const lnk = (href: string, label: string) => <a href={href} style={{ color: '#600812' }}>{label}</a>
   const pb_impressum = content.impressum
@@ -126,10 +136,10 @@ export default function LandingPage() {
 
       {legal === 'impressum' && createPortal(
         <div style={modalStyle} onClick={e => { if (e.target === e.currentTarget) setLegal(null) }}>
-          <div style={boxStyle}>
-            <button style={closeBtn} onClick={() => setLegal(null)}>×</button>
+          <div style={boxStyle} role="dialog" aria-modal="true" aria-labelledby="rs-recht-titel">
+            <button ref={schliessenRef} style={closeBtn} onClick={() => setLegal(null)} aria-label="Schließen">×</button>
             <div style={eyeStyle}>Rechtliches</div>
-            <h1 style={h1Style}><span style={emStyle}>Impressum</span></h1>
+            <h1 id="rs-recht-titel" style={h1Style}><span style={emStyle}>Impressum</span></h1>
             {pb_impressum
               ? <div style={{ marginTop: 24, fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{pb_impressum}</div>
               : <>
@@ -147,10 +157,10 @@ export default function LandingPage() {
 
       {legal === 'datenschutz' && createPortal(
         <div style={modalStyle} onClick={e => { if (e.target === e.currentTarget) setLegal(null) }}>
-          <div style={boxStyle}>
-            <button style={closeBtn} onClick={() => setLegal(null)}>×</button>
+          <div style={boxStyle} role="dialog" aria-modal="true" aria-labelledby="rs-recht-titel">
+            <button ref={schliessenRef} style={closeBtn} onClick={() => setLegal(null)} aria-label="Schließen">×</button>
             <div style={eyeStyle}>Rechtliches</div>
-            <h1 style={h1Style}><span style={emStyle}>Datenschutzerklärung</span></h1>
+            <h1 id="rs-recht-titel" style={h1Style}><span style={emStyle}>Datenschutzerklärung</span></h1>
             {pb_datenschutz
               ? <div style={{ marginTop: 24, fontSize: '0.9rem', color: '#1a0e08', lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{pb_datenschutz}</div>
               : <>

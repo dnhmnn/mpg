@@ -1,7 +1,7 @@
-// Bild „lager“: Schritt Material (10:20). Das Lager (/lager) am Standort „HLF 20/1“ nach dem erfundenen Einsatz
-// E-2026-0417 (siehe eks.mjs): Auf dem Fahrzeug fehlt, was bei der Versorgung der Bewohnerin verbraucht wurde
-// (Einmalhandschuhe, Rettungsdecken, eine Sauerstoffmaske — unter Soll, gelb), zwei Artikel laufen bald ab.
-// Oben die Zahlen (In Ordnung, Bald fällig, Abgelaufen, Gesamt), unten die Standorte.
+// Bild „lager“: Schritt Material (10:20). Die Startseite des Lagers (/lager, Kacheln seit 20.11.2026) am Standort
+// „HLF 20/1“ nach dem erfundenen Einsatz E-2026-0417: Auf dem Fahrzeug fehlt, was bei der Versorgung der Bewohnerin
+// verbraucht wurde (Einmalhandschuhe, Rettungsdecken, eine Sauerstoffmaske — unter Soll), zwei Artikel laufen bald ab.
+// Im roten Kopf Standort und Zahlen (in Ordnung, bald fällig, abgelaufen), darunter die Kacheln.
 // Nur erfundene Daten: erfundene Feuerwehr, keine Markennamen.
 //
 // Die App fragt den Bestand je Standort ab (Filter location_id); die gemeinsame Antwort in daten.mjs kennt keine
@@ -94,7 +94,7 @@ import('../daten.mjs').then(aufbauen)
 
 export const bild = {
   name: 'lager',
-  pfad: '/lager?seite=bestand',
+  pfad: '/lager',
   warte: 900,
   sammlungen: {
     inventory_locations: STANDORTE,
@@ -112,8 +112,7 @@ export const bild = {
     const perPage = Number(url.searchParams.get('perPage') || 30)
     return { body: { page: 1, perPage, totalItems: items.length, totalPages: 1, items } }
   },
-  // Wie am Gerät: den Standort des Fahrzeugs wählen, von dem das Material genommen wurde
-  // (seit 20.11.2026 die Auswahl im roten Kopf; das Bild auf der Website zeigt noch das Lager davor)
+  // Wie am Gerät: den Standort des Fahrzeugs wählen, von dem das Material genommen wurde (Auswahl im roten Kopf)
   vorher: async (page) => {
     await page.selectOption('select[aria-label="Standort wählen"]', { label: 'HLF 20/1' })
     await page.waitForTimeout(800)

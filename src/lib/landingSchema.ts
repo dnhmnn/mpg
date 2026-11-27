@@ -150,9 +150,9 @@ export const DEF_PRICING: Tier[] = [
 
 // Menü der Unterseiten: zurück zu den Abschnitten der Startseite (landing/Startseite.tsx)
 export const DEF_NAV = [
-  { label: 'Module', href: '/#module' },
+  { label: 'Apps', href: '/#apps' },
+  { label: 'Grundsätze', href: '/#grundsaetze' },
   { label: 'Für wen', href: '/#fuer-wen' },
-  { label: 'Stand', href: '/#stand' },
   { label: 'Kontakt', href: '/#kontakt' },
 ]
 

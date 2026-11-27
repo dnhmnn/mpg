@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <!-- Auf der Website (nicht in der App) darf man zoomen; dieselben Hosts wie isMarketingDomain in src/App.tsx -->
+  <script>if(/^(www\.)?responda\.systems$/.test(location.hostname)){var v=document.querySelector('meta[name="viewport"]');if(v)v.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover')}</script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <!-- Darstellung vor dem ersten Bild (wie applyTheme in src/lib/theme.ts), damit der rote Start nicht die Farbe wechselt -->
@@ -10,8 +12,8 @@
   <!-- Rot, solange der Start steht (src/components/Zwischenschirm.tsx entfernt es); das erste theme-color gilt -->
   <meta name="theme-color" content="#3d0408" data-zwischen>
   <meta name="theme-color" content="#faf9f7">
-  <title>Responda: Digitale Einsatzverwaltung für Hilfsorganisationen</title>
-  <meta name="description" content="Responda verbindet Patientendokumentation, Medizinprodukte und Lager für Hilfsorganisationen und Feuerwehren, vom Sanitätsdienst bis zur Wasser- und Bergrettung. Derzeit in Entwicklung.">
+  <title>Responda: Für den ganzen Dienst. In einer App.</title>
+  <meta name="description" content="Einsätze, Protokolle, Medizinprodukte, Hygiene, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren. Server in Nürnberg. In Erprobung.">
   <meta name="keywords" content="Responda, Einsatzverwaltung, Hilfsorganisation, Sanitätsdienst, Feuerwehr, digitale Protokolle, Lagerverwaltung, Ausbildungsmanagement, MPG Prüfung">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://responda.systems/">
@@ -19,16 +21,16 @@
   <!-- Open Graph (Google-Vorschau, WhatsApp, Social Media) -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://responda.systems/">
-  <meta property="og:title" content="Responda: Digitale Einsatzverwaltung für Hilfsorganisationen">
-  <meta property="og:description" content="Einsatz, Dokumentation, Material und Ausbildung in einer App. Derzeit in Entwicklung.">
+  <meta property="og:title" content="Responda: Für den ganzen Dienst. In einer App.">
+  <meta property="og:description" content="Einsätze, Protokolle, Medizinprodukte, Hygiene, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren. Server in Nürnberg. In Erprobung.">
   <meta property="og:image" content="https://responda.systems/og-image.png">
   <meta property="og:locale" content="de_DE">
   <meta property="og:site_name" content="Responda">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Responda: Digitale Einsatzverwaltung für Hilfsorganisationen">
-  <meta name="twitter:description" content="Einsatz, Dokumentation, Material und Ausbildung in einer App. Derzeit in Entwicklung.">
+  <meta name="twitter:title" content="Responda: Für den ganzen Dienst. In einer App.">
+  <meta name="twitter:description" content="Einsätze, Protokolle, Medizinprodukte, Hygiene, Lager und Ausbildung für Hilfsorganisationen und Feuerwehren. Server in Nürnberg. In Erprobung.">
   <meta name="twitter:image" content="https://responda.systems/og-image.png">
 
   <link rel="icon" type="image/svg+xml" href="/logoklein.svg">

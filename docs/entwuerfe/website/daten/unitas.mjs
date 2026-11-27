@@ -1,7 +1,10 @@
-// Bild „unitas“: Schritt Nachbereitung. Unitas (/unitas) für die angemeldete Lena Berger, Reiter Protokolle:
-// oben „Wartet auf deine Unterschrift“ mit dem Protokoll der erfundenen Bewohnerin „Erika Mustermann“ aus dem
-// erfundenen Einsatz E-2026-0417 (dieselbe Kennung wie in protokoll.mjs), darunter frühere Protokolle, in deren
-// Besatzung Lena Berger steht. Die Neuigkeiten der Feuerwehr Musterstadt stehen im Reiter Übersicht (gleiche Daten).
+// Bild „unitas“: Unitas (/unitas) für die angemeldete Einsatzkraft Lena Berger am 19.11.2026, 09:41, Reiter
+// Übersicht: Gruß, die Zahlen (eine Unterschrift steht aus: das Protokoll der erfundenen Bewohnerin „Erika
+// Mustermann“ aus dem erfundenen Einsatz E-2026-0417, dieselbe Kennung wie in protokoll.mjs; ein eigenes Protokoll
+// freigegeben) und die Neuigkeiten der Feuerwehr Musterstadt. Die Zahl am Reiter Lernbar kommt aus denselben
+// Terminen und Modulen wie in den Bildern „ausbildungen“ und „lernbar“ (ausbildungsDaten in ausbildungen.mjs).
+// Im Reiter Protokolle stehen dieselben Daten: oben „Wartet auf deine Unterschrift“, darunter frühere Protokolle,
+// in deren Besatzung Lena Berger steht.
 // Nur erfundene Daten: erfundene Feuerwehr, erfundene Personen, Musterstadt, Platzhalternamen für Patienten.
 //
 // Wie die Karte zustande kommt (src/pages/Unitas.tsx): Die Liste „Wartet auf deine Unterschrift“ holt die App über
@@ -9,12 +12,14 @@
 // die Protokolle, deren Absender ausstehend und mit dieser Person verknüpft ist (formular.pb.js). Solange die
 // Unterschrift aussteht, zählt das Protokoll nicht zu den eigenen (istMeinProtokoll), steht also nur oben.
 
+import { ausbildungsDaten, personRouten } from './ausbildungen.mjs'
+
 // ORG und USER kommen aus '../daten.mjs', nachgeladen wie in eks.mjs (ein statischer Import hinge im Kreis fest).
 const PATIENTS = []
 const NEUIGKEITEN = []
-const TERMINE = []
-const TERMIN_USER = []
 const EINTRAEGE = []
+// Termine, Teilnahmen, Module und Fortschritt wie im Bild „ausbildungen“
+const AUSBILDUNG = {}
 
 const PROTOKOLL_ID = 'protokollerika1'
 
@@ -98,22 +103,24 @@ function aufbauen({ ORG, USER }) {
       inhalt: 'Die Geräte vom Einsatz gehen heute in die Atemschutzwerkstatt. Bis dahin sind auf dem HLF 20/1 die Reservegeräte verlastet.',
     }, ORG),
     neuigkeit({
+      id: 'neuigkeitsan204', von: 'Anna Beispiel', tag: '19', hm: '07:55',
+      titel: 'Heute 19 Uhr: Sanitätsausbildung Modul 2',
+      inhalt: 'Im Schulungsraum, Thema Ersteinschätzung und Rauchgas. Bitte vorher in der Lernbar die beiden Module dazu durchgehen.',
+    }, ORG),
+    neuigkeit({
       id: 'neuigkeitdien03', von: 'Katrin Schulz', tag: '16', hm: '18:05',
       titel: 'Dienstplan Dezember steht',
       inhalt: 'Übungsdienste jeden Montag, am 14.12. Jahresabschluss mit Fahrzeugpflege.',
     }, ORG),
   )
 
-  // Ein anstehender Termin in der Lernbar (Zahl am Reiter)
-  TERMINE.push({
-    id: 'terminatemuebg1', collectionId: 'pbc_ausbildungen_termine', collectionName: 'ausbildungen_termine',
-    name: 'Atemschutz-Belastungsübung', start_datetime: pb('26', '19:00'), status: 'geplant', organisation_id: ORG.id,
-    created: pb('02', '10:00'), updated: pb('02', '10:00'),
-  })
-  TERMIN_USER.push({
-    id: 'terminuserlena1', collectionId: 'pbc_ausbildungen_termine_user', collectionName: 'ausbildungen_termine_user',
-    termin_id: 'terminatemuebg1', teilnehmer_id: USER.id, status: 'zugesagt',
-    created: pb('02', '10:00'), updated: pb('02', '10:00'),
+  // Anstehende Termine und offene Module in der Lernbar (Zahl am Reiter), wie in ausbildungen.mjs
+  const d = ausbildungsDaten(ORG, USER)
+  Object.assign(AUSBILDUNG, {
+    ausbildungen_termine: d.termine,
+    ausbildungen_termine_user: d.teilnahmen,
+    ausbildungen_module: d.module,
+    ausbildungen_module_progress: d.fortschritt,
   })
 }
 import('../daten.mjs').then(aufbauen)
@@ -138,6 +145,8 @@ function patientenListe(url) {
   return { body: { page: 1, perPage, totalItems: items.length, totalPages: 1, items } }
 }
 
+const ausbildung = personRouten(AUSBILDUNG)
+
 export const bild = {
   name: 'unitas',
   pfad: '/unitas',
@@ -145,18 +154,11 @@ export const bild = {
   sammlungen: {
     patients: PATIENTS,
     unitas_neuigkeiten: NEUIGKEITEN,
-    ausbildungen_termine: TERMINE,
-    ausbildungen_termine_user: TERMIN_USER,
   },
   routen: (methode, url) => {
     if (methode === 'GET' && url.pathname === '/api/responda/formular/unterschriften') return { body: { eintraege: EINTRAEGE } }
     if (methode === 'GET' && url.pathname === '/api/collections/patients/records') return patientenListe(url)
     if (url.pathname === '/api/realtime') return echtzeit(methode)
-    return undefined
-  },
-  vorher: async (page) => {
-    // Der Reiter Protokolle (wie ein Tipp auf die Zahl „Unterschriften“ in der Übersicht)
-    await page.getByRole('button', { name: /Protokolle/ }).last().click()
-    await page.waitForTimeout(600)
+    return ausbildung(methode, url)
   },
 }

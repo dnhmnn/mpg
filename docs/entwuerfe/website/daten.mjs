@@ -21,8 +21,8 @@ export const USER = {
   id: USER_ID, collectionId: '_pb_users_auth_', collectionName: 'users', email: 'lena.berger@example.org', emailVisibility: false, verified: true,
   name: 'Lena Berger', organization_id: ORG_ID, organization_name: ORG.org_name, role: 'admin', zusatzrollen: [], supervisor: false,
   permissions: ALLE_RECHTE, permissions_migrated: true, disabled: false, expires_at: '', created: '2025-03-01 10:00:00.000Z', updated: JETZT,
-  // Im Hub ausgeblendet (wie es jede Person selbst kann): Einsätze und Ausbildungen zeigt die Website nicht
-  hub_apps: { ausgeblendet: ['einsaetze', 'ausbildungen'], reihenfolge: [] }, hinweis_gesehen_am: JETZT,
+  // Im Hub nichts ausgeblendet: die Website zeigt alle Apps, auch Einsätze und Ausbildungen
+  hub_apps: { ausgeblendet: [], reihenfolge: [] }, hinweis_gesehen_am: JETZT,
 }
 
 export const ANMELDUNG = { token: TOKEN, record: USER }
@@ -63,12 +63,16 @@ export function antwort(methode, url, body, bild = {}) {
   return { body: {} }
 }
 
-// Je Bild eine Datei in daten/ (export const bild = { name, pfad, thema?, warte?, sammlungen?, routen?, vorher? })
+// Je Bild eine Datei in daten/ (export const bild = { name, pfad, thema?, warte?, sammlungen?, routen?, vorher? });
+// mehrere Bilder mit denselben Daten: export const bilder = [ … ]
 const ORDNER = new URL('./daten/', import.meta.url)
 const { readdirSync, existsSync } = await import('node:fs')
 const teile = existsSync(ORDNER) ? readdirSync(ORDNER).filter((f) => f.endsWith('.mjs')).sort() : []
 const weitere = []
-for (const f of teile) weitere.push((await import(new URL(f, ORDNER).href)).bild)
+for (const f of teile) {
+  const m = await import(new URL(f, ORDNER).href)
+  weitere.push(...(m.bilder || [m.bild]))
+}
 
 /** Die Bilder: Name, Pfad in der App, optional Thema und Schritte vor dem Bild. */
 export const BILDER = [

@@ -233,16 +233,30 @@ Dark-Mode-Varianten sind ebenfalls gesetzt (`#0f0a07` / `#9a8a78`).
   oben (`OrgPublicLayout`, Zusammenhang `rahmen`). Die öffentlichen Formulare selbst (`/<org-code>/patienten`
   usw.) bleiben, wie sie sind.
 
-#### Website responda.systems, festgelegt vom Owner am 19./20.11.2026
+#### Website responda.systems, festgelegt vom Owner am 19./20.11.2026, neu am 26./27.11.2026
 - Ganz in Dunkelrot wie die Zugangsseiten: großes Logo, große helle Schrift (`src/pages/landing/Startseite.tsx`,
   Stile `RS_CSS` in `src/pages/landing/stil.ts`), html und body die ganze Zeit rot (`useStatusleiste('--rs-kopf')`).
-- Statt Bereiche zu erklären, läuft ein erfundener Einsatz der „Feuerwehr Musterstadt“ ab (Wohnungsbrand,
-  Patientin, Gerät gesperrt, Material, Nachbereitung); auf dem Rechner steht das Telefon und wechselt beim Scrollen
-  den Bildschirm, am Telefon steht nach jedem Schritt ein eigenes. Wenig Text („statt es ewig zu erklären“).
-- Nicht auf die Website: Einsätze, Ausbildung und Fortbildung (Owner, 20.11.2026; EKS gibt es seit 22.11.2026 nicht mehr).
+  Ein durchgehendes Rot ohne Bänder, nichts Festes am unteren Rand (nur der Streifen `.rs-statusleiste` oben).
+- Szene am Scrollen wie auf der Apple-Website (Owner, 26.11.2026): Das Handy kommt aus der Brusttasche einer
+  Einsatzjacke, der Bildschirm geht an wie Responda selbst (Dunkelrot, Zeichen), dann zeigt es nacheinander alle
+  Apps, auch Einsätze und Ausbildungen (Owner 26.11.2026; hebt „Nicht auf die Website: Einsätze, Ausbildung“ vom
+  20.11.2026 auf). Vier Kapitel (Im Einsatz, Material, Ausbildung, Team und Organisation) mit je einem großen
+  Kapitelmoment, am Rechner eine Kapitelzeile; zum Schluss „Für den ganzen Dienst. In einer App.“ mit Knopf.
+  Danach Grundsätze als Lesezeilen (hellen beim Hochrollen auf), „Für wen“ als ein Satz, Kontakt als Schlussbild.
+  Wenig Text („statt es ewig zu erklären“). Push steht nie als Alarmierung da.
+- Ablauf und Texte der Szene als reine Rechnung in `src/pages/landing/ablauf.ts` mit Prüffällen
+  (`src/lib/__tests__/landingAblauf.test.ts`: Grenzen, nie zwei Texte zugleich, Bilder ohne Schleier, Fenster der
+  geladenen Bilder). Scroll in `src/pages/landing/scroll.ts`: eine Höhe aus `.rs-mass` (100svh, Rückfall 100vh),
+  nie `window.innerHeight`, kein resize-Listener, malen liest kein Layout. Bilder nur im Fenster um den aktuellen
+  Schritt (sonst `display: none`, am iPhone wegen des Speichers), Vorladen im Leerlauf, nicht bei „Daten sparen“.
+- „Bewegung reduzieren“: dieselbe Seite, nur über Deckkraft (keine zweite Fassung). Leiste mit „Anmelden“ und
+  „Kontakt“, Sprunglinks „Zum Kontakt“ und „Apps überspringen“; die Szene steht für Screenreader als Gliederung
+  in `.rs-sr`. Zoomen ist nur auf der Website frei (Skript in `index.html`), in der App bleibt es aus.
 - Die Bilder der App (`public/website/*.webp`) entstehen aus der gebauten App mit erfundenen Testdaten:
   `node docs/entwuerfe/website/aufnahme.mjs` (Daten in `docs/entwuerfe/website/daten.mjs` und `daten/`), dann
   `node docs/entwuerfe/website/webp.mjs <ordner-mit-png>`. Nie echte Personen, Organisationen oder Patientendaten.
+- Vor dem Veröffentlichen am Telefon und am Rechner aufnehmen (oben, beim Scrollen, Schluss, ganz unten), auch mit
+  „Bewegung reduzieren“; am iPhone noch anzusehen.
 
 ## Keyframes (in globals.css oder inline `<style>`)
 ```css
