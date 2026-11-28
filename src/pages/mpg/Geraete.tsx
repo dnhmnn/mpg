@@ -4,7 +4,7 @@
 
 import { useMemo } from 'react'
 import { Link, useNavigate, useOutlet, useParams, useSearchParams } from 'react-router-dom'
-import { STUFEN, istAusserBetrieb, type Stufe } from '../../lib/mpg/zustand'
+import { STUFEN, istAusserBetrieb, istGeloescht, type Stufe } from '../../lib/mpg/zustand'
 import { useMpg } from './MpgDaten'
 import { GeraetKarte, naechsteFrist } from './GeraetKarte'
 import { rundenVon } from './Heute'
@@ -14,12 +14,14 @@ import { Icon } from '../benutzer/bausteine'
 import { ImBereich, MpgKopf } from './kopf'
 import { rundenPfad, type Device } from './typen'
 
-type Filter = 'alle' | 'gesperrt' | 'handlung' | 'bald' | 'bereit' | 'ausser'
-const FILTER: [Filter, string][] = [['alle', 'Alle'], ['gesperrt', 'Gesperrt'], ['handlung', 'Handeln'], ['bald', 'Bald fällig'], ['bereit', 'Bereit'], ['ausser', 'Außer Betrieb']]
+type Filter = 'alle' | 'gesperrt' | 'handlung' | 'bald' | 'bereit' | 'ausser' | 'geloescht'
+// „Gelöscht“: nach der Außerbetriebnahme gelöscht, Nachweise noch aufbewahrt (Owner, 27.11.2026)
+const FILTER: [Filter, string][] = [['alle', 'Alle'], ['gesperrt', 'Gesperrt'], ['handlung', 'Handeln'], ['bald', 'Bald fällig'], ['bereit', 'Bereit'], ['ausser', 'Außer Betrieb'], ['geloescht', 'Gelöscht']]
+const EIGEN: Filter[] = ['ausser', 'geloescht']
 
 function passt(f: Filter, s: Stufe): boolean {
   if (f === 'alle') return true
-  if (f === 'ausser') return false
+  if (f === 'ausser' || f === 'geloescht') return false
   if (f === 'bereit') return s === 'ok' || s === 'bald'
   return s === f
 }
@@ -42,16 +44,17 @@ export default function Geraete() {
   }
 
   const rang = (d: Device) => STUFEN.indexOf(m.zustand(d).stufe)
-  const ausser = useMemo(() => m.devices.filter(istAusserBetrieb), [m.devices])
+  const ausser = useMemo(() => m.devices.filter(d => istAusserBetrieb(d) && !istGeloescht(d)), [m.devices])
+  const geloescht = useMemo(() => m.devices.filter(d => istAusserBetrieb(d) && istGeloescht(d)), [m.devices])
   const treffer = useMemo(() => {
     const t = q.trim().toLowerCase()
-    return (filter === 'ausser' ? ausser : m.bestand)
+    return (filter === 'ausser' ? ausser : filter === 'geloescht' ? geloescht : m.bestand)
       .filter(d => !t || [d.name, d.type, d.location, d.serial_number].some(f => (f || '').toLowerCase().includes(t)))
-      .filter(d => filter === 'ausser' || passt(filter, m.zustand(d).stufe))
+      .filter(d => EIGEN.includes(filter) || passt(filter, m.zustand(d).stufe))
       .sort((a, b) => rang(a) - rang(b) || a.name.localeCompare(b.name, 'de'))
-  }, [m.bestand, ausser, m.zustand, q, filter])
+  }, [m.bestand, ausser, geloescht, m.zustand, q, filter])
 
-  const zahl = (f: Filter) => f === 'ausser' ? ausser.length : m.bestand.filter(d => passt(f, m.zustand(d).stufe)).length
+  const zahl = (f: Filter) => f === 'ausser' ? ausser.length : f === 'geloescht' ? geloescht.length : m.bestand.filter(d => passt(f, m.zustand(d).stufe)).length
   // Im roten Kopf: Titel, Zurück zur Startseite, Gerät anlegen
   const rotKopf = (
     <MpgKopf tiefe={1} titel="Geräte" unter={`${m.bestand.length} im Bestand`} zurueck="/mpg"
@@ -65,7 +68,7 @@ export default function Geraete() {
         {q && <button type="button" aria-label="Suche leeren" onClick={() => setze('q', '')}><Icon n="kreuz" /></button>}
       </div>
       <div style={{ display: 'flex', gap: 6, overflowX: 'auto', marginBottom: 16, paddingBottom: 2, scrollbarWidth: 'none' }}>
-        {FILTER.filter(([f]) => f !== 'ausser' || ausser.length > 0 || filter === 'ausser').map(([f, name]) => {
+        {FILTER.filter(([f]) => !EIGEN.includes(f) || zahl(f) > 0 || filter === f).map(([f, name]) => {
           const an = filter === f
           return (
             <button key={f} onClick={() => setze('zustand', f)} aria-pressed={an} style={{
@@ -108,7 +111,7 @@ export default function Geraete() {
                 <td style={{ ...zelle, ...kursivGrau }}>{d.location || '—'}</td>
                 {!detail && <td style={{ ...zelle, ...kursivGrau }}>{d.serial_number || '—'}</td>}
                 {!detail && <td style={{ ...zelle, ...kursivGrau }}>{naechsteFrist(z)}</td>}
-                <td style={zelle}>{aus(d) ? <span style={{ ...kursivGrau }}>außer Betrieb</span> : <ZustandMarke stufe={z.stufe} />}</td>
+                <td style={zelle}>{aus(d) ? <span style={{ ...kursivGrau }}>{istGeloescht(d) ? 'gelöscht' : 'außer Betrieb'}</span> : <ZustandMarke stufe={z.stufe} />}</td>
               </tr>
             )
           })}
@@ -120,7 +123,7 @@ export default function Geraete() {
   // Telefon: nach Standort gruppiert
   const gruppiert = treffer.length === 0 ? leer : rundenVon(treffer).map(g => (
     <Abschnitt key={g.schluessel} titel={`${g.name} (${g.geraete.length})`}
-      rechts={filter === 'ausser' ? undefined : <Link to={rundenPfad(g.schluessel)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '10px 8px', margin: '-10px -8px', letterSpacing: '0.08em' }}>Prüfrunde</Link>}>
+      rechts={EIGEN.includes(filter) ? undefined : <Link to={rundenPfad(g.schluessel)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--lbf-akzent)', textDecoration: 'none', padding: '10px 8px', margin: '-10px -8px', letterSpacing: '0.08em' }}>Prüfrunde</Link>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {g.geraete
           .sort((a, b) => rang(a) - rang(b) || a.name.localeCompare(b.name, 'de'))

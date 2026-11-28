@@ -14,7 +14,7 @@ import { fallAus, istUeberfaellig, type CirsDatensatz } from '../../lib/cirs'
 import { zaehleStufen, type ZustandGeraet } from '../../lib/mpg/zustand'
 import { mitDefektFallback, neuesteKontrollen, type KontrollEintrag } from '../../lib/mpg/kontrollen'
 import { useHeute } from '../../hooks/useHeute'
-import type { Tag } from '../../lib/mpg/fristen'
+import { FRIST_FELDER, type Tag } from '../../lib/mpg/fristen'
 import type { User } from '../../types'
 
 export interface Neuigkeit {
@@ -150,7 +150,8 @@ async function laden(user: User, org: string, heute: Tag): Promise<Neuigkeit[]> 
       pb.collection('mpg_devices').getFullList<ZustandGeraet & { id: string }>({
         filter: pb.filter('organization_id = {:org}', { org }),
         // ausser_betrieb: außer Betrieb genommene zählen nicht mit (fehlt das Feld, liefert PocketBase es einfach nicht)
-        fields: 'id,interval,last_inspection,last_inspection_passed,operational,has_stk,last_stk,stk_interval_months,has_mtk,last_mtk,mtk_interval_months,ausser_betrieb,inbetriebnahme',
+        // Fristfelder aus einer Liste (FRIST_FELDER), damit der Hub wie das MPG rechnet (auch „alle N Tage“)
+        fields: ['id', ...FRIST_FELDER, 'last_inspection_passed', 'operational', 'ausser_betrieb'].join(','),
         requestKey: 'widget-mpg',
       }),
       pb.collection('mpg_defects').getFullList<{ id: string; device_id: string; severity: string; description: string; created: string }>({

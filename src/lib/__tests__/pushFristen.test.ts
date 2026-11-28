@@ -61,7 +61,8 @@ function datumWert(): string | null {
 }
 function geraetZufall() {
   return {
-    interval: wahl<unknown>(['daily', 'weekly', 'monthly', 'yearly', 'täglich', 'Wöchentlich', 'jaehrlich', 'annually', '', null, ['monthly'], ['yearly', 'daily'], 'xyz']) as string,
+    interval: wahl<unknown>(['daily', 'weekly', 'monthly', 'yearly', 'täglich', 'Wöchentlich', 'jaehrlich', 'annually', '', null, ['monthly'], ['yearly', 'daily'], 'xyz', 'days', 'days', ['days'], 'Tage']) as string,
+    interval_days: wahl<unknown>([null, 0, 1, 3, 7, 10, 14, 30, 90, 365, 400, 2.5, '21']) as number,
     last_inspection: datumWert(),
     has_stk: rnd() < 0.6,
     last_stk: datumWert(),
@@ -116,7 +117,13 @@ describe('fristenVon wie src/lib/mpg/fristen.ts (TZ Europe/Berlin)', () => {
       const h = tagZufall()
       expect(flach(F.lageVon(t, h, 30))).toEqual(FT.lageVon(t, h, 30))
     }
-    for (const v of ['daily', 'Täglich', ' woche ', ['yearly'], null, 7, 'xyz']) expect(F.intervallVon(v)).toBe(FT.intervallVon(v))
+    for (const v of ['daily', 'Täglich', ' woche ', ['yearly'], null, 7, 'xyz', 'days', ' Tage ', ['days']]) expect(F.intervallVon(v)).toBe(FT.intervallVon(v))
+    for (const t of [null, undefined, 0, 1, 7, 14, 365, 366, 2.5, '9', 'x']) {
+      expect(F.tageVon(t)).toBe(FT.tageVon(t))
+      for (const i of FT.INTERVALLE) expect(F.vorwarnungVon(i, t)).toBe(FT.vorwarnungVon(i, t))
+      expect(F.naechstePruefung('2026-10-24', 'days', t)).toBe(FT.naechstePruefung('2026-10-24', 'days', t))
+    }
+    expect(F.INTERVALLE).toEqual(FT.INTERVALLE)
   })
   it('ueberfaelligeKontrollen und wocheMpg', () => {
     const g = { has_stk: true, last_stk: '2024-01-10', stk_interval_months: 24, has_mtk: true, last_mtk: '2024-03-01', mtk_interval_months: 24, last_inspection: '2026-11-01', interval: 'monthly' }

@@ -449,6 +449,22 @@ bestanden. Gegenprobe mit offenen Regeln und ohne Hook: 174 schlagen an.
 
 ### Vorher
 
+**Mit dem Skript (seit 27.11.2026):** Die Schritte 1 bis 3 und 8 erledigt
+`scripts/mpg-einrichten.py`: Es legt fehlende Sammlungen (`mpg_ereignisse`) und
+Felder an (auch `interval_days` für „alle N Tage“, die Auswahl `days` an
+`interval` und `geloescht`), prüft die Felder von `users` und die Batch-API und
+setzt die Regeln unten wörtlich, mit Sicherung und `zurueck`. Regeln setzt es nur,
+wenn der Hook in Fassung 3 läuft (`GET /api/responda/mpg/fassung`); `interval_days`,
+`geloescht` und `days` legt es erst dann an (der Hook verlangt dafür „MPG verwalten“):
+```
+cd /opt/responda-quelle && git pull
+cp pb_hooks/mpg.pb.js pb_hooks/push-fristen.js pb_hooks/push-versand.js /opt/pb_hooks/ && systemctl restart pocketbase
+python3 scripts/mpg-einrichten.py            # zeigt, was es täte (legt Sammlungen und Felder schon an)
+python3 scripts/mpg-einrichten.py anwenden   # dazu Sicherung, dann die Regeln
+```
+Die Schritte unten bleiben als Beschreibung, was das Skript tut, und für den Fall,
+dass jemand von Hand einrichtet.
+
 Die App läuft auch ohne diese Schritte weiter; sie erkennt selbst, was schon da
 ist. Bis dahin schreibt sie ohne Gerätebuch, und „Außer Betrieb nehmen“ zeigt
 einen Hinweis statt still nichts zu speichern.
@@ -466,9 +482,12 @@ einen Hinweis statt still nichts zu speichern.
    Konto gelöscht, würde PocketBase sonst still Einträge ändern). Die ID vergibt
    die App (15 Zeichen `a–z0–9`), so kommt nichts doppelt an. Die Regeln noch
    **nicht** eintragen.
-2. An **`mpg_devices`** vier Felder anlegen, nicht Pflicht:
+2. An **`mpg_devices`** diese Felder anlegen, nicht Pflicht:
    `ausser_betrieb` (*Date*), `ausser_betrieb_grund` (*Plain text*),
-   `verbleib` (*Plain text*), `inbetriebnahme` (*Date*, für die erste STK und MTK).
+   `verbleib` (*Plain text*), `inbetriebnahme` (*Date*, für die erste STK und MTK),
+   `interval_days` (*Number*, ganze Zahl, 0 bis 365: Abstand bei „alle N Tage“) und
+   `geloescht` (*Date*: gelöscht nach der Außerbetriebnahme, setzt der Hook). Ist
+   `interval` eine Auswahl, kommt der Wert `days` dazu (Owner, 27.11.2026).
 
    Empfohlen, ebenfalls *Plain text*, nicht Pflicht: `user_id` an
    `mpg_inspections`, `reported_by_id` und `resolved_by_id` an `mpg_defects`.
@@ -494,7 +513,7 @@ einen Hinweis statt still nichts zu speichern.
      `mpg_defect_reports` — fehlt eines, lehnt PocketBase das Speichern der
      Regel ab.
    - `mpg_devices` darf nur diese Felder haben (dazu `id`, `created`,
-     `updated`): `name`, `type`, `serial_number`, `location`, `interval`, `last_inspection`, `last_inspection_passed`, `next_inspection_due`, `operational`, `has_stk`, `last_stk`, `stk_interval_months`, `has_mtk`, `last_mtk`, `mtk_interval_months`, `ausser_betrieb`, `ausser_betrieb_grund`, `verbleib`, `inbetriebnahme`, `organization_id`. Jedes weitere könnte jeder mit MPG-Zugang
+     `updated`): `name`, `type`, `serial_number`, `location`, `interval`, `interval_days`, `last_inspection`, `last_inspection_passed`, `next_inspection_due`, `operational`, `has_stk`, `last_stk`, `stk_interval_months`, `has_mtk`, `last_mtk`, `mtk_interval_months`, `ausser_betrieb`, `ausser_betrieb_grund`, `verbleib`, `inbetriebnahme`, `geloescht`, `organization_id`. Jedes weitere könnte jeder mit MPG-Zugang
      ändern — dann in die Update-Regel ² nach demselben Muster
      (`@request.body.<feld>:isset = false`) aufnehmen, bevor sie gespeichert wird.
 4. `pb_hooks/mpg.pb.js` nach **`/opt/pb_hooks`** kopieren und PocketBase neu
@@ -593,8 +612,11 @@ Außerbetriebnahme. „Zuletzt geprüft“ und „bestanden“ prüft zusätzlic
 Sie müssen zu einem gespeicherten Prüfprotokoll desselben Geräts passen
 (Zeitpunkt und Ergebnis). `next_inspection_due` prüft er nicht — die App
 berechnet die Fälligkeit selbst aus dem Prüfstand und liest das Feld nicht.
+Seit 27.11.2026 zählen auch `interval_days` (alle N Tage) und `geloescht` (Löschen
+nach der Außerbetriebnahme) zu den Stammdaten; die Fassung davor ohne die beiden
+ersetzt `scripts/mpg-einrichten.py`.
 ```
-@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now)) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && ((@request.auth.permissions.mpg_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.mpg_verwalten.until ~ " " && @request.auth.temp_permissions.mpg_verwalten.until > @now)) || (@request.body.name:isset = false && @request.body.type:isset = false && @request.body.serial_number:isset = false && @request.body.location:isset = false && @request.body.interval:isset = false && @request.body.has_stk:isset = false && @request.body.last_stk:isset = false && @request.body.stk_interval_months:isset = false && @request.body.has_mtk:isset = false && @request.body.last_mtk:isset = false && @request.body.mtk_interval_months:isset = false && @request.body.ausser_betrieb:isset = false && @request.body.ausser_betrieb_grund:isset = false && @request.body.verbleib:isset = false && @request.body.inbetriebnahme:isset = false && @request.body.organization_id:isset = false && (@request.body.operational:isset = false || @request.body.operational = false)))
+@request.auth.id != "" && @request.auth.disabled != true && (@request.auth.expires_at = "" || @request.auth.expires_at > @now) && organization_id = @request.auth.organization_id && (@request.auth.permissions.dashboard = true || @request.auth.supervisor = true || (@request.auth.temp_permissions.dashboard.until ~ " " && @request.auth.temp_permissions.dashboard.until > @now)) && (@request.body.organization_id:isset = false || @request.body.organization_id = @request.auth.organization_id) && ((@request.auth.permissions.mpg_verwalten = true || @request.auth.role = "admin" || @request.auth.role = "mpg" || @request.auth.supervisor = true || (@request.auth.temp_permissions.mpg_verwalten.until ~ " " && @request.auth.temp_permissions.mpg_verwalten.until > @now)) || (@request.body.name:isset = false && @request.body.type:isset = false && @request.body.serial_number:isset = false && @request.body.location:isset = false && @request.body.interval:isset = false && @request.body.interval_days:isset = false && @request.body.has_stk:isset = false && @request.body.last_stk:isset = false && @request.body.stk_interval_months:isset = false && @request.body.has_mtk:isset = false && @request.body.last_mtk:isset = false && @request.body.mtk_interval_months:isset = false && @request.body.ausser_betrieb:isset = false && @request.body.ausser_betrieb_grund:isset = false && @request.body.verbleib:isset = false && @request.body.inbetriebnahme:isset = false && @request.body.geloescht:isset = false && @request.body.organization_id:isset = false && (@request.body.operational:isset = false || @request.body.operational = false)))
 ```
 
 **³ Defekte — Update.** Geringe und mittlere Mängel schließt jeder; einen Defekt
@@ -646,6 +668,22 @@ Superuser korrigieren:
   gesperrt. **Nicht abgedeckt:** Felder einer dieser Sammlungen in der
   Admin-Oberfläche entfernen — dabei gehen deren Werte verloren. Das bitte
   unterlassen.
+- `mpg_devices`, Löschen nach der Außerbetriebnahme (Owner, 27.11.2026): `geloescht`
+  lässt sich nur bei einem außer Betrieb genommenen Gerät und nur mit „MPG
+  verwalten“ setzen (auch der Abstand `interval_days`), den Zeitpunkt setzt der
+  Server; beim Anlegen ist es abgelehnt. Danach bleibt das Gerät, wie es ist (Ändern
+  abgelehnt: „Das Gerät ist gelöscht …“), bis es wiederhergestellt wird (`geloescht`
+  leeren, sonst nichts). Die App zeigt es nur noch unter „Gelöscht“.
+- **Aufbewahrung** (Cron `mpg_aufbewahrung`, nachts 03:23): Ein gelöschtes Gerät wird
+  mit allen Einträgen im Gerätebuch, Prüfungen, Defekten und Meldungen endgültig
+  gelöscht, wenn fünf Jahre vorbei sind (Medizinproduktebuch), gerechnet ab dem
+  spätesten von Datum der Außerbetriebnahme, Zeitpunkt des Löschens (Serverzeit) und
+  neuestem Eintrag im Gerätebuch. Ein rückdatiertes Datum löscht so nie früher
+  (Durchsicht 28.11.2026: per API zurückdatiert und gelöscht, wären die Nachweise sonst
+  in der nächsten Nacht weg gewesen). In der Transaktion liest der Lauf alles noch
+  einmal (ein eben wiederhergestelltes Gerät bleibt). Nur dieser Lauf darf Nachweise
+  löschen (Merker je Datensatz während des Löschens); er schreibt je Gerät eine Zeile
+  ins Log (Kennungen und Zahlen).
 - `mpg_devices`: Löschen nur ohne Prüfungen, Defekte, bestätigte Meldungen und
   ohne Einträge im Gerätebuch derselben Organisation (außer „angelegt“,
   „geändert“, „gelöscht“) — ein versehentlich angelegtes Gerät darf wieder weg,

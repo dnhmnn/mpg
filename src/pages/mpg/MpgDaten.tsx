@@ -69,7 +69,7 @@ export type Blatt =
   | { art: 'schwere'; defekt: Defect }
   | { art: 'bestaetigen'; meldung: ExternalReport }
   | { art: 'ablehnen'; meldung: ExternalReport }
-  | { art: 'sperren' | 'freigeben' | 'ausserBetrieb' | 'wiederInBetrieb'; device: Device }
+  | { art: 'sperren' | 'freigeben' | 'ausserBetrieb' | 'wiederInBetrieb' | 'entfernen' | 'wiederherstellen'; device: Device }
   | { art: 'vermerk'; device: Device; bezug?: { id: string; text: string } }
   | { art: 'kontrolle'; device: Device; kontrolle: KontrollArt; ausserplanmaessig?: boolean }
   | null
@@ -289,6 +289,8 @@ function useMpgDatenWert() {
   // Gibt es die Felder der Außerbetriebnahme schon? PocketBase liefert jedes Feld mit, auch
   // leer — fehlt es, würde ein Speichern still verworfen
   const ausserBetriebMoeglich = devices.some(d => 'ausser_betrieb' in d)
+  // Ebenso das Feld zum Löschen nach der Außerbetriebnahme (scripts/mpg-einrichten.py)
+  const loeschenMoeglich = devices.some(d => 'geloescht' in d)
   // Ebenso das Datum der Inbetriebnahme (Beginn der ersten STK- und MTK-Frist). Ohne Geräte
   // zeigt es sich nicht — dann anbieten; fehlt das Feld doch, meldet das Speichern es.
   const inbetriebnahmeMoeglich = devices.some(d => 'inbetriebnahme' in d) || (geraeteGeladen && devices.length === 0)
@@ -342,7 +344,8 @@ function useMpgDatenWert() {
     // Was der Vorgang am Gerät setzt — zeigt das Gerät diesen Stand schon?
     const soll: Record<string, unknown> = Object.assign({}, ...plan.filter(a => a.collection === 'mpg_devices' && a.aktion === 'update' && a.id === o.geraetId).map(a => a.body))
     const DATUM = ['ausser_betrieb', 'last_stk', 'last_mtk', 'last_inspection']
-    const norm = (k: string, v: unknown) => v === null || v === undefined ? '' : DATUM.includes(k) ? (kalendertag(String(v)) ?? '') : typeof v === 'string' ? v.trim() : String(v)
+    // geloescht: den Zeitpunkt setzt der Server, es zählt nur „gesetzt oder leer“
+    const norm = (k: string, v: unknown) => v === null || v === undefined ? '' : k === 'geloescht' ? (String(v).trim() ? 'gesetzt' : '') : DATUM.includes(k) ? (kalendertag(String(v)) ?? '') : typeof v === 'string' ? v.trim() : String(v)
     const eintrag = plan.find(a => a.collection === 'mpg_ereignisse' && a.aktion === 'create')
     const r = await mitSperre(async () => {
       const eintragDa = !!eintrag && buch && await gibtEs('mpg_ereignisse', eintrag.id)
@@ -443,7 +446,7 @@ function useMpgDatenWert() {
       // STK höchstens 24 Monate, MTK ganze Jahre (höchstens 2) — ein Altwert bleibt, solange niemand ihn anfasst
       stk_interval_months: !id || geaendert.includes('stk_interval_months') ? stkMonate(felder.stk_interval_months) : felder.stk_interval_months,
       mtk_interval_months: !id || geaendert.includes('mtk_interval_months') ? mtkJahre(felder.mtk_interval_months) * 12 : felder.mtk_interval_months,
-      next_inspection_due: faelligFeld({ interval: felder.interval, last_inspection: alt?.last_inspection }, heute),
+      next_inspection_due: faelligFeld({ interval: felder.interval, interval_days: felder.interval_days, last_inspection: alt?.last_inspection }, heute),
     }
     // Nach einem unklaren Versuch genau den gesendeten Plan noch einmal — neu berechnet hielte
     // er das Gerät (schon geändert nachgeladen) für unverändert
@@ -477,7 +480,7 @@ function useMpgDatenWert() {
       const soll = stammdatenText(id ? { ...gespeichert, ...gesendet } : daten), ist = stammdatenText(gespeichert)
       const fehlt = soll.filter((f, i) => f.wert !== ist[i].wert).map(f => f.name)
       if (fehlt.length) {
-        showMsg(`Gespeichert — aber PocketBase hat ${fehlt.join(', ')} nicht übernommen. Bitte in PocketBase die Felder von mpg_devices prüfen (Prüfintervall: Feld „interval“, Text oder Auswahl mit daily, weekly, monthly, yearly).`, 'error')
+        showMsg(`Gespeichert — aber PocketBase hat ${fehlt.join(', ')} nicht übernommen. Bitte in PocketBase die Felder von mpg_devices prüfen (Prüfintervall: Feld „interval“, Text oder Auswahl mit daily, weekly, days, monthly, yearly, dazu „interval_days“ als Zahl; am besten mit scripts/mpg-einrichten.py).`, 'error')
       }
       neu = gespeichert
     } catch { /* Nachladen scheitert (Funkloch) — dann mit dem gesendeten Stand */ }
@@ -578,7 +581,7 @@ function useMpgDatenWert() {
     gibtEs, mitSperre, ausfuehren, vorErneutemSenden, blattVersuch, merkeBlattVersuch,
     loadKontrollen, kontrollEintraege, mitKontrollen, angabenDa, setAngabenDa,
     speichereGeraet, loescheGeraet, speichereVorlage,
-    buch, darfVerwalten, bestand, ausserBetriebMoeglich, inbetriebnahmeMoeglich,
+    buch, darfVerwalten, bestand, ausserBetriebMoeglich, loeschenMoeglich, inbetriebnahmeMoeglich,
     leseEntwurf, schreibeEntwurf, entwurfWenn, entwurfStand, laufendePruefung, setLaufendePruefung,
     unklarStand, aendereUnklar, unklarerDefekt, unklareBestaetigung, defektAngekommen, meldungNochOffen,
   }

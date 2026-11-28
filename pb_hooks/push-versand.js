@@ -654,7 +654,7 @@ function geraetFelder(r) {
   const b = (f) => { try { return r.getBool(f) } catch (err) { return false } }
   const z = (f) => { try { return zahlOderNull(r.get(f)) } catch (err) { return null } }
   return {
-    id: r.id, name: s("name"), interval: iv, last_inspection: s("last_inspection"),
+    id: r.id, name: s("name"), interval: iv, interval_days: z("interval_days"), last_inspection: s("last_inspection"),
     has_stk: b("has_stk"), last_stk: s("last_stk"), stk_interval_months: z("stk_interval_months"),
     has_mtk: b("has_mtk"), last_mtk: s("last_mtk"), mtk_interval_months: z("mtk_interval_months"),
     inbetriebnahme: s("inbetriebnahme"), ausser_betrieb: s("ausser_betrieb"), operational: b("operational"),

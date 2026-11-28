@@ -18,6 +18,8 @@ export interface Device {
   serial_number: string
   location: string
   interval: Intervall
+  /** Abstand in Tagen bei interval 'days' (alle N Tage) */
+  interval_days?: number
   last_inspection?: string
   last_inspection_passed?: boolean
   next_inspection_due: string
@@ -36,6 +38,8 @@ export interface Device {
   inbetriebnahme?: string
   /** Außerbetriebnahme (Paket 3) — fehlen in PocketBase, solange die Felder nicht angelegt sind */
   ausser_betrieb?: string
+  /** Gelöscht nach der Außerbetriebnahme (Zeitpunkt setzt der Server); Nachweise bleiben 5 Jahre */
+  geloescht?: string
   ausser_betrieb_grund?: string
   verbleib?: string
 }

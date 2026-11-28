@@ -7,17 +7,16 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { pb } from '../../lib/pocketbase'
-import { kalendertag, lageText, plusMonate, tagText, type Frist } from '../../lib/mpg/fristen'
-import { stammdatenText, taktText } from '../../lib/mpg/aktionen'
+import { kalendertag, lageText, tagText, type Frist } from '../../lib/mpg/fristen'
+import { aufbewahrenBis, endgueltigNach, stammdatenText, taktText } from '../../lib/mpg/aktionen'
 import { KONTROLLE_NAME, type KontrollArt } from '../../lib/mpg/kontrollen'
 import { darfBeheben } from '../../lib/mpg/rechte'
-import { istAusserBetrieb } from '../../lib/mpg/zustand'
+import { istAusserBetrieb, istGeloescht } from '../../lib/mpg/zustand'
 import { pbFehlerText } from '../../lib/pbFehler'
 import { useMpg } from './MpgDaten'
 import { useLadestand } from './Ladestand'
 import { PruefungEintrag } from './PruefungEintrag'
 import { GeraetebuchEintrag } from './GeraetebuchEintrag'
-import { AUFBEWAHRUNG_JAHRE } from './blaetter'
 import { MelderZeile } from './Meldungen'
 import {
   Abschnitt, Aktionen, Karte, Leer, Marke, Reiter, SCHWERE_RAND, STUFE_FARBE, SchwereMarke, SeitenKopf, ZustandMarke,
@@ -26,8 +25,9 @@ import {
 import type { Device, Ereignis, Inspection } from './typen'
 
 type Teil = 'ueberblick' | 'verlauf' | 'stammdaten'
-const UNKLAR_BLAETTER: ['sperren' | 'freigeben' | 'ausserBetrieb' | 'wiederInBetrieb', string][] = [
+const UNKLAR_BLAETTER: ['sperren' | 'freigeben' | 'ausserBetrieb' | 'wiederInBetrieb' | 'entfernen' | 'wiederherstellen', string][] = [
   ['sperren', 'Sperre'], ['freigeben', 'Freigabe'], ['ausserBetrieb', 'Außerbetriebnahme'], ['wiederInBetrieb', 'Wieder in Betrieb'],
+  ['entfernen', 'Löschen'], ['wiederherstellen', 'Wiederherstellen'],
 ]
 const SEITE = 20
 
@@ -46,14 +46,17 @@ export default function Geraet() {
 
   const z = m.zustand(device)
   const ausser = istAusserBetrieb(device)
+  // Gelöscht (nach der Außerbetriebnahme): nur noch lesen, Vermerk und Wiederherstellen
+  const geloescht = ausser && istGeloescht(device)
+  const liste = geloescht ? '/mpg/geraete?zustand=geloescht' : ausser ? '/mpg/geraete?zustand=ausser' : '/mpg/geraete'
   const setTeil = (t: Teil) => { const n = new URLSearchParams(such); if (t === 'ueberblick') n.delete('teil'); else n.set('teil', t); setSuch(n, { replace: true }) }
   const knopfLink = { ...knopfRand, textDecoration: 'none', display: 'inline-flex', alignItems: 'center' } as const
 
   return (
     <>
-      <SeitenKopf zurueck="/mpg/geraete" titel={device.name}
+      <SeitenKopf zurueck={liste} titel={device.name}
         unter={[device.type, device.location, device.serial_number && `S/N ${device.serial_number}`].filter(Boolean).join(' · ')}
-        rechts={ausser ? <Marke grund="rgba(var(--lbf-grau-rgb),0.12)" schrift="var(--warm-gray)">Außer Betrieb</Marke> : <ZustandMarke stufe={z.stufe} />} />
+        rechts={ausser ? <Marke grund="rgba(var(--lbf-grau-rgb),0.12)" schrift="var(--warm-gray)">{geloescht ? 'Gelöscht' : 'Außer Betrieb'}</Marke> : <ZustandMarke stufe={z.stufe} />} />
 
       {/* breit steht der Hinweis schon über der Liste daneben */}
       {!breit && banner}
@@ -70,7 +73,8 @@ export default function Geraet() {
         {ausser && m.unklarerDefekt(device.id) && <button onClick={() => m.setBlatt({ art: 'defekt', device })} style={knopfGefahr}>Mangel erneut senden</button>}
         {m.buch && <button onClick={() => m.setBlatt({ art: 'vermerk', device })} style={knopfRand}>Vermerk</button>}
         {!ausser && m.darfVerwalten && <Link to={`/mpg/geraete/${device.id}/bearbeiten`} style={knopfLink}>Bearbeiten</Link>}
-        {ausser && m.darfVerwalten && <button onClick={() => m.setBlatt({ art: 'wiederInBetrieb', device })} disabled={m.busy} style={knopfRand}>Wieder in Betrieb nehmen</button>}
+        {ausser && !geloescht && m.darfVerwalten && <button onClick={() => m.setBlatt({ art: 'wiederInBetrieb', device })} disabled={m.busy} style={knopfRand}>Wieder in Betrieb nehmen</button>}
+        {geloescht && m.darfVerwalten && <button onClick={() => m.setBlatt({ art: 'wiederherstellen', device })} disabled={m.busy} style={knopfRand}>Wiederherstellen</button>}
       </div>
 
       {/* Unklar gesendet und das Blatt geschlossen: nicht liegen lassen */}
@@ -119,6 +123,12 @@ export default function Geraet() {
               </div>
             </div>
           )}
+          {m.darfVerwalten && ausser && !geloescht && (
+            <div style={{ marginTop: 20 }}>
+              <button disabled={m.busy} style={{ ...knopfRand, fontSize: 13, color: 'var(--lbf-fehler-text)' }} onClick={() => m.setBlatt({ art: 'entfernen', device })}>Gerät löschen</button>
+              <div style={{ ...kursivGrau, marginTop: 6 }}>Aus allen Listen. Gerätebuch, Prüfungen und Defekte bleiben fünf Jahre nach der Außerbetriebnahme aufbewahrt.</div>
+            </div>
+          )}
         </>
       )}
     </>
@@ -132,8 +142,12 @@ function AusserBetriebKarte({ device }: { device: Device }) {
     ['Seit', seit ? tagText(seit) : '—'],
     ['Grund', device.ausser_betrieb_grund || '—'],
     ['Verbleib', device.verbleib || '—'],
-    ['Aufbewahren bis', seit ? `${tagText(plusMonate(seit, AUFBEWAHRUNG_JAHRE * 12))} — Gerätebuch, Prüfungen und Defekte` : '—'],
+    ['Aufbewahren bis', seit ? `${tagText(aufbewahrenBis(seit))} — Gerätebuch, Prüfungen und Defekte` : '—'],
   ]
+  if (istGeloescht(device)) {
+    const am = kalendertag(device.geloescht)
+    zeilen.push(['Gelöscht', am ? `${tagText(am)}, aus Bestand und Geräteliste; endgültig gelöscht frühestens nach dem ${tagText(endgueltigNach(seit, am))}` : '—'])
+  }
   return (
     <Abschnitt titel="Außer Betrieb">
       <Karte rand="rgba(var(--lbf-grau-rgb),0.4)">

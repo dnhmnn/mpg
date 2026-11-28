@@ -57,6 +57,12 @@ export function istAusserBetrieb(g: Pick<ZustandGeraet, 'ausser_betrieb'>): bool
   return !!String(g.ausser_betrieb ?? '').trim()
 }
 
+/** Gelöscht (nach der Außerbetriebnahme, Owner 27.11.2026): steht nur noch unter „Gelöscht“, bis der Server
+ *  es nach der Aufbewahrungsfrist endgültig löscht. Gelöscht wird nur, was außer Betrieb ist. */
+export function istGeloescht(g: { geloescht?: string | null }): boolean {
+  return !!String(g.geloescht ?? '').trim()
+}
+
 export interface Grund { stufe: Stufe; text: string }
 
 export interface Zustand {

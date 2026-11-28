@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { bleibtGesperrt, defektAusKontrolle, istAusserBetrieb, kontrolleNichtBestanden, sperrtDefekt, type Grund } from '../../lib/mpg/zustand'
 import {
   planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeSchwere, planeSperre, planeVermerk, planeWiederInBetrieb,
-  restNachAnker, schwereBraucht,
+  restNachAnker, schwereBraucht, aufbewahrenBis, endgueltigNach, planeEntfernen, planeWiederherstellen, AUFBEWAHRUNG_JAHRE,
 } from '../../lib/mpg/aktionen'
 import { kalendertag, plusMonate, tagText } from '../../lib/mpg/fristen'
 import { ERGEBNIS_NAME, KONTROLLE_LANG, KONTROLLE_NAME, naechsteNachKontrolle, plakettenText, planeKontrolle, type KontrollArt, type KontrollErgebnis } from '../../lib/mpg/kontrollen'
@@ -43,6 +43,8 @@ export function Blaetter() {
     case 'freigeben': return <Freigeben key={blatt.device.id} device={blatt.device} />
     case 'ausserBetrieb': return <AusserBetrieb key={blatt.device.id} device={blatt.device} />
     case 'wiederInBetrieb': return <WiederInBetrieb key={blatt.device.id} device={blatt.device} />
+    case 'entfernen': return <Entfernen key={blatt.device.id} device={blatt.device} />
+    case 'wiederherstellen': return <Wiederherstellen key={blatt.device.id} device={blatt.device} />
     case 'vermerk': return <Vermerk key={blatt.device.id + (blatt.bezug?.id ?? '')} device={blatt.device} bezug={blatt.bezug} />
     case 'kontrolle': return <KontrolleEintragen key={blatt.device.id + blatt.kontrolle} device={blatt.device} art={blatt.kontrolle} ausserplanmaessig={blatt.ausserplanmaessig} />
   }
@@ -638,8 +640,7 @@ function Freigeben({ device }: { device: Device }) {
 // ── Außer Betrieb nehmen (MPG verwalten) ──────────────────────────────────
 
 const VERBLEIB = ['Verschrottet / entsorgt', 'An Hersteller zurückgegeben', 'Verkauft / abgegeben', 'Eingelagert']
-/** Wie lange die Nachweise eines außer Betrieb genommenen Geräts aufzubewahren sind */
-export const AUFBEWAHRUNG_JAHRE = 5
+export { AUFBEWAHRUNG_JAHRE }
 
 function AusserBetrieb({ device }: { device: Device }) {
   const m = useMpg()
@@ -698,7 +699,7 @@ function AusserBetrieb({ device }: { device: Device }) {
         </Feld>
         <Hinweis>
           Das Gerät verschwindet aus Bestand, Heute und Prüfrunden. Sein Gerätebuch mit allen Prüfungen und Defekten
-          bleibt erhalten{tag ? ` — aufzubewahren bis ${tagText(plusMonate(tag, AUFBEWAHRUNG_JAHRE * 12))}` : ''}.
+          bleibt erhalten{tag ? ` — aufzubewahren bis ${tagText(aufbewahrenBis(tag))}` : ''}.
           {offen > 0 ? ` ${offen === 1 ? 'Ein offener Defekt oder eine offene Meldung bleibt' : `${offen} offene Defekte oder Meldungen bleiben`} stehen.` : ''}
         </Hinweis>
         {tag && tag > m.heute && <div style={{ ...kursivGrau, color: 'var(--lbf-fehler-text)' }}>Das Datum darf nicht in der Zukunft liegen.</div>}
@@ -750,6 +751,109 @@ function WiederInBetrieb({ device }: { device: Device }) {
         {unklar && !m.busy && <UnklarHinweis />}
         <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
           los={wieder} losText={unklar ? 'Erneut senden' : 'Wieder in Betrieb nehmen'} frei />
+      </div>
+    </Blatt>
+  )
+}
+
+// ── Gerät löschen nach der Außerbetriebnahme (MPG verwalten, Owner 27.11.2026) ──────────
+
+function Entfernen({ device }: { device: Device }) {
+  const m = useMpg()
+  const { versuch, id, merke, unklarNach } = useBlattVersuch(`entfernen:${device.id}`)
+  const unklar = !!versuch
+  const [verstanden, setVerstanden] = useState(unklar)
+  const schliessen = () => m.setBlatt(null)
+  const titel = `Gerät löschen: ${device.name}`
+  if (!m.darfVerwalten && !versuch) return <Blatt ueber={device.type} titel={titel} onClose={schliessen}><NurVerwalter was="Ein Gerät löschen" /></Blatt>
+  if (!m.loeschenMoeglich && !versuch) {
+    return (
+      <Blatt ueber={device.type} titel={titel} onClose={schliessen}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <Hinweis>In PocketBase fehlt noch das Feld zum Löschen (geloescht an mpg_devices). Bitte am Server scripts/mpg-einrichten.py ausführen.</Hinweis>
+          <button onClick={schliessen} style={{ ...knopfRand, color: 'var(--warm-gray)' }}>Schließen</button>
+        </div>
+      </Blatt>
+    )
+  }
+  const seit = kalendertag(device.ausser_betrieb)
+  // Fünf Jahre ab heute (dem Löschen), frühestens ab der Außerbetriebnahme — wie der Server
+  const bis = endgueltigNach(seit, m.heute)
+  const offen = m.offeneDefekteVon(device.id).length + m.offeneMeldungenVon(device.id).length
+  const fertig = () => { merke(null); schliessen(); m.loadDevices().catch(() => undefined) }
+
+  async function loeschen() {
+    const plan = versuch?.anfragen ?? planeEntfernen({ geraet: device, seit, heute: m.heute, jetzt: new Date().toISOString(), wer: m.wer(), id, buch: m.buch })
+    let anfragen = plan
+    if (versuch) {
+      const v = await m.vorErneutemSenden({ versuch, geraetId: device.id, was: 'Löschen' })
+      if (v.weiter === 'schon') return fertig()
+      if (v.weiter === 'abbrechen') return
+      anfragen = v.anfragen
+    }
+    const r = await m.ausfuehren(anfragen, 'Gerät gelöscht — die Nachweise bleiben aufbewahrt')
+    if (r === 'ok') fertig()
+    else if (r === 'unklar') unklarNach(plan, device.id)
+  }
+
+  return (
+    <Blatt ueber={device.type} titel={titel} onClose={schliessen} gesperrt={m.busy}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <Hinweis>
+          Das Gerät verschwindet aus Bestand und Geräteliste und steht nur noch unter „Gelöscht“. Gerätebuch, Prüfungen und
+          Defekte bleiben noch {AUFBEWAHRUNG_JAHRE} Jahre aufbewahrt, mindestens bis {tagText(bis)} (Medizinproduktebuch), und werden danach endgültig gelöscht.
+        </Hinweis>
+        {offen > 0 && (
+          <Hinweis ton="warn">
+            {offen === 1 ? 'Ein offener Defekt oder eine offene Meldung bleibt' : `${offen} offene Defekte oder Meldungen bleiben`} unter Meldungen stehen. Bitte vorher beheben oder ablehnen.
+          </Hinweis>
+        )}
+        <Haken an={verstanden} setAn={setVerstanden} gesperrt={unklar || m.busy} titel="Das Gerät löschen" text="Bis zum endgültigen Löschen lässt es sich wiederherstellen." />
+        {unklar && !m.busy && <UnklarHinweis />}
+        <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
+          los={loeschen} losText={unklar ? 'Erneut senden' : 'Gerät löschen'} frei={unklar || verstanden} gefahr />
+      </div>
+    </Blatt>
+  )
+}
+
+function Wiederherstellen({ device }: { device: Device }) {
+  const m = useMpg()
+  const { versuch, id, merke, unklarNach } = useBlattVersuch(`wiederherstellen:${device.id}`)
+  const unklar = !!versuch
+  const [bemerkung, setBemerkung] = useState(() => eintragText(versuch))
+  const schliessen = () => m.setBlatt(null)
+  const titel = `Wiederherstellen: ${device.name}`
+  if (!m.darfVerwalten && !versuch) return <Blatt ueber={device.type} titel={titel} onClose={schliessen}><NurVerwalter was="Ein gelöschtes Gerät wiederherstellen" /></Blatt>
+  const fertig = () => { merke(null); schliessen(); m.loadDevices().catch(() => undefined) }
+
+  async function wiederherstellen() {
+    const plan = versuch?.anfragen ?? planeWiederherstellen({ geraet: device, bemerkung, wer: m.wer(), id, buch: m.buch })
+    let anfragen = plan
+    if (versuch) {
+      const v = await m.vorErneutemSenden({ versuch, geraetId: device.id, was: 'Wiederherstellen' })
+      if (v.weiter === 'schon') return fertig()
+      if (v.weiter === 'abbrechen') return
+      anfragen = v.anfragen
+    }
+    const r = await m.ausfuehren(anfragen, 'Wiederhergestellt — das Gerät steht wieder unter „Außer Betrieb“')
+    if (r === 'ok') fertig()
+    else if (r === 'unklar') unklarNach(plan, device.id)
+  }
+
+  return (
+    <Blatt ueber={device.type} titel={titel} onClose={schliessen} gesperrt={m.busy}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {m.buch && (
+          <Feld label="Bemerkung (optional)" hinweis="Steht im Gerätebuch.">
+            <textarea value={bemerkung} onChange={e => setBemerkung(e.target.value)} rows={2} readOnly={m.busy || unklar}
+              placeholder="z. B. irrtümlich gelöscht" style={{ ...eingabe, resize: 'vertical' }} />
+          </Feld>
+        )}
+        <Hinweis>Das Gerät steht danach wieder unter „Außer Betrieb“, nicht im Bestand. Zurück in den Bestand geht es mit „Wieder in Betrieb nehmen“.</Hinweis>
+        {unklar && !m.busy && <UnklarHinweis />}
+        <KnopfZeile abbrechen={unklar ? () => verwerfen(merke, schliessen) : schliessen} abbrechenText={unklar ? 'Verwerfen' : 'Abbrechen'}
+          los={wiederherstellen} losText={unklar ? 'Erneut senden' : 'Wiederherstellen'} frei />
       </div>
     </Blatt>
   )

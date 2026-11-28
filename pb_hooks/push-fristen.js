@@ -10,11 +10,12 @@
 
 // ── MPG (Port von src/lib/mpg/fristen.ts) ───────────────────────────────────
 
-const INTERVALLE = ["daily", "weekly", "monthly", "yearly"]
+const INTERVALLE = ["daily", "weekly", "days", "monthly", "yearly"]
 
 const INTERVALL_NAMEN = {
   daily: "daily", "täglich": "daily", taeglich: "daily", tag: "daily",
   weekly: "weekly", "wöchentlich": "weekly", woechentlich: "weekly", woche: "weekly",
+  days: "days", tage: "days",
   monthly: "monthly", monatlich: "monthly", monat: "monthly",
   yearly: "yearly", annually: "yearly", "jährlich": "yearly", jaehrlich: "yearly", jahr: "yearly",
 }
@@ -26,6 +27,17 @@ function intervallVon(wert) {
 }
 
 const VORWARNUNG = { daily: 0, weekly: 1, monthly: 7, yearly: 30, stk: 30, mtk: 30 }
+
+/** Gültige Zahl der Tage bei „alle N Tage“: 1 bis 365, sonst 7 (wie tageVon in fristen.ts). */
+function tageVon(wert) {
+  const n = Number(wert)
+  return Number.isInteger(n) && n >= 1 && n <= 365 ? n : 7
+}
+
+/** Vorwarnung einer Regelprüfung; bei „alle N Tage“ ein Viertel des Abstands, höchstens 30. */
+function vorwarnungVon(intervall, tage) {
+  return intervall === "days" ? Math.min(30, Math.floor(tageVon(tage) / 4)) : VORWARNUNG[intervall]
+}
 
 function zahl2(n) {
   return (n < 10 ? "0" : "") + n
@@ -115,10 +127,11 @@ function tageZwischen(a, b) {
   return Math.round((utcVon(b) - utcVon(a)) / 86400000)
 }
 
-function naechstePruefung(letzte, intervall) {
+function naechstePruefung(letzte, intervall, tage) {
   switch (intervall) {
     case "daily": return plusTage(letzte, 1)
     case "weekly": return plusTage(letzte, 7)
+    case "days": return plusTage(letzte, tageVon(tage))
     case "monthly": return plusMonate(letzte, 1)
     case "yearly": return plusMonate(letzte, 12)
   }
@@ -169,8 +182,8 @@ function mit(a, b) {
 function fristenVon(g, heute) {
   const intervall = intervallVon(g.interval)
   const letzte = kalendertagBerlin(g.last_inspection)
-  const naechste = letzte ? naechstePruefung(letzte, intervall) : null
-  const liste = [mit({ art: "pruefung", bezeichnung: "Prüfung", letzte: letzte, naechste: naechste }, lageVon(naechste, heute, VORWARNUNG[intervall]))]
+  const naechste = letzte ? naechstePruefung(letzte, intervall, g.interval_days) : null
+  const liste = [mit({ art: "pruefung", bezeichnung: "Prüfung", letzte: letzte, naechste: naechste }, lageVon(naechste, heute, vorwarnungVon(intervall, g.interval_days)))]
   const gueltig = (t) => (t && t <= heute ? t : null)
   const inbetriebRoh = kalendertagBerlin(g.inbetriebnahme)
   const inbetrieb = gueltig(inbetriebRoh)
@@ -291,7 +304,7 @@ function cirsUeberfaellig(rec, heuteTag) {
 
 module.exports = {
   INTERVALLE, VORWARNUNG, STK_HOECHSTENS, MTK_HOECHSTENS_JAHRE,
-  intervallVon, kalendertagBerlin, tagBerlin, parseZeit, plusTage, plusMonate, monatsende, tageZwischen, naechstePruefung,
+  intervallVon, tageVon, vorwarnungVon, kalendertagBerlin, tagBerlin, parseZeit, plusTage, plusMonate, monatsende, tageZwischen, naechstePruefung,
   monateVon, stkMonate, mtkJahre, naechsteStk, naechsteMtk, lageVon, fristenVon, ueberfaelligeKontrollen, wocheMpg,
   payloadLesen, gueltigerTag, bearbeitungAus, cirsUeberfaellig,
 }

@@ -9,7 +9,7 @@ import { pbFehlerText } from '../../lib/pbFehler'
 import { useMpg } from './MpgDaten'
 import { PruefungEintrag } from './PruefungEintrag'
 import { GeraetebuchEintrag } from './GeraetebuchEintrag'
-import { istAusserBetrieb } from '../../lib/mpg/zustand'
+import { istAusserBetrieb, istGeloescht } from '../../lib/mpg/zustand'
 import { Feld, Leer, Reiter, SeitenKopf, eingabe, knopfLeise, knopfRand, kursivGrau, useBreit } from './teile'
 import type { Ereignis, Inspection } from './typen'
 
@@ -83,7 +83,7 @@ export default function Logbuch() {
           <Feld label="Gerät">
             <select value={geraet} onChange={e => setze('geraet', e.target.value)} style={eingabe}>
               <option value="">Alle Geräte</option>
-              {geraete.map(d => <option key={d.id} value={d.id}>{d.name}{d.location ? ` · ${d.location}` : ''}{istAusserBetrieb(d) ? ' (außer Betrieb)' : ''}</option>)}
+              {geraete.map(d => <option key={d.id} value={d.id}>{d.name}{d.location ? ` · ${d.location}` : ''}{istGeloescht(d) ? ' (gelöscht)' : istAusserBetrieb(d) ? ' (außer Betrieb)' : ''}</option>)}
             </select>
           </Feld>
         </div>

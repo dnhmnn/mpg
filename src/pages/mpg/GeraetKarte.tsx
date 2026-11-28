@@ -2,7 +2,7 @@
 
 import { Link } from 'react-router-dom'
 import { tagText } from '../../lib/mpg/fristen'
-import { istAusserBetrieb } from '../../lib/mpg/zustand'
+import { istAusserBetrieb, istGeloescht } from '../../lib/mpg/zustand'
 import { useMpg } from './MpgDaten'
 import { Aktionen, Karte, Marke, STUFE_FARBE, ZustandMarke, knopfLeise, kursivGrau, relativeDate } from './teile'
 import type { Device } from './typen'
@@ -29,7 +29,7 @@ export function GeraetKarte({ device, mitAktionen = true, zurueck, gruende = 3 }
               <div style={{ ...kursivGrau, marginTop: 2 }}>{[device.location, device.serial_number && `S/N ${device.serial_number}`].filter(Boolean).join(' · ')}</div>
             )}
           </div>
-          {ausser ? <Marke grund="rgba(var(--lbf-grau-rgb),0.12)" schrift="var(--warm-gray)">Außer Betrieb</Marke> : <ZustandMarke stufe={z.stufe} />}
+          {ausser ? <Marke grund="rgba(var(--lbf-grau-rgb),0.12)" schrift="var(--warm-gray)">{istGeloescht(device) ? 'Gelöscht' : 'Außer Betrieb'}</Marke> : <ZustandMarke stufe={z.stufe} />}
         </div>
         {z.gruende.slice(0, gruende).map((g, i) => (
           <div key={i} style={{ fontSize: 13, fontStyle: 'italic', marginTop: i ? 1 : 8, color: g.stufe === 'gesperrt' ? 'var(--lbf-fehler-text)' : 'var(--lbf-text)' }}>{g.text}</div>

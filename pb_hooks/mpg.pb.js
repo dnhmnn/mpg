@@ -10,6 +10,11 @@
 //                    im Gerätebuch wird außer Betrieb genommen statt gelöscht. Sein Prüfstand
 //                    (zuletzt geprüft, bestanden) folgt aus einem gespeicherten Prüfprotokoll,
 //                    im Zweifel zur sicheren Seite (siehe unten).
+//                    Ein außer Betrieb genommenes Gerät lässt sich „löschen“ (Feld geloescht, Owner
+//                    27.11.2026): Es verschwindet aus den Listen der App, seine Nachweise bleiben fünf
+//                    Jahre (Medizinproduktebuch), gerechnet ab dem Löschen (Serverzeit), frühestens ab
+//                    der Außerbetriebnahme, und werden danach von der nächtlichen Aufbewahrung unten
+//                    endgültig gelöscht — nur von ihr, nie früher.
 //
 // Die API-Regeln sperren das meiste bereits (docs/pocketbase-regeln.md, „MPG: API-Regeln“).
 // Diese Hooks sind die zweite Ebene: Superuser umgehen API-Regeln — auch in der
@@ -48,8 +53,11 @@ onRecordDeleteRequest((e) => {
   throw new BadRequestError("Defekte bleiben als Nachweis erhalten — bitte als behoben schließen.")
 }, "mpg_defects")
 
-// Auch ohne API-Anfrage: „Truncate“ in der Admin-Oberfläche löscht Datensatz für Datensatz
+// Auch ohne API-Anfrage: „Truncate“ in der Admin-Oberfläche löscht Datensatz für Datensatz.
+// Einzige Ausnahme: die Aufbewahrung unten nach Ablauf der fünf Jahre (Merker je Datensatz,
+// nur während ihres eigenen Löschens gesetzt).
 onRecordDelete((e) => {
+  if ($app.store().get("responda:mpg_tilgen:" + e.record.id) === true) return e.next()
   throw new BadRequestError("Nachweise im MPG werden nicht gelöscht.")
 }, "mpg_ereignisse", "mpg_inspections", "mpg_defects")
 
@@ -88,6 +96,7 @@ onCollectionUpdate((e) => {
 // mpg_ereignisse noch nicht angelegt), zählt sie nicht — jeder andere Fehler verhindert
 // das Löschen.
 onRecordDelete((e) => {
+  if ($app.store().get("responda:mpg_tilgen:" + e.record.id) === true) return e.next()
   const params = { id: e.record.id, org: e.record.getString("organization_id") }
   const hat = (collection, filter) => {
     try { e.app.findCollectionByNameOrId(collection) } catch (err) { return false }
@@ -104,11 +113,66 @@ onRecordDelete((e) => {
   e.next()
 }, "mpg_devices")
 
-// Ein neues Gerät hat noch keinen Prüfstand — den gibt es erst mit dem ersten Protokoll.
+// Löschen nach der Außerbetriebnahme (Feld geloescht): nur ein außer Betrieb genommenes Gerät,
+// nur mit „MPG verwalten“ (zweite Ebene zur Regel ²), den Zeitpunkt setzt der Server — er ist der
+// Beginn der Aufbewahrung, ein Datum vom Gerät zählt dafür nicht. Danach bleibt das Gerät, wie es
+// ist — Gerätebuch, Prüfungen und Defekte sind Nachweise bis zum Ende der Aufbewahrung. Erlaubt ist
+// nur das Wiederherstellen (geloescht leeren), und auch das ändert sonst nichts. Ebenso braucht der
+// Abstand bei „alle N Tage“ (interval_days) „MPG verwalten“. Der Superuser darf korrigieren.
+onRecordUpdateRequest((e) => {
+  const alt = e.record.original()
+  let vorher = "", jetzt = ""
+  try { vorher = alt.getString("geloescht"); jetzt = e.record.getString("geloescht") } catch (err) { return e.next() }
+  const gesetzt = (r, f) => { try { return String(r.getString(f) || "").trim() !== "" } catch (err) { return false } }
+  // „MPG verwalten“ wie in den Regeln: Leitung, MPG-Beauftragte, Supervisor, Häkchen, auch befristet
+  const verwalten = () => {
+    const a = e.auth
+    if (!a) return false
+    try { if (a.getBool("supervisor")) return true } catch (err) { /* Feld fehlt */ }
+    const rolle = a.getString("role")
+    if (rolle === "admin" || rolle === "mpg") return true
+    let p = {}, t = {}
+    try { p = JSON.parse(a.getString("permissions") || "{}") || {} } catch (err) { p = {} }
+    if (p.mpg_verwalten === true) return true
+    try { t = JSON.parse(a.getString("temp_permissions") || "{}") || {} } catch (err) { t = {} }
+    const bis = t.mpg_verwalten && typeof t.mpg_verwalten.until === "string" ? t.mpg_verwalten.until : ""
+    return bis.indexOf(" ") > 0 && bis > new Date().toISOString().replace("T", " ")
+  }
+  if (!e.hasSuperuserAuth()) {
+    let tageAlt = "", tageNeu = ""
+    try { tageAlt = alt.getString("interval_days"); tageNeu = e.record.getString("interval_days") } catch (err) { /* Feld fehlt */ }
+    if ((tageAlt !== tageNeu || vorher !== jetzt) && !verwalten()) {
+      throw new ForbiddenError("Das braucht das Recht „MPG verwalten“.")
+    }
+  }
+  if (!vorher && jetzt) {
+    if (!gesetzt(alt, "ausser_betrieb") || !gesetzt(e.record, "ausser_betrieb")) {
+      throw new BadRequestError("Löschen geht nur bei einem Gerät, das außer Betrieb genommen ist.")
+    }
+    e.record.set("geloescht", new Date().toISOString().replace("T", " "))
+  } else if (vorher && !e.hasSuperuserAuth()) {
+    const felder = ["name", "type", "serial_number", "location", "interval", "interval_days", "last_inspection", "last_inspection_passed",
+      "next_inspection_due", "operational", "has_stk", "last_stk", "stk_interval_months", "has_mtk", "last_mtk", "mtk_interval_months",
+      "ausser_betrieb", "ausser_betrieb_grund", "verbleib", "inbetriebnahme", "organization_id"]
+    for (const f of felder) {
+      let a = "", n = ""
+      try { a = alt.getString(f); n = e.record.getString(f) } catch (err) { continue }
+      if (a !== n) throw new BadRequestError("Das Gerät ist gelöscht und bleibt, wie es ist — zum Ändern erst wiederherstellen.")
+    }
+    if (jetzt && jetzt !== vorher) e.record.set("geloescht", vorher)
+  }
+  e.next()
+}, "mpg_devices")
+
+// Ein neues Gerät hat noch keinen Prüfstand — den gibt es erst mit dem ersten Protokoll. Und es ist nicht
+// gelöscht: Löschen geht nur über das Ändern eines außer Betrieb genommenen Geräts (Zeitpunkt vom Server).
 onRecordCreateRequest((e) => {
   if (!e.hasSuperuserAuth() && (e.record.getString("last_inspection") || e.record.getBool("last_inspection_passed"))) {
     throw new BadRequestError("Der Prüfstand eines Geräts folgt aus einem gespeicherten Prüfprotokoll — bitte eine Prüfung erfassen.")
   }
+  let geloescht = ""
+  try { geloescht = e.record.getString("geloescht") } catch (err) { geloescht = "" }
+  if (geloescht && !e.hasSuperuserAuth()) throw new BadRequestError("Ein neues Gerät ist nicht gelöscht — löschen geht erst nach der Außerbetriebnahme.")
   e.next()
 }, "mpg_devices")
 
@@ -425,3 +489,82 @@ onRecordUpdateRequest((e) => {
   }
   e.next()
 }, "mpg_defect_reports")
+
+// ── Aufbewahrung ───────────────────────────────────────────────────────────
+
+// Gelöschte Geräte (außer Betrieb genommen, dann gelöscht) mit allen Nachweisen endgültig löschen,
+// sobald die Aufbewahrung abgelaufen ist: fünf Jahre nach dem spätesten von Datum der
+// Außerbetriebnahme, Zeitpunkt des Löschens (setzt der Server) und neuestem Eintrag im Gerätebuch.
+// So löscht ein rückdatiertes oder vertipptes Datum nie früher, und ein später nachgetragener Vermerk
+// verlängert die Frist. Die App zeigt „mindestens bis“ aus Datum und Löschen, also nie später als hier.
+// Einmal in der Nacht, je Gerät in einer Transaktion, die alles noch einmal selbst liest (wird ein
+// Gerät gerade wiederhergestellt, bleibt es).
+cronAdd("mpg_aufbewahrung", "23 3 * * *", () => {
+  const plusJahre = (tag, n) => {
+    const t = String(tag).split("-").map(Number)
+    const ziel = new Date(Date.UTC(t[0] + n, t[1] - 1, 1))
+    const letzter = new Date(Date.UTC(ziel.getUTCFullYear(), ziel.getUTCMonth() + 1, 0)).getUTCDate()
+    return new Date(Date.UTC(ziel.getUTCFullYear(), ziel.getUTCMonth(), Math.min(t[2], letzter))).toISOString().slice(0, 10)
+  }
+  const tag = (s) => { const t = String(s || "").slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(t) ? t : "" }
+  // Ende der Aufbewahrung eines Geräts, alles über app gelesen (in der Transaktion: tx)
+  const ende = (app, g) => {
+    const seit = tag(g.getString("ausser_betrieb")), geloescht = tag(g.getString("geloescht"))
+    if (!seit || !geloescht) return ""
+    let ab = seit > geloescht ? seit : geloescht
+    try {
+      const neuester = app.findRecordsByFilter("mpg_ereignisse", "device_id = {:d} && organization_id = {:o}", "-created", 1, 0, { d: g.id, o: g.getString("organization_id") })
+      if (neuester.length) { const t = tag(neuester[0].getString("created")); if (t > ab) ab = t }
+    } catch (err) { /* ohne Gerätebuch zählen Datum und Löschen */ }
+    return plusJahre(ab, 5)
+  }
+  const heute = new Date().toISOString().slice(0, 10)
+  let geraete = []
+  try {
+    $app.findCollectionByNameOrId("mpg_devices").fields.getByName("geloescht").name
+    geraete = $app.findRecordsByFilter("mpg_devices", "geloescht != '' && ausser_betrieb != ''", "", 0, 0)
+  } catch (err) { return }
+  for (const kandidat of geraete) {
+    const org = kandidat.getString("organization_id")
+    try {
+      const bis = ende($app, kandidat)
+      if (!bis || heute <= bis) continue
+      const zahl = { ereignisse: 0, pruefungen: 0, defekte: 0, meldungen: 0 }
+      let getilgt = false
+      $app.runInTransaction((tx) => {
+        // Noch einmal in der Transaktion: inzwischen wiederhergestellt oder die Frist verlängert → bleibt
+        let g = null
+        try { g = tx.findRecordById("mpg_devices", kandidat.id) } catch (err) { g = null }
+        if (!g) return
+        const b = ende(tx, g)
+        if (!b || heute <= b) return
+        const weg = (r) => {
+          const k = "responda:mpg_tilgen:" + r.id
+          $app.store().set(k, true)
+          try { tx.delete(r) } finally { $app.store().remove(k) }
+        }
+        for (const [c, z] of [["mpg_ereignisse", "ereignisse"], ["mpg_inspections", "pruefungen"], ["mpg_defects", "defekte"], ["mpg_defect_reports", "meldungen"]]) {
+          try { tx.findCollectionByNameOrId(c) } catch (err) { continue }
+          const liste = tx.findRecordsByFilter(c, "device_id = {:d} && organization_id = {:o}", "", 0, 0, { d: g.id, o: org })
+          for (const r of liste) { weg(r); zahl[z]++ }
+        }
+        weg(g)
+        getilgt = true
+      })
+      if (getilgt) {
+        $app.logger().info("MPG: gelöschtes Gerät nach Ablauf der Aufbewahrung endgültig gelöscht",
+          "device", kandidat.id, "organization", org, "ausser_betrieb", tag(kandidat.getString("ausser_betrieb")), "geloescht", tag(kandidat.getString("geloescht")),
+          "ereignisse", zahl.ereignisse, "pruefungen", zahl.pruefungen, "defekte", zahl.defekte, "meldungen", zahl.meldungen)
+      }
+    } catch (err) {
+      $app.logger().error("MPG: Aufbewahrung — endgültiges Löschen fehlgeschlagen", "device", kandidat.id, "organization", org, "error", String(err))
+    }
+  }
+})
+
+// Welche Fassung dieses Hooks läuft (für scripts/mpg-einrichten.py; nur Superuser).
+// Fassung 2: Löschen nach der Außerbetriebnahme mit Aufbewahrung, Prüfintervall „alle N Tage“.
+// Fassung 3: Aufbewahrung ab dem Löschen (Serverzeit), Löschen und Tage nur mit „MPG verwalten“.
+routerAdd("GET", "/api/responda/mpg/fassung", (e) => {
+  return e.json(200, { fassung: 3 })
+}, $apis.requireSuperuserAuth())

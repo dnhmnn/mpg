@@ -10,13 +10,15 @@
 /** Kalendertag 'JJJJ-MM-TT'. */
 export type Tag = string
 
-export type Intervall = 'daily' | 'weekly' | 'monthly' | 'yearly'
+/** 'days': alle N Tage (N in interval_days, wie „alle N Tage“ in der Hygiene; Owner 27.11.2026) */
+export type Intervall = 'daily' | 'weekly' | 'days' | 'monthly' | 'yearly'
 
-export const INTERVALLE: Intervall[] = ['daily', 'weekly', 'monthly', 'yearly']
+export const INTERVALLE: Intervall[] = ['daily', 'weekly', 'days', 'monthly', 'yearly']
 
 const INTERVALL_NAMEN: Record<string, Intervall> = {
   daily: 'daily', täglich: 'daily', taeglich: 'daily', tag: 'daily',
   weekly: 'weekly', wöchentlich: 'weekly', woechentlich: 'weekly', woche: 'weekly',
+  days: 'days', tage: 'days',
   monthly: 'monthly', monatlich: 'monthly', monat: 'monthly',
   yearly: 'yearly', annually: 'yearly', jährlich: 'yearly', jaehrlich: 'yearly', jahr: 'yearly',
 }
@@ -31,12 +33,24 @@ export function intervallVon(wert: unknown): Intervall {
   return INTERVALL_NAMEN[String(roh ?? '').trim().toLowerCase()] ?? 'monthly'
 }
 
+/** Gültige Zahl der Tage bei „alle N Tage“: 1 bis 365, sonst 7 (wie tageVon in der Hygiene). */
+export function tageVon(wert: unknown): number {
+  const n = Number(wert)
+  return Number.isInteger(n) && n >= 1 && n <= 365 ? n : 7
+}
+
 /**
  * Vorwarnung in Tagen, ab der eine Frist „bald fällig“ ist. Bei täglicher Prüfung
  * gibt es keine Vorwarnung — sonst stünde jedes Gerät immer auf „bald“.
  */
-export const VORWARNUNG: Record<Intervall | 'stk' | 'mtk', number> = {
+export const VORWARNUNG: Record<Exclude<Intervall, 'days'> | 'stk' | 'mtk', number> = {
   daily: 0, weekly: 1, monthly: 7, yearly: 30, stk: 30, mtk: 30,
+}
+
+/** Vorwarnung einer Regelprüfung; bei „alle N Tage“ ein Viertel des Abstands, höchstens 30
+ *  (7 Tage wie wöchentlich 1, 28 bis 31 wie monatlich 7, 365 wie jährlich 30). */
+export function vorwarnungVon(intervall: Intervall, tage?: unknown): number {
+  return intervall === 'days' ? Math.min(30, Math.floor(tageVon(tage) / 4)) : VORWARNUNG[intervall]
 }
 
 function zahl2(n: number) { return String(n).padStart(2, '0') }
@@ -98,11 +112,12 @@ export function tageZwischen(a: Tag, b: Tag): number {
   return Math.round((utcVon(b) - utcVon(a)) / 86_400_000)
 }
 
-/** Nächste Regelprüfung nach der letzten. */
-export function naechstePruefung(letzte: Tag, intervall: Intervall): Tag {
+/** Nächste Regelprüfung nach der letzten (tage: nur bei „alle N Tage“). */
+export function naechstePruefung(letzte: Tag, intervall: Intervall, tage?: unknown): Tag {
   switch (intervall) {
     case 'daily': return plusTage(letzte, 1)
     case 'weekly': return plusTage(letzte, 7)
+    case 'days': return plusTage(letzte, tageVon(tage))
     case 'monthly': return plusMonate(letzte, 1)
     case 'yearly': return plusMonate(letzte, 12)
   }
@@ -195,9 +210,15 @@ export function lageVon(naechste: Tag | null, heute: Tag, vorwarnung: number): {
   return { lage: 'ok', tage }
 }
 
+/** Felder, die eine Frist bestimmen, als Liste für Abfragen mit fields (z. B. die Glocke im Hub): Wer nur diese
+ *  liest, rechnet wie das MPG. Ein neues Fristfeld gehört hierher und in FristFelder (Prüffall hält beide gleich). */
+export const FRIST_FELDER = ['interval', 'interval_days', 'last_inspection', 'has_stk', 'last_stk', 'stk_interval_months', 'has_mtk', 'last_mtk', 'mtk_interval_months', 'inbetriebnahme'] as const
+
 /** Die Felder eines Geräts, die eine Frist bestimmen (mpg_devices). */
 export interface FristFelder {
   interval?: string | string[] | null
+  /** Abstand in Tagen bei interval 'days' */
+  interval_days?: number | null
   last_inspection?: string | null
   has_stk?: boolean | null
   last_stk?: string | null
@@ -209,18 +230,30 @@ export interface FristFelder {
   inbetriebnahme?: string | null
 }
 
+// Ein Fristfeld ohne Eintrag in FRIST_FELDER bricht die Typprüfung (sonst rechnete der Hub still anders)
+const fristFelderVollstaendig: [Exclude<keyof FristFelder, (typeof FRIST_FELDER)[number]>] extends [never] ? true : never = true
+void fristFelderVollstaendig
+
 export const INTERVALL_TEXT: Record<Intervall, string> = {
-  daily: 'Täglich', weekly: 'Wöchentlich', monthly: 'Monatlich', yearly: 'Jährlich',
+  daily: 'Täglich', weekly: 'Wöchentlich', days: 'Alle N Tage', monthly: 'Monatlich', yearly: 'Jährlich',
+}
+
+/** Prüfintervall lesbar, bei „alle N Tage“ mit der Zahl („Alle 14 Tage“, „Jeden Tag“ bei 1). */
+export function intervallText(interval: unknown, tage?: unknown): string {
+  const i = intervallVon(interval)
+  if (i !== 'days') return INTERVALL_TEXT[i]
+  const n = tageVon(tage)
+  return n === 1 ? 'Jeden Tag' : `Alle ${n} Tage`
 }
 
 /** Alle Fristen eines Geräts: Regelprüfung, dazu STK und MTK, wenn verlangt. */
 export function fristenVon(g: FristFelder, heute: Tag): Frist[] {
   const intervall = intervallVon(g.interval)
   const letzte = kalendertag(g.last_inspection)
-  const naechste = letzte ? naechstePruefung(letzte, intervall) : null
+  const naechste = letzte ? naechstePruefung(letzte, intervall, g.interval_days) : null
   const liste: Frist[] = [{
     art: 'pruefung', bezeichnung: 'Prüfung', letzte, naechste,
-    ...lageVon(naechste, heute, VORWARNUNG[intervall]),
+    ...lageVon(naechste, heute, vorwarnungVon(intervall, g.interval_days)),
   }]
   // Erste STK/MTK ab der Inbetriebnahme, danach ab der letzten bestandenen. Ein Datum nach
   // heute zählt nicht: Steht die letzte Kontrolle in der Zukunft, gilt die Inbetriebnahme
@@ -250,7 +283,7 @@ export function fristenVon(g: FristFelder, heute: Tag): Frist[] {
  */
 export function faelligFeld(g: FristFelder, heute: Tag): string {
   const letzte = kalendertag(g.last_inspection)
-  const tag = letzte ? naechstePruefung(letzte, intervallVon(g.interval)) : heute
+  const tag = letzte ? naechstePruefung(letzte, intervallVon(g.interval), g.interval_days) : heute
   const [j, m, t] = tag.split('-').map(Number)
   return new Date(j, m - 1, t, 23, 59, 59).toISOString()
 }

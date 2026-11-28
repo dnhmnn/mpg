@@ -18,7 +18,7 @@
 //
 // Prüffälle: src/lib/mpg/selbsttest.ts
 
-import { faelligFeld, INTERVALL_TEXT, intervallVon, kalendertag, monateVon, mtkAbweichend, mtkJahre, stkAbweichend, stkMonate, tagText, tagVonDatum, type FristFelder, type Tag } from './fristen'
+import { faelligFeld, intervallText, intervallVon, kalendertag, plusMonate, tageVon, monateVon, mtkAbweichend, mtkJahre, stkAbweichend, stkMonate, tagText, tagVonDatum, type FristFelder, type Tag } from './fristen'
 import { defektText, maengelText, MANGEL_VERMERK, type PruefErgebnis, type Pruefpunkt } from './pruefung'
 import type { Anfrage } from './schreiben'
 import { SCHWERE_TEXT, sperrtDefekt, type Schwere } from './zustand'
@@ -29,11 +29,12 @@ export interface GeraetKurz extends FristFelder { id: string; name: string; type
 
 // ── Gerätebuch ───────────────────────────────────────────────────────────────
 
-export type EreignisArt = 'angelegt' | 'geaendert' | 'gesperrt' | 'freigegeben' | 'ausser_betrieb' | 'wieder_in_betrieb' | 'vermerk' | 'geloescht' | 'stk' | 'mtk'
+export type EreignisArt = 'angelegt' | 'geaendert' | 'gesperrt' | 'freigegeben' | 'ausser_betrieb' | 'wieder_in_betrieb' | 'vermerk' | 'geloescht' | 'wiederhergestellt' | 'stk' | 'mtk'
 
 export const EREIGNIS_TEXT: Record<EreignisArt, string> = {
   angelegt: 'Angelegt', geaendert: 'Stammdaten geändert', gesperrt: 'Gesperrt', freigegeben: 'Freigegeben',
   ausser_betrieb: 'Außer Betrieb genommen', wieder_in_betrieb: 'Wieder in Betrieb genommen', vermerk: 'Vermerk', geloescht: 'Gelöscht',
+  wiederhergestellt: 'Wiederhergestellt',
   stk: 'Sicherheitstechnische Kontrolle', mtk: 'Messtechnische Kontrolle',
 }
 
@@ -58,6 +59,8 @@ export function ereignis(o: { id: string; geraet: { id: string; name: string }; 
 
 export interface Stammdaten {
   name: string; type: string; serial_number: string; location: string; interval: string
+  /** Abstand in Tagen bei Prüfintervall „alle N Tage“ (interval 'days') */
+  interval_days: number
   has_stk: boolean; last_stk: string; stk_interval_months: number
   has_mtk: boolean; last_mtk: string; mtk_interval_months: number
   /** Datum der Inbetriebnahme — ab ihm läuft die erste STK und MTK */
@@ -85,7 +88,7 @@ export function stammdatenText(d: StammdatenRoh): { feld: string; name: string; 
     { feld: 'type', name: 'Gerätetyp', wert: (d.type ?? '').trim() || '—' },
     { feld: 'serial_number', name: 'Seriennummer', wert: (d.serial_number ?? '').trim() || '—' },
     { feld: 'location', name: 'Standort', wert: (d.location ?? '').trim() || '—' },
-    { feld: 'interval', name: 'Prüfintervall', wert: INTERVALL_TEXT[intervallVon(d.interval)] },
+    { feld: 'interval', name: 'Prüfintervall', wert: intervallText(d.interval, d.interval_days) },
     { feld: 'stk', name: 'STK', wert: kontrolleText('stk', d.has_stk, d.last_stk, d.stk_interval_months) },
     { feld: 'mtk', name: 'MTK', wert: kontrolleText('mtk', d.has_mtk, d.last_mtk, d.mtk_interval_months) },
     { feld: 'inbetriebnahme', name: 'Inbetriebnahme', wert: tagText(kalendertag(d.inbetriebnahme)) },
@@ -102,9 +105,11 @@ export function stammdatenAenderungen(alt: StammdatenRoh, neu: StammdatenRoh): A
 
 /** Neues Gerät — mit ID vom Gerät (genau einmal), im Gerätebuch „angelegt“ mit allen Stammdaten. */
 export function planeNeuesGeraet(o: { id: string; daten: Stammdaten & { next_inspection_due: string }; wer: Wer; ereignisId: string; buch: boolean }): Anfrage[] {
+  // Die Zahl der Tage nur bei „alle N Tage“ (sonst stünde ein bedeutungsloser Wert am Gerät)
+  const { interval_days, ...ohneTage } = o.daten
   const anfragen: Anfrage[] = [{
     collection: 'mpg_devices', aktion: 'create', id: o.id,
-    body: { ...o.daten, organization_id: o.wer.organization_id, operational: true },
+    body: { ...ohneTage, ...(intervallVon(o.daten.interval) === 'days' ? { interval_days } : {}), organization_id: o.wer.organization_id, operational: true },
   }]
   if (o.buch) {
     anfragen.push(ereignis({
@@ -119,6 +124,7 @@ export function planeNeuesGeraet(o: { id: string; daten: Stammdaten & { next_ins
 export function gleichesStammdatum(k: keyof Stammdaten, a: unknown, b: unknown): boolean {
   if (k === 'last_stk' || k === 'last_mtk' || k === 'inbetriebnahme') return (kalendertag(a as string) ?? '') === (kalendertag(b as string) ?? '')
   if (k === 'interval') return intervallVon(a) === intervallVon(b)
+  if (k === 'interval_days') return tageVon(a) === tageVon(b)
   if (k === 'has_stk' || k === 'has_mtk') return !!a === !!b
   if (k === 'stk_interval_months' || k === 'mtk_interval_months') return monateVon(a as number) === monateVon(b as number)
   return String(a ?? '').trim() === String(b ?? '').trim()
@@ -126,11 +132,11 @@ export function gleichesStammdatum(k: keyof Stammdaten, a: unknown, b: unknown):
 
 /** Name eines Stammdatums, wie er im Gerätebuch steht (STK- und MTK-Felder unter „STK“ bzw. „MTK“) */
 export function stammdatenName(k: keyof Stammdaten): string {
-  const feld = k.includes('stk') ? 'stk' : k.includes('mtk') ? 'mtk' : k
+  const feld = k.includes('stk') ? 'stk' : k.includes('mtk') ? 'mtk' : k === 'interval_days' ? 'interval' : k
   return stammdatenText({}).find(f => f.feld === feld)?.name ?? k
 }
 
-const STAMMFELDER: (keyof Stammdaten)[] = ['name', 'type', 'serial_number', 'location', 'interval', 'has_stk', 'last_stk', 'stk_interval_months', 'has_mtk', 'last_mtk', 'mtk_interval_months', 'inbetriebnahme']
+const STAMMFELDER: (keyof Stammdaten)[] = ['name', 'type', 'serial_number', 'location', 'interval', 'interval_days', 'has_stk', 'last_stk', 'stk_interval_months', 'has_mtk', 'last_mtk', 'mtk_interval_months', 'inbetriebnahme']
 
 /** Welche Stammdaten unterscheiden sich? */
 export function geaenderteStammdaten(von: StammdatenRoh, nach: Stammdaten): (keyof Stammdaten)[] {
@@ -154,10 +160,11 @@ export function planeGeraetAenderung(o: {
   // sich das Datum „hinter dem Häkchen“ ändern, ohne dass es im Gerätebuch erscheint)
   const aus = (k: keyof Stammdaten) => (!o.daten.has_stk && (k === 'last_stk' || k === 'stk_interval_months'))
     || (!o.daten.has_mtk && (k === 'last_mtk' || k === 'mtk_interval_months'))
+    || (intervallVon(o.daten.interval) !== 'days' && k === 'interval_days')
   const geaendert = geaenderteStammdaten(o.ausgang ?? o.alt, o.daten).filter(k => !aus(k) && !gleichesStammdatum(k, o.alt[k], o.daten[k]))
   if (!geaendert.length) return []
   const body: Record<string, unknown> = Object.fromEntries(geaendert.map(k => [k, o.daten[k]]))
-  if ('interval' in body) body.next_inspection_due = o.daten.next_inspection_due
+  if ('interval' in body || 'interval_days' in body) body.next_inspection_due = o.daten.next_inspection_due
   const aenderungen = stammdatenAenderungen(o.alt, { ...o.alt, ...body } as StammdatenRoh)
   const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'update', id: o.id, body }]
   if (o.buch && (aenderungen.length || o.begruendung?.trim())) {
@@ -205,6 +212,50 @@ export function planeAusserBetrieb(o: { geraet: { id: string; name: string }; da
     body: { ausser_betrieb: o.datum, ausser_betrieb_grund: o.grund.trim(), verbleib: o.verbleib.trim(), operational: false },
   }]
   if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'ausser_betrieb', text: ausserBetriebText(o), wer: o.wer }))
+  return anfragen
+}
+
+/** Wie lange die Nachweise eines außer Betrieb genommenen Geräts aufzubewahren sind (Betreiberverordnung) */
+export const AUFBEWAHRUNG_JAHRE = 5
+
+/** Fünf Jahre nach einem Tag (die Pflicht: so lange nach der Außerbetriebnahme aufbewahren). */
+export function aufbewahrenBis(seit: Tag): Tag {
+  return plusMonate(seit, AUFBEWAHRUNG_JAHRE * 12)
+}
+
+/**
+ * Wann ein gelöschtes Gerät frühestens endgültig gelöscht wird: fünf Jahre nach dem späteren von
+ * Außerbetriebnahme und Löschen. Das Löschen stempelt der Server, ein zurückdatiertes Datum der
+ * Außerbetriebnahme löscht also nie früher (Durchsicht 28.11.2026). Der Server rechnet genauso und
+ * nimmt dazu noch spätere Einträge im Gerätebuch (pb_hooks/mpg.pb.js), also nie früher als hier.
+ */
+export function endgueltigNach(seit: Tag | null, geloescht: Tag): Tag {
+  return aufbewahrenBis(seit && seit > geloescht ? seit : geloescht)
+}
+
+/** Text im Gerätebuch, wenn ein außer Betrieb genommenes Gerät gelöscht wird */
+export function entfernenText(bis: Tag): string {
+  return `Aus Bestand und Geräteliste entfernt. Gerätebuch, Prüfungen und Defekte bleiben mindestens bis ${tagText(bis)} aufbewahrt und werden danach endgültig gelöscht.`
+}
+
+/**
+ * Ein außer Betrieb genommenes Gerät löschen (Owner, 27.11.2026): Es verschwindet aus Bestand und
+ * Geräteliste und steht nur noch unter „Gelöscht“. Seine Nachweise bleiben fünf Jahre (Medizinproduktebuch),
+ * gerechnet ab dem Löschen, frühestens ab der Außerbetriebnahme, und werden danach am Server endgültig
+ * gelöscht. Den Zeitpunkt setzt der Server.
+ * Gerät zuerst, dann das Gerätebuch (wie beim Außer-Betrieb-Nehmen).
+ */
+export function planeEntfernen(o: { geraet: { id: string; name: string }; seit: Tag | null; heute: Tag; jetzt: string; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = [{ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { geloescht: o.jetzt } }]
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'geloescht', text: entfernenText(endgueltigNach(o.seit, o.heute)), wer: o.wer }))
+  return anfragen
+}
+
+/** Ein gelöschtes Gerät zurückholen: wieder unter „Außer Betrieb“ (nicht im Bestand). Gerätebuch zuerst. */
+export function planeWiederherstellen(o: { geraet: { id: string; name: string }; bemerkung: string; wer: Wer; id: string; buch: boolean }): Anfrage[] {
+  const anfragen: Anfrage[] = []
+  if (o.buch) anfragen.push(ereignis({ id: o.id, geraet: o.geraet, art: 'wiederhergestellt', text: o.bemerkung, wer: o.wer }))
+  anfragen.push({ collection: 'mpg_devices', aktion: 'update', id: o.geraet.id, body: { geloescht: '' } })
   return anfragen
 }
 

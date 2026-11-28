@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { INTERVALL_TEXT, INTERVALLE, intervallVon, kalendertag, monateVon, mtkAbweichend, mtkJahre, stkAbweichend, stkMonate, STK_HOECHSTENS } from '../../lib/mpg/fristen'
+import { INTERVALL_TEXT, INTERVALLE, intervallVon, kalendertag, tageVon, monateVon, mtkAbweichend, mtkJahre, stkAbweichend, stkMonate, STK_HOECHSTENS } from '../../lib/mpg/fristen'
 import { KEIN_VORSCHLAG, vorschlagFuer } from '../../lib/mpg/kontrollen'
 import { neueId, type Anfrage } from '../../lib/mpg/schreiben'
 import { istAusserBetrieb, kontrolleNichtBestanden, zustandVon } from '../../lib/mpg/zustand'
@@ -16,6 +16,7 @@ function felderVon(d?: Device): GeraetFelder {
   return {
     name: d?.name ?? '', type: d?.type ?? 'AED', serial_number: d?.serial_number ?? '', location: d?.location ?? '',
     interval: intervallVon(d?.interval ?? 'monthly'),
+    interval_days: tageVon(d?.interval_days),
     // Intervalle wie gespeichert — ein Altwert (z. B. 36 Monate) bleibt, solange ihn niemand anfasst
     has_stk: !!d?.has_stk, last_stk: kalendertag(d?.last_stk) ?? '', stk_interval_months: monateVon(d?.stk_interval_months),
     has_mtk: !!d?.has_mtk, last_mtk: kalendertag(d?.last_mtk) ?? '', mtk_interval_months: monateVon(d?.mtk_interval_months),
@@ -58,6 +59,10 @@ function Formular({ device }: { device?: Device }) {
   const set = <K extends keyof GeraetFelder>(k: K, v: GeraetFelder[K]) => setF(x => ({ ...x, [k]: v }))
   // STK-Monate als Text, damit sich die Zahl frei löschen und neu tippen lässt
   const [stkText, setStkText] = useState(() => String(ausgang.stk_interval_months))
+  // Abstand bei „alle N Tage“ als Text, damit man die Zahl frei tippen kann (gültig: 1 bis 365)
+  const [tageText, setTageText] = useState(() => String(ausgang.interval_days))
+  const tageZahl = Number(tageText)
+  const tageFalsch = !(Number.isInteger(tageZahl) && tageZahl >= 1 && tageZahl <= 365)
   const [begruendung, setBegruendung] = useState('')
   const [ohneNibp, setOhneNibp] = useState(false)
   const zurueck = device ? `/mpg/geraete/${device.id}` : '/mpg/geraete'
@@ -88,7 +93,7 @@ function Formular({ device }: { device?: Device }) {
   const wiederGesperrt = (['stk', 'mtk'] as const).filter(a => !!durchgefallen(a) && (a === 'stk' ? !ausgang.has_stk && f.has_stk : !ausgang.has_mtk && f.has_mtk))
   const vorgezogen = (['stk', 'mtk'] as const).filter(a => { const d = durchgefallen(a); const neu = a === 'stk' ? f.last_stk : f.last_mtk; return !!d && !!neu && neu !== (a === 'stk' ? ausgang.last_stk : ausgang.last_mtk) && neu >= d })
   const brauchtGrund = (abgeschaltet || geloescht || hebtAuf) && m.buch
-  const frei = !!f.name.trim() && !datumFalsch && !stkFalsch && !vorgezogen.length && (!brauchtGrund || !!begruendung.trim())
+  const frei = !!f.name.trim() && !datumFalsch && !stkFalsch && !(f.interval === 'days' && tageFalsch) && !vorgezogen.length && (!brauchtGrund || !!begruendung.trim())
 
   const geheZurueck = useZurueck(zurueck)
   async function speichern() {
@@ -142,6 +147,16 @@ function Formular({ device }: { device?: Device }) {
           <select value={f.interval} onChange={e => set('interval', intervallVon(e.target.value))} style={eingabe}>
             {INTERVALLE.map(v => <option key={v} value={v}>{INTERVALL_TEXT[v]}</option>)}
           </select>
+          {f.interval === 'days' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+              <span style={{ fontSize: 14 }}>Alle</span>
+              <input type="number" inputMode="numeric" min={1} max={365} step={1} value={tageText} aria-label="Abstand in Tagen"
+                onChange={e => { setTageText(e.target.value); const n = Number(e.target.value); if (Number.isInteger(n) && n >= 1 && n <= 365) set('interval_days', n) }}
+                onBlur={() => setTageText(String(f.interval_days))} style={{ ...eingabe, width: 90 }} />
+              <span style={{ fontSize: 14 }}>Tage</span>
+            </div>
+          )}
+          {f.interval === 'days' && tageFalsch && <div style={ROT}>Bitte eine ganze Zahl von 1 bis 365.</div>}
         </Feld>
         {(m.inbetriebnahmeMoeglich || f.inbetriebnahme) && (
           <Feld label="Inbetriebnahme" hinweis="Ab diesem Tag läuft die Frist für die erste STK und MTK.">

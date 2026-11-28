@@ -5,13 +5,13 @@
 
 import {
   fristenVon, faelligFeld, intervallVon, kalendertag, lageVon, lageText, monateVon, mtkAbweichend, mtkJahre, naechsteMtk, naechstePruefung,
-  naechsteStk, plusMonate, stkAbweichend, stkMonate, tageZwischen, VORWARNUNG,
+  naechsteStk, plusMonate, stkAbweichend, stkMonate, tageZwischen, VORWARNUNG, intervallText, tageVon, vorwarnungVon, INTERVALLE,
 } from './fristen'
-import { bleibtGesperrt, defektAusKontrolle, istAusserBetrieb, kontrolleNichtBestanden, pruefungNichtBestanden, zustandVon, zaehleStufen } from './zustand'
+import { bleibtGesperrt, defektAusKontrolle, istAusserBetrieb, istGeloescht, kontrolleNichtBestanden, pruefungNichtBestanden, zustandVon, zaehleStufen } from './zustand'
 import { ergebnisVon, moeglicheErgebnisse, restInOrdnung, setzePunkt, vorlageWaehlen, MANGEL_VERMERK, type PunktStatus, type Pruefpunkt } from './pruefung'
 import {
   anker, ausserBetriebText, planeAusserBetrieb, planeBeheben, planeBestaetigung, planeDefekt, planeFreigabe, planeGeraetAenderung, planeSchwere, schwereBraucht,
-  planeLoeschen, planeNeuesGeraet, planePruefung, planeSperre, planeVermerk, planeWiederInBetrieb, restNachAnker, stammdatenAenderungen,
+  planeLoeschen, planeNeuesGeraet, planeEntfernen, planeWiederherstellen, aufbewahrenBis, endgueltigNach, entfernenText, planePruefung, planeSperre, planeVermerk, planeWiederInBetrieb, restNachAnker, stammdatenAenderungen,
   stammdatenText, type Stammdaten,
 } from './aktionen'
 import { kontrolleText, mitDefektFallback, neuesteKontrollen, plakettenText, planeKontrolle, typLegtNahe, vorschlagFuer, type KontrollAngaben } from './kontrollen'
@@ -55,6 +55,15 @@ export function laufeMpgSelbsttest(): TestErgebnis[] {
   r.push(eq('wöchentlich: 7 Tage später', naechstePruefung('2026-10-16', 'weekly'), '2026-10-23'))
   r.push(eq('monatlich: monatsende-sicher', naechstePruefung('2026-01-31', 'monthly'), '2026-02-28'))
   r.push(eq('jährlich: vom 29.02. auf den 28.02.', naechstePruefung('2024-02-29', 'yearly'), '2025-02-28'))
+  // Alle N Tage (wie in der Hygiene, Owner 27.11.2026)
+  r.push(eq('alle 14 Tage: zwei Wochen später, über das Monatsende', naechstePruefung('2026-10-25', 'days', 14), '2026-11-08'))
+  r.push(eq('alle 3 Tage über die Zeitumstellung (25.10.2026)', naechstePruefung('2026-10-24', 'days', 3), '2026-10-27'))
+  r.push(eq('alle N Tage: ungültige Zahl zählt wie 7', [naechstePruefung('2026-10-01', 'days', 0), naechstePruefung('2026-10-01', 'days', 400), naechstePruefung('2026-10-01', 'days', 2.5), naechstePruefung('2026-10-01', 'days', 'x'), naechstePruefung('2026-10-01', 'days')],
+    ['2026-10-08', '2026-10-08', '2026-10-08', '2026-10-08', '2026-10-08']))
+  r.push(eq('alle N Tage: Grenzen 1 und 365', [naechstePruefung('2026-10-01', 'days', 1), naechstePruefung('2026-10-01', 'days', 365), tageVon('14'), tageVon(null)], ['2026-10-02', '2027-10-01', 14, 7]))
+  r.push(eq('Vorwarnung bei alle N Tage: ein Viertel, höchstens 30, wie die festen Intervalle', [1, 3, 7, 14, 30, 90, 365].map(t => vorwarnungVon('days', t)), [0, 0, 1, 3, 7, 22, 30]))
+  r.push(eq('Vorwarnung der festen Intervalle bleibt', INTERVALLE.filter(i => i !== 'days').map(i => vorwarnungVon(i, 400)), [0, 1, 7, 30]))
+  r.push(eq('Intervall lesbar', [intervallText('days', 14), intervallText('days', 1), intervallText('days', null), intervallText('monthly', 14), intervallText('Tage', '3')], ['Alle 14 Tage', 'Jeden Tag', 'Alle 7 Tage', 'Monatlich', 'Alle 3 Tage']))
 
   // ── STK / MTK ──
   r.push(eq('STK mit Ablauf des Monats (10.03.2024 + 24 Mon.)', naechsteStk('2024-03-10', 24), '2026-03-31'))
@@ -89,6 +98,13 @@ export function laufeMpgSelbsttest(): TestErgebnis[] {
   r.push(eq('Intervall als Liste (Auswahl mit Mehrfachwahl in PocketBase)', fristenVon({ interval: ['weekly'], last_inspection: um(2026, 10, 15) }, HEUTE)[0].naechste, '2026-10-22'))
   r.push(eq('Intervall als deutsches Wort', [intervallVon('Wöchentlich'), intervallVon(' täglich '), intervallVon('JÄHRLICH'), intervallVon('monatlich')], ['weekly', 'daily', 'yearly', 'monthly']))
   r.push(eq('unbekanntes Intervall zählt monatlich', fristenVon({ interval: 'quartal', last_inspection: um(2026, 10, 1) }, HEUTE)[0].naechste, '2026-11-01'))
+  r.push(eq('alle 10 Tage am Gerät: fällig, bald, in Ordnung', [
+    fristenVon({ interval: 'days', interval_days: 10, last_inspection: um(2026, 10, 5) }, HEUTE)[0],
+    fristenVon({ interval: 'days', interval_days: 10, last_inspection: um(2026, 10, 8) }, HEUTE)[0].lage,
+    fristenVon({ interval: 'days', interval_days: 10, last_inspection: um(2026, 10, 12) }, HEUTE)[0].lage,
+    fristenVon({ interval: ['days'], interval_days: 10, last_inspection: um(2026, 10, 1) }, HEUTE)[0].lage,
+  ], [{ art: 'pruefung', bezeichnung: 'Prüfung', letzte: '2026-10-05', naechste: '2026-10-15', lage: 'ueberfaellig', tage: -2 }, 'bald', 'ok', 'ueberfaellig']))
+  r.push(eq('next_inspection_due bei alle N Tage', kalendertag(faelligFeld({ interval: 'days', interval_days: 21, last_inspection: um(2026, 10, 16, 8) }, HEUTE)), '2026-11-06'))
   r.push(eq('next_inspection_due: Ende des Fälligkeitstags', kalendertag(faelligFeld({ interval: 'daily', last_inspection: um(2026, 10, 16, 8) }, HEUTE)), '2026-10-17'))
   r.push(eq('next_inspection_due: nie geprüft → heute', kalendertag(faelligFeld({ interval: 'yearly' }, HEUTE)), HEUTE))
   r.push(eq('next_inspection_due: monatsende-sicher', kalendertag(faelligFeld({ interval: 'monthly', last_inspection: um(2026, 1, 31) }, HEUTE)), '2026-02-28'))
@@ -315,9 +331,24 @@ export function laufeMpgSelbsttest(): TestErgebnis[] {
   r.push(eq('Vermerk zu einer Prüfung (Korrektur)', planeVermerk({ geraet: g1, text: ' Datum war falsch ', bezug: 'p7', wer, id: 'e6' }).map(a => [a.collection, a.id, a.body.art, a.body.text, a.body.bezug]), [['mpg_ereignisse', 'e6', 'vermerk', 'Datum war falsch', 'p7']]))
   const loe = planeLoeschen({ geraet: g1, wer, id: 'e7', buch: true })
   r.push(eq('Löschen: Gerät weg, Gerätebuch hält es fest (Anker)', [loe.map(a => `${a.collection}:${a.aktion}`), anker(loe)], [['mpg_devices:delete', 'mpg_ereignisse:create'], { collection: 'mpg_ereignisse', id: 'e7' }]))
+  // Löschen nach der Außerbetriebnahme (Owner 27.11.2026): aus allen Listen, Nachweise 5 Jahre
+  r.push(eq('Aufbewahren: 5 Jahre ab Außerbetriebnahme, 29.02. auf 28.02.', [aufbewahrenBis('2026-10-20'), aufbewahrenBis('2028-02-29')], ['2031-10-20', '2033-02-28']))
+  const ent = planeEntfernen({ geraet: g1, seit: '2026-10-20', heute: '2026-11-27', jetzt: '2026-11-27T10:00:00.000Z', wer, id: 'e8', buch: true })
+  r.push(eq('Gerät löschen: Gerät zuerst (Zeitpunkt), dann Gerätebuch mit Frist ab dem Löschen', [ent.map(a => `${a.collection}:${a.aktion}`), ent[0].body, ent[1].body.art, ent[1].body.text],
+    [['mpg_devices:update', 'mpg_ereignisse:create'], { geloescht: '2026-11-27T10:00:00.000Z' }, 'geloescht',
+      'Aus Bestand und Geräteliste entfernt. Gerätebuch, Prüfungen und Defekte bleiben mindestens bis 27.11.2031 aufbewahrt und werden danach endgültig gelöscht.']))
+  r.push(eq('Endgültig: fünf Jahre ab dem späteren von Außerbetriebnahme und Löschen (zurückdatiert löscht nie früher)', [
+    endgueltigNach('2015-01-01', '2026-11-27'), endgueltigNach(null, '2026-11-27'), endgueltigNach('2026-12-01', '2026-11-27')],
+    ['2031-11-27', '2031-11-27', '2031-12-01']))
+  r.push(eq('Gerät löschen ohne Gerätebuch: nur das Gerät', planeEntfernen({ geraet: g1, seit: null, heute: '2026-11-27', jetzt: 'x', wer, id: 'e8', buch: false }).length, 1))
+  r.push(eq('Text im Gerätebuch nennt „mindestens bis“', entfernenText('2031-11-27').includes('mindestens bis 27.11.2031'), true))
+  const zur = planeWiederherstellen({ geraet: g1, bemerkung: 'irrtümlich', wer, id: 'e9', buch: true })
+  r.push(eq('Wiederherstellen: Gerätebuch zuerst, dann nur das Feld (bleibt außer Betrieb)', [zur.map(a => `${a.collection}:${a.aktion}`), zur[0].body.art, zur[1].body],
+    [['mpg_ereignisse:create', 'mpg_devices:update'], 'wiederhergestellt', { geloescht: '' }]))
+  r.push(eq('gelöscht: leer, fehlend, gesetzt', [istGeloescht({ geloescht: '' }), istGeloescht({}), istGeloescht({ geloescht: null }), istGeloescht({ geloescht: '2026-11-27 10:00:00.000Z' })], [false, false, false, true]))
 
   // ── Stammdaten im Gerätebuch ──
-  const stamm: Stammdaten = { name: 'Defi RTW 1', type: 'AED', serial_number: 'SN1', location: 'RTW 1', interval: 'monthly', has_stk: true, last_stk: '2025-03-10', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24, inbetriebnahme: '' }
+  const stamm: Stammdaten = { name: 'Defi RTW 1', type: 'AED', serial_number: 'SN1', location: 'RTW 1', interval: 'monthly', interval_days: 7, has_stk: true, last_stk: '2025-03-10', stk_interval_months: 24, has_mtk: false, last_mtk: '', mtk_interval_months: 24, inbetriebnahme: '' }
   r.push(eq('Stammdaten lesbar', stammdatenText(stamm).map(f => f.wert), ['Defi RTW 1', 'AED', 'SN1', 'RTW 1', 'Monatlich', 'alle 24 Monate · zuletzt 10.03.2025', 'nicht erforderlich', '—']))
   r.push(eq('Stammdaten: MTK in Jahren, STK höchstens 24 Monate (abweichend eingetragen steht dabei), Inbetriebnahme', stammdatenText({ ...stamm, stk_interval_months: 36, has_mtk: true, mtk_interval_months: 12, last_mtk: '2025-05-01', inbetriebnahme: '2023-01-15' }).slice(5).map(f => f.wert),
     ['alle 24 Monate (eingetragen: 36 Monate) · zuletzt 10.03.2025', 'jährlich · zuletzt 01.05.2025', '15.01.2023']))
@@ -340,6 +371,18 @@ export function laufeMpgSelbsttest(): TestErgebnis[] {
   r.push(eq('Ändern: Intervall als Liste gespeichert ist keine Änderung', planeGeraetAenderung({ id: 'g1', alt: { ...stamm, interval: ['monthly'] as unknown as string }, daten, wer, ereignisId: 'e8', buch: true }), []))
   const neuerTakt = planeGeraetAenderung({ id: 'g1', alt: stamm, daten: { ...daten, interval: 'weekly' }, wer, ereignisId: 'e8', buch: true })
   r.push(eq('Ändern: neues Prüfintervall bringt die Fälligkeit mit', Object.keys(neuerTakt[0].body).sort(), ['interval', 'next_inspection_due']))
+  // Alle N Tage
+  const aufTage = planeGeraetAenderung({ id: 'g1', alt: stamm, daten: { ...daten, interval: 'days', interval_days: 14 }, wer, ereignisId: 'e8', buch: true })
+  r.push(eq('Ändern auf alle 14 Tage: Intervall, Tage und Fälligkeit, im Gerätebuch lesbar', [Object.keys(aufTage[0].body).sort(), aufTage[1].body.aenderungen],
+    [['interval', 'interval_days', 'next_inspection_due'], [{ feld: 'interval', name: 'Prüfintervall', alt: 'Monatlich', neu: 'Alle 14 Tage' }]]))
+  const nurTage = planeGeraetAenderung({ id: 'g1', alt: { ...stamm, interval: 'days', interval_days: 14 }, daten: { ...daten, interval: 'days', interval_days: 10 }, wer, ereignisId: 'e8', buch: true })
+  r.push(eq('Ändern nur der Tage: mit Fälligkeit, „Alle 14 Tage → Alle 10 Tage“', [nurTage[0].body, nurTage[1].body.aenderungen],
+    [{ interval_days: 10, next_inspection_due: daten.next_inspection_due }, [{ feld: 'interval', name: 'Prüfintervall', alt: 'Alle 14 Tage', neu: 'Alle 10 Tage' }]]))
+  r.push(eq('Tage ohne „alle N Tage“ sind keine Änderung', planeGeraetAenderung({ id: 'g1', alt: stamm, daten: { ...daten, interval_days: 30 }, wer, ereignisId: 'e8', buch: true }), []))
+  r.push(eq('Neues Gerät: Tage nur bei „alle N Tage“', [
+    'interval_days' in planeNeuesGeraet({ id: 'g9', daten, wer, ereignisId: 'e9', buch: false })[0].body,
+    planeNeuesGeraet({ id: 'g9', daten: { ...daten, interval: 'days', interval_days: 5 }, wer, ereignisId: 'e9', buch: false })[0].body.interval_days,
+  ], [false, 5]))
   r.push(eq('Ändern: Datum hinter abgeschaltetem Häkchen geht nicht mit', planeGeraetAenderung({ id: 'g1', alt: { ...stamm, has_stk: false }, daten: { ...daten, has_stk: false, last_stk: '2026-10-17' }, wer, ereignisId: 'e8', buch: true }), []))
   r.push(eq('Ändern: STK 24 → 12 Monate geht raus', planeGeraetAenderung({ id: 'g1', alt: stamm, daten: { ...daten, stk_interval_months: 12 }, wer, ereignisId: 'e8', buch: false })[0].body, { stk_interval_months: 12 }))
   const ohneStk = planeGeraetAenderung({ id: 'g1', alt: stamm, daten: { ...daten, has_stk: false }, wer, ereignisId: 'e8', buch: true, begruendung: 'Laien-AED, Ausnahme bestätigt durch Aufsicht' })

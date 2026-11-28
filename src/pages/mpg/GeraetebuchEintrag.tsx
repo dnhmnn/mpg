@@ -7,7 +7,7 @@ import type { Ereignis } from './typen'
 
 export const EREIGNIS_FARBE: Record<EreignisArt, string> = {
   gesperrt: '#dc2626', ausser_betrieb: '#dc2626', geloescht: '#dc2626',
-  freigegeben: '#16a34a', wieder_in_betrieb: '#16a34a',
+  freigegeben: '#16a34a', wieder_in_betrieb: '#16a34a', wiederhergestellt: 'rgba(var(--lbf-grau-rgb),0.4)',
   angelegt: 'var(--lbf-akzent)', geaendert: 'var(--lbf-akzent)', stk: 'var(--lbf-akzent)', mtk: 'var(--lbf-akzent)',
   vermerk: 'rgba(var(--lbf-grau-rgb),0.4)',
 }
