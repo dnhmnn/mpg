@@ -17,8 +17,8 @@ body{width:1200px;height:630px;background:#3d0408;color:#fde8d8;font-family:A,sa
 .vorzeile{position:absolute;left:82px;top:250px;font-size:17px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(253,232,216,.76)}
 h1{position:absolute;left:78px;top:286px;width:640px;font-size:74px;line-height:1.02;font-weight:700;letter-spacing:-.03em}
 h1 em{font-style:italic;display:block}
-.handy{position:absolute;right:110px;top:70px;width:300px;border-radius:44px;padding:9px;background:#140405;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 0 0 1px rgba(253,232,216,.1)}
-.handy img{display:block;width:100%;border-radius:35px}
+.handy{position:absolute;right:110px;top:70px;width:300px;border-radius:32px;padding:8px;background:#140405;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 0 0 1px rgba(253,232,216,.1)}
+.handy img{display:block;width:100%;border-radius:24px}
 .schein{position:absolute;right:-20px;top:-40px;width:560px;height:720px;background:radial-gradient(closest-side,rgba(253,232,216,.13),rgba(253,232,216,0) 70%)}
 </style></head><body>
 <div class="schein"></div>

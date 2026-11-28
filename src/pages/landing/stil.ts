@@ -150,6 +150,10 @@ export const RS_CSS = `
 .rs-sz-handy{ position: absolute; z-index: 2; left: calc(50% - var(--hw, 300px) / 2); top: var(--oben, 10vh); width: var(--hw, 300px);
   transform-origin: 50% 70%; will-change: transform, opacity; }
 .rs-sz-handy .rs-telefon{ position: relative; width: 100%; }
+/* Ecken aus der Breite des Handys statt fest in px (Owner, 28.11.2026: „zu rund“): sonst wirkt das kleine Handy
+   am Telefon rund wie eine Pille. Etwa ein Zehntel der Breite außen, der Bildschirm passend kleiner. */
+.rs-sz-handy .rs-telefon{ border-radius: calc(var(--hw, 300px) * 0.105); padding: calc(var(--hw, 300px) * 0.026); }
+.rs-sz-handy .rs-sz-schirm{ border-radius: calc(var(--hw, 300px) * 0.08); }
 .rs-sz-schein{ position: absolute; left: -60%; right: -60%; top: -20%; bottom: -20%; opacity: 0; pointer-events: none;
   background: radial-gradient(closest-side, rgba(253,232,216,0.16), rgba(253,232,216,0) 70%); }
 .rs-sz-schirm{ position: relative; border-radius: 35px; overflow: hidden; aspect-ratio: 390 / 844; background: #050101; }
