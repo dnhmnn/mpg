@@ -113,7 +113,7 @@ function SectionView({ s, d, preview }: { s: Section; d: Design; preview?: boole
     if (!preview) return null
     return (
       <section {...common}>
-        <div className="wrap"><p className="sub">Preis-Abschnitt: wird auf der Website nicht angezeigt, solange Responda in Entwicklung ist.</p></div>
+        <div className="wrap"><p className="sub">Preis-Abschnitt: wird auf der Website nicht angezeigt, solange Responda in Erprobung ist.</p></div>
       </section>
     )
   }

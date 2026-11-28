@@ -10,7 +10,7 @@
 // Ablauf und Texte der Szene: ./ablauf.ts (mit Prüffällen), Scroll: ./scroll.ts, Stile: ./stil.ts.
 // Die Bilder der App entstehen mit erfundenen Testdaten (docs/entwuerfe/website/aufnahme.mjs).
 
-import { Fragment, useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useStatusleiste } from '../../hooks/useStatusleiste'
 import { API_URL, APP_URL, DEF_NAV } from '../../lib/landingSchema'
 import { RS_CSS } from './stil'
@@ -66,6 +66,10 @@ function szeneMaler(root: HTMLElement, ruhig: boolean, anstossen: () => void): T
         if (m.breit) {
           hh = Math.min(m.H * 0.8, 760, m.H - navH - 24)
           oben = Math.max((m.H - hh) / 2, navH + 12)
+          // Texte stehen unter Leiste (und Kapitelzeile); passen sie nicht, ohne Erklärzeile und kleiner (.knapp)
+          el.classList.remove('knapp')
+          const platz = () => { const tb = texteEl?.getBoundingClientRect(); return tb ? tb.height : m.H }
+          if (Math.max(0, ...texte.map(t => t.offsetHeight)) > platz() - 16) el.classList.add('knapp')
         } else {
           // Am Telefon: Handy oben, darunter der Text; auf kleinen Bildschirmen ohne Erklärzeile (.knapp)
           oben = Math.max(navH + 12, m.H * 0.1)
@@ -79,7 +83,8 @@ function szeneMaler(root: HTMLElement, ruhig: boolean, anstossen: () => void): T
           el.classList.remove('knapp')
           hh = rechne()
           if (hh < 260) { el.classList.add('knapp'); hh = rechne() }
-          hh = Math.max(220, hh)
+          // Untergrenze klein genug, dass das Handy nie in den Text ragt (geteilter Bildschirm, großer Zoom)
+          hh = Math.max(140, hh)
         }
         const hw = (hh - 20) * 0.4627 + 20
         setz(el, '--hh', `${hh}px`); setz(el, '--hw', `${hw}px`); setz(el, '--oben', `${oben}px`)
@@ -89,6 +94,13 @@ function szeneMaler(root: HTMLElement, ruhig: boolean, anstossen: () => void): T
       }
       anfang = el.getBoundingClientRect().top + window.scrollY
     },
+
+    // Stelle in der Szene (Bildschirmhöhen) beim Drehen halten
+    lageVor(y: number, m: Mass) {
+      const sv = (y - anfang) / m.H
+      return sv > 0 && sv < GESAMT + 0.5 ? sv : null
+    },
+    lageNach(sv: number, m: Mass) { return anfang + sv * m.H },
 
     malen(y: number, m: Mass) {
       const sv = Math.min(Math.max(0, (y - anfang) / m.H), GESAMT)
@@ -364,6 +376,15 @@ export default function Startseite({ email, unterseiten, onLegal }: {
   }, [])
   useScrollMaler(rootRef, (anstossen) => [szeneMaler(rootRef.current!, ruhig, anstossen), zeilenMaler(rootRef.current!, ruhig)], [ruhig])
   useEinblenden(rootRef)
+  // Aufruf mit Anker (/#kontakt aus dem Menü der Unterseiten, Links von außen): Beim Laden gab es das Ziel
+  // noch nicht, und der Rücksprung nach oben (ObenBeginnen) liefe danach. Jetzt steht die Seite: hinrollen.
+  useLayoutEffect(() => {
+    const anker = window.location.hash.slice(1)
+    if (!anker) return
+    let ziel: HTMLElement | null = null
+    try { ziel = document.getElementById(decodeURIComponent(anker)) } catch { ziel = null }
+    ziel?.scrollIntoView()
+  }, [])
   useVorladen()
 
   const links = [...DEF_NAV.filter(l => l.href !== '/#kontakt').map(l => ({ ...l, href: l.href.replace(/^\//, '') })), ...unterseiten]

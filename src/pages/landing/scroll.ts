@@ -8,10 +8,14 @@ import { useLayoutEffect, type RefObject } from 'react'
 export interface Mass { H: number; vw: number; breit: boolean }
 
 export interface Teilnehmer {
-  /** Größen und Lagen lesen (Layout lesen ist hier erlaubt). voll: Breite oder Höhe deutlich anders */
+  /** Größen und Lagen lesen (Layout lesen ist hier erlaubt). voll: Breite, Höhe oder breit/schmal anders */
   messen: (m: Mass, voll: boolean) => void
   /** Nur schreiben, nie Layout lesen */
   malen: (y: number, m: Mass) => void
+  /** Vor dem Messen bei anderer Größe: die Lage merken (z. B. Bildschirmhöhen in der Szene), sonst null */
+  lageVor?: (y: number, m: Mass) => number | null
+  /** Nach dem Messen: wohin rollen, damit dieselbe Stelle im Bild bleibt (Drehen, anderes Fenster) */
+  lageNach?: (lage: number, m: Mass) => number | null
 }
 
 /** Schreibt nur, was sich geändert hat (Zahlen auf drei Stellen gerundet) */
@@ -42,9 +46,19 @@ export function useScrollMaler(rootRef: RefObject<HTMLElement | null>, teilnehme
     const messen = () => {
       const H = massEl.getBoundingClientRect().height || massEl.offsetHeight || 1
       const vw = root.clientWidth || document.documentElement.clientWidth
-      const voll = vw !== m.vw || m.H === 0 || Math.abs(H - m.H) / m.H > 0.25
-      m = { H, vw, breit: vw >= 900 || vw > 1.2 * H }
+      const breit = vw >= 900 || vw > 1.2 * H
+      // Jede andere Größe misst voll neu (H kommt aus 100svh und ändert sich am iPhone nicht mit den Leisten)
+      const voll = vw !== m.vw || H !== m.H || breit !== m.breit
+      // Beim Drehen oder anderem Fenster dieselbe Stelle halten (scrollY in px bliebe sonst gleich)
+      const alt = m, y = window.scrollY
+      const lagen = alt.H && voll ? tn.map(t => t.lageVor?.(y, alt) ?? null) : []
+      m = { H, vw, breit }
       for (const t of tn) t.messen(m, voll)
+      for (let i = 0; i < lagen.length; i++) {
+        const l = lagen[i]
+        const ziel = l === null ? null : tn[i].lageNach?.(l, m) ?? null
+        if (ziel !== null && Math.abs(ziel - window.scrollY) > 1) { window.scrollTo(0, ziel); break }
+      }
     }
     messen(); malen()
     let messenGeplant = 0

@@ -27,7 +27,7 @@ export interface Modul {
  *  Einsätze und Ausbildungen (hebt die Festlegung vom 20.11.2026 auf). */
 export const MODULE: Modul[] = [
   { name: 'Responda', kapitel: '', titel: ['Alles an einem Ort.', 'Auf dem Handy.'], laenge: 0.6, bilder: ['hub'],
-    text: 'Jede Einsatzkraft sieht die Apps, die sie braucht. Im Browser, ohne Installation. Was ihr eingebt, liegt auf einem eigenen Server in Nürnberg.' },
+    text: 'Jede Einsatzkraft sieht die Apps, die sie braucht. Im Browser, ohne Installation. Gespeichert wird auf einem eigenen Server in Nürnberg.' },
   { name: 'Einsätze', kapitel: 'Im Einsatz', titel: ['Der Einsatz', 'hält alles zusammen.'], laenge: 0.8, bilder: ['einsaetze'],
     text: 'Protokolle und Produktausgaben mit derselben Einsatznummer gehören von selbst dazu, dazu Personen und beteiligte Organisationen.' },
   { name: 'Patientendokumentation', kapitel: 'Im Einsatz', titel: ['Das Protokoll entsteht', 'beim Patienten.'], laenge: 0.8, bilder: ['protokoll'],
@@ -36,8 +36,8 @@ export const MODULE: Modul[] = [
     text: 'Prüfen, freigeben und archivieren, für die Leitung und die Verantwortlichen.' },
   { name: 'Vorgänge und CIRS', kapitel: 'Im Einsatz', titel: ['Formulare', 'statt Zettel.'], laenge: 0.5, bilder: ['vorgaenge'],
     text: 'Eigene Formulare und Anträge, CIRS-Meldungen auf Wunsch anonym, auch über Link oder QR-Code.' },
-  { name: 'Medizinprodukte', kapitel: 'Material', titel: ['Nicht einsatzbereit', 'heißt gesperrt.'], laenge: 0.8, bilder: ['mpg'],
-    text: 'Prüfen, STK und MTK im Blick, Defekte melden, auch über QR-Code. Ein schwerer Defekt sperrt das Gerät, bis es geprüft ist.' },
+  { name: 'Medizinprodukte', kapitel: 'Material', titel: ['Schwerer Defekt', 'heißt gesperrt.'], laenge: 0.8, bilder: ['mpg'],
+    text: 'Prüfen, STK und MTK im Blick, Defekte melden, auch über QR-Code. Ein schwerer Defekt sperrt das Gerät, bis er behoben und das Gerät freigegeben ist.' },
   { name: 'Hygiene', kapitel: 'Material', neu: true, titel: ['Desinfiziert.', 'Und nachgewiesen.'], laenge: 1.0, bilder: ['hygiene', 'hygiene-checkliste'],
     text: 'Fahrzeuge, Räume und Geräte nach Plan oder aus Anlass. Die Checkliste passt zum Fahrzeug, der Nachweis steht.' },
   { name: 'Lager', kapitel: 'Material', titel: ['Auffallen,', 'bevor es fehlt.'], laenge: 0.5, bilder: ['lager'],
@@ -270,9 +270,9 @@ export function zeileHell(anteil: number): number { return 0.2 + 0.8 * (1 - weic
 
 /** Grundsätze und „Für wen“ (Texte hier, damit die Prüffälle sie mit lesen) */
 export const GRUNDSAETZE: { name: [string, string]; text: string }[] = [
-  { name: ['In', 'Nürnberg.'], text: 'Was ihr eingebt, liegt auf einem eigenen Server in Nürnberg.' },
+  { name: ['In', 'Nürnberg.'], text: 'Gespeichert wird auf einem eigenen Server in Nürnberg.' },
   { name: ['Im', 'Browser.'], text: 'Ohne Installation auf Handy, Tablet und PC.' },
-  { name: ['Im', 'Funkloch.'], text: 'Was ohne Netz abgeschickt wird, geht raus, sobald Netz da ist.' },
+  { name: ['Im', 'Funkloch.'], text: 'Protokolle, Produktausgaben und Meldungen, die ohne Netz abgeschickt werden, gehen raus, sobald Netz da ist.' },
   { name: ['Patientendaten', 'nie im Push.'], text: 'Benachrichtigungen nennen nie Patientendaten.' },
   { name: ['In', 'eurer Hand.'], text: 'Jede Organisation legt Rollen, Rechte und Formulare selbst fest.' },
 ]

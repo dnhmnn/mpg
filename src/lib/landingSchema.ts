@@ -246,7 +246,7 @@ export function buildCss(d: Design): string {
   .lp .cform{display:flex;flex-direction:column;gap:14px}
   .lp .fg{display:flex;flex-direction:column;gap:6px}
   .lp .flabel{font-size:0.95rem;font-weight:700;color:${d.text}}
-  .lp .finput,.lp .ftextarea{padding:12px 14px;border-radius:10px;border:1.5px solid rgba(96,8,18,0.10);background:${d.bg};color:${d.text};font-size:0.95rem;font-family:inherit;transition:border-color 0.2s;outline:none;-webkit-appearance:none;width:100%}
+  .lp .finput,.lp .ftextarea{padding:12px 14px;border-radius:10px;border:1.5px solid rgba(96,8,18,0.10);background:${d.bg};color:${d.text};font-size:16px;font-family:inherit;transition:border-color 0.2s;outline:none;-webkit-appearance:none;width:100%}
   .lp .finput:focus,.lp .ftextarea:focus{border-color:${d.primary}}
   .lp .ftextarea{min-height:120px;resize:vertical}
   .lp .finput::placeholder,.lp .ftextarea::placeholder{color:${d.gray};opacity:0.6}

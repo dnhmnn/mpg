@@ -30,6 +30,10 @@ export const RS_CSS = `
 .rs .rs-hell :focus-visible{ outline-color: var(--rs-akzent); }
 .rs-innen{ max-width: 1120px; margin: 0 auto; padding: 0 max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); }
 .rs section[id]{ scroll-margin-top: calc(64px + env(safe-area-inset-top)); }
+/* Was den Fokus bekommt, bleibt sichtbar unter der klebenden Leiste (WCAG 2.4.11) */
+.rs-teil :is(a, button, input, textarea, select), .rs-fuss :is(a, button){ scroll-margin-top: calc(96px + env(safe-area-inset-top)); scroll-margin-bottom: 24px; }
+/* Lange Wörter (Patientendokumentation …) bei großem Zoom trennen statt abschneiden */
+.rs :is(h1, h2, h3, .rs-sz-titel, .rs-ueber, .rs-sz-kapitelname, .rs-sz-schlusssatz, .rs-satz, .rs-lead){ overflow-wrap: break-word; -webkit-hyphens: auto; hyphens: auto; }
 
 /* Maß für die Bildschirmhöhe (scroll.ts): nie fixed */
 .rs-mass{ position: absolute; top: 0; left: 0; width: 100%; height: 100vh; visibility: hidden; pointer-events: none; }
@@ -67,6 +71,7 @@ export const RS_CSS = `
 @media (min-width: 860px){ .rs-links{ display: flex; } }
 .rs-anmelden{ display: flex; align-items: center; min-height: 44px; padding: 0 10px; font-size: 14px; font-weight: 700; color: var(--rs-creme-2); border-radius: 10px; }
 .rs-anmelden:hover{ color: var(--rs-creme); }
+@media (max-width: 299px){ .rs-anmelden{ display: none; } }
 @media (min-width: 860px){ .rs-anmelden{ font-size: 15px; padding: 0 12px; } }
 
 /* Knöpfe */
@@ -103,7 +108,7 @@ export const RS_CSS = `
 @supports (height: 100svh){ .rs-szene{ height: calc(var(--n, 17) * 100svh); } }
 .rs-anker{ position: absolute; left: 0; width: 1px; height: 1px; pointer-events: none; top: calc(var(--ab, 1.86) * 100vh); }
 @supports (height: 100svh){ .rs-anker{ top: calc(var(--ab, 1.86) * 100svh); } }
-.rs-sz-bild{ position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+.rs-sz-bild{ position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; overflow: clip; }
 .rs-sz-held{ position: absolute; inset: 0; z-index: 4; will-change: opacity, transform; }
 .rs-sz-held .rs-held{ padding-top: calc(env(safe-area-inset-top) + 64px + clamp(16px, 4.5vh, 56px)); }
 .rs-sz-held .rs-gross{ width: clamp(84px, 13vh, 150px); height: clamp(84px, 13vh, 150px); }
@@ -162,7 +167,10 @@ export const RS_CSS = `
 .rs-sz-text .rs-lead{ margin-top: 10px; font-size: 16px; }
 .rs-sz-text .rs-ueber{ margin-bottom: 10px; font-size: 12px; letter-spacing: 0.14em; }
 .rs-szene.knapp .rs-sz-text .rs-lead{ display: none; }
-.rs-szene.breit .rs-sz-texte{ top: 0; bottom: 0; left: max(20px, calc(50% - 540px)); right: auto; width: min(44vw, 500px); align-items: center; }
+.rs-szene.breit .rs-sz-texte{ top: calc(env(safe-area-inset-top) + 64px); bottom: 12px; left: max(20px, env(safe-area-inset-left), calc(50% - 540px)); right: auto; width: min(44vw, 500px); align-items: center; }
+@media (min-width: 900px) and (min-height: 560px){ .rs-szene.breit .rs-sz-texte{ top: calc(env(safe-area-inset-top) + 128px); } }
+.rs-szene.breit.knapp .rs-sz-text .rs-lead{ display: none; }
+.rs-szene.breit.knapp .rs-sz-titel{ font-size: clamp(22px, min(3.6vw, 7vh), 40px); }
 .rs-szene.breit .rs-sz-text{ align-self: center; }
 .rs-szene.breit .rs-sz-titel{ font-size: clamp(36px, 4.4vw, 56px); }
 .rs-szene.breit .rs-sz-text .rs-lead{ font-size: clamp(17px, 1.6vw, 20px); margin-top: 18px; }
@@ -170,15 +178,16 @@ export const RS_CSS = `
 .rs-neu{ margin-left: 12px; padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--rs-creme-3); color: var(--rs-creme); letter-spacing: 0.12em; }
 /* Kapitelmoment: großer Name mittig, das Handy tritt blass zurück */
 .rs-sz-kapitel{ position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; text-align: center;
-  padding: calc(env(safe-area-inset-top) + 64px) 20px 0; opacity: 0; visibility: hidden; pointer-events: none; will-change: opacity, transform; }
+  padding: calc(env(safe-area-inset-top) + 64px) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); opacity: 0; visibility: hidden; pointer-events: none; will-change: opacity, transform; }
 .rs-sz-kapitel .rs-vorzeile{ margin: 0; }
-.rs-sz-kapitelname{ margin: 10px 0 0; font-size: clamp(40px, min(10.5vw, 15vh), 128px); font-weight: 800; line-height: 0.98; letter-spacing: -0.03em; }
+.rs-sz-kapitelname{ margin: 10px 0 0; font-size: clamp(28px, min(10.5vw, 15vh), 128px); font-weight: 800; line-height: 0.98; letter-spacing: -0.03em; }
 .rs-sz-kapitelname em{ font-style: italic; color: var(--rs-creme); }
 .rs-sz-kapitelapps{ display: none; margin: 18px auto 0; max-width: 34ch; font-size: clamp(17px, 1.6vw, 19px); font-style: italic; color: var(--rs-creme-2); }
 .rs-szene.breit .rs-sz-kapitelapps{ display: block; }
+.rs-szene.breit.knapp .rs-sz-kapitelapps{ display: none; }
 /* Kapitelzeile: nur am Rechner, unter der Leiste auf der Achse der Texte */
-.rs-sz-kapitelzeile{ display: none; position: absolute; z-index: 5; top: calc(env(safe-area-inset-top) + 84px); left: max(20px, calc(50% - 540px)); gap: 20px; opacity: 0; visibility: hidden; }
-@media (min-width: 900px){ .rs-szene.breit .rs-sz-kapitelzeile{ display: flex; } }
+.rs-sz-kapitelzeile{ display: none; position: absolute; z-index: 5; top: calc(env(safe-area-inset-top) + 76px); left: max(20px, env(safe-area-inset-left), calc(50% - 540px)); gap: 20px; opacity: 0; visibility: hidden; }
+@media (min-width: 900px) and (min-height: 560px){ .rs-szene.breit .rs-sz-kapitelzeile{ display: flex; } }
 .rs-sz-kapitelzeile button{ position: relative; display: none; align-items: center; min-height: 44px; padding: 0; background: none; border: 0; cursor: pointer;
   font: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--rs-creme-3); }
 .rs-sz-kapitelzeile button[aria-current]{ display: flex; color: var(--rs-creme); }
@@ -191,8 +200,8 @@ export const RS_CSS = `
 }
 /* Schluss: der Satz des Einstiegs, allein auf Rot */
 .rs-sz-schluss{ position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; justify-items: center; text-align: center;
-  padding: calc(env(safe-area-inset-top) + 64px) 20px 0; pointer-events: none; }
-.rs-sz-schlusssatz{ margin: 0; font-size: clamp(40px, min(7vw, 11vh), 96px); font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; }
+  padding: calc(env(safe-area-inset-top) + 64px) max(20px, env(safe-area-inset-right)) 0 max(20px, env(safe-area-inset-left)); pointer-events: none; }
+.rs-sz-schlusssatz{ margin: 0; font-size: clamp(28px, min(7vw, 11vh), 96px); font-weight: 800; line-height: 1.02; letter-spacing: -0.03em; }
 .rs-sz-schlusssatz .z1, .rs-sz-schlusssatz .z2{ display: block; opacity: 0; }
 .rs-sz-schlusssatz em{ font-style: italic; color: var(--rs-creme); }
 .rs-sz-schluss .rs-knopf{ margin-top: clamp(24px, 4vh, 40px); pointer-events: auto; opacity: 0; visibility: hidden; }
